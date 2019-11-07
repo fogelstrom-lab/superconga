@@ -1,0 +1,523 @@
+#include "Grid_CPU_iterators.cpp"
+
+/////////////////////////////////////////
+// Code path for CPU (host) specific code
+/////////////////////////////////////////
+
+template<typename,typename> class GridData;
+
+template <typename T, typename DEV>
+struct GridFunctions
+{};
+
+template <typename T>
+struct GridFunctions<T,thrust::host_vector<T> >
+{
+	typedef GridData<T,thrust::host_vector<T> > GridCPU;
+	typedef thrust::host_vector<T> Vector;
+
+	GridCPU* grid;
+
+	GridFunctions( GridCPU* ptr ) : grid(ptr) {}
+
+	template <typename T2>
+	void	typeConvert( GridData<T2,thrust::device_vector<T2> >& other ) const;
+	
+	// Compute the complex magnitude squared, of specified field.
+	void 	complexMagnitudeSq( GridCPU* result ) const;
+
+	// Compute complex phase of this (complex) grid.
+	void	complexPhase( GridCPU* result ) const;
+
+	// Compute gradient of complex phase of this grid.
+	void	complexPhaseGradient( GridCPU* result, const T h ) const;
+
+	// Compute the magnitude of the real part of this vector field.
+	void	fieldMagnitude( GridCPU* result ) const;
+
+	// Sum all fields.
+	void	sumFieldComponents( GridCPU* result ) const;
+
+	// Insert other grid into this. <x,y>_offset are offset in discrete elements from center.
+	// x_offset = y_offset = 0 results in a centered grid.
+	void	insertGrid(	const GridCPU* other, const int x_offset, const int y_offset );
+
+	// Insert other grid into this, with applied rotation (to other grid).
+	void	insertRotatedGrid( const GridCPU* other, const T phi,
+				const int x_offset, const int y_offset, Type::type part );
+
+	// Add other grid to this, with applied rotation (to other grid).
+	void	insertRotatedGridAdditive( const GridCPU* other, const T phi, int field,
+				const int x_offset, const int y_offset, Type::type part );
+
+	// Change resolution of grid, with linear interpolation of existing data.
+	void	resample( const int nx_new, const int ny_new );
+
+	// Find min and max value of range
+	static void	minmax( const GridCPU& grid, T& minv, T& maxv, int field, Type::type part );
+};
+
+
+template <typename T>
+template <typename T2>
+void GridFunctions<T,thrust::host_vector<T> >::typeConvert( GridData<T2,thrust::device_vector<T2> >& other ) const
+{
+	*(other.getVector()) = *(grid->getVector());
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::complexMagnitudeSq( GridCPU* result ) const
+{
+	iterTwoComplexToReal( *grid, *result, ComplexMagnitudeSqFunc<T>() );
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::complexPhase( GridCPU* result ) const
+{
+	iterTwoComplexToReal( *grid, *result, ComplexPhaseFunc<T>() );
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::fieldMagnitude( GridCPU* result ) const
+{
+	result->setZero();
+	iterTwo( *grid, *result, FieldMagnitudeFunc<T>(), Type::real );
+	result->sqrt();
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::sumFieldComponents( GridCPU* result ) const
+{
+	result->setZero();
+	iterTwo( *grid, *result, AddFuncTwo<T>(), grid->representation() );
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::complexPhaseGradient( GridCPU* result, const T h ) const
+{
+	const int Nx = grid->_dimX;
+	const int Ny = grid->_dimY;
+
+	T* data_src_re = grid->getDataPointer(0,Type::real);
+	T* data_src_im = grid->getDataPointer(0,Type::imag);
+	T* data_dst_x = result->getDataPointer(0,Type::real);
+	T* data_dst_y = result->getDataPointer(1,Type::real);
+
+	T f0, f1, f2, g0, g1, g2, denom, dPhase_dx, dPhase_dy;
+	
+	// Grid index
+	int idx, idx_x0, idx_x2, idx_y0, idx_y2;
+
+	// Set gradient to zero at borders for now. Implement other gradient methods later!
+	dPhase_dx = (T)0.0;
+	dPhase_dy = (T)0.0;
+
+	for ( int ty=0; ty<Ny; ++ty )
+	{
+		for ( int tx=0; tx<Nx; ++tx )
+		{
+			dPhase_dx = (T)0.0;
+			dPhase_dy = (T)0.0;
+
+			idx = ty*Nx + tx;
+
+			if ( tx > 0 && tx < Nx-1 && ty > 0 && ty < Ny-1 )
+			{
+				idx_x0 = ty * Nx + (tx-1);
+				idx_x2 = ty * Nx + (tx+1);
+
+				idx_y0 = (ty-1) * Nx + tx;
+				idx_y2 = (ty+1) * Nx + tx;
+
+				// Read elements at current grid point
+				f1 = data_src_im[idx];
+				g1 = data_src_re[idx];
+
+				// Some precomputed quantities
+				denom = (T)2.0*h*(f1*f1 + g1*g1);
+
+				if ( denom > (T)0.00001 )
+				{
+					denom = (T)1.0 / denom;
+				
+					// Gradient in x
+					f0 = data_src_im[idx_x0];
+					g0 = data_src_re[idx_x0];
+
+					f2 = data_src_im[idx_x2];
+					g2 = data_src_re[idx_x2];
+
+					dPhase_dx = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
+					//dPhase_dx = f1;
+
+					// Gradient in y
+					f0 = data_src_im[idx_y0];
+					f2 = data_src_im[idx_y2];
+
+					g0 = data_src_re[idx_y0];
+					g2 = data_src_re[idx_y2];
+
+					dPhase_dy = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
+					//dPhase_dy = g1;
+				}
+			}
+
+			data_dst_x[idx] = dPhase_dx;
+			data_dst_y[idx] = dPhase_dy;	
+		}
+	}
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::insertGrid( const GridCPU* other, const int x_offset, const int y_offset )
+{
+	// insert 'other' grid into 'this'
+	const int Nx_this = grid->dimX();
+	const int Ny_this = grid->dimY();
+
+	const int Nx_other = other->dimX();
+	const int Ny_other = other->dimY();
+	const int Nf_other = other->numFields();
+
+	const Type::type part[2] = {Type::real,Type::imag};
+
+	int x_start_this=0, y_start_this=0, x_start_other=0, y_start_other=0, x_max, y_max, c_other;
+	int tx_this, ty_this, tx_other, ty_other, idx_this, idx_other;
+
+	int x_diff = (grid->_dimX - Nx_other)/2;
+	int y_diff = (grid->_dimY - Ny_other)/2;
+	
+	if ( x_diff < 0 )	// Other grid bigger than this
+	{
+		x_start_other = -x_diff + x_offset;
+		x_max = grid->_dimX;
+	} else				// Other grid smaller (or equal) than this
+	{
+		x_start_this = x_diff + x_offset;
+		x_max = Nx_other;
+	}
+
+	if ( y_diff < 0 )
+	{
+		y_start_other = -y_diff + y_offset;
+		y_max = grid->_dimY;
+	} else
+	{
+		y_start_this = y_diff + y_offset;
+		y_max = Ny_other;
+	}	
+
+	T *data_this, *data_other;
+
+	for ( int c=0; c<grid->numFields(); ++c )
+	{
+		c_other = c >= Nf_other ? Nf_other-1 : c;
+
+		for ( int p=0; p<1+int(grid->isComplex()); ++p )
+		{
+			data_this = grid->getDataPointer(	c,			part[p] );
+			data_other = other->getDataPointer(	c_other,	part[p] );
+
+			for ( int ty=0; ty<y_max; ++ty )
+			{
+				for ( int tx=0; tx<x_max; ++tx )
+				{
+					tx_this = tx + x_start_this;
+					ty_this = ty + y_start_this;
+
+					tx_other = tx + x_start_other;
+					ty_other = ty + y_start_other;
+
+					if ( tx_this < Nx_this && ty_this < Ny_this && tx_other < Nx_other && ty_other < Ny_other )
+					{
+						idx_this = ty_this * Nx_this + tx_this;
+						idx_other = ty_other * Nx_other + tx_other;
+					
+						data_this[idx_this] = data_other[idx_other];
+					}				
+				}
+			}
+		}
+	}
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::insertRotatedGrid(
+	const GridCPU* other, const T phi, const int x_offset, const int y_offset, Type::type representation )
+{
+	// Grid dimensions of grid to rotate and read from (lookup grid)
+	const int Nx_this = grid->dimX();
+	const int Ny_this = grid->dimY();
+
+	const int Nx_other = other->dimX();
+	const int Ny_other = other->dimY();
+	const int Nf_other = other->numFields();
+
+	const int complex = int(grid->isComplex());
+
+	const Type::type part[2] = {Type::real,Type::imag};
+
+	// Coordinate transforms from current grid to lookup grid
+	const T x_transform = (Nx_other - Nx_this)/(T)2.0;
+	const T y_transform = (Ny_other - Ny_this)/(T)2.0;
+	
+	// Shifts lookup grid center to origin
+	const T grid_origin_shift_x = (Nx_other-1)/(T)2.0;
+	const T grid_origin_shift_y = (Ny_other-1)/(T)2.0;
+
+	int idx_grid_out, c_other, X_int, Y_int;
+	T X,Y, Xr,Yr, X_frac,Y_frac, X1_interp,X2_interp;
+
+	T *data_this, *data_other;
+
+	// Loop over elements
+	for ( int c=0; c<grid->numFields(); ++c )
+	{
+		c_other = c >= Nf_other ? Nf_other-1 : c;
+
+		for ( int p=0; p<1+complex; ++p )
+		{
+			data_this = grid->getDataPointer(	c,			part[p] );
+			data_other = other->getDataPointer(	c_other,	part[p] );
+
+			for ( int y=0; y<Ny_this; ++y )
+			{
+				for ( int x=0; x<Nx_this; ++x )
+				{
+					// Array index to current grid
+					idx_grid_out = y*Nx_this + x;
+				
+					// Coordinates to lookup grid
+					X = x + x_transform - grid_origin_shift_x;
+					Y = y + y_transform - grid_origin_shift_y;
+				
+					// Rotate centered coordinates, and put grid corner at origin
+					Xr = (T)X*cos(-phi) - (T)Y*sin(-phi) + grid_origin_shift_x;
+					Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
+				
+					// Bilinear interpolation
+					//
+					X_int = Xr;
+					Y_int = Yr;
+				
+					if ( (X_int>=0) && (X_int+1<Nx_other) && (Y_int>=0) && (Y_int+1<Ny_other) )
+					{		
+						X_frac = Xr - (T)X_int;
+						Y_frac = Yr - (T)Y_int;
+				
+						X1_interp =	((T)1.0-X_frac) * data_other[Y_int*Nx_other + X_int] +
+									X_frac * data_other[Y_int*Nx_other + (X_int+1)];
+
+						X2_interp =	((T)1.0-X_frac) * data_other[(Y_int+1)*Nx_other + X_int] +
+									X_frac * data_other[(Y_int+1)*Nx_other + (X_int+1)];
+				
+						data_this[idx_grid_out] = ((T)1.0-Y_frac) * X1_interp + Y_frac * X2_interp;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::insertRotatedGridAdditive(
+	const GridCPU* other, const T phi, int field, const int x_offset, const int y_offset, Type::type representation )
+{
+	int fieldStart, fieldEnd;
+
+	if ( field == -1 )
+	{
+		fieldStart = 0;
+		fieldEnd = grid->_numFields;
+	} else if ( field < grid->_numFields ) {
+		fieldStart = field;
+		fieldEnd = field + 1;	
+	} else {
+		std::cout << "GridData()::insertRotatedGridAdditive : Field out of bounds, operation terminated.\n";
+		return;
+	}
+
+	// Grid dimensions of grid to rotate and read from (lookup grid)
+	const int Nx_this = grid->dimX();
+	const int Ny_this = grid->dimY();
+
+	const int Nx_other = other->dimX();
+	const int Ny_other = other->dimY();
+	const int Nf_other = other->numFields();
+
+	const int complex = int(grid->isComplex());
+
+	const Type::type part[2] = {Type::real,Type::imag};
+
+	// Coordinate transforms from current grid to lookup grid
+	const T x_transform = (Nx_other - Nx_this)/(T)2.0;
+	const T y_transform = (Ny_other - Ny_this)/(T)2.0;
+	
+	// Shifts lookup grid center to origin
+	const T grid_origin_shift_x = (Nx_other-1)/(T)2.0;
+	const T grid_origin_shift_y = (Ny_other-1)/(T)2.0;
+
+	int idx_grid_out, c_other, X_int, Y_int;
+	T X,Y, Xr,Yr, X_frac,Y_frac, X1_interp,X2_interp;
+
+	T *data_this, *data_other;
+
+	// Loop over elements
+	for ( int c=fieldStart; c<fieldEnd; ++c )
+	{
+		c_other = c >= Nf_other ? Nf_other-1 : c;
+
+		for ( int p=0; p<1+complex; ++p )
+		{
+			data_this = grid->getDataPointer(	c,			part[p] );
+			data_other = other->getDataPointer(	c_other,	part[p] );
+
+			for ( int y=0; y<Ny_this; ++y )
+			{
+				for ( int x=0; x<Nx_this; ++x )
+				{
+					// Array index to current grid
+					idx_grid_out = y*Nx_this + x;
+				
+					// Coordinates to lookup grid
+					X = x + x_transform - grid_origin_shift_x;
+					Y = y + y_transform - grid_origin_shift_y;
+				
+					// Rotate centered coordinates, and put grid corner at origin
+					Xr = (T)X*cos(-phi) - (T)Y*sin(-phi) + grid_origin_shift_x;
+					Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
+				
+					// Bilinear interpolation
+					//
+					X_int = Xr;
+					Y_int = Yr;
+				
+					if ( (X_int>=0) && (X_int+1<Nx_other) && (Y_int>=0) && (Y_int+1<Ny_other) )
+					{		
+						X_frac = Xr - (T)X_int;
+						Y_frac = Yr - (T)Y_int;
+				
+						X1_interp =	((T)1.0-X_frac) * data_other[Y_int*Nx_other + X_int] +
+									X_frac * data_other[Y_int*Nx_other + (X_int+1)];
+
+						X2_interp =	((T)1.0-X_frac) * data_other[(Y_int+1)*Nx_other + X_int] +
+									X_frac * data_other[(Y_int+1)*Nx_other + (X_int+1)];
+				
+						data_this[idx_grid_out] += ((T)1.0-Y_frac) * X1_interp + Y_frac * X2_interp;
+					}
+				}
+			}
+		}
+	}
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::resample( const int nx_new, const int ny_new )
+{
+	const int isComplex = int(grid->isComplex());
+	const int numFields = grid->numFields();
+	const int numElements = nx_new * ny_new * numFields * (1+isComplex);
+
+	// Allocate vector for new grid
+	Vector* vec_tmp = new Vector(numElements);
+
+	T *data, *data_tmp;
+
+	const int nx = grid->dimX();
+	const int ny = grid->dimY();
+	
+	int i,j,c,p,idx_new;
+
+	int x_int, y_int, x_add, y_add;
+	T sx, sy, x, y, x_frac, y_frac, x1_interp, x2_interp;
+	size_t ptr_offset;
+
+	const Type::type part[2] = {Type::real,Type::imag};
+
+	for ( c=0; c<grid->numFields(); ++c )
+	{
+		for ( p=0; p<1+isComplex; ++p )
+		{
+			data = grid->getDataPointer(c,part[p]);
+
+			ptr_offset = nx_new * ny_new * (c * (1+isComplex) + int(part[p]==Type::imag && isComplex));
+			data_tmp = thrust::raw_pointer_cast(vec_tmp->data()) + ptr_offset;
+
+			//#pragma omp parallel for private(i,j,idx) shared(c,p,data_src,data_dst,functor)
+			for ( j=0; j<ny_new; ++j )
+			{
+				for ( i=0; i<nx_new; ++i )
+				{
+					idx_new = j*nx_new + i;
+
+					// Scaling factor between grids
+					sx = (T)(nx-1) / (T)(nx_new-1);
+					sy = (T)(ny-1) / (T)(ny_new-1);
+				
+					// Coordinates to old grid
+					x = sx * i;
+					y = sy * j;
+				
+					x_int = x;
+					y_int = y;
+				
+					x_frac = x - (T)x_int;
+					y_frac = y - (T)y_int;
+
+					// Bilinear interpolation	
+					if ( i == nx_new-1 )	x_add = 0;
+					else					x_add = 1;
+					if ( j == ny_new-1 )	y_add = 0;
+					else					y_add = 1;
+					
+					x1_interp = ((T)1.0-x_frac) * data[y_int*nx + x_int] +
+								x_frac * data[y_int*nx + (x_int+x_add)];		
+					
+					x2_interp = ((T)1.0-x_frac) * data[(y_int+y_add)*nx + x_int] +
+								x_frac * data[(y_int+y_add)*nx + (x_int+x_add)];
+				
+					data_tmp[idx_new] = ((T)1.0-y_frac) * x1_interp + y_frac * x2_interp;
+				}
+			}
+		}
+	}
+
+	// Free old vector and reassign
+	delete grid->_data;
+	grid->_data = vec_tmp;
+
+	// Change affected class member variables
+	grid->_dimX = nx_new;
+	grid->_dimY = ny_new;
+	
+	grid->_allocatedMemTotal -= nx*ny*numFields*(1+isComplex)*sizeof(T);
+	grid->_allocatedMemTotal += numElements*sizeof(T);
+}
+
+
+template <typename T>
+void GridFunctions<T,thrust::host_vector<T> >::minmax( const GridCPU& grid, T& minv, T& maxv, int field, Type::type part )
+{
+	Vector& vec = *(grid.getVector());
+
+	size_t start = grid.getFieldComponentOffset( field, part );
+	size_t end = start + grid.dimX() * grid.dimY();
+
+	typedef typename thrust::detail::normal_iterator<T*> iter;
+
+	iter begin = vec.begin();
+
+	thrust::pair<iter,iter> result = thrust::minmax_element( begin+start, begin+end );
+
+	minv = *result.first;
+	maxv = *result.second;
+}

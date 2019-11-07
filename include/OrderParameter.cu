@@ -1,0 +1,187 @@
+#include "OrderParameter.h"
+
+template <typename T>
+OrderParameter<T>::OrderParameter() :
+	ContextModule<T>(), _orderParameterCompound(0), _orderParameterCompoundRotated(0)
+{}
+
+
+template <typename T>
+OrderParameter<T>::OrderParameter( const OrderParameter<T>& other ) :
+	ContextModule<T>(other), _orderParameterCompound(0), _orderParameterCompoundRotated(0)
+{
+//	std::cout << "OrderParameter<T>::OrderParameter( const OrderParameter<T>& other )\n";
+	const int Nc = other.getNumOrderParameterComponents();
+
+	for ( int i=0; i<Nc; ++i )
+		_orderParameterComponentList.push_back( other._orderParameterComponentList[i]->clone() );
+
+	if ( other._orderParameterCompound )
+		_orderParameterCompound = new GridGPU( *other._orderParameterCompound );
+
+	if ( other._orderParameterCompoundRotated )
+		_orderParameterCompoundRotated = new GridGPU( *other._orderParameterCompoundRotated );
+}
+
+
+template <typename T>
+OrderParameter<T>::OrderParameter( Context<T>* ctx ) :
+	ContextModule<T>(ctx), _orderParameterCompound(0), _orderParameterCompoundRotated(0)
+		
+{
+	ctx->set( this );
+}
+
+
+template <typename T>
+OrderParameter<T>::~OrderParameter()
+{
+//	std::cout << "~OrderParameter()\n";
+
+	for ( int i=0; i<getNumOrderParameterComponents(); ++i )
+	{
+		//std::cout << "-->deleting component " << i << "\n";
+		delete _orderParameterComponentList[i];
+	}
+
+	if ( _orderParameterCompound ) delete _orderParameterCompound;
+	if ( _orderParameterCompoundRotated ) delete _orderParameterCompoundRotated;
+}
+
+
+template <typename T>
+OrderParameter<T>& OrderParameter<T>::operator=( OrderParameter<T> other )
+{
+	swap(*this,other);
+	return *this;
+}
+
+
+template <typename T>
+void swap( OrderParameter<T>& A, OrderParameter<T>& B )
+{
+	std::swap(A._orderParameterComponentList, B._orderParameterComponentList );
+	std::swap(A._orderParameterCompound, B._orderParameterCompound );
+	std::swap(A._orderParameterCompoundRotated, B._orderParameterCompoundRotated );
+}
+
+
+template <typename T>
+int OrderParameter<T>::initialize()
+{
+	int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+	int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+
+	GridGPU::initializeGrid( _orderParameterCompound, N0, N0 );
+	GridGPU::initializeGrid( _orderParameterCompoundRotated, N1, N1 );
+
+	for ( int i=0; i<getNumOrderParameterComponents(); ++i )
+		_orderParameterComponentList[i]->initialize();
+
+	return 0;
+}
+
+
+template <typename T>
+void OrderParameter<T>::add( OrderParameterComponent<T>* delta )
+{
+	if ( !(delta->getParameters()) )
+		delta->setParameters( ContextModule<T>::getParameters() );
+
+	_orderParameterComponentList.push_back( delta );
+}
+
+
+template <typename T>
+int OrderParameter<T>::getNumOrderParameterComponents() const
+{
+	return _orderParameterComponentList.size();
+}
+
+
+template <typename T>
+OrderParameterComponent<T>* OrderParameter<T>::getOrderParameterComponent( int delta_idx ) const
+{
+	const int Nc = getNumOrderParameterComponents();
+
+	if ( delta_idx >= Nc )
+		delta_idx = Nc-1;
+
+	return _orderParameterComponentList[delta_idx];
+}
+
+template <typename T>
+typename Grid<T>::GPU* OrderParameter<T>::getOrderParameterComponentField( int delta_idx ) const
+{
+	return getOrderParameterComponent(delta_idx)->getOrderParameterField();
+}
+
+
+template <typename T>
+typename Grid<T>::GPU* OrderParameter<T>::getOrderParameterField()
+{
+	// Add delta components together
+	_orderParameterCompound->setZero();
+
+	for ( int i=0; i<getNumOrderParameterComponents(); ++i )
+		*_orderParameterCompound += ( *(getOrderParameterComponent(i)->getOrderParameterField()) );
+	
+	return _orderParameterCompound;
+}
+
+
+template <typename T>
+typename Grid<T>::GPU* OrderParameter<T>::getOrderParameterFieldRotated( const T angle )
+{
+	// Get global model parameters
+	int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+	int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+
+	// Add delta components together in rotated frame
+	OrderParameterComponent<T>* delta_tmp;
+	
+	_orderParameterCompoundRotated->setZero();
+
+	GridGPU delta_comp_tmp( N0, N0 );
+
+	for ( int i=0; i<getNumOrderParameterComponents(); ++i )
+	{
+		delta_tmp = getOrderParameterComponent(i);
+		delta_comp_tmp = *(delta_tmp->getOrderParameterField());
+
+		// Rotating the order parameter field PHI degrees is equivalent to solving the
+		// trajectories along -PHI, hence the minus sign in the function call below.
+		delta_tmp->computeMomentumDependence( &delta_comp_tmp, -angle );		
+
+		_orderParameterCompoundRotated->insertRotatedGridAdditive( &delta_comp_tmp, angle, 0 );
+	}
+	
+	return _orderParameterCompoundRotated;
+}
+
+
+/*
+template <typename T>
+CoherenceFunctions<T>* OrderParameter<T>::createCoherenceFunctions() const
+{
+	return new CoherenceFunctions( ContextModule<T>::getContext(), getCoherenceFunctionSymmetry() );
+}
+*/
+
+template <typename T>
+char* OrderParameter<T>::type() const
+{
+	char buf[32];
+	char* tmp;
+	
+	strcpy(buf,getOrderParameterComponent(0)->getType());
+	
+	for ( int i=1; i<getNumOrderParameterComponents(); ++i )
+	{
+		tmp = getOrderParameterComponent(i)->getType();
+		strcat(buf,tmp);
+	}
+
+	char* ret = (char*)buf;
+	return ret;
+}
