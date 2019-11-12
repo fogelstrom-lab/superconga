@@ -15,7 +15,6 @@ public:
 					RiccatiSolverDisc();
 	virtual			~RiccatiSolverDisc();
 
-					//RiccatiSolverDisc( Parameters<T> & param, GeometryGroup<T> * geom );
 					RiccatiSolverDisc( Context<T>* ctx );
 
 	virtual int 	initialize();

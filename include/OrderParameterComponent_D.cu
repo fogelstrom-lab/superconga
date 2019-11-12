@@ -49,30 +49,6 @@ OrderParameterComponent_D<T>* OrderParameterComponent_D<T>::clone() const
 }
 
 
-/*template <typename T>
-typename Grid<T>::GPU* OrderParameterComponent_D<T>::createLatticeOrientationGrid()
-{
-	if ( _latticeOrientationGrid == 0 )
-	{
-		int N = OrderParameterComponent<T>::getParameters()->getGridResolutionBase();
-		_latticeOrientationGrid = new GridGPU(N,N,1,Type::real);
-	}
-
-	return _latticeOrientationGrid;
-}
-
-
-template <typename T>
-void OrderParameterComponent_D<T>::setGrain_half( const T orientation )
-{
-	GridGPU* grain = createLatticeOrientationGrid();
-	dim3 bpg, tpb;
-	grain->getKernelDimensions(bpg,tpb);
-
-	setGrains_kernel<<<bpg,tpb>>>( grain->getDataPointer(), orientation, grain->dimX(), grain->dimY() );
-}*/
-
-
 template <typename T>
 void OrderParameterComponent_D<T>::computeMomentumDependence( GridGPU* target, const T angle )
 {

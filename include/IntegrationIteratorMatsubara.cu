@@ -40,7 +40,6 @@ void IntegrationIteratorMatsubara<T>::initEnergies()
 	const Parameters<T>* param = ContextModule<T>::getParameters();
 
 	T T_Tc = param->getTemperature();
-	//int numEnergies = param->getNumMatsubaraFrequencies();
 	int numEnergies = param->getNumFrequencies();
 
 	// Set matsubara energies
@@ -58,10 +57,6 @@ void IntegrationIteratorMatsubara<T>::initEnergies()
 	GridGPU* energies = new GridGPU;
 	*energies = *energies_cpu;
 
-	/*GridCPU* ones = new GridCPU(numEnergies, 1, 1, Type::real);
-	ones->setValue(1.0, Type::real);
-	GridGPU* residues = new GridGPU;
-	*residues = *ones;*/
 	GridGPU* residues = new GridGPU(numEnergies, 1, 1, Type::real);
 	residues->setValue(1.0, Type::real);
 
@@ -243,10 +238,6 @@ void IntegrationIteratorMatsubara<T>::compute()
 			for ( int i=0; i<NC; ++i )
 				ctx->getComputeObject(i)->computeGreensAngle(
 					energy_iter, riccati->getGamma(), riccati->getGammabar(), geom );
-			//for ( int i=0; i<NC; ++i )
-			//	ctx->getComputeObject(i)->computeGreensAngle(
-			//		energy_iter, residues, riccati->getGamma(), riccati->getGammabar(), geom );
-
 		}		
 			
 		// Add integration contribution of greens function from current angle

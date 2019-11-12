@@ -16,11 +16,6 @@ __device__ void computeFreeEnergyLocal(
 	GreensAnomalous<T>::computeGreens_local(		gamma, gammabar, f );
 	GreensAnomalousTilde<T>::computeGreens_local(	gamma, gammabar, fb );
 
-//	g *= M_PI;
-//	f *= M_PI;
-//	fb *= M_PI;
-//	free_e = M_PI * (D.conj()*f + D*fb) / (M_PI + i*g);
-
 	free_e = M_PI * (D.conj()*f + D*fb) / (T(1.0) + i*g);
 }
 
@@ -120,7 +115,6 @@ int ComputeFreeEnergy<T>::initialize()
 template <typename T>
 IntegrationIterator<T>* ComputeFreeEnergy<T>::createIntegrationIterator( int numEnergiesPerBlock )
 {
-	//return new IntegrationIteratorMatsubara<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 	return new IntegrationIteratorOzaki<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 }
 
@@ -244,28 +238,6 @@ void ComputeFreeEnergy<T>::computePropertyFromGreens()
 
 		if ( abs(freeEnergy_unitArea_old) < 0.000000001 )
 			freeEnergy_unitArea_old = 0.000000001;
-/*
-		GridGPU* delta = C::getOrderParameter()->getOrderParameterField();
-
-		GridGPU deltaValue = delta->complexMagnitudeSq();
-		C::getGeometry()->zeroValuesOutsideDomain( &deltaValue );
-	
-		T D2 = deltaValue.sumField();
-
-
-		_freeEnergy_noB = h*h * (
-				D2 * (log(T_Tc) + 2.0*M_PI*T_Tc * e_inv_sum) -
-				2.0/(T)numAngles * T_Tc * freeNew_re
-				);
-
-		_Bterm = area*B*B/(8.0*M_PI);
-
-		_freeEnergy = _freeEnergy_noB + _Bterm;
-
-		_freeEnergy_unitArea = (
-				D2 * (log(T_Tc) + 2.0*M_PI*T_Tc * e_inv_sum) -
-				2.0/(T)numAngles * T_Tc * freeNew_re ) / areaD;
-*/
 
 		OrderParameter<T>* delta = C::getOrderParameter();
 		const GridGPU& delta_field = *(delta->getOrderParameterField());
@@ -289,22 +261,9 @@ void ComputeFreeEnergy<T>::computePropertyFromGreens()
 		if ( residual < C::getParameters()->getConvergenceCriterion() )
 			ComputeProperty<T>::setConverged();
 
-
-
-//		_freeEnergyGrid *= -2.0/(T)numAngles * T_Tc;
-//		_freeEnergyGrid += deltaValue
-
 		using namespace std;
 	
-//		cout << "\nFree Re = " << freeNew_re << endl;
-//		cout << "Free Im = " << freeNew_im << endl;
-//		cout << "D2 = " << D2*h*h/area << endl;
-//		cout << "D2 debug = " << D2/areaD << endl;
 		cout << "Area = " << C::getGeometry()->area() << endl;
-//		cout << "_freeEnergy_angle = " << freeNew_re/((T)numAngles*areaD) << endl;
-//		cout << "B term = " << _Bterm << "\n";
-//		cout << "freeEnergyNoB/area = " << _freeEnergy_noB / area << endl;
-//		cout << "freeEnergy/area = " << _freeEnergy / area << endl;
 		cout << "_freeEnergy_unitArea = " << _freeEnergy_unitArea << endl;
 	}
 	else

@@ -88,8 +88,6 @@ void RiccatiSolverConfined<T,GAMMA,POTENTIAL>::computeCoherenceFunctions(
 	if ( gamma_angle >= 2.0*M_PI )
 		gamma_angle -= 2.0*M_PI;
 
-//	std::cout << "angle: " << system_angle << ", y_min = " << idx_min << ", y_max = " << idx_max << "\n";
-
 	// Gives 10-15% speedup with streams
 	cudaStream_t s1, s2;
 	cudaStreamCreate( &s1 );
@@ -106,10 +104,6 @@ void RiccatiSolverConfined<T,GAMMA,POTENTIAL>::computeCoherenceFunctions(
 	int doInducedBfield = R::doComputeInducedMagneticField();
 
 	computeEnergyShift<T,POTENTIAL>(this,ps,eShift,doInducedBfield,current_angle_idx);
-
-
-	//const int isSinglet = C::getOrderParameter()->getOrderParameterComponent(0)->isSinglet();
-
 
 	// 	Solve gamma by propagating riccati trajectories along positive y
 	computeGammaFunctionTemplate_new_kernel<T,typename GAMMA<T>::Gamma,2,3,1>

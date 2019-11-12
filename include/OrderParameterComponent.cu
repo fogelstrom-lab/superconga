@@ -28,7 +28,6 @@ OrderParameterComponent<T>::OrderParameterComponent( Parameters<T>* param, T Tct
 template <typename T>
 OrderParameterComponent<T>::~OrderParameterComponent()
 {
-//	std::cout << "~OrderParameterComponent()\n";
 	if ( _deltaComp ) delete _deltaComp;
 }
 
@@ -102,18 +101,6 @@ void OrderParameterComponent<T>::computeCouplingConstant( GridGPU* target )
 		_couplingConstant = ( M_PI*T_Tc/(log(T_Tc) + log(1.0/_Tcthis_Tc) + 2.0*matsubaraSum) );
 	}
 
-	/*
-	const double T_Tc = _param->getTemperature();
-	const int numFrequencies = _param->getNumMatsubaraFrequencies();
-
-	double matsubaraSum = 0.0;
-	
-	for ( int i=0; i<numFrequencies; ++i )
-		matsubaraSum += 1.0/(2.0*double(i) + 1.0);
-	
-	_couplingConstant = ( M_PI*T_Tc/(log(T_Tc) + log(1.0/_Tcthis_Tc) + 2.0*matsubaraSum) );*/
-	//std::cout << "_couplingConstant: " << _couplingConstant << std::endl;
-
 	(*target) *= _couplingConstant;
 }
 
@@ -133,7 +120,6 @@ void OrderParameterComponent<T>::computeCouplingConstant(
 	if ( ! _initCouplingConstant )
 	{
 		const double T_Tc = _param->getTemperature();
-		//const int numFrequencies = _param->getNumMatsubaraFrequencies();
 		const int numFrequencies = _param->getNumFrequencies();
 		
 		double energySum = 0.0;
@@ -143,18 +129,6 @@ void OrderParameterComponent<T>::computeCouplingConstant(
 		
 		_couplingConstant = ( M_PI*T_Tc/(log(T_Tc) + log(1.0/_Tcthis_Tc) + 2.0*M_PI*T_Tc*energySum) );
 	}
-
-	/*const double T_Tc = _param->getTemperature();
-	//const int numFrequencies = _param->getNumMatsubaraFrequencies();
-	const int numFrequencies = _param->getNumFrequencies();
-	
-	double energySum = 0.0;
-
-	for ( int i=0; i<numFrequencies; ++i )
-		energySum += residues[i] / energies[i];
-	
-	_couplingConstant = ( M_PI*T_Tc/(log(T_Tc) + log(1.0/_Tcthis_Tc) + 2.0*M_PI*T_Tc*energySum) );
-	std::cout << "_couplingConstant: " << _couplingConstant << std::endl;*/
 
 	(*target) *= _couplingConstant;
 }

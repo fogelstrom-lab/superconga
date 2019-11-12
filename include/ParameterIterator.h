@@ -10,8 +10,6 @@ public:
 			~ParameterIterator() {}
 		
 			ParameterIterator( T p_min, T p_max );		
-//			ParameterIterator( T p_min, T p_max, T p_inc );
-//			ParameterIterator( T p_min, T p_max, int num );
 	
 	ParameterIterator<T>& operator=( const ParameterIterator<T>& right );
 	T operator()() { return getCurrentValue(); }
@@ -39,7 +37,6 @@ public:
 	int		isDone() const { return _isDone; }
 	
 	T		getCurrentValue() const;
-//	void	setCurrentIndex( int idx );
 	
 private:
 

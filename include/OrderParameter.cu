@@ -10,7 +10,6 @@ template <typename T>
 OrderParameter<T>::OrderParameter( const OrderParameter<T>& other ) :
 	ContextModule<T>(other), _orderParameterCompound(0), _orderParameterCompoundRotated(0)
 {
-//	std::cout << "OrderParameter<T>::OrderParameter( const OrderParameter<T>& other )\n";
 	const int Nc = other.getNumOrderParameterComponents();
 
 	for ( int i=0; i<Nc; ++i )
@@ -36,11 +35,8 @@ OrderParameter<T>::OrderParameter( Context<T>* ctx ) :
 template <typename T>
 OrderParameter<T>::~OrderParameter()
 {
-//	std::cout << "~OrderParameter()\n";
-
 	for ( int i=0; i<getNumOrderParameterComponents(); ++i )
 	{
-		//std::cout << "-->deleting component " << i << "\n";
 		delete _orderParameterComponentList[i];
 	}
 
@@ -158,15 +154,6 @@ typename Grid<T>::GPU* OrderParameter<T>::getOrderParameterFieldRotated( const T
 	
 	return _orderParameterCompoundRotated;
 }
-
-
-/*
-template <typename T>
-CoherenceFunctions<T>* OrderParameter<T>::createCoherenceFunctions() const
-{
-	return new CoherenceFunctions( ContextModule<T>::getContext(), getCoherenceFunctionSymmetry() );
-}
-*/
 
 template <typename T>
 char* OrderParameter<T>::type() const

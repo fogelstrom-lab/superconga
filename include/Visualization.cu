@@ -22,7 +22,6 @@ template <typename T>
 Visualization<T>::~Visualization()
 {
 	if ( _image ) delete[] _image;
-	//if ( _colorScheme ) delete _colorScheme;
 #ifdef __CUDACC__
 	if ( _geom_mask ) delete _geom_mask;
 #endif
@@ -64,13 +63,6 @@ void Visualization<T>::constructor()
 		_valImgUsed[i] = 0;
 		_textImg[i] = "";
 	}
-		
-/*
-	const int N = _num_image_X * _num_image_Y;
-	gridList = new GridGPU*[N];
-	typeList = new Type::type[N];
-	fieldList = new int[N];
-*/
 
 #ifdef __CUDACC__
 	_geom = 0;
@@ -109,34 +101,9 @@ void Visualization<T>::allocMemImageGrid( const int num_image_X, const int num_i
 	
 		_image = new float[numPixels*3];
 		_numPixelsAllocated = numPixels;
-
-//		std::cout << "allocMemImageGrid(): numPixels = " << numPixels << "\n";
 	}	
 }
 
-/*
-template <typename T>
-void Visualization<T>::registerImage( GridGPU* grid, Type::type representation, int field,
-	int img_x, int img_y )
-{
-	int idx = img_y * getNumImagesX() + img_x;
-
-	gridList[idx] = grid;
-	typeList[idx] = representation;
-	fieldList[idx] = field;
-}
-
-
-template <typename T>
-void Visualization<T>::getImageInfo( int img_x, int img_y, GridGPU*& grid, Type::type& representation, int& field )
-{
-	int img_idx = img_y*_num_image_X + img_x;
-
-	grid = gridList[img_idx];
-	representation = typeList[img_idx];
-	field = fieldList[img_idx];
-}
-*/
 
 template <typename T>
 void Visualization<T>::getImageCoordinatesFromWindow( int x, int y, int& img_x, int& img_y, int& grid_x, int& grid_y )
@@ -188,8 +155,6 @@ void Visualization<T>::plotImage( const GRID& grid, int field, Type::type repres
 		return;
 	}
 
-//	_grid = grid;
-
 	const int numFields = grid.numFields();
 		
 	if ( field < numFields && img_x < _num_image_X && img_y < _num_image_Y )
@@ -229,9 +194,6 @@ void Visualization<T>::drawField(
 	const GRID* grid, const int field, const int image_idx_x, const int image_idx_y,
 	Type::type representation, int normalize, T minVal, T maxVal )
 {
-//	registerImage( _grid, representation, field, image_idx_x, image_idx_y );
-	//_colorScheme = cmap;
-
 	const int Nx = grid->dimX();
 	const int Ny = grid->dimY();
 
@@ -289,7 +251,6 @@ void Visualization<T>::drawField(
 					pixelPtr = _image + 3*(imgIndexOffset + row*rowIndexOffset + col);
 										
 					_colorScheme.getColor( pixelValue, pixelPtr[0], pixelPtr[1], pixelPtr[2] );
-					//cmap.getColor( pixelValue, pixelPtr[0], pixelPtr[1], pixelPtr[2] );
 				}	
 			}			
 		}
@@ -623,7 +584,6 @@ void Visualization<T>::printRangeToImage( int img_row, int img_col, T minVal, T 
 	char txt[256];
 	int imgIdx = _num_image_X*img_row + img_col;
 
-//	sprintf( txt, "%s; %s", txt_tmp, _textImg[imgIdx].c_str() );
 	sprintf( txt, "%s (%f, %f)", _textImg[imgIdx].c_str(), minVal, maxVal );
 
 	for ( i=0; txt[i]; i++ )
@@ -652,7 +612,6 @@ void Visualization<T>::printParametersToImage( const Parameters<T> * param )
 		int numE = param->getNumEnergies();
 		if ( numE == 0 )
 			numE = param->getNumFrequencies();
-		//	numE = param->getNumMatsubaraFrequencies();
 
 		char txt[256];
 		sprintf( txt, "Discrete width = %d,   Discrete angles = %d,   Discrete Energies = %d",

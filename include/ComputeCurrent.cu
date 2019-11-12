@@ -48,7 +48,6 @@ int ComputeCurrent<T>::initialize()
 template <typename T>
 IntegrationIterator<T>* ComputeCurrent<T>::createIntegrationIterator( int numEnergiesPerBlock )
 {
-	//return new IntegrationIteratorMatsubara<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 	return new IntegrationIteratorOzaki<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 }
 

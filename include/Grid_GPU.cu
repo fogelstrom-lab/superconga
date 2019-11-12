@@ -211,7 +211,6 @@ void GridFunctions<T,thrust::device_vector<T> >::div( GridGPU* result, const T h
 template <typename T>
 void GridFunctions<T,thrust::device_vector<T> >::curl( GridGPU* result, const T h ) const
 {
-//	dim3 tpb(grid->dimX()-2,1), bpg(1,grid->dimY()-2);
 	dim3 tpb, bpg;
 	getKernelDimensions( bpg, tpb );
 	
@@ -228,7 +227,6 @@ void GridFunctions<T,thrust::device_vector<T> >::curl( GridGPU* result, const T 
 template <typename T>
 void GridFunctions<T,thrust::device_vector<T> >::del2( GridGPU* result, const T h ) const
 {
-//	dim3 tpb(grid->dimX()-2,1), bpg(1,grid->dimY()-2);
 	dim3 tpb, bpg;
 	getKernelDimensions( bpg, tpb );
 
@@ -493,7 +491,6 @@ void GridFunctions<T,thrust::device_vector<T> >::insertRotatedGridAdditive(
 template <typename T>
 void GridFunctions<T,thrust::device_vector<T> >::resample( const int nx_new, const int ny_new )
 {
-//	std::cout << "Resample<device>\n";
 	const int isComplex = int(grid->isComplex());
 	const int numFields = grid->numFields();
 	const int numElements = nx_new * ny_new * numFields * (1+isComplex);
@@ -546,18 +543,10 @@ void GridFunctions<T,thrust::device_vector<T> >::resample( const int nx_new, con
 template <typename T>
 void GridFunctions<T,thrust::device_vector<T> >::resample( GridGPU*& target, const int nx_new, const int ny_new ) const
 {
-//	std::cout << "Resample<device>\n";
 	GridGPU::initializeGrid(target, nx_new, ny_new, grid->numFields(), grid->representation());
 
 	const int isComplex = int(grid->isComplex());
 	const int numFields = grid->numFields();
-//	const int numElements = nx_new * ny_new * numFields * (1+isComplex);
-
-	// Allocate vector for new grid
-//	Vector* vec_tmp = new Vector(numElements);
-//	T* data_tmp = thrust::raw_pointer_cast(vec_tmp->data());
-
-//	T* data_dst = target->getDataPointer();
 
 	const int nx = grid->dimX();
 	const int ny = grid->dimY();
@@ -569,8 +558,6 @@ void GridFunctions<T,thrust::device_vector<T> >::resample( GridGPU*& target, con
 	
 	for ( int c=0; c<numFields; ++c )
 	{
-		//int fieldOffset = (nx_new * ny_new * (1+isComplex)) * c;
-		
 		resample_kernel<<<blocksPerGrid,threadsPerBlock>>>(
 			grid->getDataPointer( c, Type::real ),
 			target->getDataPointer( c, Type::real ),

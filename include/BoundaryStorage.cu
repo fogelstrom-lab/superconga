@@ -1,19 +1,5 @@
 #include "BoundaryStorage.h"
 
-//template <typename T>
-//__device__ int BoundaryStorage<T>::getSparseIndex(
-//	const int idx_e, const int idx_a, const int idx_x,
-//	const int Nx, const int numSparse, int *sparseIndices )
-//{
-//	// Find sparse index. Majority: energy, angle, trajectory
-//	int sparse_idx = sparseIndices[ idx_a * Nx + idx_x ];
-//	
-//	if ( sparse_idx > -1 )
-//		sparse_idx += idx_e * numSparse;
-
-//	return sparse_idx;
-//}
-
 // CONSIDER IMPLEMENTING WITH MAJORITY: angle, energy, trajectory
 // (for performance reasons (better memory coalescing, but harder implementation
 // in finding sparse index))
@@ -39,7 +25,6 @@ BoundaryStorage<T>::BoundaryStorage()
 		_num_bnd_intersect_gamma(0), _num_bnd_intersect_gammabar(0),
 		_boundary_in_gamma(0), _boundary_out_gamma(0),
 		_boundary_in_gammabar(0), _boundary_out_gammabar(0),
-		//_numIntersectTrajectories(0), _trajectoryStartIndex(0),
 		_trajectoryRange_x(0), _trajectoryRange_y(0),
 		_trajectoryRangeAllStart_y(0), _trajectoryRangeAllEnd_y(0),
 		_numEnergies(0)
@@ -66,8 +51,6 @@ BoundaryStorage<T>::~BoundaryStorage()
 	if ( _boundary_in_gammabar ) delete _boundary_in_gammabar;
 	if ( _boundary_out_gammabar ) delete _boundary_out_gammabar;
 	
-//	if ( _numIntersectTrajectories ) delete _numIntersectTrajectories;
-//	if ( _trajectoryStartIndex ) delete _trajectoryStartIndex;
 	if ( _trajectoryRange_x ) delete _trajectoryRange_x;
 	if ( _trajectoryRange_y ) delete _trajectoryRange_y;
 	if ( _trajectoryRangeAllStart_y ) delete _trajectoryRangeAllStart_y;
@@ -83,7 +66,6 @@ BoundaryStorage<T>::BoundaryStorage( GeometryGroup<T> * geom )
 		_num_bnd_intersect_gamma(0), _num_bnd_intersect_gammabar(0),
 		_boundary_in_gamma(0), _boundary_out_gamma(0),
 		_boundary_in_gammabar(0), _boundary_out_gammabar(0),
-		//_numIntersectTrajectories(0), _trajectoryStartIndex(0),
 		_trajectoryRange_x(0), _trajectoryRange_y(0),
 		_trajectoryRangeAllStart_y(0), _trajectoryRangeAllEnd_y(0),
 		_numEnergies(0)
@@ -319,8 +301,6 @@ void BoundaryStorage<T>::computeSparseIndices( const int numEnergies, const int 
 			sum_idx_in_gammabar, sum_idx_out_gammabar );
 	}
 
-//	std::cout << "BoundaryStorage<T>::computeSparseIndices(): Mid A!\n";
-
 	// Copy data from CPU to GPU
 	*_index_sparse_in_gamma = index_sparse_in_gamma;
 	*_index_sparse_out_gamma = index_sparse_out_gamma;
@@ -349,8 +329,6 @@ void BoundaryStorage<T>::computeSparseIndices( const int numEnergies, const int 
 
 	int *coord_gamma_ptr = coord_bnd_intersect_gamma.getDataPointer();
 	int *coord_gammabar_ptr = coord_bnd_intersect_gammabar.getDataPointer();
-
-//	std::cout << "BoundaryStorage<T>::computeSparseIndices(): Mid B!\n";
 
 	for ( a=0; a<numAngles; ++a )
 	{

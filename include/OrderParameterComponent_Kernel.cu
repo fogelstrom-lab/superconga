@@ -17,12 +17,6 @@ struct Basis_S
 template <typename T>
 struct Basis_D
 {
-	/*__host__ __device__ static cplx<T> compute( const T total_angle )
-	{
-		return cplx<T>( sqrt((T)2.0) * cos( (T)2.0*( total_angle ) ),
-						(T)0.0 );
-	}*/
-
 	__host__ __device__ static cplx<T> compute( const T total_angle )
 	{
 		return cplx<T>( sqrt((T)2.0) * cos( (T)2.0*( total_angle ) ),
@@ -63,24 +57,4 @@ __global__ void computeMomentumDependence_kernel( T* target_re, T* target_im, T*
 		target_im[idx] = tmp.y;
 	}
 }
-
-
-
-/*template<typename T>
-__global__ void setGrains_kernel( T* data, const T orientation, const int Nx, const int Ny )
-{
-	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-	
-	const int idx = ty * Nx + tx;
-
-	if ( tx < Nx && ty < Ny )
-	{
-		if ( tx < Nx/2 )
-			data[idx] = (T)0.0;
-		else
-			data[idx] = orientation;
-	}
-}*/
-
 #endif

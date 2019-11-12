@@ -9,8 +9,6 @@ double Initial<T>::computeDeltaBulk( const double T_Tc, const double deltaConver
 	// Delta, initial guess
 	double delta = 1.76 * sqrt(1.0-T_Tc);
 
-//	std::cout << "Delta initial guess = " << delta << "\n";
-
 	int isDeltaConverged = 0;
 	double matsubaraSum, eps, g, deltaDiff;
 	
@@ -63,7 +61,6 @@ void Initial<T>::constant( OrderParameterComponent<T>* deltaComponent, const T r
 
 
 template <typename T>
-//template <typename T2>
 void Initial<T>::grid( OrderParameterComponent<T>* deltaComponent, const GridGPU& grid )
 {
 	GridGPU tmp = grid;

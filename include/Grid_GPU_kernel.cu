@@ -68,9 +68,6 @@ __global__ void complexPhase_kernel( const T* data_src_re, const T* data_src_im,
 	
 	if ( tx < Nx && ty < Ny )
 	{
-		// Grid index
-		//const int idx = ty * Nx + tx;
-	
 		x = data_src_re[idx_src];
 		y = data_src_im[idx_src];
 				
@@ -151,7 +148,6 @@ __global__ void complexPhaseGradient_kernel( const T* data_src_re, const T* data
 				g2 = data_src_re[idx_x2];
 
 				dPhase_dx = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
-				//dPhase_dx = f1;
 
 				// Gradient in y
 				f0 = data_src_im[idx_y0];
@@ -161,7 +157,6 @@ __global__ void complexPhaseGradient_kernel( const T* data_src_re, const T* data
 				g2 = data_src_re[idx_y2];
 
 				dPhase_dy = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
-				//dPhase_dy = g1;
 			}
 		}
 
@@ -343,7 +338,6 @@ __global__ void insertRotatedGrid_kernel(
 		const T Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
 	
 		// Bilinear interpolation
-		//
 		const int X_int = Xr;
 		const int Y_int = Yr;
 	
@@ -400,7 +394,6 @@ __global__ void insertRotatedGridAdditive_kernel(
 		const T Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
 	
 		// Bilinear interpolation
-		//
 		const int X_int = Xr;
 		const int Y_int = Yr;
 	

@@ -78,7 +78,6 @@ typename Grid<T>::GPU ComputeProperty<T>::computeSFMomentum(
 	const int N = param->getGridResolutionBase();
 	const T h = param->getGridElementSize();
 	const T Phi = param->getMagneticFieldStrength();
-//	const T B = Phi / geom->area();
 	
 	GridGPU* delta_grid = delta->getOrderParameterField();
 

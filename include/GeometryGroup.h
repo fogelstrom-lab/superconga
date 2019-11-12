@@ -11,7 +11,6 @@
 #include <cplx.h>
 #include <Parameters.h>
 #include <Grid.h>
-//#include <IntegrationIterator.h>
 #include <GeometryComponent.h>
 
 template <typename T>

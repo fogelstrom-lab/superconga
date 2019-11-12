@@ -1,10 +1,6 @@
 #ifndef _RICCATISOLVERCONFINED_H
 #define _RICCATISOLVERCONFINED_H
 
-//#include "util/csecond.c"
-//#include <Parameters.h>
-//#include <Grid.h>
-//#include "BoundaryStorage.h"
 #include <RiccatiSolver.h>
 
 template <typename T, template <typename> class GAMMA, template <typename> class POTENTIAL>

@@ -3,7 +3,6 @@
 
 #include <string>
 
-//#include "GridData.h"
 template<typename,typename> class GridData;
 
 namespace v1
@@ -14,8 +13,6 @@ class Parameters
 public:
 			Parameters() : _version(1), _energies(0) {}
 			~Parameters() { if ( _energies && _isValid ) delete _energies; }
-
-//			Parameters( int N_grid_delta, T gridRadius, int angularResolution, int numFrequencies );
 	
 			Parameters<T>& operator=( const Parameters<T>& right );
 

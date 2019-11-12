@@ -67,7 +67,6 @@ public:
 
 	// Compute
 	int 			increaseIterationCount() { _numIter++; return _numIter; }
-//	void			setIntegrationDirection( int dir ) { _direction = dir; }
 
 
 	// Debug
@@ -82,21 +81,6 @@ private:
 	GridGPU *		_debug_store_grid;
 
 	// Energy iterators
-
-	// This iterator loops over all matsubara frequencies when computing gamma
-	// functions in parallel, which are summed up to form the greens functions.
-	// Used when the storage for gammas needs to be reduced.
-	// Has no effect on boundary storage.
-//	ParameterIterator<int>	_energyMatsubara_iter;
-	
-	// This iterator divides the full energy spectrum (array) into several partial
-	// blocks. Each partial block is computed until convergence is reached.
-	// Used for large sweeps for LDOS, when there is not enough memory to hold
-	// all energies in memory at once.
-	// Affects boundary storage and gamma storage. Can not be used with matsubara
-	// summation.
-//	ParameterIterator<int>	_energyBlock_iter;
-
 	GridGPU*				_energies;
 	ParameterIterator<int>*	_energy_iter;
 

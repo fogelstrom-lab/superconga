@@ -28,8 +28,6 @@ public:
 			Context();
 			~Context();
 
-			//Context( const Context<T>& other );
-
 	// Setters
 	void					set( Parameters<T>* param ) { _param = param; }
 	void					set( GeometryGroup<T>* geom ) { _geom = geom; }
@@ -37,15 +35,11 @@ public:
 	void					set( RiccatiSolver<T>* solver ) { _solver = solver; }
 	void					set( IntegrationIterator<T>* iter ) { _iter = iter; }
 	void					set( GradientAccelerator<T>* acc ) { _acc = acc; }
-//	void					set( CoherenceFunctions<T>* cf ) { _cf = cf; }
 	int						add( ComputeOrderParameter<T>* compute ) { _compute_delta = compute; return add(static_cast<ComputeProperty<T>*>(compute)); }
 	int						add( ComputeCurrent<T>* compute ) { _compute_current = compute; return add(static_cast<ComputeProperty<T>*>(compute)); }
 	int						add( ComputeCurrentDensity<T>* compute ) { _compute_current_density = compute; return add(static_cast<ComputeProperty<T>*>(compute)); }
 	int						add( ComputeLDOS<T>* compute ) { _compute_ldos = compute; return add(static_cast<ComputeProperty<T>*>(compute)); }
 	int						add( ComputeProperty<T>* compute );
-
-	// Creators
-//	Parameters<T>* createParameters
 
 	// Functions
 	int							initialize( int numEnergiesPerBlock = -1 );
@@ -58,7 +52,6 @@ public:
 	OrderParameterComponent<T>*	getOrderParameterComponent( int idx ) const { return _delta->getOrderParameterComponent(idx); }
 	RiccatiSolver<T>*			getRiccatiSolver() const { return _solver; }
 	IntegrationIterator<T>*		getIntegrationIterator() const { return _iter; }
-//	CoherenceFunctions<T>*		getCoherenceFunctions() const { return _cf; }
 	GradientAccelerator<T>*		getGradientAccelerator() const { return _acc; }
 
 	int 						getNumComputeObjects() const { return _computeObjectList.size(); }
@@ -84,7 +77,6 @@ private:
 	OrderParameter<T>*		_delta;
 	RiccatiSolver<T>*		_solver;
 	IntegrationIterator<T>*	_iter;
-//	CoherenceFunctions<T>*	_cf;
 	GradientAccelerator<T>* _acc;
 
 	std::vector<ComputeProperty<T>*> _computeObjectList;
@@ -97,8 +89,6 @@ private:
 	ComputeCurrent<T>*			_compute_current;
 	ComputeCurrentDensity<T>*	_compute_current_density;
 	ComputeLDOS<T>*				_compute_ldos;
-//	ComputeFreeEnergy<T>*		_compute_free_energy;
-
 };
 
 #endif

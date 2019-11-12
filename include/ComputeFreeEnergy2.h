@@ -46,9 +46,6 @@ public:
 	// Compute physical property from greens function.
 	virtual void			computePropertyFromGreens();
 	
-	// Compute residual
-//	virtual T				computeResidual( const ComputeProperty<T> * other ) const;
-	
 private:
 
 	// Computed current will be stored here at end of IntegrationIterator::compute() function.

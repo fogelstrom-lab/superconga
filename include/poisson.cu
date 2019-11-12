@@ -74,9 +74,6 @@ __global__ void poisson_tridiag( T* A, const T* b, const char* geom, const int N
 			s++;
 	}
 
-//	for (int j=2; j<Nx-2; ++j)
-//		A[j*Nx+x] += (T)(j-1)/(T)j * A[(j-1)*Nx+x];
-
 	// GE backward
 	s--;
 	for (int y=Nx-2; y>=1; --y)
@@ -101,15 +98,6 @@ __global__ void poisson_tridiag( T* A, const T* b, const char* geom, const int N
 			}
 		}
 	}
-
-//	for (int j=Nx-2; j>=2; --j)
-//	{
-//		A[j*Nx+x] *= (T)j/(T)(j+1);
-//		A[(j-1)*Nx+x] += A[j*Nx+x];
-//	}
-
-//	// Compute remaining element
-//	A[Nx+x] *= (T)0.5;
 }
 
 
@@ -197,7 +185,6 @@ __global__ void poisson_resample(
 
 
 template <typename T>
-//void solve_poisson_tridiag( Grid<T>::GPU* sol, Grid<T>::GPU* rhs, const T h, const T c, const T bc )
 void solve_poisson_tridiag(
 	GridData<T,thrust::device_vector<T> >* sol,
 	GridData<T,thrust::device_vector<T> >* rhs,

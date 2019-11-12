@@ -65,7 +65,6 @@ int ComputeOrderParameter<T>::initialize()
 template <typename T>
 IntegrationIterator<T>* ComputeOrderParameter<T>::createIntegrationIterator( int numEnergiesPerBlock )
 {
-	//return new IntegrationIteratorMatsubara<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 	return new IntegrationIteratorOzaki<T>( ContextModule<T>::getContext(), numEnergiesPerBlock );
 }
 
@@ -160,18 +159,12 @@ void ComputeOrderParameter<T>::computePropertyFromGreens()
 		int Nc = _delta->getNumOrderParameterComponents();
 		int numEnergies = param->getNumFrequencies();
 
-		//GridCPU energies_cpu = *(ContextModule<T>::getIntegrationIterator()->getEnergies());
-		//GridCPU residues_cpu = *(ContextModule<T>::getIntegrationIterator()->getResidues());
-		
 		for ( int i=0; i<Nc; ++i )
 		{
 			// Compute new delta from anomalous greens function
 			OrderParameterComponent<T> *component = _delta->getOrderParameterComponent(i);
 			
 			component->computeCouplingConstant();
-
-			//component->computeCouplingConstant( energies_cpu.getDataPointer( 0, Type::imag ),
-			//									residues_cpu.getDataPointer( 0, Type::real ) );
 
 			*(component->getOrderParameterField()) *= 1.0/(T)Na;	
 		}
@@ -187,17 +180,6 @@ void ComputeOrderParameter<T>::computePropertyFromGreens()
 
 		// Update main order parameter
 		*deltaOld = *_delta;
-
-		//T a = 1.0;
-		/*for( int i=0; i<Nc; ++i )
-		{
-			GridGPU* newField = _delta->getOrderParameterComponent(i)->getOrderParameterField();
-			GridGPU* oldField = deltaOld->getOrderParameterComponent(i)->getOrderParameterField();
-
-			*(oldField) *= (1.0-a);
-			*(newField) *= a;
-			*(oldField) += *(newField);
-		}*/
 
 		// Copy results to grid with one field per order parameter component
 		for ( int i=0; i<Nc; ++i )

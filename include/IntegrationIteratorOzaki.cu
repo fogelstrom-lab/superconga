@@ -112,8 +112,6 @@ void IntegrationIteratorOzaki<T>::initEnergies()
 	T *ozakiEnergies_re = ozakiEnergies_cpu->getDataPointer(0,Type::real);
 	T *ozakiEnergies_im = ozakiEnergies_cpu->getDataPointer(0,Type::imag);
 
-	//thrust::host_vector<T> ozakiPoles(numEnergies, 0.0);
-	//thrust::host_vector<T> ozakiResidues(numEnergies, 0.0);
 	GridCPU* ozakiPoles = new GridCPU(numEnergies, 1, 1, Type::real);
 	GridCPU* ozakiResidues = new GridCPU(numEnergies, 1, 1, Type::real);
 
@@ -127,7 +125,7 @@ void IntegrationIteratorOzaki<T>::initEnergies()
 	for ( int i=0; i<numEnergies; ++i )
 	{
 		ozakiEnergies_re[i] = 0.0;
-		ozakiEnergies_im[i] = ozakiPoles_ptr[i] * T_Tc;//(M_PI*T_Tc) * (2.0*i + 1.0);
+		ozakiEnergies_im[i] = ozakiPoles_ptr[i] * T_Tc;
 
 	}
 
@@ -138,24 +136,6 @@ void IntegrationIteratorOzaki<T>::initEnergies()
 
 	IntegrationIterator<T>::setEnergies( energies );
 	IntegrationIterator<T>::setResidues( residues );
-
-	/*const char* saveFile = (char*) "/home/patric/programming/c++/ozaki/verify/poles.dat";
-	// Truncate data file and add header
-	{
-		stringstream ss;
-		ss << "# n pole residue";
-		appendLineToTextFile( saveFile, ss, ios_base::trunc );
-	}
-	// Write poles, residues and energies to file
-	for( int i = 0; i < numEnergies; ++i )
-	{
-		stringstream ss;
-		ss << (i+1) << " ";
-		ss.precision(15);
-		ss << ozakiPoles_ptr[i] << " ";
-		ss << ozakiResidues_ptr[i];
-		appendLineToTextFile( saveFile, ss );
-	}*/
 }
 
 

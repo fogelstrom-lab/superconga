@@ -165,7 +165,6 @@ __global__ void maskNormals_Kernel(
 
 		// Store computed data
 		dist_p[idx] *= mult;
-//		dist_p[idx] = T(int(dom_p[idx]));
 		normX_p[idx] *= mult;
 		normY_p[idx] *= mult;
 	}

@@ -23,7 +23,6 @@ GeometryGroup<T>::GeometryGroup( const GeometryGroup<T>& other ) :
 
 	if ( Nc > 0 )
 	{
-		//_geomComponentList = new GeometryComponent<T>*[_numGeomComponents];
 		for ( int i=0; i<Nc; ++i )
 		{
 			_geomComponentList.push_back( other._geomComponentList[i]->clone() );
@@ -112,7 +111,6 @@ int GeometryGroup<T>::initialize()
 template <typename T>
 void GeometryGroup<T>::setGeomOpMatrix()
 {
-	//std::cout << "GeometryGroup<T>::setGeomOpMatrix()\n";
 	char op_add[16] 	= {	0,1,2,3,
 							1,1,1,1,
 							2,1,2,1,
@@ -263,14 +261,13 @@ void GeometryGroup<T>::geomOpAdd( GeometryComponent<T> * newGeom )
 template <typename T>
 void GeometryGroup<T>::geomOpRemove( GeometryComponent<T>* newGeom )
 {
-//	geomOp( newGeom, _geomOpRemove );
 	int Nx, Ny;
 	getGridDimensions( Nx, Ny );
 
 	dim3 bpg, tpb;
 	_domainLabels->getKernelDimensions(bpg,tpb);
 
-	Grid<char>::GPU* domResult = _domainLabels;//getDomainLabelsGrid();
+	Grid<char>::GPU* domResult = _domainLabels;
 
 	Grid<char>::GPU* domTmp(0);
 	Grid<char>::GPU::initializeGrid( domTmp, domResult );
@@ -346,7 +343,6 @@ T GeometryGroup<T>::area( int discrete )
 		h = 1.0;
 		
 	return ((T)area + (T)border * 1.0) * h*h;
-//	return ((T)area) * h*h;
 }
 
 
@@ -355,9 +351,6 @@ template <typename T>
 cplx<T> GeometryGroup<T>::fieldAverage( GridGPU* data, const int field )
 {
 	create(0.0);
-	
-//	_domainLabels->copyDataToCPU();
-//	data->copyDataToCPU();
 
 	typename Vector<T>::CPU vec_cpu = *(_domainLabels->getVector());
 	typename Grid<T>::CPU data_cpu = *data;

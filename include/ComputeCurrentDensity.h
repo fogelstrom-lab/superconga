@@ -42,9 +42,6 @@ public:
 
 	// Compute physical property from greens function.
 	virtual void			computePropertyFromGreens();
-	
-	// Compute residual
-//	virtual T				computeResidual( const ComputeProperty<T> * other ) const;
 
 	GridGPU*				getResult_interval( int field=0 ) { if (field==0) return _lcurrent_x; else return _lcurrent_y; }
 

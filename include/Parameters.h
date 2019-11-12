@@ -9,7 +9,6 @@
 template<typename,typename> class GridData;
 
 #include <Parameters_old.h>
-//#include <Parameters_old.cu>
 
 template <typename T>
 class Parameters : public ContextModule<T>
@@ -37,7 +36,6 @@ public:
 	// Getters
 	int		getGridResolutionBase() const			{ return _N_grid_base; }
 	int		getGridResolutionCoherence() const		{ return _N_grid_coherence; }
-//	int		getGridResolutionBoundary() const		{ return _N_grid_boundary; }
 	int		getGridResolutionDeltaRotated() const	{ return _N_grid_coherence; }
 
 	T		getGridWidth() const				{ return _gridWidth; }
@@ -75,7 +73,6 @@ public:
 	void	setTemperature( T T_Tc );
 	void	setMagneticFieldStrength( T magneticField );
 	
-//	void	setSignEnergy( int sign ) { _signEnergy = sign; }
 	void	setEnergyRange( T e_min, T e_max, int numEnergies, T smearingFactor = 0.01 );
 	void	setNumEnergies( int numEnergies ) { _numEnergies = numEnergies; }
 	

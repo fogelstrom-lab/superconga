@@ -94,8 +94,6 @@ __global__ void gamma_trajectories(
 	const int e = threadIdx.x;
 	const int a = blockIdx.y;
 
-	//const T theta = 2.0*M_PI * (T)a / (T)Na;
-
 	const int idx_a = a*Ne + e;
 	const int idx_b = ((a+Na/2)%Na)*Ne + e;
 
@@ -167,12 +165,6 @@ __global__ void gamma_trajectories_debug(
 
 	Gamma::General<T>::Gamma::computeGamma_local(D, ga0, en, h, 0, ga);
 	Gamma::General<T>::Gammabar::computeGamma_local(D, gb0, en, h, 0, gb);
-
-//	ga_re[idx_a] = ga.x;
-//	ga_im[idx_a] = ga.y;
-
-//	gb_re[idx_b] = gb.x;
-//	gb_im[idx_b] = gb.y;
 
 	ga_re[idx_a] = D.x;
 	ga_im[idx_a] = D.y;
@@ -263,9 +255,6 @@ void IntegrationIteratorMatsubaraDisc<T>::initEnergies()
 		energies_im[i] = (M_PI*T_Tc) * (2.0*i + 1.0);
 	}
 
-//	energies->copyDataToGPU();
-//	energies->printDimensions();
-//	energies->printAllData();
 	GridGPU* energies = new GridGPU;
 	*energies = *energies_cpu;
 
@@ -333,8 +322,6 @@ void IntegrationIteratorMatsubaraDisc<T>::compute()
 
 	const int Ne = energies->dimX();
 
-	//RiccatiSolver<T>*	riccati = ctx->getRiccatiSolver();
-	//GeometryGroup<T>*	geom = ctx->getGeometry();
 	OrderParameter<T>*	delta = ctx->getOrderParameter();
 	GridGPU* delta_grid = delta->getOrderParameterComponentField(0);
 
@@ -384,18 +371,7 @@ void IntegrationIteratorMatsubaraDisc<T>::compute()
 
 	it = it%(Nx*Nx);
 
-	//int y = it/Nx;
-	//int x = it - y*Nx;
-
-//	int x = G_x;
-//	int y = G_y;
-
-	//y = (y*10)%Nx;
-
-//	std::cout << "x,y = " << x << "," << y << "\n";
-
 	// Iterate over real space lattice points
-	//
 	for ( int y=0; y<Nx; ++y )
 	{
 		std::cout << "Row " << y << "\n";
@@ -413,38 +389,6 @@ void IntegrationIteratorMatsubaraDisc<T>::compute()
 				gen_trajectories<<<bpg,tpb>>>(
 					traj_x.getDataPointer(), traj_y.getDataPointer(), cos2Theta.getDataPointer(),
 					px, py, h, R2, Na, Ns);
-
-				/*
-				tx = traj_x;
-				ty = traj_y;
-
-				for (int ta=0; ta<Na; ++ta)
-				{
-					T* txp = tx.getDataPointer(ta);
-					T* typ = ty.getDataPointer(ta);
-
-					for (int t=0; t<Ns; ++t)
-					{
-						T xx = txp[t];
-						T yy = typ[t];
-
-						int xxx = xx/h + (Nx-1)*0.5;
-						int yyy = yy/h + (Nx-1)*0.5;
-
-						G_re_ptr[yyy*Nx+xxx] = 1.0;
-						G_im_ptr[yyy*Nx+xxx] = 1.0;
-					}
-				}
-
-				gamma_trajectories_debug<<<bpg_g,tpb_g>>>(
- 					ga.getDataPointer(0,Type::real), ga.getDataPointer(0,Type::imag),
- 					gb.getDataPointer(0,Type::real), gb.getDataPointer(0,Type::imag),
- 					traj_x.getDataPointer(), traj_y.getDataPointer(),
- 					delta_grid->getDataPointer(0,Type::real), delta_grid->getDataPointer(0,Type::imag),
- 					energies->getDataPointer(0,Type::imag),
-					h, Nx, Na, Ne, Ns  );
-*/
-
 
  				// Compute gammas along trajectories
  				gamma_trajectories<<<bpg_g,tpb_g>>>(
@@ -477,12 +421,6 @@ void IntegrationIteratorMatsubaraDisc<T>::compute()
 
  				G_re_ptr[idx] = G_re;
  				G_im_ptr[idx] = G_im;
-/*
- 				GridCPU tmp = ga;
-
- 				G_re_ptr[idx] = G_re;
- 				G_im_ptr[idx] = G_im;				
-*/
 			}
 		}
 	}
@@ -491,8 +429,6 @@ void IntegrationIteratorMatsubaraDisc<T>::compute()
 	*s_wave_grid *= 2.1;
 
 	G_sum.write("G_sum.grd");
-
-//	*deltaComp->getResult() = *s_wave_grid;
 
 	// Compute updated order parameter (components)
 	// Add coupling constant and angle integration normalization factor here

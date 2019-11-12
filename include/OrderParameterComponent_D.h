@@ -1,12 +1,9 @@
 #ifndef _ORDERPARAMETERCOMPONENT_D_H
 #define _ORDERPARAMETERCOMPONENT_D_H
 
-//#include "util/csecond.c"
 #include <Parameters.h>
 #include <Grid.h>
 #include <OrderParameterComponent.h>
-
-//#include "OrderParameterComponent_Kernel.cu"
 
 template <typename T>
 class OrderParameterComponent_D : public OrderParameterComponent<T>
@@ -32,16 +29,6 @@ public:
 	
 	void			setLatticeOrientation( T angle ) { _latticeOrientation = angle; }
 	T				getLatticeOrientation() const { return _latticeOrientation; }
-	/* Added:
-	virtual void	setLatticeOrientation( T angle ) { _latticeOrientation = angle; }
-	virtual T		getLatticeOrientation() const { return _latticeOrientation; }*/
-
-	/*GridGPU*		getLatticeOrientationGrid() const { return _latticeOrientationGrid; }
-	GridGPU*		createLatticeOrientationGrid();
-	
-	void			setGrain_half( const T orientation );*/
-
-//	virtual int 	isSinglet() const {return 1;}
 
 private:
 	friend void		swap( OrderParameterComponent_D<T>& A, OrderParameterComponent_D<T> B )

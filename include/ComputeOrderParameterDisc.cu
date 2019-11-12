@@ -2,13 +2,13 @@
 
 template <typename T>
 ComputeOrderParameterDisc<T>::ComputeOrderParameterDisc()
-	: ComputeProperty<T>(), _delta(0), _deltaTmp(0), _delta_fields(0)//, _greensAtomic(0)
+	: ComputeProperty<T>(), _delta(0), _deltaTmp(0), _delta_fields(0)
 {}
 
 
 template <typename T>
 ComputeOrderParameterDisc<T>::ComputeOrderParameterDisc( Context<T>* ctx )
-	: ComputeProperty<T>(ctx), _delta(0), _deltaTmp(0), _delta_fields(0)//, _greensAtomic(0)
+	: ComputeProperty<T>(ctx), _delta(0), _deltaTmp(0), _delta_fields(0)
 {
 	ctx->add(this);
 }
@@ -21,7 +21,6 @@ ComputeOrderParameterDisc<T>::~ComputeOrderParameterDisc()
 	if ( _delta ) delete _delta;
 	if ( _deltaTmp ) delete _deltaTmp;
 	if ( _delta_fields ) delete _delta_fields;
-//	if ( _greensAtomic ) delete _greensAtomic;
 }
 
 
@@ -43,7 +42,6 @@ int ComputeOrderParameterDisc<T>::initialize()
 	GridGPU::initializeGrid( _deltaTmp, N0, N0 );
 	GridGPU::initializeGrid( _delta_fields, N0, N0, Nc, Type::complex );
 
-//	GridData<float>::initializeGrid( &_greensAtomic, N1, N1 );
 	ComputeProperty<T>::initGreensAngle(N1);
 
 	return 0;
@@ -82,67 +80,6 @@ void ComputeOrderParameterDisc<T>::initializeIteration( int numFields )
 			_delta->getOrderParameterComponent(i)->getOrderParameterField()->setZero();
 	}
 }
-
-/*
-template <typename T>
-void ComputeOrderParameterDisc<T>::initializeGreensAngle()
-{
-	if ( ComputeProperty<T>::doCompute() )
-		ComputeProperty<T>::initializeGreensAngle();	// Sets to zero
-}
-
-
-template <typename T>
-void ComputeOrderParameterDisc<T>::computeGreensAngle(
-	ParameterIterator<int> * iter, GridGPU * gamma, GridGPU * gammabar, GeometryGroup<T> * geom )
-{
-	typedef ComputeProperty<T> C;
-
-	if ( ComputeProperty<T>::doCompute() )
-		GreensFunctionStatic<T,GreensAnomalous>::computeGreensSumEnergy(
-			C::getGreensCurrentAngle(), iter, gamma, gammabar, geom );
-
-//	GreensFunctionStatic<T,GreensAnomalous>::computeGreensSumEnergyReduction(
-//		_greensAtomic, iter, gamma, gammabar, geom );
-}
-
-
-template <typename T>
-void ComputeOrderParameterDisc<T>::integrateGreensAngle( GeometryGroup<T> * geom, const T angle )
-{
-	typedef ComputeProperty<T> C;
-
-	if ( ComputeProperty<T>::doCompute() )
-	{
-		GridGPU * greens = C::getGreensCurrentAngle();
-
-		// Transfer float griddata to T griddata
-	//	dim3 bpg, tpb;
-	//	_greensAtomic->getKernelDimensions(bpg,tpb);
-	//	
-	//	transfer_Kernel<<<bpg,tpb>>>( _greensAtomic->getGridDimX(),
-	//							_greensAtomic->getDataPointerGPU(0,Type::real),
-	//							_greensAtomic->getDataPointerGPU(0,Type::imag),
-	//							greens->getDataPointerGPU(0,Type::real),				
-	//							greens->getDataPointerGPU(0,Type::imag) );
-
-		for ( int i=0; i<_delta->getNumOrderParameterComponents(); ++i )
-		{
-			_deltaTmp->setZero();
-			
-			// Compensate for numerical diffusion from interpolation during rotation 
-			geom->extendValuesAtBoundary( greens, 1 );
-
-			// Rotate back to reference frame and add momentum dependence
-			_deltaTmp->insertRotatedGrid( greens, angle );
-			_delta->getOrderParameterComponent(i)->computeMomentumDependence( _deltaTmp, angle );
-
-			// Add angle contribution (angle integration)
-			*( _delta->getOrderParameterComponent(i)->getOrderParameterField() ) += *_deltaTmp;
-		}
-	}
-}
-*/
 
 template <typename T>
 void ComputeOrderParameterDisc<T>::computePropertyFromGreens()
@@ -194,10 +131,6 @@ T ComputeOrderParameterDisc<T>::computeResidual( OrderParameter<T>* old ) const
 		// Compute residual for each component
 		GridGPU* deltaNew = _delta->getOrderParameterComponent(i)->getOrderParameterField();
 		GridGPU* deltaOld = old->getOrderParameterComponent(i)->getOrderParameterField();
-
-		//std::cout << "cr: " << deltaNew->dimX() << ", " << deltaOld->dimX();
-		//GridGPU::printDimensions( *deltaNew );
-		//GridGPU::printDimensions( *deltaOld );
 
 		residual += GridGPU::differenceMagnitude( *deltaOld, *deltaNew ) / sqrt(numDelta);		
 	}

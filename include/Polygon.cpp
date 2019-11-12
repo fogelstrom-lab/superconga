@@ -91,7 +91,6 @@ void Polygon<T>::setVerticesRadial( const int numVertices, T radius, T angle, T 
 template <typename T>
 void Polygon<T>::transformPhysicalToNormalized( const int numVertices, T* px, T* py, const T w )
 {
-	//const T w = param.getGridWidth();
 	const T wn = 0.35;
 
 	for (int i=0; i<numVertices; ++i)

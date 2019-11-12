@@ -114,9 +114,6 @@ _HD_ void Gamma::General<T>::Gammabar::computeGamma_local( const cplx<T>& D, con
 template <typename T>
 _HD_ void Gamma::Matsubara<T>::Gamma::computeGamma_local( const cplx<T>& D, const cplx<T>& g0, const cplx<T>& e, const T h, const int y, cplx<T>& g )
 {
-	//cplx<T> D(D_re,D_im);
-	//cplx<T> g0(g0_re, g0_im);
-	//cplx<T> e(e_re, e_im);
 	cplx<T> i((T)0.0, (T)1.0);
 
 	cplx<T> g01, g1, C, Cexp, iTwoOm;
