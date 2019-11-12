@@ -1,3 +1,7 @@
+#ifndef _VECTORPOTENTIAL_KERNEL_H
+#define _VECTORPOTENTIAL_KERNEL_H
+
+#include <cuda.h>
 
 template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShift_external_kernel( T* eShift, const T system_angle, const T B, const int N, const T h )
@@ -26,4 +30,4 @@ __global__ void computeEnergyShift_internal_kernel( T* eShift, const T* jx, cons
 	if ( x < N && y < N )
 		eShift[idx] += T(M_PI) * (cos(system_angle)*jx[idx] + sin(system_angle)*jy[idx]);
 }
-
+#endif

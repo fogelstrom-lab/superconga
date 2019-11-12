@@ -2,8 +2,11 @@
 // Functions to compute local value of Gammas
 //////////////////////////////////////////////
 
-#ifndef _LOCALGAMMA_
-#define _LOCALGAMMA_
+#ifndef _LOCALGAMMA_H
+#define _LOCALGAMMA_H
+
+#include <cplx.h>
+#include <cuda.h>
 
 #ifdef __CUDACC__
 #ifndef _HD_

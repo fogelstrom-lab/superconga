@@ -1,3 +1,6 @@
+#ifndef _GRIDFUNCTORS_H
+#define _GRIDFUNCTORS_H
+
 #include <math.h>
 
 #ifdef __CUDACC__
@@ -24,3 +27,4 @@ struct absVal
 };
 
 }
+#endif

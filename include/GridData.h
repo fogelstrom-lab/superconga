@@ -1,12 +1,346 @@
-#include "Grid.h"
-#include "Grid_functors.h"
-#include "Grid_CPU.cpp"
-#include "Grid_file.cpp"
+#ifndef _GRIDDATA_H
+#define _GRIDDATA_H
 
 #ifdef __CUDACC__
-#include "Grid_GPU.cu"
+#define _DEV_ __host__ __device__
+#else
+#define _DEV_
 #endif
 
+#include <cmath>
+#include <Type.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+#include <thrust/functional.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/iterator/constant_iterator.h>
+#include <thrust/copy.h>
+#include <thrust/fill.h>
+#include <thrust/extrema.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+#include <cplx.h>
+#include <GridFunctors.h>
+#include <GridFunctions.h>
+//#include <Parameters.h>
+
+// Forward declarations. These can be used when we want to refer to another
+// class without including the .h file.  
+template<typename> class Parameters;
+
+// Diverging codepaths (CPU and GPU) are put in GridFunctions class, with template specialization telling them apart
+template <typename T, typename DEV>
+class GridData : public GridFunctions<T,DEV>
+{
+public:
+		GridData();
+		~GridData();
+			
+		// Copy constructor
+		GridData( const GridData& other );					// Copies entire object
+
+		// Allocates memory only, no field data values are set
+		GridData( const GridData& other, int numFields );	// Allocates with field dimensions from other, but number of fields as specified
+		GridData( int nx, int ny, int numFields = 1, Type::type representation = Type::complex );
+
+	// Operators
+	bool		operator==( const GridData& right ) const;
+	bool		operator!=( const GridData& right ) const;
+
+	GridData&	operator=( GridData right );
+	GridData&	operator=( const cplx<T> right );
+	GridData&	operator=( const T right );
+
+	// Try thrust::for_each instead of thrust::transform for better performance for operators?
+
+	// IMPORTANT NOTE on operators:
+	// GridData does NOT represent matrices. As such the operator* does NOT perform a matrix-matrix multiplication,
+	// but rather an element-element multiplication; for all elements in the array: c_i = a_i * b_i
+
+	void		operator+=( const GridData& right );
+	void		operator+=( const cplx<T> right );
+	void		operator+=( const T right );
+	void		operator-=( const GridData& right );
+	void		operator-=( const cplx<T> right );
+	void		operator-=( const T right );
+	void		operator*=( const GridData& right );
+	void		operator*=( const cplx<T> right );
+	void		operator*=( const T right );
+
+	GridData	operator+( GridData right ) const;
+	GridData	operator+( const cplx<T> right ) const;
+	GridData	operator+( const T right ) const;
+	GridData	operator-( GridData right ) const;
+	GridData	operator-( const cplx<T> right ) const;
+	GridData	operator-( const T right ) const;
+	GridData	operator*( GridData right ) const;
+	GridData	operator*( const cplx<T> right ) const;
+	GridData	operator*( const T right ) const;
+
+	GridData	operator-() const;
+	
+	// Returns a copy of the specified field (somewhat dubious use of operator[])
+	GridData	operator[]( const int field ) const;
+
+	// operator() is identical to getDataPointer()
+	T*			operator()( const int field = 0, Type::type representation = Type::real ) const {
+					return thrust::raw_pointer_cast(_data->data()) + getFieldComponentOffset(field,representation);}	
+
+	// Type conversion operator
+	template <typename T2, typename DEV2>
+	operator GridData<T2,DEV2>();
+
+	template <typename T2>
+	operator GridData<T2,thrust::device_vector<T2> >();
+
+
+	//// Query functions ////
+
+	int			dimX() const { return _dimX; }
+	int			dimY() const { return _dimY; }
+	int			numFields() const { return _numFields; }
+	Type::type 	representation() const { return _representation; }
+
+	bool		isComplex() const { return _representation == Type::complex; }
+
+	DEV*		getVector() const { return _data; }
+	T*			getDataPointer( const int field = 0, Type::type representation = Type::real ) const {
+					return thrust::raw_pointer_cast(_data->data()) + getFieldComponentOffset(field,representation);}
+
+	//// Modifying basic functions ////
+
+	// Set elements of all or specified field(s) to scalar value.
+	void		setValue( const T val, Type::type representation = Type::complex, const int field = -1 );
+
+	// Set all elements to zero.
+	void		setZero();
+
+	// Copy raw data from p_data to this grid.
+	int			setData( const T* p_host_data, size_t numElements );
+
+	// In-place complex conjugation of field data.
+	GridData&	conjugate();
+
+	// In-place transponate of field data. (Not implemented for CPU!!!)
+	GridData&	transpose( const int field = -1 );
+
+	// In-place square root (Only per-element. Does NOT perform complex-valued square-root!)
+	GridData&	sqrt();
+
+
+	//// Non-modifying utility functions ////
+
+	// In all cases where the argument is of type GridData*, the object to which the pointer
+	// refers must be initialized and have the correct dimensions.
+
+	// Compute absolute value for grid (works for complex as well)
+	GridData	abs() const;
+
+	// Compute the complex magnitude squared
+	void		complexMagnitudeSq( GridData* result ) const;
+	GridData	complexMagnitudeSq() const;
+
+	// Compute complex phase of this (complex) grid
+	void		complexPhase( GridData* result ) const;
+	GridData	complexPhase() const;
+
+	// Compute complex phase gradient of this grid
+	void		complexPhaseGradient( GridData* result, const T h = 1.0 ) const;
+	GridData	complexPhaseGradient( const T h = 1.0 ) const;
+
+	// Compute the magnitude of this (real valued) vector field
+	void		fieldMagnitude( GridData* result ) const;
+	GridData	fieldMagnitude() const;
+
+	// Compute divergence of vector field (Not implemented for CPU!!!)
+	void 		div( GridData* result, const T h = 1.0 ) const;
+	GridData 	div( const T h = 1.0 ) const;
+
+	// Compute curl of vector field (Not implemented for CPU!!!)
+	// Only returns z-component, since x- and y-components will be zero for a 2d-field
+	void 		curl( GridData* result, const T h = 1.0 ) const;
+	GridData 	curl( const T h = 1.0 ) const;
+
+	// Compute laplacian (div(grad)) of field (Not implemented for CPU!!!)
+	void		del2( GridData* result, const T h = 1.0 ) const;
+	GridData 	del2( const T h = 1.0 ) const;
+
+	// Sum all field components.
+	void		sumFieldComponents( GridData* result ) const;
+	GridData	sumFieldComponents() const;
+
+	// Sum all elements of specified fields. Result returned (real) or put in reference variables (complex).
+	T			sumField( const int field = 0 ) const;							// Use for real valued
+	void		sumField( T& sum_re, T& sum_im, const int field = 0 ) const;	// Use for real or complex valued
+
+	// Sum all elements in a field, for all fields
+	GridData 	sumFields() const;
+
+	// Copy single field from this to target
+	void		copyFieldTo( GridData* target, int thisField, int otherField ) const;
+
+
+	//// Modifying utility functions ////
+
+	// Insert other grid into this. <x,y>_offset are offset in discrete elements from center.
+	// x_offset = y_offset = 0 results in a centered grid.
+	void		insertGrid(	const GridData* other, const int x_offset = 0, const int y_offset = 0 );
+
+	// Insert other grid into this, with applied rotation (to other grid).
+	void		insertRotatedGrid( const GridData* other, const T phi,
+					const int x_offset = 0, const int y_offset = 0, Type::type part = Type::complex );
+
+	// Add other grid to this, with applied rotation (to other grid).
+	void		insertRotatedGridAdditive( const GridData* grid_insert, const T phi, int field = -1,
+					const int x_offset = 0, const int y_offset = 0, Type::type part = Type::complex );
+
+	// Change resolution of grid, with linear interpolation of existing data.
+	void		resample( const int nx_new, const int ny_new );
+	void		resample( GridData*& target, const int nx_new, const int ny_new ) const;  //(CPU NOT IMPLEMENTED)
+
+
+	//// Helper query functions ////
+
+	// Returns the pointer offset (==number of data elements) to the specified field.
+	size_t		getFieldComponentOffset( int field, const Type::type representation = Type::real, Type::location pos = Type::start ) const {
+					const int complex = int(isComplex());
+					return _dimX * _dimY * (field * (1+complex) + int(representation==Type::imag && complex) + int(pos==Type::end)); }
+
+	// Returns the number of data elements in the entire array.
+	size_t		numElements() const { return numElementsField() * _numFields; }
+
+	// Returns the number of elements of one field.
+	size_t		numElementsField() const { return size_t(_dimX) * size_t(_dimY) * size_t(1+int(isComplex())); }
+
+
+	//// File I/O ////
+
+	int			read( const char* filename, Parameters<T>* param = 0 );
+	int			read( const char* filename, int num, Parameters<T>* param = 0 );
+
+	int			write( const char* filename, Parameters<T>* param = 0 );
+	int			write( const char* filename, int num, Parameters<T>* param = 0 );
+
+	int			readNumpyArray( const char* filename, int numFields = 1 );	// Can only read real valued data
+	int			writeNumpyArray( const char* filename, Type::type representation = Type::complex );
+
+	// Print data to terminal
+	void		print( int field, Type::type representation ) const;
+	void		print( int field ) const;
+	void		print() const;
+
+	void 		printDimensions() const;
+
+
+	//// Static functions ////
+	static int	readParameters( const char* filename, Parameters<T>* param );
+	static int	readParameters( const char* filename, int num, Parameters<T>* param );
+
+	// Safely initialize or delete GridData pointers, without copying values.
+	// *grid must point to properly initialized GridData, or == 0.
+	static int		initializeGrid( GridData*& grid, int Nx, int Ny, int numFields=1, Type::type representation = Type::complex );
+
+	template <typename T2, typename DEV2>
+	static int		initializeGrid( GridData<T,DEV>*& grid, const GridData<T2,DEV2>* other );
+
+	static void		deleteGrid( GridData*& grid );
+
+	// Returns True if A.dimX * A.dimY == B.dimX * B.dimY
+	static bool		dimEq( const GridData& A, const GridData& B );
+
+	// Used to compute residual
+	static T 		differenceMagnitude( const GridData& A, const GridData& B );
+
+// FUNCTIONS BELOW SHOULD NOT BE STATIC MEMBERS!! //////////
+	static void		minmax( const GridData& grid, T& minv, T& maxv, int field=0, Type::type part = Type::real );
+// TO HERE //////////////////////////////////////////////////////
+
+	static size_t	allocatedMemTotal() { return _allocatedMemTotal; }
+	static void		printAllocatedMemTotal() { std::cout << _allocatedMemTotal << std::endl; }
+
+	// GridFunctions is a class used to contain the code which is CPU or GPU specific.
+	// By declaring it a friend class it can access the private members of this class.
+	friend class GridFunctions<T,DEV>;
+
+
+	// Functors for complex valued multiplication
+	//
+
+	// Complex vector dot product
+	struct complexVectorProduct_functor
+	{
+		template <typename Tuple>
+		_DEV_ void operator()( Tuple vecs )
+		{
+			const T temp_re = thrust::get<0>(vecs);
+			const T temp_im = thrust::get<1>(vecs);
+			thrust::get<0>(vecs) = ( temp_re * thrust::get<2>(vecs) ) - ( temp_im * thrust::get<3>(vecs) );
+			thrust::get<1>(vecs) = ( temp_re * thrust::get<3>(vecs) ) + ( temp_im * thrust::get<2>(vecs) );
+		}
+	};
+
+
+	// Scale complex vector with complex scalar
+	struct scaleComplexVector_functor
+	{
+		const cplx<T> scalar;
+
+		scaleComplexVector_functor( const cplx<T> _scalar ) : scalar(_scalar) {}
+
+		template <typename Tuple>
+		_DEV_ void operator()( Tuple vec )
+		{
+			const T temp_re = thrust::get<0>(vec);
+			const T temp_im = thrust::get<1>(vec);
+
+			thrust::get<0>(vec) = ( temp_re * scalar.x ) - ( temp_im * scalar.y );
+			thrust::get<1>(vec) = ( temp_re * scalar.y ) + ( temp_im * scalar.x );
+		}
+	};
+
+
+	// Scale complex vector with complex scalar
+	struct addComplexScalar_functor
+	{
+		const cplx<T> scalar;
+
+		addComplexScalar_functor( const cplx<T> _scalar ) : scalar(_scalar) {}
+
+		template <typename Tuple>
+		_DEV_ void operator()( Tuple vec )
+		{
+
+			thrust::get<0>(vec) += scalar.x;
+			thrust::get<1>(vec) += scalar.y;
+		}
+	};	
+
+private:
+
+	// Specifies if GridData contains real (Type::real) or complex (Type::complex) valued data
+	Type::type	_representation;
+	
+	// Number of elements in x and y
+	int		_dimX;
+	int		_dimY;
+
+	// Number of fields
+	int		_numFields;
+	
+	// DEV can be thrust::host_vector<T> or thrust::device_vector<T>. Contains data array.
+	DEV*	_data;
+
+	// Total allocated memory for ALL instantiated Grid<T>::DEV objects
+	static size_t	_allocatedMemTotal;
+
+	// Swap function implemented according to the copy-and-swap c++ idiom (very useful!)
+	template <typename S, typename DEVS>
+	friend void swap( GridData<S,DEVS>& grid1, GridData<S,DEVS>& grid2 );
+};
 
 template <typename T, typename DEV>
 size_t GridData<T,DEV>::_allocatedMemTotal = 0;
@@ -691,7 +1025,7 @@ void GridData<T,DEV>::sumField( T& sum_re, T& sum_im, const int field ) const
 template <typename T, typename DEV>
 GridData<T,DEV> GridData<T,DEV>::sumFields() const
 {
-	typename Grid<T>::CPU result( numFields(), 1, 1, representation() );
+	GridData<T,DEV> result( numFields(), 1, 1, representation() );
 
 	T re_tmp, im_tmp, *re, *im;
 
@@ -916,3 +1250,459 @@ void GridData<T,DEV>::printDimensions() const
 	cout << "Nx = " << dimX() << ", Ny = " << dimY();
 	cout << ", Num fields = " << numFields() << ", Complex = " << int(isComplex()) << endl;	
 }
+
+
+
+/* ==================== FILE ====================*/
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::read( const char* filename, int num, Parameters<T>* param )
+{
+	char buf[256];
+	sprintf(buf,"%s.%d.grd",filename,num);
+
+	return read( buf, param );
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::write( const char* filename, int num, Parameters<T>* param )
+{
+	char buf[256];
+	sprintf(buf,"%s.%d.grd",filename,num);
+
+	return write( buf, param );
+}
+
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::read( const char* filename, Parameters<T>* param )
+{
+	using namespace std;
+	
+	// Data header structure: (all int datatype)
+	// size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
+	size_t numBytesHeader = 32 * sizeof(int);
+	size_t numBytesData_old = numElements() * sizeof(T);
+	size_t numBytesData;
+
+	Parameters<T> param_read;
+
+	int storeParameters, parametersVersion;
+
+	ifstream file( filename, ios::in | ios::binary );
+	
+	if ( file.is_open() )
+	{
+		int* header = new int[32];
+		
+		file.read( (char*)header, 32*sizeof(int) );
+		
+		int sizeOfInputDatatype = header[0];
+		
+		if ( sizeOfInputDatatype != sizeof(T) )
+		{
+			std::cout << "Error: datatype to be read is not the same as instantiated class\n";
+			file.close();
+			return 1;
+		}
+
+		int isComplex = header[1];
+		_dimX = header[2];
+		_dimY = header[3];
+		_numFields = header[5];
+
+		storeParameters = header[6];
+		parametersVersion = header[7];
+
+		if ( isComplex == 0 )
+			_representation = Type::real;
+		if ( isComplex == 1 )
+			_representation = Type::complex;
+			
+		numBytesData = numElements() * sizeof(T);
+
+		GridData<T,DEV>::_allocatedMemTotal -= numBytesData_old;
+		GridData<T,DEV>::_allocatedMemTotal += numBytesData;
+
+		// Read data to host memory
+		thrust::host_vector<T> data_tmp(numElements());
+		T* data_ptr = thrust::raw_pointer_cast( data_tmp.data() );
+
+		// Go past header
+		file.seekg( numBytesHeader );
+			
+		// Read parameters
+		param_read.setInvalid();
+	
+		if ( storeParameters == 1 )
+		{
+			param_read.read( file, parametersVersion );
+			param_read.setValid();
+		}
+
+		file.read( (char*)data_ptr, numBytesData );
+		
+		file.close();
+		std::cout << "Read: " << filename << "\n";
+		
+		if ( param )
+			*param = param_read;
+
+		if ( _data ) delete _data;
+		_data = new DEV(numElements());
+
+		*_data = data_tmp;
+		
+		return 0;
+	} else {
+		std::cout << "Could not open file: " << filename << "\n";
+		return 1;
+	}
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::write( const char* filename, Parameters<T>* param )
+{
+	using namespace std;
+	
+	// Data header structure: (all int datatype)
+	// size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
+	size_t numBytesHeader = 32 * sizeof(int);
+
+	size_t numBytesData, numBytesParameters;//, numBytesPerField;
+	numBytesData = numElements() * sizeof(T);
+	numBytesParameters = sizeof(Parameters<T>);
+
+	int storeParameters = 0, parametersVersion = 0;
+	if ( param != 0 )
+	{
+		storeParameters = 1;
+		parametersVersion = param->getVersion();
+	}
+
+	int isComplex_out = int(isComplex());
+
+	// Open file for writing
+	ofstream file( filename, ios::out | ios::binary | ios::trunc );
+	
+	if ( file.is_open() )
+	{
+		//copyDataToCPU();
+		thrust::host_vector<T> data_tmp = *_data;
+		T* data_ptr = thrust::raw_pointer_cast(data_tmp.data());
+		
+		int sizeOfDatatype = sizeof(T);
+		int _dimZ = 1;
+		// Write header info
+		file.write( (char*)(&sizeOfDatatype), sizeof(int) );
+		file.write( (char*)(&isComplex_out), sizeof(int) );
+		file.write( (char*)(&_dimX), sizeof(int) );
+		file.write( (char*)(&_dimY), sizeof(int) );
+		file.write( (char*)(&_dimZ), sizeof(int) ); // legacy stuff
+		file.write( (char*)(&_numFields), sizeof(int) );
+
+		file.write( (char*)(&storeParameters), sizeof(int) );
+		file.write( (char*)(&parametersVersion), sizeof(int) );
+		file.write( (char*)(&numBytesParameters), sizeof(int) );
+		
+		file.seekp( numBytesHeader );
+		
+		// Write parameters
+		if ( storeParameters )
+			file.write( (char*)param, numBytesParameters );
+
+		// Write grid data
+		file.write( (char*)data_ptr, numBytesData );
+		
+		file.close();
+		std::cout << "Wrote binary: " << filename << "\n";
+		return 0;
+	} else {
+		std::cout << "Could not open file: " << filename << "\n";
+		return 1;
+	}
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::readNumpyArray( const char* filename, int numFields )
+{
+	using namespace std;
+	
+	const int MAX_TOKENS_PER_LINE = 16384;
+
+	// create a file-reading object
+	ifstream fin;
+	fin.open( filename );
+
+	if ( !fin.good() )
+		return 1;
+  
+	// Determine grid dimensions (Nx)
+	int Nx, Ny, Nf;
+	
+	int n_delimit = 0, found = 0, found_last = 1;
+	
+	string line;
+	getline( fin, line );
+	
+	while ( line.find('#', 0) <= line.length() || line.length() == 0 )
+		getline( fin, line );
+		
+	while ( found != found_last )
+	{
+		found_last = found;	
+		found = line.find(' ', found_last+1);
+
+		if ( found >= line.length() )
+			break;
+
+		n_delimit++;
+	}
+
+	Nx = n_delimit;
+
+	// Determine grid dimensions (Ny,Nf)	
+	int lines_data = 0;
+
+	fin.clear();
+	fin.seekg(0);
+
+	while ( !fin.eof() )
+	{
+		getline( fin, line );
+		
+		if ( line.find('#',0) >= line.length() )
+		{
+			if ( (int)line[0] > 0 )
+				lines_data++;
+		}			
+	}
+
+	if ( numFields > 0 )
+	{
+		Ny = lines_data / numFields;
+		Nf = numFields;
+	}
+	else
+	{
+		Ny = 1;
+		Nf = lines_data;
+	}
+
+	// Create grid
+	size_t numBytesData_old = numElements() * sizeof(T);
+
+	_dimX = Nx;
+	_dimY = Ny;
+	_numFields = Nf;
+	_representation = Type::real;
+
+	thrust::host_vector<T> data_tmp( numElements() );
+
+	// Rewind
+	fin.clear();
+	fin.seekg(0);
+
+	// Read file contents
+	T* data_ptr = thrust::raw_pointer_cast(data_tmp.data());
+	int j = 0;
+	
+	while ( !fin.eof() )
+	{
+		getline( fin, line );
+	
+		int idx_delimit[MAX_TOKENS_PER_LINE];
+		n_delimit = 0;
+		
+		found = 0;
+		found_last = 1;
+		
+		if ( line.find('#', 0) >= line.length() && line.length() > 0 )
+		{
+			idx_delimit[n_delimit++] = -1;
+		
+			while ( found != found_last )
+			{
+				found_last = found;	
+				found = line.find(' ', found_last+1);
+
+				if ( found >= line.length() )
+					break;
+
+				idx_delimit[n_delimit++] = found;
+			}
+
+			T subfloat;
+			for ( int i=0; i<n_delimit-1; ++i )
+			{
+				int start = idx_delimit[i]+1;
+				int num = idx_delimit[i+1] - start;
+				string sub = line.substr(start, num);
+
+				stringstream tmp;
+				tmp << sub;
+				tmp >> subfloat;
+				data_ptr[j++] = subfloat;
+			}		
+		}
+	}
+	
+	fin.close();
+
+	*_data = data_tmp;
+	GridData<T,DEV>::_allocatedMemTotal -= numBytesData_old;
+	GridData<T,DEV>::_allocatedMemTotal += numElements() * sizeof(T);
+		
+	return 0;
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::writeNumpyArray( const char* filename, Type::type representation )
+{
+	using namespace std;
+
+	// Open file for writing
+	ofstream file( filename, ios::out | ios::binary | ios::trunc );
+	
+	if ( file.is_open() )
+	{
+		GridData<T,thrust::host_vector<T> > grid_tmp = *this;
+
+		T *data_re, *data_im, val_re, val_im;
+
+		int n, idx;
+		char tmp[64];
+		char* sig;
+		
+		int writeComplex = int(isComplex() && representation == Type::complex);
+
+		n = sprintf(tmp,"# Nx=%d, Ny=%d, Nf=%d, complex=%d\n", _dimX, _dimY, _numFields, writeComplex );
+		file.write( tmp, n );
+		
+		for ( int c=0; c<_numFields; ++c )
+		{
+			if ( writeComplex )
+			{
+				data_re = grid_tmp.getDataPointer( c, Type::real );
+				data_im = grid_tmp.getDataPointer( c, Type::imag );
+				
+				for ( int j=0; j<_dimY; ++j )
+				{
+					for ( int i=0; i<_dimX; ++i )
+					{
+						idx = j*_dimX + i;
+
+						val_re = data_re[idx];
+						val_im = data_im[idx];
+						
+						if ( val_im >= (T)0.0 )
+							sig = (char*)"+";
+						else
+							sig = (char*)"";
+
+						n = sprintf(tmp,"(%.10e%s%.10ej) ", double(val_re), sig, double(val_im));
+						file.write( tmp, n );
+					}
+					file.write( (char*)"\n", 1 );
+				}
+			} else {
+				data_re = grid_tmp.getDataPointer( c, Type::real );
+				
+				for ( int j=0; j<_dimY; ++j )
+				{
+					for ( int i=0; i<_dimX; ++i )
+					{
+						idx = j*_dimX + i;
+
+						val_re = data_re[idx];
+				
+						n = sprintf(tmp,"%.10e ",double(val_re));
+						file.write( tmp, n );
+					}
+					file.write( (char*)"\n", 1 );
+				}
+			}
+			file.write( (char*)"\n", 1 );
+		}			
+		
+		file.close();
+		std::cout << "Wrote Ascii in numpy format: " << filename << "\n";
+		return 0;
+	} else {
+		std::cout << "Could not open file: " << filename << "\n";
+		return 1;
+	}
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::readParameters( const char* filename, int num, Parameters<T>* param )
+{
+	char buf[256];
+	sprintf(buf,"%s.%d.grd",filename,num);
+
+	return readParameters( buf, param );
+}
+
+
+template <typename T, typename DEV>
+int GridData<T,DEV>::readParameters( const char* filename, Parameters<T>* param )
+{
+	using namespace std;
+	
+	// Data header structure: (all int datatype)
+	// size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
+	size_t numBytesHeader = 32 * sizeof(int);
+	int storeParameters, parametersVersion; //,numBytesParameters;
+
+	Parameters<T> param_read;
+
+	ifstream file( filename, ios::in | ios::binary );
+	
+	if ( file.is_open() )
+	{
+		int* header = new int[32];
+		
+		file.read( (char*)header, 32*sizeof(int) );
+		
+		int sizeOfInputDatatype = header[0];
+		
+		if ( sizeOfInputDatatype != sizeof(T) )
+		{
+			std::cout << "Error: datatype to be read is not the same as instantiated class\n";
+			file.close();
+			return 1;
+		}
+
+		storeParameters = header[6];
+		parametersVersion = header[7];
+
+		// Go past header
+		file.seekg( numBytesHeader );
+			
+		// Read parameters
+		param_read.setInvalid();
+
+		if ( storeParameters == 1 )
+		{
+			param_read.read( file, parametersVersion );
+			param_read.setValid();
+		}
+		
+		file.close();
+		
+		if ( param )
+			*param = param_read;
+
+		return 0;
+	} else {
+		std::cout << "Could not open file: " << filename << "\n";
+		return 1;
+	}
+}
+#endif
