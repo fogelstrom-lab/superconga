@@ -14,7 +14,7 @@ int GridData<T,DEV>::read( const char* filename, int num, Parameters<T>* param )
 
 
 template <typename T, typename DEV>
-int GridData<T,DEV>::write( const char* filename, int num, Parameters<T>* param )//, Type::type representation )
+int GridData<T,DEV>::write( const char* filename, int num, Parameters<T>* param )
 {
 	char buf[256];
 	sprintf(buf,"%s.%d.grd",filename,num);
@@ -87,7 +87,6 @@ int GridData<T,DEV>::read( const char* filename, Parameters<T>* param )
 	
 		if ( storeParameters == 1 )
 		{
-			//file.read( (char*)&param_read, numBytesParameters );
 			param_read.read( file, parametersVersion );
 			param_read.setValid();
 		}
@@ -125,7 +124,6 @@ int GridData<T,DEV>::write( const char* filename, Parameters<T>* param )
 	size_t numBytesData, numBytesParameters;//, numBytesPerField;
 	numBytesData = numElements() * sizeof(T);
 	numBytesParameters = sizeof(Parameters<T>);
-//	cout << "Parameters<T> size: " << numBytesParameters << endl;
 
 	int storeParameters = 0, parametersVersion = 0;
 	if ( param != 0 )
@@ -135,9 +133,6 @@ int GridData<T,DEV>::write( const char* filename, Parameters<T>* param )
 	}
 
 	int isComplex_out = int(isComplex());
-
-	// Bytes to store per field
-//	numBytesPerField = numBytesData / _numFields;
 
 	// Open file for writing
 	ofstream file( filename, ios::out | ios::binary | ios::trunc );
@@ -170,8 +165,6 @@ int GridData<T,DEV>::write( const char* filename, Parameters<T>* param )
 
 		// Write grid data
 		file.write( (char*)data_ptr, numBytesData );
-		//for ( int i=0; i<_numFieldComponents; ++i )
-		//	file.write( (char*)getDataPointerCPU(i,representation), numBytesPerField );
 		
 		file.close();
 		std::cout << "Wrote binary: " << filename << "\n";
@@ -189,7 +182,6 @@ int GridData<T,DEV>::readNumpyArray( const char* filename, int numFields )
 	using namespace std;
 	
 	const int MAX_TOKENS_PER_LINE = 16384;
-//	const char* const DELIMITER = " ";
 
 	// create a file-reading object
 	ifstream fin;
@@ -296,16 +288,13 @@ int GridData<T,DEV>::readNumpyArray( const char* filename, int numFields )
 			T subfloat;
 			for ( int i=0; i<n_delimit-1; ++i )
 			{
-				//cout << "range = " << idx_delimit[i]+1 << ", " << idx_delimit[i+1]-1 << endl;
 				int start = idx_delimit[i]+1;
 				int num = idx_delimit[i+1] - start;
 				string sub = line.substr(start, num);
-				//cout << sub << endl;
 
 				stringstream tmp;
 				tmp << sub;
 				tmp >> subfloat;
-				//cout << subfloat << endl;
 				data_ptr[j++] = subfloat;
 			}		
 		}
@@ -441,7 +430,6 @@ int GridData<T,DEV>::readParameters( const char* filename, Parameters<T>* param 
 
 		storeParameters = header[6];
 		parametersVersion = header[7];
-//		numBytesParameters = header[8];
 
 		// Go past header
 		file.seekg( numBytesHeader );
@@ -451,7 +439,6 @@ int GridData<T,DEV>::readParameters( const char* filename, Parameters<T>* param 
 
 		if ( storeParameters == 1 )
 		{
-			//file.read( (char*)&param_read, numBytesParameters );
 			param_read.read( file, parametersVersion );
 			param_read.setValid();
 		}

@@ -1,8 +1,6 @@
 #ifndef _COMPUTECURRENT_H
 #define _COMPUTECURRENT_H
 
-//#include "Parameters.h"
-//#include "GridData.h"
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubara.h>
 #include <IntegrationIteratorOzaki.h>
@@ -17,7 +15,6 @@ public:
 							ComputeCurrent();
 	virtual					~ComputeCurrent();
 
-//							ComputeCurrent( Parameters<T> & param );
 							ComputeCurrent( Context<T>* ctx );
 	
 	virtual GridGPU*		getResult() { return _current_real; }
@@ -47,8 +44,6 @@ public:
 	// Compute physical property from greens function.
 	virtual void			computePropertyFromGreens();
 	
-	// Compute residual
-//	virtual T				computeResidual( const ComputeProperty<T> * other ) const;
 	
 private:
 

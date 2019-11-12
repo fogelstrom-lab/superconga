@@ -30,8 +30,6 @@ public:
 
 						ComputeProperty( Context<T>* ctx );
 
-
-//	Parameters<T> *			getParameters() const { return _param; };
 	GridGPU*			getGreensCurrentAngle() { return _greensCurrentAngle; }
 	void				initGreensAngle( const int N, const int numFields = 1 );
 	
@@ -42,7 +40,6 @@ public:
 	void				setConverged( bool converged = true ) { _isConverged = converged; }
 
 	// Static Functions
-//	template<template <typename> class POTENTIAL>
 	static GridGPU		computeSFMomentum( Parameters<T>* param, OrderParameter<T>* delta );
 
 

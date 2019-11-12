@@ -6,45 +6,12 @@
 #define PI 3.1415926535897932384
 #endif
 
-/*
-template <typename T>
-Parameters<T>::Parameters() :
-	_gridWidth( 1.0 ),
-	_angularResolution( 5 ),
-	_cutOff( 10 ),
-	_T_Tc( 0.5 ),
-	_magneticField( 0.0 ),
-	_convergence( 0.00000001 ),
-	_numFrequencies( 0 ),
-	_numEnergies( 0 ),
-	_energies( 0 ),
-//	_numEnergiesPerBlock( 0 ),
-	_signEnergy(1),
-	_LDOS_energyMin( 0.0 ),
-	_LDOS_energyMax( 0.0 ),
-	_smearingFactor( 0.01 ),
-	_param1(0.0), _param2(0.0), _param3(0.0), _param4(0.0), _param5(0.0),
-	_version( 1 ),
-	_isValid( 1 )
-{
-	setGridResolution( 101 );
-//	setMatsubaraFrequencies();
-}
-
-
-template <typename T>
-Parameters<T>::~Parameters()
-{
-	if ( _energies ) delete _energies;
-}
-*/
 namespace v1
 {
 
 template <typename T>
 Parameters<T>& Parameters<T>::operator=( const Parameters<T>& right )
 {
-//	std::cout << "A\n";
 	operatorEq(right);
 	return *this;
 }
@@ -54,7 +21,6 @@ template <typename T>
 template <typename T2>
 Parameters<T>& Parameters<T>::operator=( const Parameters<T2>& right )
 {
-//	std::cout << "B\n";
 	operatorEq(right);
 	return *this;
 }
@@ -64,7 +30,6 @@ template <typename T>
 template <typename T2>
 Parameters<T>::operator Parameters<T2>() const
 {
-//	std::cout << "C\n";
 	Parameters<T2> other;
 	other = *this;
 	return other;
@@ -75,8 +40,6 @@ template <typename T>
 template <typename T2>
 Parameters<T>& Parameters<T>::operatorEq( const Parameters<T2>& right )
 {
-//	std::cout << "Eq\n";
-
 	if ( _version != right.getVersion() )
 		std::cout << "Parameters<T>::operator=(): Warning, differing versions of Parameters class\n";
 
@@ -88,15 +51,12 @@ Parameters<T>& Parameters<T>::operatorEq( const Parameters<T2>& right )
 	_convergence = right.getConvergenceCriterion();
 	_numFrequencies = right.getNumMatsubaraFrequencies();
 	_numEnergies = right.getNumEnergies();
-//	_energies
-//	_signEnergy(1),
 	_LDOS_energyMin = right.getLDOSEnergyMin();
 	_LDOS_energyMax = right.getLDOSEnergyMax();
 	_smearingFactor = right.getSmearingFactor();
 	_isValid = right.isValid();
 
 	setGridResolution( right.getGridResolutionBase() );
-//	setLDOSEnergies(_LDOS_energyMin,_LDOS_energyMax,_smearingFactor);
 	initEnergies();
 
 	return *this;
@@ -142,8 +102,6 @@ void Parameters<T>::setLDOSEnergies()
 		energies_re[i] = _LDOS_energyMin + i * LDOS_energyIncrement;
 		energies_im[i] = _smearingFactor;
 	}
-
-//	_energies->copyDataToGPU();	
 }
 
 
@@ -221,7 +179,6 @@ void Parameters<T>::setMatsubaraFrequencies()
 			energies_im[i] = _signEnergy * (PI*_T_Tc) * (2.0*i + 1.0);
 		}
 	}
-//	_energies->copyDataToGPU();
 }
 
 
@@ -310,15 +267,6 @@ int Parameters<T>::read( std::string filename )
 		file.close();
 
 		initEnergies();
-		// _energies = 0;
-
-		// if ( getNumMatsubaraFrequencies() != getNumEnergies() )
-		// 	setLDOSEnergies();
-		// else if ( getNumMatsubaraFrequencies() == getNumEnergies() && getLDOSEnergyMin() != getLDOSEnergyMax() )
-		// 	setLDOSEnergies();
-		// else
-		// 	setMatsubaraFrequencies();
-
 		return 0;
 	}
 	else
@@ -367,12 +315,7 @@ void Parameters<T>::print() const
 	cout << "Magnetic Field Strength: " << _magneticField << endl;
 	cout << "LDOS energy range: (" << _LDOS_energyMin << ", " << _LDOS_energyMax << ")" << endl;
 	cout << "Convergence Criterion: " << _convergence << endl;
-//	cout << "GridData adress: " << _energies << endl;
 	cout << "GridData energies: ";
-//	if ( _energies != 0 )
-//		_energies->printAllData();
-	//else
-	//	cout << "NIL\n\n";	
 }
 
 }

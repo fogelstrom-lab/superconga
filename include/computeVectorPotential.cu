@@ -12,7 +12,6 @@ __global__ void computeVectorPotential2d_kernel( T* Ax, T* Ay, const T* jx, cons
 	const int idx = y*Nx + x;
 	const int idxp = py*Nx + px;
 
-	//if ( geom[idx] )
 	if ( x < Nx && y < Nx )
 	{
 		T mult, h2 = h*h;
@@ -44,8 +43,6 @@ void computeVectorPotential(
 {
 	A->setZero();
 
-	//dim3 bpg(1,N);
-	//dim3 tpb(N,1);
 	dim3 bpg, tpb;
 	A->getKernelDimensions(bpg,tpb);
 

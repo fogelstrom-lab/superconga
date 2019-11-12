@@ -11,9 +11,6 @@ void computeGammaFunctionTemplate_CPU(
 	T *bnd_in_gamma_real, T *bnd_in_gamma_imag,
 	T *bnd_out_gamma_real, T *bnd_out_gamma_imag )
 {	
-//	const int x		= blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset;	// x-coordinate
-//	const int e_idx	= blockDim.y * blockIdx.y + threadIdx.y;				// energy coordinate
-
 	T dh, g_real, g_imag, g_bnd_real, g_bnd_imag, g0_real=0.0, g0_imag=0.0;
 	T D1_re, D1_im, D2_re, D2_im, Dbnd_re, Dbnd_im;
 
@@ -27,7 +24,6 @@ void computeGammaFunctionTemplate_CPU(
 	T energy_zeroPotential_re, energy_im;
 	int boundary_entry_count, boundary_exit_count;
 
-//	if ( x < N && e_idx < Ne )
 	for ( x=x_min; x<N; ++x )
 	{
 		for ( e_idx=e_min; e_idx<e_max; ++e_idx )
@@ -39,7 +35,6 @@ void computeGammaFunctionTemplate_CPU(
 			boundary_exit_count = 0;
 			
 			yStart = (N-1)*(int)(DIR==-1);
-//			int y;
 			
 			// Compute gamma along trajectory
 			for ( int i=0; i<N; ++i )
@@ -183,7 +178,6 @@ void computeGammaFunctionInitialBoundaryTemplate_CPU(
 		T energy_zeroPotential_re = energies_re[e_idx];
 		T energy_im = energies_im[e_idx];
 		
-//		int boundary_entry_count = 0;
 		int boundary_exit_count = 0;
 		
 		const int yStart = (N-1)*(int)(DIR==-1);
@@ -204,28 +198,7 @@ void computeGammaFunctionInitialBoundaryTemplate_CPU(
 				
 			// What type of node are we on?
 			nodeType = domainLabel[idx];
-/*
-			if ( nodeType == ENTRY )
-			{
-				// Compute gammas and store							
-				idx_sparse = BoundaryStorage<T>::getSparseIndex(
-								angle_idx, e_idx, x, boundary_entry_count,
-								Ne, N, idx_in_gamma );
 
-					
-				// Compute gamma at current grid point
-				GAMMA<T>::computeGamma_local(	delta_real[idx], delta_imag[idx],
-												(T)0.0, (T)0.0,
-												energy_re, energy_im,
-												(T)0.0, 0,
-												g_bnd_real, g_bnd_imag );
-
-				bnd_in_gamma_real[idx_sparse] = g_bnd_real;
-				bnd_in_gamma_imag[idx_sparse] = g_bnd_imag;
-
-				boundary_entry_count++;
-			}
-*/
 			if ( nodeType == EXIT )
 			{
 				// Compute gammas and store							

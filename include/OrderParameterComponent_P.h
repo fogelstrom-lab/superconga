@@ -1,12 +1,9 @@
 #ifndef _ORDERPARAMETERCOMPONENT_P_H
 #define _ORDERPARAMETERCOMPONENT_P_H
 
-//#include "util/csecond.c"
 #include <Parameters.h>
 #include <Grid.h>
 #include <OrderParameterComponent.h>
-
-//#include "OrderParameterComponent_Kernel.cu"
 
 template <typename T>
 class OrderParameterComponent_P : public OrderParameterComponent<T>
@@ -32,11 +29,6 @@ public:
 	
 	void			setLatticeOrientation( T angle ) { _latticeOrientation = angle; }
 	T				getLatticeOrientation() const { return _latticeOrientation; }
-
-	/*GridGPU*		getLatticeOrientationGrid() const { return _latticeOrientationGrid; }
-	GridGPU*		createLatticeOrientationGrid();
-	
-	void			setGrain_half( const T orientation );*/
 
 private:
 	friend void		swap( OrderParameterComponent_P<T>& A, OrderParameterComponent_P<T> B )

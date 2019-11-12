@@ -14,14 +14,6 @@ RiccatiSolverBulk<T,GAMMA,POTENTIAL>::~RiccatiSolverBulk()
 }
 
 
-/*
-template <typename T, template <typename> class GAMMA, template <typename> class POTENTIAL>
-RiccatiSolverBulk<T,GAMMA,POTENTIAL>::RiccatiSolverBulk( Parameters<T> & param, GeometryGroup<T> * geom )
-	:	RiccatiSolver<T>( param, geom )
-{
-	std::cout << "RiccatiSolverBulk::RiccatiSolverBulk(Parameters<T> & param, GeometryGroup<T> * geom)\n";
-}
-*/
 template <typename T, template <typename> class GAMMA, template <typename> class POTENTIAL>
 RiccatiSolverBulk<T,GAMMA,POTENTIAL>::RiccatiSolverBulk( Context<T>* ctx )
 	:	RiccatiSolver<T>( ctx )
@@ -72,8 +64,6 @@ void RiccatiSolverBulk<T,GAMMA,POTENTIAL>::computeCoherenceFunctions(
 
 	R::getKernelDimensions( blocksPerGrid, threadsPerBlock, numEnergiesPerBlock );
 	int trajectoryIdx_start = 0;
-//	int trajectoryIdx_start = R::getStorage()->getTrajectoryStartIndexAngle( current_angle_idx );
-//	R::getKernelDimensionsOptim( blocksPerGrid, threadsPerBlock, numEnergiesPerBlock, current_angle_idx );
 
 	// System and gamma angle
 	T system_angle		= ((T)current_angle_idx/(T)numAngles) * (2.0*PI);

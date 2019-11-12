@@ -6,7 +6,6 @@ ParameterIterator<T>::ParameterIterator()
 {
 	_sweepDir = 1;
 	_p_num = 0;
-//	updateNumber();
 	begin();
 }
 
@@ -25,27 +24,6 @@ ParameterIterator<T>::ParameterIterator( T p_min, T p_max )
 
 	begin();
 }
-
-
-//template <typename T>
-//ParameterIterator<T>::ParameterIterator( T p_min, T p_max, T p_inc )
-//	: _p_min(p_min), _p_max(p_max), _p_inc(p_inc)
-//{
-//	_sweepDir = 1;
-//	updateNumber();
-//	begin();
-//}
-
-
-//template <typename T>
-//ParameterIterator<T>::ParameterIterator( T p_min, T p_max, int num )
-//	: _p_min(p_min), _p_max(p_max), _p_num(num)
-//{
-//	_sweepDir = 1;
-//	updateIncrement();
-//	begin();
-//}
-
 
 template <typename T>
 ParameterIterator<T>& ParameterIterator<T>::operator=( const ParameterIterator<T>& right )
@@ -70,7 +48,6 @@ template <typename T>
 void ParameterIterator<T>::updateIncrement()
 {
 	if (_p_num == 1)
-//		_p_inc = (T)0.0;
 		_p_inc = _p_max - _p_min;
 	else
 		_p_inc = (_p_max - _p_min) / ((T)_p_num - 1);
@@ -169,7 +146,6 @@ void ParameterIterator<T>::setSingle()
 template <typename T>
 void ParameterIterator<T>::setSingleValue()
 {
-//	_p_min = 0;
 	_p_max = _p_min + _p_inc;
 	_p_num = 1;
 	begin();
@@ -205,7 +181,6 @@ T ParameterIterator<T>::next( int step )
 template <typename T>
 T ParameterIterator<T>::getCurrentValue() const
 {
-	//std::cout << _count-_isDone <<"\n";
 	if ( _sweepDir == 1 )
 		return _p_min + _p_inc*(T)(_count - _isDone);
 	else
@@ -225,16 +200,6 @@ T ParameterIterator<T>::getNumInterval() const
 	else
 		return getIncrement();
 }
-
-
-//template <typename T>
-//void ParameterIterator<T>::setCurrentIndex( int idx )
-//{
-//	return _isDone;
-//}
-
-
-
 
 
 

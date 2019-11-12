@@ -717,30 +717,21 @@ GridData<T,DEV> GridData<T,DEV>::sumFields() const
 template <typename T, typename DEV>
 void GridData<T,DEV>::insertGrid( const GridData<T,DEV>* other, const int x_offset, const int y_offset )
 {
-//	if ( isComplex() == other->isComplex() )
-		GridFunctions<T,DEV>::insertGrid( other, x_offset, y_offset );
-//	else
-//		std::cout << "GridData::insertGrid() ERROR: Both grids must be real or complex.\n";
+	GridFunctions<T,DEV>::insertGrid( other, x_offset, y_offset );
 }
 
 
 template <typename T, typename DEV>
 void GridData<T,DEV>::insertRotatedGrid( const GridData* other, const T phi, const int x_offset, const int y_offset, Type::type part )
 {
-//	if ( isComplex() == other->isComplex() )
-		GridFunctions<T,DEV>::insertRotatedGrid( other, phi, x_offset, y_offset, part );
-//	else
-//		std::cout << "GridData::insertRotatedGrid() ERROR: Both grids must be real or complex.\n";
+	GridFunctions<T,DEV>::insertRotatedGrid( other, phi, x_offset, y_offset, part );
 }
 
 
 template <typename T, typename DEV>
 void GridData<T,DEV>::insertRotatedGridAdditive( const GridData* other, const T phi, int field, const int x_offset, const int y_offset, Type::type part )
 {
-//	if ( isComplex() == other->isComplex() )
-		GridFunctions<T,DEV>::insertRotatedGridAdditive( other, phi, field, x_offset, y_offset, part );
-//	else
-//		std::cout << "GridData::insertRotatedGrid() ERROR: Both grids must be real or complex.\n";
+	GridFunctions<T,DEV>::insertRotatedGridAdditive( other, phi, field, x_offset, y_offset, part );
 }
 
 

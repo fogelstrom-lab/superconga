@@ -42,9 +42,6 @@ public:
 	void			setColorScheme( Color::Base* colorScheme );
 	void			setColorScheme( const Color::Base& colorScheme );
 
-//	GridGPU*	getGrid() const { return _grid; };
-//	void		setGrid( GridGPU* grid ) { _grid = grid; };
-
 	// Initialize pixel buffer. num_img = 3 means allocate memory for 3 images -
 	// i.e. one each for real, imag, and abs parts.
 	void	allocMemImageGrid( const int num_image_X, const int num_image_Y );
@@ -90,10 +87,6 @@ public:
 	int		getNumPixelsWindowY() const { return (_Ny_img*_displayZoom + 2*_border_y) * _num_image_Y + _border_top_y; }
 
 	// Image interaction
-/*
-	void	registerImage( GridGPU* grid, Type::type representation, int field, int img_x, int img_y );
-	void	getImageInfo( int img_x, int img_y, GridGPU*& grid, Type::type& representation, int& field );
-*/
 	void	getImageCoordinatesFromWindow( int x, int y, int& img_x, int& img_y, int& grid_x, int& grid_y );
 
 	// Helpers
@@ -149,15 +142,8 @@ private:
 
 	std::string		_textImg[64];
 
-	// Info about contents of each subimage
-/*
-	GridGPU**	gridList;
-	Type::type*	typeList;
-	int*		fieldList;
-*/
 	// Other
 	Color::Base		_colorScheme;
-//	GridGPU*		_grid;
 
 #ifdef __CUDACC__	
 	GeometryGroup<T>*	_geom;

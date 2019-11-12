@@ -153,7 +153,6 @@ void GridFunctions<T,thrust::host_vector<T> >::complexPhaseGradient( GridCPU* re
 					g2 = data_src_re[idx_x2];
 
 					dPhase_dx = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
-					//dPhase_dx = f1;
 
 					// Gradient in y
 					f0 = data_src_im[idx_y0];
@@ -163,7 +162,6 @@ void GridFunctions<T,thrust::host_vector<T> >::complexPhaseGradient( GridCPU* re
 					g2 = data_src_re[idx_y2];
 
 					dPhase_dy = ( (f2-f0)*g1 - f1*(g2-g0) ) * denom;
-					//dPhase_dy = g1;
 				}
 			}
 
@@ -303,7 +301,6 @@ void GridFunctions<T,thrust::host_vector<T> >::insertRotatedGrid(
 					Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
 				
 					// Bilinear interpolation
-					//
 					X_int = Xr;
 					Y_int = Yr;
 				
@@ -396,7 +393,6 @@ void GridFunctions<T,thrust::host_vector<T> >::insertRotatedGridAdditive(
 					Yr = (T)X*sin(-phi) + (T)Y*cos(-phi) + grid_origin_shift_y;
 				
 					// Bilinear interpolation
-					//
 					X_int = Xr;
 					Y_int = Yr;
 				
@@ -451,8 +447,7 @@ void GridFunctions<T,thrust::host_vector<T> >::resample( const int nx_new, const
 
 			ptr_offset = nx_new * ny_new * (c * (1+isComplex) + int(part[p]==Type::imag && isComplex));
 			data_tmp = thrust::raw_pointer_cast(vec_tmp->data()) + ptr_offset;
-
-			//#pragma omp parallel for private(i,j,idx) shared(c,p,data_src,data_dst,functor)
+			
 			for ( j=0; j<ny_new; ++j )
 			{
 				for ( i=0; i<nx_new; ++i )

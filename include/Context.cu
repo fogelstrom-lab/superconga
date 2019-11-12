@@ -2,7 +2,7 @@
 
 template<typename T>
 Context<T>::Context() :
-	_param(0), _geom(0), _delta(0), _solver(0), _iter(0), /*_cf(0),*/ _acc(0), _compute_current(0),
+	_param(0), _geom(0), _delta(0), _solver(0), _iter(0), _acc(0), _compute_current(0),
 	_compute_delta(0), _compute_time(0.0), _numIterations(0)
 {}
 
@@ -39,11 +39,6 @@ Context<T>::~Context()
 		delete _iter;
 		cout << "~Context(): Deleted IntegrationIterator\n";
 	}
-//	if (_cf)
-//	{
-//		delete _cf;
-//		cout << "~Context(): Deleted CoherenceFunctions\n";
-//	}
 	if (_acc)
 	{
 		delete _acc;
@@ -100,7 +95,6 @@ int Context<T>::initialize( int numEnergiesPerBlock )
 	{
 		cout << "Context::initialize() --> Initializing OrderParameter\n";
 		_delta->initialize();
-		//_delta->createCoherenceFunctions(); // sets _cf member
 		ContextModule<T>::checkCudaError( "Context<T>::initialize(): OrderParameter" );
 	}
 

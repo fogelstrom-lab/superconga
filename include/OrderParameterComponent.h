@@ -5,11 +5,8 @@
 #ifndef _ORDERPARAMETERCOMPONENT_H
 #define _ORDERPARAMETERCOMPONENT_H
 
-//#include "util/csecond.c"
 #include <Parameters.h>
 #include <Grid.h>
-
-//#include "OrderParameterComponent_Kernel.cu"
 
 template <typename T>
 class OrderParameterComponent
@@ -26,8 +23,6 @@ public:
 					OrderParameterComponent( Parameters<T>* param, T Tcthis_Tc = 1.0 );
 
 	virtual OrderParameterComponent<T>* clone() const = 0;
-
-//	OrderParameterComponent<T>& operator=( OrderParameterComponent<T> other );
 
 	// Functions
 	int 			initialize();
@@ -49,20 +44,10 @@ public:
 	virtual void	computeCouplingConstant( const T* energies, const T* residues );
 	virtual void	computeCouplingConstant( GridGPU* target, const T* energies, const T* residues );
 
-//	virtual void	copyOrderParameterField( const GridGPU* newDelta );
-
 	virtual double	deltaBulk() const;
-
-	/* Added
-	virtual void	setLatticeOrientation( T angle ) = 0;
-	virtual T		getLatticeOrientation() const;*/
-
-//	virtual OrderParameterComponent<T>*	newCopy() const = 0;
 
 	char*			getType() const { return _type; }
 	void			setType( char* type ) { _type = type; }
-
-//	virtual int		isSinglet() const = 0;
 
 private:
 	template <typename S>

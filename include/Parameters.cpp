@@ -11,7 +11,6 @@ Parameters<T>::Parameters( Context<T>* ctx ) :
 	_magneticField( 0.0 ),
 	_convergence( 0.0001 ),
 	_numEnergies( 0 ),
-//	_signEnergy(1),
 	_energyMin( 0.0 ),
 	_energyMax( 0.0 ),
 	_smearingFactor( 0.01 ),
@@ -67,7 +66,6 @@ Parameters<T>& Parameters<T>::operatorEq( const Parameters<T2>& right )
 	_magneticField = right.getMagneticFieldStrength();
 	_convergence = right.getConvergenceCriterion();
 	_numEnergies = right.getNumEnergies();
-//	_signEnergy(1),
 	_energyMin = right.getEnergyMin();
 	_energyMax = right.getEnergyMax();
 	_smearingFactor = right.getSmearingFactor();
@@ -83,7 +81,6 @@ Parameters<T>& Parameters<T>::operatorEq( const Parameters<T2>& right )
 
 
 template <typename T>
-//int Parameters<T>::getNumMatsubaraFrequencies() const
 int Parameters<T>::getNumFrequencies() const
 {
 	if ( _param1 != 0.0 )
@@ -229,22 +226,16 @@ int Parameters<T>::read( std::ifstream& file, const int version )
 			int numBytes = sizeof(*this);
 
 			file.read( (char*)this, numBytes );
-			//file.close();
 
 			return 0;
 		}
 		else
 		{
-			//int baseResolution, angularResolution, tst, tst2, tst3;
-			//T gridWidth, cutOff, T_Tc, magneticField, magneticFlux, energyMin, energyMax, smear, convergence;
 			v1::Parameters<T> pr;
 			int numBytes = sizeof(pr);
 
 			file.read( (char*)&pr, numBytes );
 			pr.setInvalid();
-
-			//file.close();
-//			cout << "Reading parameter version: " << pr.getVersion() << "\n";
 
 			setGridResolution( pr.getGridResolutionBase() );
 			setGridWidth( pr.getGridWidth() );
@@ -258,13 +249,10 @@ int Parameters<T>::read( std::ifstream& file, const int version )
 			T e_max = pr.getLDOSEnergyMax();
 			int numEnergies = pr.getNumEnergies();
 
-			//if ( e_min != e_max && numEnergies != pr.getNumFrequencies() )
 			if ( e_min != e_max && numEnergies != pr.getNumMatsubaraFrequencies() )
 				setEnergyRange( pr.getLDOSEnergyMin(), pr.getLDOSEnergyMax(), pr.getSmearingFactor(), numEnergies );
 			else
 				setEnergyRange( 0.0, 0.0, 0.01, 0 );
-
-//			print();
 			return 0;			
 		}
 	}
@@ -325,7 +313,6 @@ void Parameters<T>::print() const
 	cout << "Grid Width: " << _gridWidth  << endl;
 	cout << "Grid Element Size: " << _gridElementSize << endl;
 	cout << "Angular Resolution: " << _angularResolution << endl;
-//	cout << "Matsubara Frequencies: " << _numFrequencies << endl;
 	cout << "Temperature: " << _T_Tc << endl;
 	cout << "Magnetic Field Strength: " << _magneticField << endl;
 	cout << "Spectral energy range: (" << _energyMin << ", " << _energyMax << ")" << endl;

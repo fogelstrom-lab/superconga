@@ -185,8 +185,6 @@ void RiccatiSolver<T>::computeInducedMagneticField()
 
 		// Solve ps
 		computeVectorPotential( _ps, j, &dom_crop, h, mult );
-
-		//std::cout << "done!\n";
 	}
 }
 
@@ -228,9 +226,6 @@ template <typename T>
 void RiccatiSolver<T>::getKernelDimensionsOptim(
 	dim3 & blocksPerGrid, dim3 & threadsPerBlock, const int numEnergies, const int angle_idx )
 {
-//	const int N0 = _param->getGridResolutionBase();
-//	const int N1 = _param->getGridResolutionCoherence();
-
 	int numTrajectories = _storage->getNumIntersectingTrajectoriesAngle( angle_idx );
 
 	int tpb_x, tpb_y, bpg_x, bpg_y;

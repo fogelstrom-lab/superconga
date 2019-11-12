@@ -23,7 +23,6 @@ void iterOne( const GridData<T,DEV>& dst, F<T> functor, int field = -1, Type::ty
 		{
 			data_dst = dst.getDataPointer(c,parts[p]);
 
-			//#pragma omp parallel for private(i,j,idx) shared(c,p,data_src,data_dst,functor)
 			for ( j=0; j<Ny; ++j )
 			{
 				for ( i=0; i<Nx; ++i )
@@ -74,7 +73,6 @@ void iterTwo( const GridData<T,DEV>& src, GridData<T,DEV>& dst, F<T> functor, Ty
 			data_src = src.getDataPointer(fieldSrc,parts[p]);
 			data_dst = dst.getDataPointer(fieldDst,parts[p]);
 
-			//#pragma omp parallel for private(i,j,idx) shared(c,p,data_src,data_dst,functor)
 			for ( j=0; j<Ny; ++j )
 			{
 				for ( i=0; i<Nx; ++i )
@@ -104,7 +102,6 @@ void iterTwoComplexToReal( const GridData<T,DEV>& src, GridData<T,DEV>& dst, F<T
 		
 		data_dst = dst.getDataPointer(c,Type::real);
 
-		//#pragma omp parallel for private(i,j,idx) shared(c,p,data_src,data_dst,functor)
 		for ( j=0; j<Ny; ++j )
 		{
 			for ( i=0; i<Nx; ++i )

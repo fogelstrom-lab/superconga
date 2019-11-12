@@ -67,7 +67,6 @@ void ComputeFreeEnergy2<T>::initializeGreensAngle()
 {
 	if ( ComputeProperty<T>::doCompute() )
 	{
-		//ComputeProperty<T>::initializeGreensAngle();	// Sets to zero
 		_f->setZero();
 		_f_tilde->setZero();
 	}

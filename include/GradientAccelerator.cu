@@ -99,7 +99,6 @@ int GradientAccelerator<T>::step( T residual, GridGPU* grid )
 		} else if ( _acount == 2+_relax )	// Find iteration gradient and apply to order parameter
 		{
 			*_g2 -= *_g1;
-//			TYPE avgRate = 0.5*(rate[0]+rate[1]);
 			T avgRate = _rate[1];
 			T factor = 0.25/abs(avgRate-1.0);
 			if ( factor > 100.0 ) factor = 100.0;

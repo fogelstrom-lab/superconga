@@ -1,9 +1,5 @@
 #include "cplx.h"
 
-//template <typename T>
-//const cplx<T> cplx<T>::i = cplx<T>((T)0.0,(T)1.0);
-
-
 // MEMBER OPERATORS
 //
 template <typename T>

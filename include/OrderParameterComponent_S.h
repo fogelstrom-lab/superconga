@@ -1,12 +1,9 @@
 #ifndef _ORDERPARAMETERCOMPONENT_S_H
 #define _ORDERPARAMETERCOMPONENT_S_H
 
-//#include "util/csecond.c"
 #include <Parameters.h>
 #include <Grid.h>
 #include <OrderParameterComponent.h>
-
-//#include "OrderParameterComponent_Kernel.cu"
 
 template <typename T>
 class OrderParameterComponent_S : public OrderParameterComponent<T>
@@ -29,10 +26,6 @@ public:
 	virtual void	computeMomentumDependence( GridGPU* target, const T angle ) {}
 
 	virtual double	deltaBulk() const;
-
-	/* Added
-	virtual void	setLatticeOrientation( T angle );
-	virtual T		getLatticeOrientation() const; */
 
 private:
 	friend void		swap( OrderParameterComponent_S<T>& A, OrderParameterComponent_S<T> B )

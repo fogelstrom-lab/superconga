@@ -234,7 +234,6 @@ __global__ void extendValuesAtBoundary_kernel( //real
 
 	if ( tx < Nx_target && ty < Ny_target )
 	{
-//		int idx = ty * Nx_target + tx;
 		int idx_geom = (ty+Ny_geom_offset) * Nx_geom + (tx+Nx_geom_offset);
 	
 		int i, j, idx_neighbor, idx_geom_neighbor;
@@ -255,7 +254,6 @@ __global__ void extendValuesAtBoundary_kernel( //real
 
 						if ( dom_ptr[idx_geom_neighbor] > 0 )
 						{
-							//idx_neighbor = (ty+j)*Nx_target + (tx+i);
 							idx_neighbor = tf*Nx_target*Ny_target + (ty+j)*Nx_target + (tx+i);
 
 							interp_real += grid_real[idx_neighbor];

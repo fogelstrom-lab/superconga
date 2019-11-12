@@ -90,18 +90,5 @@ Grid<char>::GPU* DiscGeometry<T>::createDomain( const int N )
 	dim3 bpg, tpb;
 	Grid<T>::GPU::getKernelDimensions(bpg,tpb,N,N);
 
-//	const T pos_x = _disc->getPosX();
-//	const T pos_y = _disc->getPosY();
-
-//	const T posRot_x = pos_x * (N-1);
-//	const T posRot_y = pos_y * (N-1);
-
-//	const T radius = _disc->getRadius() * T(N-1);
-	
-	// Defines discrete boundary domain and properties
-//	generateDisc_Kernel<T><<<bpg, tpb>>>(
-//		dom_component->getDataPointer(),
-//		N, N, radius, posRot_x, posRot_y, 0.0 );	
-
 	return dom_component;
 }

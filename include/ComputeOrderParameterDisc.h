@@ -63,9 +63,6 @@ private:
 
 	// Temp storage for computation of order parameter
 	GridGPU*				_deltaTmp;
-	
-	// Temp storage for greens functions
-//	GridData<float> *		_greensAtomic;
 };
 
 #endif

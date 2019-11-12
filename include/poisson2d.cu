@@ -12,29 +12,23 @@ __global__ void computeVectorPotential2d_kernel( T* Ax, T* Ay, const T* jx, cons
 	const int idx = y*Nx + x;
 	const int idxp = py*Nx + px;
 
-	//if ( geom[idx] )
+	// This block was in a commented if-statement
+	// if ( geom[idx] )
+	T mult;
+
+	if ( x == px && y == py )
 	{
-		T mult;
-
-		if ( x == px && y == py )
-		{
-			//mult = T(3.525494348)*c*h;
-			//mult = c*h;
-			//mult = 0.25*h*h*(-6.0 + M_PI + 4.0*log(h/sqrt(2.0)));
-			mult = c*0.25*h*h*(-6.0 + M_PI - log(4.0));
-		}
-		else
-		{
-			const T dx = px - x;
-			const T dy = py - y;
-
-			//mult = c*h/sqrt(dx*dx + dy*dy);
-			mult = c*h*h*log(h*sqrt(dx*dx + dy*dy));
-		}
-
-		Ax[idx] += mult*jx[idxp];
-		Ay[idx] += mult*jy[idxp];
+		mult = c*0.25*h*h*(-6.0 + M_PI - log(4.0));
 	}
+	else
+	{
+		const T dx = px - x;
+		const T dy = py - y;
+		mult = c*h*h*log(h*sqrt(dx*dx + dy*dy));
+	}
+
+	Ax[idx] += mult*jx[idxp];
+	Ay[idx] += mult*jy[idxp];
 }
 
 
@@ -287,29 +281,6 @@ __global__ void poisson_jacobi( const T* A_src, T* A_dst, const T* b, const char
 
 	if ( geom[idx] )
 	{
-//		const char bottom	= geom[(y-1)*Nx+x];
-//		const char top		= geom[(y+1)*Nx+x];
-//		const char left		= geom[y*Nx+x-1];
-//		const char right	= geom[y*Nx+x+1];
-
-//		if ( bottom==0 || top==0 || left==0 || right==0 )
-//			b_mult = 0.0;
-/*
-		const int n = 5;
-		short sum = 0, sumc = 0;
-
-		for ( int ny=-n; ny<n; ++ny )
-		{
-			for ( int nx=-n; nx<n; ++nx )
-			{
-				sum += short(geom[(y+ny)*Nx+x+nx]);
-				sumc++;
-			}
-		}
-
-		if ( sum != sumc )
-			b_mult = 0.0;
-*/
 		T Ax_0 = A_src[y*Nx + x-1];
 		T Ax_2 = A_src[y*Nx + x+1];
 
@@ -360,7 +331,6 @@ void solve_poisson_jacobi(
 			poisson_jacobi<<<bpg,tpb>>>( sol->getDataPointer(f), sol_new->getDataPointer(f), rhs->getDataPointer(f), geom->getDataPointer(0), b_mult, N );
 
 		// Enforce BC
-//		for ( int b=0; b<2; ++b )
 		if ( applyBC )
 			poisson_bc_B0<<<bpg,tpb>>>( sol->getDataPointer(0), sol->getDataPointer(1), sol_new->getDataPointer(0), sol_new->getDataPointer(1), geom->getDataPointer(0), N );
 

@@ -1,11 +1,9 @@
 #ifndef _ORDERPARAMETER_H
 #define _ORDERPARAMETER_H
 
-//#include "util/csecond.c"
 #include <Parameters.h>
 #include <Grid.h>
 #include <Context.h>
-//#include "GreensFunction.h"
 #include <OrderParameterComponent.h>
 
 template <typename T>
@@ -36,11 +34,6 @@ public:
 	GridGPU* 				getOrderParameterField();
 	GridGPU* 				getOrderParameterFieldRotated( const T angle );									// Perform rotation and return pointer
 	GridGPU*				getOrderParameterFieldRotated() const { return _orderParameterCompoundRotated; }		// Return pointer to current rotational frame
-
-	// Implement these properly in OrderparameterComponents when implementing p-wave and triplet!!!
-	// Hardcoded for singlet as for now.
-//	Type::coherence			getCoherenceFunctionSymmetry() const {return Type::singlet;}
-//	CoherenceFunctions<T>*	createCoherenceFunctions() const;
 
 	char*					type() const;
 	
