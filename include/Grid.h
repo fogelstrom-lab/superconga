@@ -1,5 +1,5 @@
-#ifndef _GRID_H
-#define _GRID_H
+#ifndef GRID_H
+#define GRID_H
 
 #ifdef __CUDACC__
 #define _DEV_ __host__ __device__
@@ -36,4 +36,5 @@ template <typename T> struct Grid {
   typedef GridData<T, thrust::host_vector<T>> GPU;
 #endif
 };
-#endif
+
+#endif // GRID_H

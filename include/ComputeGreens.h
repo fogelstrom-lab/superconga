@@ -1,5 +1,5 @@
-#ifndef _COMPUTEGREENS_H
-#define _COMPUTEGREENS_H
+#ifndef COMPUTEGREENS_H
+#define COMPUTEGREENS_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubara.h>
@@ -205,4 +205,5 @@ T ComputeGreens<T>::computeResidual(OrderParameter<T> *old) const {
   }
   return residual;
 }
-#endif
+
+#endif // COMPUTEGREENS_H

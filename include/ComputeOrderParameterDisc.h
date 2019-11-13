@@ -1,5 +1,5 @@
-#ifndef _COMPUTEORDERPARAMETERDISC_H
-#define _COMPUTEORDERPARAMETERDISC_H
+#ifndef COMPUTEORDERPARAMETERDISC_H
+#define COMPUTEORDERPARAMETERDISC_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubaraDisc.h>
@@ -186,4 +186,5 @@ T ComputeOrderParameterDisc<T>::computeResidual(OrderParameter<T> *old) const {
   }
   return residual;
 }
-#endif
+
+#endif // COMPUTEORDERPARAMETERDISC_H

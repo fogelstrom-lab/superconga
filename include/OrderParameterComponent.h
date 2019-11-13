@@ -2,8 +2,8 @@
 #define PI 3.1415926535897932384
 #endif
 
-#ifndef _ORDERPARAMETERCOMPONENT_H
-#define _ORDERPARAMETERCOMPONENT_H
+#ifndef ORDERPARAMETERCOMPONENT_H
+#define ORDERPARAMETERCOMPONENT_H
 
 #include <Grid.h>
 #include <Parameters.h>
@@ -226,4 +226,5 @@ template <typename T> double OrderParameterComponent<T>::deltaBulk() const {
 
   return delta;
 }
-#endif
+
+#endif // ORDERPARAMETERCOMPONENT_H

@@ -1,5 +1,5 @@
-#ifndef _INTEGRATIONITERATOR_H
-#define _INTEGRATIONITERATOR_H
+#ifndef INTEGRATIONITERATOR_H
+#define INTEGRATIONITERATOR_H
 
 #include <ComputeProperty.h>
 #include <GeometryGroup.h>
@@ -169,4 +169,5 @@ void IntegrationIterator<T>::setNumEnergiesPerBlock(int num) {
     initialize();
   }
 }
-#endif
+
+#endif // INTEGRATIONITERATOR_H

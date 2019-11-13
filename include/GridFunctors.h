@@ -1,5 +1,5 @@
-#ifndef _GRIDFUNCTORS_H
-#define _GRIDFUNCTORS_H
+#ifndef GRIDFUNCTORS_H
+#define GRIDFUNCTORS_H
 
 #include <math.h>
 
@@ -20,6 +20,6 @@ template <typename T> struct absVal {
   __HD__
   void operator()(T &val) { val = abs(val); }
 };
-
 } // namespace GridFunctors
-#endif
+
+#endif // GRIDFUNCTORS_H

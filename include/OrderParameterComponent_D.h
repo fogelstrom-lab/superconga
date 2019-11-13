@@ -1,5 +1,5 @@
-#ifndef _ORDERPARAMETERCOMPONENT_D_H
-#define _ORDERPARAMETERCOMPONENT_D_H
+#ifndef ORDERPARAMETERCOMPONENT_D_H
+#define ORDERPARAMETERCOMPONENT_D_H
 
 #include <Grid.h>
 #include <OrderParameterComponent.h>
@@ -117,4 +117,5 @@ void OrderParameterComponent_D<T>::computeMomentumDependence(GridGPU *target,
 template <typename T> double OrderParameterComponent_D<T>::deltaBulk() const {
   return OrderParameterComponent<T>::deltaBulk() * 1.5 / 1.76;
 }
-#endif
+
+#endif // ORDERPARAMETERCOMPONENT_D_H

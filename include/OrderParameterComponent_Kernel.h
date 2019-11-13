@@ -1,5 +1,5 @@
-#ifndef _ORDERPARAMETERCOMPONENT_KERNEL_H
-#define _ORDERPARAMETERCOMPONENT_KERNEL_H
+#ifndef ORDERPARAMETERCOMPONENT_KERNEL_H
+#define ORDERPARAMETERCOMPONENT_KERNEL_H
 
 #include <cplx.h>
 #include <cuda.h>
@@ -45,4 +45,5 @@ computeMomentumDependence_kernel(T *target_re, T *target_im, T *orientation,
     target_im[idx] = tmp.y;
   }
 }
-#endif
+
+#endif // ORDERPARAMETERCOMPONENT_KERNEL_H

@@ -1,8 +1,8 @@
 //
 // Enums to make code and function arguments read more easily.
 //
-#ifndef _TYPE_H
-#define _TYPE_H
+#ifndef TYPE_H
+#define TYPE_H
 
 struct Type {
   enum type {
@@ -18,4 +18,4 @@ struct Type {
   enum coherence { singlet = 1, triplet = 4 };
 };
 
-#endif
+#endif // TYPE_H

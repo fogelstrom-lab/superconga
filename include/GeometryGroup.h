@@ -1,8 +1,8 @@
 // Container which stores and manages objects of type GeometryComponent.
 // This class compounds the different components together, and produces the
 // final discrete geometry output.
-#ifndef _GEOMETRYGROUP_H
-#define _GEOMETRYGROUP_H
+#ifndef GEOMETRYGROUP_H
+#define GEOMETRYGROUP_H
 
 #include <GeometryComponent.h>
 #include <Grid.h>
@@ -974,4 +974,5 @@ template <typename T> T *GeometryGroup<T>::getNormals(const int dim) const {
 template <typename T> T *GeometryGroup<T>::getBoundaryDistance() const {
   return _boundaryDistance->getDataPointer();
 }
-#endif
+
+#endif // GEOMETRYGROUP_H

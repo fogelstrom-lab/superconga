@@ -2,8 +2,8 @@
 // Useful functions not belonging to any particular part of the framework of the
 // self-consistent iterations.
 //
-#ifndef _UTIL_H
-#define _UTIL_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <Grid.h>
 #include <cuda.h>
@@ -52,4 +52,5 @@ void Util<T>::mirror_diag_lower_to_upper(typename Grid<T>::GPU *grid) {
           grid->getDataPointer(c, Type::imag), N);
   }
 }
-#endif
+
+#endif // UTIL_H

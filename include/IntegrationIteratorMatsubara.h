@@ -1,5 +1,5 @@
-#ifndef _INTEGRATIONITERATORMATSUBARA_H
-#define _INTEGRATIONITERATORMATSUBARA_H
+#ifndef INTEGRATIONITERATORMATSUBARA_H
+#define INTEGRATIONITERATORMATSUBARA_H
 
 #include <ComputeProperty.h>
 #include <Context.h>
@@ -272,4 +272,5 @@ template <typename T> void IntegrationIteratorMatsubara<T>::compute() {
 
   I::increaseIterationCount();
 }
-#endif
+
+#endif // INTEGRATIONITERATORMATSUBARA_H

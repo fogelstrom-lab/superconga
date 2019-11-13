@@ -1,5 +1,5 @@
-#ifndef _PARAMETERSOLD_H
-#define _PARAMETERSOLD_H
+#ifndef PARAMETERSOLD_H
+#define PARAMETERSOLD_H
 
 #include <string>
 
@@ -387,4 +387,5 @@ template <typename T> void Parameters<T>::print() const {
   cout << "GridData energies: ";
 }
 } // namespace v1
-#endif
+
+#endif // PARAMETERSOLD_H

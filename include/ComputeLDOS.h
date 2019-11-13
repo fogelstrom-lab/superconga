@@ -1,5 +1,5 @@
-#ifndef _COMPUTELDOS_H
-#define _COMPUTELDOS_H
+#ifndef COMPUTELDOS_H
+#define COMPUTELDOS_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorKeldysh.h>
@@ -218,4 +218,5 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
       ComputeProperty<T>::setConverged();
   }
 }
-#endif
+
+#endif // COMPUTELDOS_H

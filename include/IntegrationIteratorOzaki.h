@@ -1,5 +1,5 @@
-#ifndef _INTEGRATIONITERATOROZAKI_H
-#define _INTEGRATIONITERATOROZAKI_H
+#ifndef INTEGRATIONITERATOROZAKI_H
+#define INTEGRATIONITERATOROZAKI_H
 
 #include <ComputeProperty.h>
 #include <Context.h>
@@ -350,4 +350,5 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
 
   I::increaseIterationCount();
 }
-#endif
+
+#endif // INTEGRATIONITERATOROZAKI_H

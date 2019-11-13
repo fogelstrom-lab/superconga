@@ -1,5 +1,5 @@
-#ifndef _INTEGRATIONITERATORKELDYSH_H
-#define _INTEGRATIONITERATORKELDYSH_H
+#ifndef INTEGRATIONITERATORKELDYSH_H
+#define INTEGRATIONITERATORKELDYSH_H
 
 #include <ComputeProperty.h>
 #include <Context.h>
@@ -294,4 +294,5 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
   I::increaseIterationCount();
 }
-#endif
+
+#endif // INTEGRATIONITERATORKELDYSH_H

@@ -1,5 +1,5 @@
-#ifndef _CPLX_H
-#define _CPLX_H
+#ifndef CPLX_H
+#define CPLX_H
 
 #ifdef __CUDACC__
 #include <cuda.h>
@@ -234,4 +234,4 @@ template <typename T> _DEV_ cplx<T> cplx<T>::cexp(const cplx<T> &r) {
   return c;
 }
 
-#endif
+#endif // CPLX_H

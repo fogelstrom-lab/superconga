@@ -1,3 +1,7 @@
+#ifndef COLORMAP_H
+#define COLORMAP_H
+
+#include <algorithm> // std::swap
 
 namespace Color {
 struct Base {
@@ -130,3 +134,5 @@ Copper::Copper() : Base(5) {
 }
 
 } // namespace Color
+
+#endif // COLORMAP_H

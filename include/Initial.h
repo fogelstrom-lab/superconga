@@ -2,8 +2,8 @@
 // Collection of functions to set the initial condition of the order parameter.
 // All member functions are static so this struct should not be instantiated.
 //
-#ifndef _INITIAL_H
-#define _INITIAL_H
+#ifndef INITIAL_H
+#define INITIAL_H
 
 #ifndef PI
 #define PI (T)3.1415926535897932384
@@ -345,4 +345,5 @@ int Initial<T>::read(OrderParameterComponent<T> *deltaComponent,
 
   return read(deltaComponent, fn);
 }
-#endif
+
+#endif // INITIAL_H

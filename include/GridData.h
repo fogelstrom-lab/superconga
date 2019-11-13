@@ -1,5 +1,5 @@
-#ifndef _GRIDDATA_H
-#define _GRIDDATA_H
+#ifndef GRIDDATA_H
+#define GRIDDATA_H
 
 #ifdef __CUDACC__
 #define _DEV_ __host__ __device__
@@ -1575,4 +1575,5 @@ int GridData<T, DEV>::readParameters(const char *filename,
     return 1;
   }
 }
-#endif
+
+#endif // GRIDDATA_H

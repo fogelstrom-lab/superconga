@@ -1,5 +1,5 @@
-#ifndef _PARAMETERS_H
-#define _PARAMETERS_H
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
 
 #include <ContextModule.h>
 #include <fstream>
@@ -380,4 +380,5 @@ template <typename T> void Parameters<T>::print() const {
   cout << "Convergence Criterion: " << _convergence << endl;
   cout << "Cutoff parameter: " << _cutOff << endl;
 }
-#endif
+
+#endif // PARAMETERS_H

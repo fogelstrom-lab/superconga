@@ -2,8 +2,8 @@
 // Base class for the discrete representation of geometry, as used by the
 // Riccati solver.
 //
-#ifndef _GEOMETRYCOMPONENT_H
-#define _GEOMETRYCOMPONENT_H
+#ifndef GEOMETRYCOMPONENT_H
+#define GEOMETRYCOMPONENT_H
 
 #include <Grid.h>
 #include <Parameters.h>
@@ -244,4 +244,4 @@ template <typename T> T *GeometryComponent<T>::getBoundaryDistance() const {
   return _boundaryDistance->getDataPointer();
 }
 
-#endif
+#endif // GEOMETRYCOMPONENT_H

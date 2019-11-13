@@ -1,5 +1,5 @@
-#ifndef _VISUALIZATION_H
-#define _VISUALIZATION_H
+#ifndef VISUALIZATION_H
+#define VISUALIZATION_H
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -773,4 +773,5 @@ template <typename T> void Visualization<T>::draw() {
   drawInfo();
   glutSwapBuffers();
 }
-#endif
+
+#endif // VISUALIZATION_H

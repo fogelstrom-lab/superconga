@@ -1,5 +1,5 @@
-#ifndef _ORDERPARAMETERCOMPONENT_S_H
-#define _ORDERPARAMETERCOMPONENT_S_H
+#ifndef ORDERPARAMETERCOMPONENT_S_H
+#define ORDERPARAMETERCOMPONENT_S_H
 
 #include <Grid.h>
 #include <OrderParameterComponent.h>
@@ -67,4 +67,5 @@ OrderParameterComponent_S<T> *OrderParameterComponent_S<T>::clone() const {
 template <typename T> double OrderParameterComponent_S<T>::deltaBulk() const {
   return OrderParameterComponent<T>::deltaBulk();
 }
-#endif
+
+#endif // ORDERPARAMETERCOMPONENT_S_H

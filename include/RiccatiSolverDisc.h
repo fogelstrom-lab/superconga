@@ -1,5 +1,5 @@
-#ifndef _RICCATISOLVERDISC_H
-#define _RICCATISOLVERDISC_H
+#ifndef RICCATISOLVERDISC_H
+#define RICCATISOLVERDISC_H
 
 #include <RiccatiSolver.h>
 #include <cplx.h>
@@ -130,4 +130,5 @@ int RiccatiSolverDisc<T, GAMMA, POTENTIAL>::initialize() {
 
   return 0;
 }
-#endif
+
+#endif // RICCATISOLVERDISC_H

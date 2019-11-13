@@ -1,5 +1,5 @@
-#ifndef _COMPUTEVECTORPOTENTIAL_H
-#define _COMPUTEVECTORPOTENTIAL_H
+#ifndef COMPUTEVECTORPOTENTIAL_H
+#define COMPUTEVECTORPOTENTIAL_H
 
 #include <GeometryGroup.h>
 #include <Grid.h>
@@ -69,4 +69,5 @@ void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
   }
   *A *= (-1.0 / (2.0 * M_PI));
 }
-#endif
+
+#endif // COMPUTEVECTORPOTENTIAL_H
