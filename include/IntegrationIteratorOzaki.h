@@ -7,6 +7,7 @@
 #include <OrderParameter.h>
 #include <ParameterIterator.h>
 #include <RiccatiSolver.h>
+#include <thrust/host_vector.h>
 
 /* Wrapper of dsygv from FORTRAN LAPACK
  * Documentation: http://www.netlib.org/lapack/explore-html/d5/d2e/dsygv_8f.html
@@ -99,8 +100,8 @@ void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int numPoles,
   // This implementation (i starts at 0):
   // Diagonal matrix B, B_ii = (2*i+1)
   // Off-diagonal matrix A, A_i,i+1 = A_i,i-1 = -1/2
-  thrust::host_vector<T> A(N * N, 0.0);
-  thrust::host_vector<T> B(N * N, 0.0);
+  thrust::host_vector<double> A(N * N, 0.0);
+  thrust::host_vector<double> B(N * N, 0.0);
 
   for (int i = 0; i < N; ++i) {
     B[i * N + i] = i * 2.0 + 1.0;
@@ -121,19 +122,17 @@ void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int numPoles,
   char UPLO = 'U';  // Upper triangles of A and B are stored
   int64_t INFO = 0; // Storage for info returned from dsygv
 
-  thrust::host_vector<T> W(N, 0.0);        // Eigenvalue storage
-  thrust::host_vector<T> WORK(LWORK, 0.0); // Work storage
+  thrust::host_vector<double> W(N, 0.0);        // Eigenvalue storage
+  thrust::host_vector<double> WORK(LWORK, 0.0); // Work storage
 
   dsygv_(&ITYPE, &JOBZ, &UPLO, &N, A.data(), &LDA, B.data(), &LDB, W.data(),
          WORK.data(), &LWORK, &INFO);
 
   for (int i = 0; i < numPoles; ++i) {
-    // Poles
-    const T thisPole = -1.0 / W[i];
-    poles[i] = thisPole;
-
-    // Residues
-    residues[i] = 0.25 * A[N * i] * A[N * i] * thisPole * thisPole;
+    const double pole = -1.0 / W[i];
+    const double residueSqrt = 0.5 * A[N * i] * pole;
+    poles[i] = static_cast<T>(pole);
+    residues[i] = static_cast<T>(residueSqrt * residueSqrt);
   }
 }
 
