@@ -1,10 +1,9 @@
 #ifndef _CONTEXTMODULE_H
 #define _CONTEXTMODULE_H
 
-//#include <Context.h>
+#include <cuda.h>
 
 template<typename> class Parameters;
-
 template<typename> class Context;
 template<typename> class GeometryGroup;
 template<typename> class OrderParameter;
@@ -54,4 +53,12 @@ private:
 	Context<T>* _context;
 };
 
+template<typename T>
+void ContextModule<T>::checkCudaError( std::string msg )
+{
+	cudaError_t err = cudaGetLastError();
+	
+	if ( err != cudaSuccess )
+		std::cout << "CUDA ERROR: " << msg << ": " << cudaGetErrorString( err ) << std::endl;
+}
 #endif

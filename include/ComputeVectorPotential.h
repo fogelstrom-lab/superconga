@@ -1,6 +1,18 @@
-#include "computeVectorPotential.h"
+#ifndef _COMPUTEVECTORPOTENTIAL_H
+#define _COMPUTEVECTORPOTENTIAL_H
 
+#include <cuda.h>
+#include <Grid.h>
+#include <GeometryGroup.h>
 
+template <typename T>
+void computeVectorPotential(
+	GridData<T,thrust::device_vector<T> >* A,
+	const GridData<T,thrust::device_vector<T> >* j,
+	GridData<char,thrust::device_vector<char> >* geom,
+	const T h, const T c, const int N );
+
+namespace {
 // Compute vector potential by integrating greens function kernel
 template <typename T>
 __global__ void computeVectorPotential2d_kernel( T* Ax, T* Ay, const T* jx, const T* jy, const char* geom, const int px, const int py, const T h, const T c, const int Nx )
@@ -32,7 +44,7 @@ __global__ void computeVectorPotential2d_kernel( T* Ax, T* Ay, const T* jx, cons
 		Ay[idx] += mult*jy[idxp];
 	}
 }
-
+} // namespace anonymous
 
 template <typename T>
 void computeVectorPotential(
@@ -67,4 +79,4 @@ void computeVectorPotential(
 	}
 	*A *= (-1.0/(2.0*M_PI));
 }
-
+#endif

@@ -80,5 +80,201 @@ private:
 	GridGPU*			_boundaryDistance;
 };
 
+namespace
+{
+// Label boundary interface nodes
+// Codes:
+// 0 - Outside domain
+// 1 - Inside domain
+// 2 - Trajectory entering domain
+// 3 - Trajectory exiting domain
+
+// 4 - Trajectory entering AND exiting domain at the same grid point (not implemented)
+
+
+// Label type 2 and 3 and 4 nodes
+template <typename T>
+__global__ void labelEntryExit_Kernel( char *oldLabels_p, char *newLabels_p, const int Nx, const int Ny )
+{
+	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+	
+	if ( tx < Nx && ty < Ny  )
+	{
+		const int idx = ty*Nx + tx;
+		
+		char newLabel = 0;
+		char oldLabel[3];		
+
+		if ( ty > 0 && ty < Ny-1 )
+		{		
+			// Read current and adjacent labels
+			// Maybe use shared memory here for more efficient data loading and memory coalescing
+			for ( int i=0; i<3; ++i )
+				oldLabel[i] = oldLabels_p[ (ty-1+i)*Nx + tx ];
+
+			// Label interface nodes
+			if ( oldLabel[1] == 1 )
+			{
+				newLabel = 1;
+				
+				if ( oldLabel[0] == 0 )
+				{
+					newLabel = 2;
+				}
+				else if ( oldLabel[2] == 0 )
+				{
+					newLabel = 3;
+				}
+			
+				if ( oldLabel[0] == 0 && oldLabel[2] == 0 )
+					newLabel = 0;
+			}
+		}		
+		newLabels_p[idx] = newLabel;
+	}
+}
+} // namespace anonymous
+
+template <typename T>
+GeometryComponent<T>::GeometryComponent()
+	:	_param(0), _domainLabels(0), _normals(0), _boundaryDistance(0)
+{
+	std::cout << "GeometryComponent()\n";
+}
+
+
+template <typename T>
+GeometryComponent<T>::GeometryComponent( const GeometryComponent<T>& other ) :
+	_param(other._param), _domainLabels(0), _normals(0), _boundaryDistance(0)
+{
+	if ( other._domainLabels )		_domainLabels = new Grid<char>::GPU( *other._domainLabels );
+	if ( other._normals )			_normals = new GridGPU( *other._normals );
+	if ( other._boundaryDistance )	_boundaryDistance = new GridGPU( *other._boundaryDistance );
+}
+
+
+template <typename T>
+GeometryComponent<T>::~GeometryComponent()
+{
+	std::cout << "~GeometryComponent()\n";
+	freeMem();
+}
+
+
+template <typename T>
+void swap( GeometryComponent<T>& A, GeometryComponent<T>& B )
+{
+	std::swap(A._param, B._param);
+	std::swap(A._domainLabels, B._domainLabels);
+	std::swap(A._normals, B._normals);
+	std::swap(A._boundaryDistance, B._boundaryDistance);
+}
+
+
+template <typename T>
+void GeometryComponent<T>::allocateMem()
+{
+	int N;
+	if ( _param )
+		N = _param->getGridResolutionDeltaRotated();
+	else
+	{
+		std::cout << "GeometryComponent<T>::allocateMem(): Error: No Parameters<T> object!\n";
+		return;
+	}
+
+	GridGPU::initializeGrid( _normals, N, N, 2, Type::real );
+	GridGPU::initializeGrid( _boundaryDistance, N, N, 1, Type::real );
+	Grid<char>::GPU::initializeGrid( _domainLabels, N, N, 1, Type::real );
+}
+
+
+template <typename T>
+void GeometryComponent<T>::freeMem()
+{
+	GridGPU::deleteGrid( _normals );
+	GridGPU::deleteGrid( _boundaryDistance );
+	Grid<char>::GPU::deleteGrid( _domainLabels );
+}
+
+
+template <typename T>
+void GeometryComponent<T>::labelBoundaryNodes()
+{
+	int Nx, Ny;
+	dim3 tpb, bpg;
+	
+	getGridDimensions( Nx, Ny );
+	getKernelDimensions( bpg, tpb );
+	
+	// Label boundary interface nodes
+	Grid<char>::GPU* oldLabels = _domainLabels;
+	Grid<char>::GPU* newLabels(0);
+	Grid<char>::GPU::initializeGrid(newLabels,oldLabels);
+
+	labelEntryExit_Kernel<T><<<bpg, tpb>>>( oldLabels->getDataPointer(),
+											newLabels->getDataPointer(),
+											Nx, Ny );
+
+	_domainLabels = newLabels;
+	delete oldLabels;
+}
+
+
+template <typename T>
+void GeometryComponent<T>::getGridDimensions( int& Nx, int& Ny ) const
+{
+	if ( _domainLabels )
+	{
+		Nx = _domainLabels->dimX();
+		Ny = _domainLabels->dimY();
+	}
+	else
+	{
+		std::cout << "GeometryComponent<T>::getGridDimensions() Error: _domainLabels not initialized.\n";
+		Nx = 0;
+		Ny = 0;
+	}
+}
+
+
+template <typename T>
+void GeometryComponent<T>::getKernelDimensions( dim3& bpg, dim3& tpb ) const
+{
+	int Nx, Ny;
+	getGridDimensions( Nx, Ny );
+
+	int tx = 64;
+	int bx = Nx/tx;
+	if ( tx*bx != Nx )
+		bx++;
+		
+	tpb = dim3(tx,1);
+	bpg = dim3(bx,Ny);
+}
+
+
+template <typename T>
+char* GeometryComponent<T>::getDomainLabels() const
+{
+	return _domainLabels->getDataPointer();
+}
+
+
+template <typename T>
+T* GeometryComponent<T>::getNormals( const int dim ) const 
+{
+	return _normals->getDataPointer( dim );
+}
+
+
+template <typename T>
+T* GeometryComponent<T>::getBoundaryDistance() const
+{
+	return _boundaryDistance->getDataPointer();
+}
+
+
 #endif
 

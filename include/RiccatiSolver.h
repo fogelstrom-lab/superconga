@@ -5,6 +5,7 @@
 #define _RICCATISOLVER_H
 
 #include <cplx.h>
+#include <ComputeCurrent.h>
 #include <Parameters.h>
 #include <ParameterIterator.h>
 #include <Grid.h>
@@ -12,6 +13,10 @@
 #include <IntegrationIterator.h>
 #include <BoundaryStorage.h>
 #include <BoundaryCondition.h>
+#include "LocalVectorPotential.h"
+#include "LocalGamma.h"
+#include "VectorPotential_Kernel.h"
+#include "ComputeVectorPotential.h"
 
 /////////////////////////////////////////////////////////
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE
@@ -124,4 +129,249 @@ private:
 
 };
 
+// This function could not be put into RiccatiSolver class, because of template parameter issues
+template <typename T, template <typename> class VP>
+void computeEnergyShift( ContextModule<T>* mod, typename Grid<T>::GPU* ps, typename Grid<T>::GPU* eShift, const int computeInduced, const int angle_idx )
+{
+	typedef typename Grid<T>::GPU GridGPU;
+	typedef typename Grid<T>::CPU GridCPU;
+
+	Parameters<T>* param = mod->getParameters();
+
+	// Add contribution from external magnetic field
+	const int N0 = param->getGridResolutionBase();
+	const int N1 = param->getGridResolutionCoherence();
+	const T B = param->getMagneticFieldStrength();
+	const T h = param->getGridElementSize();
+	const int Na = param->getAngularResolution();
+	const T system_angle = 2.0*M_PI * T(angle_idx)/T(Na);
+
+	dim3 bpg, tpb;
+	eShift->getKernelDimensions(bpg,tpb);
+
+	computeEnergyShift_external_kernel<T,VP><<<bpg,tpb>>>( eShift->getDataPointer(), system_angle, B, N1, h );
+
+	// Add contribution from internal magnetic field induced by currents
+	ComputeCurrent<T>* j_compute = mod->getContext()->getComputeCurrent();
+
+	if ( j_compute && computeInduced )
+	{
+		GridGPU ps_rot(N1,N1,2,Type::real);
+		ps_rot.setZero();
+		ps_rot.insertRotatedGrid(ps,-system_angle);
+
+		computeEnergyShift_internal_kernel<T><<<bpg,tpb>>>( eShift->getDataPointer(), ps_rot.getDataPointer(0), ps_rot.getDataPointer(1), system_angle, N1 );
+	}
+}
+
+
+template <typename T>
+RiccatiSolver<T>::RiccatiSolver()
+	:	ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _ps(0), _eShift(0),
+		_computeInduced(0), _orderParameterMult(1.0)
+{}
+
+
+template <typename T>
+RiccatiSolver<T>::RiccatiSolver( Context<T>* ctx )
+	:	ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _ps(0), _eShift(0),
+	_computeInduced(0), _orderParameterMult(1.0)
+{}
+
+
+template <typename T>
+RiccatiSolver<T>::~RiccatiSolver()
+{
+	std::cout << "~RiccatiSolver()\n";
+	if ( _gamma ) delete _gamma;
+	if ( _gammabar ) delete _gammabar;
+	if ( _storage ) delete _storage;
+	if ( _ps ) delete _ps;
+	if ( _eShift ) delete _eShift;
+
+	for ( int i=0; i<getNumBoundaryConditions(); ++i )
+		delete _bc_list[i];
+}
+
+
+template <typename T>
+int RiccatiSolver<T>::initialize()
+{
+	std::cout << "RiccatiSolver<T>::initialize()\n";
+	initializeCoherenceFunctions();
+
+	const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+	const int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();		
+
+	GridGPU::initializeGrid( _ps, N0, N0, 2, Type::real );
+	GridGPU::initializeGrid( _eShift, N1, N1, 1, Type::real );
+
+	_ps->setZero();
+
+	return 0;
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::initializeBoundaryStorage()
+{
+	typedef ContextModule<T> C;
+
+	if ( _storage != 0 )
+		delete _storage;
+		
+	_storage = new BoundaryStorage<T>( C::getGeometry() );
+
+	int numTrajectories = C::getParameters()->getGridResolutionCoherence();
+	int numAngles = C::getParameters()->getAngularResolution();	
+	int numEnergies = C::getIntegrationIterator()->getNumEnergiesInterval();
+
+	_storage->initialize( numTrajectories, numEnergies, numAngles );
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::initializeCoherenceFunctions()
+{
+	typedef ContextModule<T> C;
+
+	int N = C::getParameters()->getGridResolutionCoherence();		
+
+	int numFields = C::getIntegrationIterator()->getEnergyIterator()->getNumInterval();
+
+	GridGPU::initializeGrid( _gamma, N, N, numFields );
+	GridGPU::initializeGrid( _gammabar, N, N, numFields );
+
+	_gamma->setZero();
+	_gammabar->setZero();
+
+	long long bytes = N*N*numFields*2*sizeof(T)*2;
+	std::cout << "Gamma storage data: " << bytes << " bytes.\n";
+	std::cout << "numFields = " << numFields << "\n\n";
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::computeBoundaryConditions()
+{
+	typedef RiccatiSolver<T> R;
+
+	// Apply boundary condition(s)
+	int Nbc = getNumBoundaryConditions();
+
+	if ( Nbc > 0 )
+	{
+		for ( int i=0; i<Nbc; ++i )
+			getBoundaryCondition(i)->computeBoundaryCondition( ContextModule<T>::getContext() );
+	}
+	else
+	{
+		std::cout << "WARNING: No boundary conditions specified!\n";
+	}
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::computeInducedMagneticField()
+{
+	typedef ContextModule<T> C;
+
+	Parameters<T>* param = C::getParameters();
+
+	const int N0 = param->getGridResolutionBase();
+	const T h = param->getGridElementSize();
+
+	ComputeCurrent<T>* j_compute = C::getContext()->getComputeCurrent();
+
+	if ( j_compute && doComputeInducedMagneticField() )
+	{	
+		std::cout << "Solving for vector potential...\n";
+
+		if ( param->getPenetrationDepth() < 0.0000000001 )
+		{
+			std::cout << "Error, penetration depth is zero or negative!\n";
+			std::cout << "Error, penetration depth is zero or negative!\n";
+			std::cout << "Error, penetration depth is zero or negative!\n";
+		}
+
+		const T lambda = param->getPenetrationDepth();
+	
+		std::cout << "Lambda = " << lambda << "\n";
+
+		const T twopi = 2.0*M_PI;
+		const T mult = -twopi*twopi*twopi / (lambda*lambda);
+
+		GridGPU* j = j_compute->getResult();
+
+		Grid<char>::GPU* dom = C::getContext()->getGeometry()->getDomainGrid();
+
+		Grid<char>::GPU dom_crop(N0,N0,1,Type::real);
+		dom_crop.insertGrid(dom);
+
+		// Solve ps
+		computeVectorPotential( _ps, j, &dom_crop, h, mult );
+	}
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::getKernelDimensions(
+	dim3 & blocksPerGrid, dim3 & threadsPerBlock, const int numEnergies )
+{
+	const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+	const int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+
+	int tpb_x, tpb_y, bpg_x, bpg_y;
+
+	tpb_x = N1;
+	tpb_y = 1;
+
+	bpg_x = 1;
+	
+	if ( N0 <= 151 )	
+		tpb_y = 2;	// This is somewhat faster for small grid sizes
+	
+	if ( tpb_x > 512 )
+	{
+		tpb_x = N1/2 + 1;
+		bpg_x = 2;
+	}
+
+	bpg_y = numEnergies/tpb_y;
+	
+	if ( bpg_y*tpb_y != numEnergies )
+		bpg_y++;
+		
+	threadsPerBlock = dim3(tpb_x,tpb_y);
+	blocksPerGrid = dim3(bpg_x,bpg_y);
+}
+
+
+template <typename T>
+void RiccatiSolver<T>::getKernelDimensionsOptim(
+	dim3 & blocksPerGrid, dim3 & threadsPerBlock, const int numEnergies, const int angle_idx )
+{
+	int numTrajectories = _storage->getNumIntersectingTrajectoriesAngle( angle_idx );
+
+	int tpb_x, tpb_y, bpg_x, bpg_y;
+
+	tpb_x = numTrajectories;
+	tpb_y = 1;
+
+	bpg_x = 1;
+	
+	if ( tpb_x > 512 )
+	{
+		tpb_x = tpb_x/2 + 1;
+		bpg_x = 2;
+	}
+
+	bpg_y = numEnergies/tpb_y;
+	
+	if ( bpg_y*tpb_y != numEnergies )
+		bpg_y++;
+		
+	threadsPerBlock = dim3(tpb_x,tpb_y);
+	blocksPerGrid = dim3(bpg_x,bpg_y);
+}
 #endif

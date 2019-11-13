@@ -1,7 +1,8 @@
-#ifndef ORDERPARAMETERCOMPONENT_KERNEL
-#define ORDERPARAMETERCOMPONENT_KERNEL
-#include <cuda.h>
+#ifndef _ORDERPARAMETERCOMPONENT_KERNEL_H
+#define _ORDERPARAMETERCOMPONENT_KERNEL_H
 
+#include <cuda.h>
+#include <cplx.h>
 
 template <typename T>
 struct Basis_S

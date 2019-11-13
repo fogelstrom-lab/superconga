@@ -14,42 +14,42 @@
 //*******************************************************
 // API libraries
 //*******************************************************
-#include <cplx.cu>	// Complex number datatype
-#include <Grid.cpp> // Data type for observables defined on the lattice
-#include <Parameters.cpp> // Parameters specifying which the superconducting system to simulate
-#include <ParameterIterator.cpp> // Used for sweeping parameters (e.g. energy, temperature)
-#include <GeometryGroup.cu> // The geometry group stores a list of polygons/discs/... that togheter define the sample geometry (container class for GeometryComponent)
-#include <GeometryComponent.cu> // Pure virtual geometry object class - base class for discs, polygons etcetera
-#include <Disc.cpp> // Used for adding/subtracting discs from sample geometry
-#include <Polygon.cpp> // Used for adding/subtracting polygons from sample geometry (!! currently limited to convex hull !!)
-#include <PolygonGeometry.cu>
-#include <DiscGeometry.cu>
-#include <OrderParameter.cu> // Container class for order parameter components 
-#include <OrderParameterComponent.cu> // Pure virtul for s-wave, d-wave, ... components
-#include <OrderParameterComponent_S.cu> // s-wave
-//#include <OrderParameterComponent_D.cu> // d-wave
-//#include <OrderParameterComponent_P.cu> // p-wave (p_x part)
-//#include <OrderParameterComponent_PM.cu> // p-wave (p_y part)
-#include <RiccatiSolver.cu> // Pure virtual for different kinds of Riccati solvers
-//#include <RiccatiSolverBulk.cu> // Riccati solver for bulk
-#include <RiccatiSolverConfined.cu> // Riccati solver for confined geometries
-#include <ComputeProperty.cu> // Pure virtual for compute properties (observables etc). The observables to be computed are added to a list of compute objects.
-#include <ComputeOrderParameter.cu> // Compute order parameter
-#include <ComputeCurrent.cu> // Compute charge current
-#include <ComputeFreeEnergy.cu> // Compute free energy (Eilenberger functional)
-//#include <ComputeLDOS.cu> // Compute Local Density of States (!! note !! more convenient to run in a separate program using the Keldysh iterator, reading a fully converged solution as start file)
-#include <BoundaryStorage.cu> // Storage for coherence functions on the system edges - we save memory by only saving on boundaries between self-consistent iterations. These are the start point for each new energy and angle.
-#include <BoundaryConditionSpecular.cu> // Boundary condition for perfect specular reflection
-#include <IntegrationIterator.cu> // Pure virtual for different energy integration schemes (Ozaki, Matsubara, Keldysh, ...)
-#include <IntegrationIteratorOzaki.cu> // Calculate energy integral through Ozaki summation
-//#include <IntegrationIteratorMatsubara.cu> // Matsubara sum, deprecated by Ozaki method
-//#include <IntegrationIteratorKeldysh.cu> // Used for calculating observables on the real energy axsis (e.g. DOS)
-#include <GreensFunctionStatic.cu> // Misc. Green function calculations
-#include <Context.cu> // The context that connects all classes (helpful since enacpsulation is used)
-#include <Initial.cu> // Used for generating initial guess for order parameter
-#include <Visualization.cu> // Live visualization of desired observables through OpenGL
-#include <GradientAccelerator.cu> // Naive method for speeding up self-consistent iterations. Should be replaced by Anderson accelerator or similar.
-#include <ContextModule.cu> // Pure virtual for context modules (e.g. Parameters, ComputeProperty, GradientAccelerator, RiccatiSolver, OrderParameter, GeometryGroup, IntegrationIterator)
+#include <cplx.h>	// Complex number datatype
+#include <Grid.h> // Data type for observables defined on the lattice
+#include <Parameters.h> // Parameters specifying which the superconducting system to simulate
+#include <ParameterIterator.h> // Used for sweeping parameters (e.g. energy, temperature)
+#include <GeometryGroup.h> // The geometry group stores a list of polygons/discs/... that togheter define the sample geometry (container class for GeometryComponent)
+#include <GeometryComponent.h> // Pure virtual geometry object class - base class for discs, polygons etcetera
+#include <Disc.h> // Used for adding/subtracting discs from sample geometry
+#include <Polygon.h> // Used for adding/subtracting polygons from sample geometry (!! currently limited to convex hull !!)
+#include <PolygonGeometry.h>
+#include <DiscGeometry.h>
+#include <OrderParameter.h> // Container class for order parameter components 
+#include <OrderParameterComponent.h> // Pure virtul for s-wave, d-wave, ... components
+#include <OrderParameterComponent_S.h> // s-wave
+//#include <OrderParameterComponent_D.h> // d-wave
+//#include <OrderParameterComponent_P.h> // p-wave (p_x part)
+#include <RiccatiSolver.h> // Pure virtual for different kinds of Riccati solvers
+//#include <RiccatiSolverBulk.h> // Riccati solver for bulk
+#include <RiccatiSolverConfined.h> // Riccati solver for confined geometries
+#include <ComputeProperty.h> // Pure virtual for compute properties (observables etc). The observables to be computed are added to a list of compute objects.
+#include <ComputeOrderParameter.h> // Compute order parameter
+#include <ComputeCurrent.h> // Compute charge current
+#include <ComputeFreeEnergy.h> // Compute free energy (Eilenberger functional)
+#include "ComputeVectorPotential.h"
+//#include <ComputeLDOS.h> // Compute Local Density of States (!! note !! more convenient to run in a separate program using the Keldysh iterator, reading a fully converged solution as start file)
+#include <BoundaryStorage.h> // Storage for coherence functions on the system edges - we save memory by only saving on boundaries between self-consistent iterations. These are the start point for each new energy and angle.
+#include <BoundaryConditionSpecular.h> // Boundary condition for perfect specular reflection
+#include <IntegrationIterator.h> // Pure virtual for different energy integration schemes (Ozaki, Matsubara, Keldysh, ...)
+#include <IntegrationIteratorOzaki.h> // Calculate energy integral through Ozaki summation
+//#include <IntegrationIteratorMatsubara.h> // Matsubara sum, deprecated by Ozaki method
+//#include <IntegrationIteratorKeldysh.h> // Used for calculating observables on the real energy axsis (e.g. DOS)
+#include <GreensFunctionStatic.h> // Misc. Green function calculations
+#include <Context.h> // The context that connects all classes (helpful since enacpsulation is used)
+#include <Initial.h> // Used for generating initial guess for order parameter
+#include <Visualization.h> // Live visualization of desired observables through OpenGL
+#include <GradientAccelerator.h> // Naive method for speeding up self-consistent iterations. Should be replaced by Anderson accelerator or similar.
+#include <ContextModule.h> // Pure virtual for context modules (e.g. Parameters, ComputeProperty, GradientAccelerator, RiccatiSolver, OrderParameter, GeometryGroup, IntegrationIterator)
 
 
 //*******************************************************

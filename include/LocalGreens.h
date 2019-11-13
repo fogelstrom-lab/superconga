@@ -2,8 +2,8 @@
 // Functions to compute local value of Greens functions
 ///////////////////////////////////////////////////////
 
-#ifndef _LOCALGREENS_
-#define _LOCALGREENS_
+#ifndef _LOCALGREENS_H
+#define _LOCALGREENS_H
 
 #ifdef __CUDACC__
 #ifndef _HD_
