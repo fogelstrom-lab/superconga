@@ -9,22 +9,17 @@
 #define __HD__
 #endif
 
-namespace GridFunctors
-{
+namespace GridFunctors {
 
-template <typename T>
-struct square_root
-{
-	__HD__
-	void operator()( T& val ) { val = sqrt(val); }
+template <typename T> struct square_root {
+  __HD__
+  void operator()(T &val) { val = sqrt(val); }
 };
 
-template <typename T>
-struct absVal
-{
-	__HD__
-	void operator()( T& val ) { val = abs(val); }
+template <typename T> struct absVal {
+  __HD__
+  void operator()(T &val) { val = abs(val); }
 };
 
-}
+} // namespace GridFunctors
 #endif

@@ -7,9 +7,9 @@
 #define _DEV_
 #endif
 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 #include <GridData.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 // Wrapper structs/typedefs for the GridData class. This makes it simpler to
 // read and write GridData variable declarations. For example:
@@ -17,27 +17,23 @@
 // GridData<double,thrust::device_vector<double> >  --->  Grid<double>::GPU
 // thrust::host_vector<double>    --->  Vector<double>::CPU
 // thrust::device_vector<double>  --->  Vector<double>::GPU
-template <typename T>
-struct Vector
-{
-	typedef thrust::host_vector<T> CPU;
+template <typename T> struct Vector {
+  typedef thrust::host_vector<T> CPU;
 
 #ifdef __CUDACC__
-	typedef thrust::device_vector<T> GPU;
+  typedef thrust::device_vector<T> GPU;
 #else
-	typedef thrust::host_vector<T> GPU;
+  typedef thrust::host_vector<T> GPU;
 #endif
 };
 
-template <typename T>
-struct Grid
-{
-	typedef GridData<T,thrust::host_vector<T> > CPU;
+template <typename T> struct Grid {
+  typedef GridData<T, thrust::host_vector<T>> CPU;
 
 #ifdef __CUDACC__
-	typedef GridData<T,thrust::device_vector<T> > GPU;
+  typedef GridData<T, thrust::device_vector<T>> GPU;
 #else
-	typedef GridData<T,thrust::host_vector<T> > GPU;
+  typedef GridData<T, thrust::host_vector<T>> GPU;
 #endif
 };
 #endif
