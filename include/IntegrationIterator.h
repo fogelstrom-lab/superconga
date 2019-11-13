@@ -1,166 +1,172 @@
 #ifndef _INTEGRATIONITERATOR_H
 #define _INTEGRATIONITERATOR_H
 
+#include <ComputeProperty.h>
 #include <GeometryGroup.h>
 #include <OrderParameter.h>
-#include <RiccatiSolver.h>
-#include <ComputeProperty.h>
 #include <ParameterIterator.h>
+#include <RiccatiSolver.h>
 
-template <typename T>
-class IntegrationIterator : public ContextModule<T>
-{
-	typedef typename Grid<T>::GPU GridGPU;
+template <typename T> class IntegrationIterator : public ContextModule<T> {
+  typedef typename Grid<T>::GPU GridGPU;
 
 public:
-				IntegrationIterator();
-	virtual		~IntegrationIterator();
+  IntegrationIterator();
+  virtual ~IntegrationIterator();
 
-				IntegrationIterator(	Context<T>* ctx,
-										int numEnergiesPerBlock = -1 );
-	
-	// Virtual functions
-	//
-	virtual int 	initialize();
+  IntegrationIterator(Context<T> *ctx, int numEnergiesPerBlock = -1);
 
-	// Call this once before starting self consistent iteration, or when changing initial condition.
-	virtual void	setBoundaryInitialCondition() = 0;
+  // Virtual functions
+  //
+  virtual int initialize();
 
-	// Computes all properties added with addComputeProperty(). Iterate this self consistently.
-	virtual void	compute() = 0;
+  // Call this once before starting self consistent iteration, or when changing
+  // initial condition.
+  virtual void setBoundaryInitialCondition() = 0;
 
-	// Used by BoundaryStorage to determine size of storage
-	virtual int 	getNumEnergiesInterval() = 0;
-	virtual int 	getEnergyIdxOffset_boundaryStorage() = 0;
+  // Computes all properties added with addComputeProperty(). Iterate this self
+  // consistently.
+  virtual void compute() = 0;
 
-	// Energies
-	const ParameterIterator<int>*	getEnergyIterator() const { return _energy_iter; }
-	ParameterIterator<int>* 		getEnergyIterator() { return _energy_iter; }
-	void							setEnergyIterator( ParameterIterator<int>* iter ) { if (_energy_iter) delete _energy_iter; _energy_iter = iter; }
+  // Used by BoundaryStorage to determine size of storage
+  virtual int getNumEnergiesInterval() = 0;
+  virtual int getEnergyIdxOffset_boundaryStorage() = 0;
 
-	void			initIterators();
-	virtual void	initEnergies() = 0;
+  // Energies
+  const ParameterIterator<int> *getEnergyIterator() const {
+    return _energy_iter;
+  }
+  ParameterIterator<int> *getEnergyIterator() { return _energy_iter; }
+  void setEnergyIterator(ParameterIterator<int> *iter) {
+    if (_energy_iter)
+      delete _energy_iter;
+    _energy_iter = iter;
+  }
 
-	// Angles
-	int				getCurrentAngleIndex() const { return _currentAngleIndex; }
-	T				getCurrentAngleRadians() const;
-	
-	void			setCurrentAngleIndex( int angle_idx ) { _currentAngleIndex = angle_idx; }
+  void initIterators();
+  virtual void initEnergies() = 0;
 
+  // Angles
+  int getCurrentAngleIndex() const { return _currentAngleIndex; }
+  T getCurrentAngleRadians() const;
 
-	// Getters
-	GridGPU*		getEnergies() const { return _energies; }
-	GridGPU*		getResidues() const { return _residues; }
+  void setCurrentAngleIndex(int angle_idx) { _currentAngleIndex = angle_idx; }
 
-	GridGPU*		getOrderParameterFieldCurrentAngle() const
-						{ return ContextModule<T>::getContext()->getOrderParameter()->getOrderParameterFieldRotated(); }					
+  // Getters
+  GridGPU *getEnergies() const { return _energies; }
+  GridGPU *getResidues() const { return _residues; }
 
-	int 			getNumIterations() const { return _numIter; }
-	int 			getNumEnergiesPerBlock() const { return _numEnergiesPerBlock; }
-	int 			getBoundaryIdx_offset() const { return _boundaryIdxOffset; }
+  GridGPU *getOrderParameterFieldCurrentAngle() const {
+    return ContextModule<T>::getContext()
+        ->getOrderParameter()
+        ->getOrderParameterFieldRotated();
+  }
 
-	// Setters
-	void			setEnergies( GridGPU* en ) { if (_energies) delete _energies; _energies = en; }
-	void			setNumEnergiesPerBlock( int num );
-	void			setResidues( GridGPU* res ) { if (_residues) delete _residues; _residues = res; }
+  int getNumIterations() const { return _numIter; }
+  int getNumEnergiesPerBlock() const { return _numEnergiesPerBlock; }
+  int getBoundaryIdx_offset() const { return _boundaryIdxOffset; }
 
-	// Compute
-	int 			increaseIterationCount() { _numIter++; return _numIter; }
+  // Setters
+  void setEnergies(GridGPU *en) {
+    if (_energies)
+      delete _energies;
+    _energies = en;
+  }
+  void setNumEnergiesPerBlock(int num);
+  void setResidues(GridGPU *res) {
+    if (_residues)
+      delete _residues;
+    _residues = res;
+  }
 
+  // Compute
+  int increaseIterationCount() {
+    _numIter++;
+    return _numIter;
+  }
 
-	// Debug
-	void			setDebug( int angle_idx ) { _debug_store_angle = angle_idx; }
-	GridGPU *		getDebugGrid() const { return _debug_store_grid; }
-	//void			computeDebug();
-
+  // Debug
+  void setDebug(int angle_idx) { _debug_store_angle = angle_idx; }
+  GridGPU *getDebugGrid() const { return _debug_store_grid; }
+  // void			computeDebug();
 
 private:
-	// Debug
-	int				_debug_store_angle;
-	GridGPU *		_debug_store_grid;
+  // Debug
+  int _debug_store_angle;
+  GridGPU *_debug_store_grid;
 
-	// Energy iterators
-	GridGPU*				_energies;
-	ParameterIterator<int>*	_energy_iter;
+  // Energy iterators
+  GridGPU *_energies;
+  ParameterIterator<int> *_energy_iter;
 
-	// Factor to multiply summand with in energy sum, i.e. different factor for
-	// different energies. In the case of Ozaki integration iterator, these
-	// factors are the Ozaki residues. For Matsubara and Keldysh, it will be a
-	// factor of 1 for each energy.
-	GridGPU*				_residues;
+  // Factor to multiply summand with in energy sum, i.e. different factor for
+  // different energies. In the case of Ozaki integration iterator, these
+  // factors are the Ozaki residues. For Matsubara and Keldysh, it will be a
+  // factor of 1 for each energy.
+  GridGPU *_residues;
 
-	// Max energies a compute block can have
-	int 					_numEnergiesPerBlock;
+  // Max energies a compute block can have
+  int _numEnergiesPerBlock;
 
-	int						_boundaryIdxOffset;
-	
-	// Angle
-	int						_numAngles;
-	int						_currentAngleIndex;
-	
-	int						_numIter;
+  int _boundaryIdxOffset;
+
+  // Angle
+  int _numAngles;
+  int _currentAngleIndex;
+
+  int _numIter;
 };
 
 template <typename T>
-IntegrationIterator<T>::IntegrationIterator() :
-	_energies(0), _energy_iter(0), _numIter(0), _debug_store_grid(0), _residues(0)
-{}
-
+IntegrationIterator<T>::IntegrationIterator()
+    : _energies(0), _energy_iter(0), _numIter(0), _debug_store_grid(0),
+      _residues(0) {}
 
 template <typename T>
-IntegrationIterator<T>::IntegrationIterator( Context<T>* ctx, int numEnergiesPerBlock ) :
-	ContextModule<T>(ctx), _energies(0), _energy_iter(0), _numEnergiesPerBlock(numEnergiesPerBlock),
-	_numIter(0), _debug_store_grid(0), _debug_store_angle(-1), _residues(0)
-{
-	std::cout << "IntegrationIterator<T>::IntegrationIterator( Context<T>* context )\n";
+IntegrationIterator<T>::IntegrationIterator(Context<T> *ctx,
+                                            int numEnergiesPerBlock)
+    : ContextModule<T>(ctx), _energies(0), _energy_iter(0),
+      _numEnergiesPerBlock(numEnergiesPerBlock), _numIter(0),
+      _debug_store_grid(0), _debug_store_angle(-1), _residues(0) {
+  std::cout
+      << "IntegrationIterator<T>::IntegrationIterator( Context<T>* context )\n";
 }
 
+template <typename T> IntegrationIterator<T>::~IntegrationIterator() {
+  std::cout << "~IntegrationIterator()\n";
 
-template <typename T>
-IntegrationIterator<T>::~IntegrationIterator()
-{
-	std::cout << "~IntegrationIterator()\n";
-
-	if ( _debug_store_grid ) delete _debug_store_grid;
-	if ( _energies ) delete _energies;
-	if ( _energy_iter ) delete _energy_iter;
-	if ( _residues ) delete _residues;
+  if (_debug_store_grid)
+    delete _debug_store_grid;
+  if (_energies)
+    delete _energies;
+  if (_energy_iter)
+    delete _energy_iter;
+  if (_residues)
+    delete _residues;
 }
 
-
-template <typename T>
-int IntegrationIterator<T>::initialize()
-{
-	std::cout << "IntegrationIterator::initialize()\n";
-	initIterators();
-	return 0;
+template <typename T> int IntegrationIterator<T>::initialize() {
+  std::cout << "IntegrationIterator::initialize()\n";
+  initIterators();
+  return 0;
 }
 
-
-template <typename T>
-void IntegrationIterator<T>::initIterators()
-{
-	_numAngles = ContextModule<T>::getContext()->getParameters()->getAngularResolution();
-	setCurrentAngleIndex(0);
-	_numIter = 0;
+template <typename T> void IntegrationIterator<T>::initIterators() {
+  _numAngles =
+      ContextModule<T>::getContext()->getParameters()->getAngularResolution();
+  setCurrentAngleIndex(0);
+  _numIter = 0;
 }
 
-
-template <typename T>
-T IntegrationIterator<T>::getCurrentAngleRadians() const
-{
-	return ((T)_currentAngleIndex/(T)_numAngles) * (T)2.0*PI;
+template <typename T> T IntegrationIterator<T>::getCurrentAngleRadians() const {
+  return ((T)_currentAngleIndex / (T)_numAngles) * (T)2.0 * PI;
 }
 
-
 template <typename T>
-void IntegrationIterator<T>::setNumEnergiesPerBlock( int num )
-{
-	if ( num != _numEnergiesPerBlock )
-	{
-		_numEnergiesPerBlock = num;
-		initialize();
-	}
+void IntegrationIterator<T>::setNumEnergiesPerBlock(int num) {
+  if (num != _numEnergiesPerBlock) {
+    _numEnergiesPerBlock = num;
+    initialize();
+  }
 }
 #endif
-

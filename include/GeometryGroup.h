@@ -1,1119 +1,977 @@
 // Container which stores and manages objects of type GeometryComponent.
-// This class compounds the different components together, and produces the final
-// discrete geometry output.
+// This class compounds the different components together, and produces the
+// final discrete geometry output.
 #ifndef _GEOMETRYGROUP_H
 #define _GEOMETRYGROUP_H
 
-#include <cuda.h>
+#include <GeometryComponent.h>
+#include <Grid.h>
+#include <Parameters.h>
 #include <Type.h>
 #include <cplx.h>
-#include <Parameters.h>
-#include <Grid.h>
-#include <GeometryComponent.h>
+#include <cuda.h>
 
-template <typename T>
-class GeometryGroup : public ContextModule<T>
-{
-	typedef typename Grid<T>::GPU GridGPU;
+template <typename T> class GeometryGroup : public ContextModule<T> {
+  typedef typename Grid<T>::GPU GridGPU;
 
 public:
-							GeometryGroup();
-	virtual					~GeometryGroup();
+  GeometryGroup();
+  virtual ~GeometryGroup();
 
-							GeometryGroup( const GeometryGroup<T>& other );
-							GeometryGroup( Context<T>* ctx );
+  GeometryGroup(const GeometryGroup<T> &other);
+  GeometryGroup(Context<T> *ctx);
 
-	GeometryGroup<T>&		operator=( GeometryGroup<T> other );
+  GeometryGroup<T> &operator=(GeometryGroup<T> other);
 
 public:
-	// Allocates memory for member variables (grids)
-	virtual int 			initialize();
+  // Allocates memory for member variables (grids)
+  virtual int initialize();
 
-	// Add/set geometry component to contribute to resulting compounded geometry
-	int						add( GeometryComponent<T>* newComponent, Type::type operation );
-	void					set( GeometryComponent<T>* newComponent, Type::type operation, int geomIdx );
+  // Add/set geometry component to contribute to resulting compounded geometry
+  int add(GeometryComponent<T> *newComponent, Type::type operation);
+  void set(GeometryComponent<T> *newComponent, Type::type operation,
+           int geomIdx);
 
-	// Get a pointer to the specified individual geometry component
-	GeometryComponent<T>*	getGeometryComponent( const int comp ) const;
+  // Get a pointer to the specified individual geometry component
+  GeometryComponent<T> *getGeometryComponent(const int comp) const;
 
-	int 					getNumGeometryComponents() const { return _geomComponentList.size(); }
+  int getNumGeometryComponents() const { return _geomComponentList.size(); }
 
-	// Create discrete representation for compounded geometry in rotational frame given by 
-	// angle argument. Stores result in _domainLabels, _normals, and _boundaryDistance
-	void					create( const T angle );
+  // Create discrete representation for compounded geometry in rotational frame
+  // given by angle argument. Stores result in _domainLabels, _normals, and
+  // _boundaryDistance
+  void create(const T angle);
 
-	// Create discrete representation with resolution NxN, and return domain labels only.
-	// Does not store data in any member variables.
-	Grid<char>::GPU* 		createDomain( const int N );
-	
-	// Extrapolates values outwards from boundary, with numExtend lattice sites.
-	// This is used prior to rotating e.g. the order parameter lattice into a rotational frame
-	// in the momentum integral. The reason is that the rotation together with the linear
-	// interpolation will cause the boundary lattice sites to (wrongly) have fractional values,
-	// i.e. less than they should be. By extrapolating the boundary values, this artifact is eliminated.
-	void					extendValuesAtBoundary( GridGPU* target, const int numExtend ) const;
+  // Create discrete representation with resolution NxN, and return domain
+  // labels only. Does not store data in any member variables.
+  Grid<char>::GPU *createDomain(const int N);
 
-	// Because of the extrapolation in extendValuesAtBoundary(), the computed quantities will
-	// have some non-zero values slightly outside of the actual simulation domain. These do not belong
-	// to the solution, and can be removed with the zeroValuesOutsideDomain() function.
-	void					zeroValuesOutsideDomain( GridGPU* target );
-	
-	// Computes the area of the discrete geometry. Returned in physical units by default.
-	// Set discrete=1 to retrieve the area in number of lattice nodes.
-	T						area( int discrete = 0 );
+  // Extrapolates values outwards from boundary, with numExtend lattice sites.
+  // This is used prior to rotating e.g. the order parameter lattice into a
+  // rotational frame in the momentum integral. The reason is that the rotation
+  // together with the linear interpolation will cause the boundary lattice
+  // sites to (wrongly) have fractional values, i.e. less than they should be.
+  // By extrapolating the boundary values, this artifact is eliminated.
+  void extendValuesAtBoundary(GridGPU *target, const int numExtend) const;
 
-	// Computes the average of the specified field in the inpute grid, only using the values
-	// inside the actual geometry definition.
-	cplx<T>					fieldAverage( GridGPU* data, const int field = 0 );
+  // Because of the extrapolation in extendValuesAtBoundary(), the computed
+  // quantities will have some non-zero values slightly outside of the actual
+  // simulation domain. These do not belong to the solution, and can be removed
+  // with the zeroValuesOutsideDomain() function.
+  void zeroValuesOutsideDomain(GridGPU *target);
 
-	// Getters	
-	void					getGridDimensions( int & Nx, int & Ny ) const;
-	int						getNumAngles() const;
-	T						getCurrentAngle() const { return _currentAngle; }
+  // Computes the area of the discrete geometry. Returned in physical units by
+  // default. Set discrete=1 to retrieve the area in number of lattice nodes.
+  T area(int discrete = 0);
 
-	// Getters (pointers to data in corresponding grids)
-	char*		 			getDomainLabels() const;
-	T*			 			getNormals( const int dim ) const;
-	T*			 			getBoundaryDistance() const;
+  // Computes the average of the specified field in the inpute grid, only using
+  // the values inside the actual geometry definition.
+  cplx<T> fieldAverage(GridGPU *data, const int field = 0);
 
-	// Getters for pointers to grids containing discrete geometry representation
-	Grid<char>::GPU* 		getDomainLabelsGrid() const { return _domainLabels; }
-	GridGPU*	 			getNormalsGrid() const { return _normals; }
-	GridGPU*		 		getBoundaryDistanceGrid() const { return _boundaryDistance; }
+  // Getters
+  void getGridDimensions(int &Nx, int &Ny) const;
+  int getNumAngles() const;
+  T getCurrentAngle() const { return _currentAngle; }
 
-	// Get domain labels grid for the geometry in reference frame.
-	Grid<char>::GPU*		getDomainGrid() const { return _domain_ref; }
+  // Getters (pointers to data in corresponding grids)
+  char *getDomainLabels() const;
+  T *getNormals(const int dim) const;
+  T *getBoundaryDistance() const;
 
-	// Helper functions to find locations of geometry boundary crossings. Only used by the BoundaryStorage
-	// class so far, when determining how much memory is required to store all the boundary values
-	// for the coherence functions.
-	void					countBoundariesAlongTrajectory( int Nx, int Ny,	char* dom_ptr,
-								int* idx_in_ptr, int* idx_out_ptr, int* numBndIsect_ptr, int& sum_idx_in, int& sum_idx_out );
-	void					countBoundariesAlongNegativeTrajectory( int Nx, int Ny,	char* dom_ptr,
-								int* idx_in_ptr, int* idx_out_ptr, int* numBndIsect_ptr, int& sum_idx_in, int& sum_idx_out );
-	
-	void					findBoundaryCrossingsAlongTrajectory( int Nx, int Ny, char* dom_p, int*& coord_ptr );
-	void					findBoundaryCrossingsAlongNegativeTrajectory( int Nx, int Ny, char* dom_p, int*& coord_ptr );
+  // Getters for pointers to grids containing discrete geometry representation
+  Grid<char>::GPU *getDomainLabelsGrid() const { return _domainLabels; }
+  GridGPU *getNormalsGrid() const { return _normals; }
+  GridGPU *getBoundaryDistanceGrid() const { return _boundaryDistance; }
 
+  // Get domain labels grid for the geometry in reference frame.
+  Grid<char>::GPU *getDomainGrid() const { return _domain_ref; }
+
+  // Helper functions to find locations of geometry boundary crossings. Only
+  // used by the BoundaryStorage class so far, when determining how much memory
+  // is required to store all the boundary values for the coherence functions.
+  void countBoundariesAlongTrajectory(int Nx, int Ny, char *dom_ptr,
+                                      int *idx_in_ptr, int *idx_out_ptr,
+                                      int *numBndIsect_ptr, int &sum_idx_in,
+                                      int &sum_idx_out);
+  void countBoundariesAlongNegativeTrajectory(int Nx, int Ny, char *dom_ptr,
+                                              int *idx_in_ptr, int *idx_out_ptr,
+                                              int *numBndIsect_ptr,
+                                              int &sum_idx_in,
+                                              int &sum_idx_out);
+
+  void findBoundaryCrossingsAlongTrajectory(int Nx, int Ny, char *dom_p,
+                                            int *&coord_ptr);
+  void findBoundaryCrossingsAlongNegativeTrajectory(int Nx, int Ny, char *dom_p,
+                                                    int *&coord_ptr);
 
 private:
-	template <typename S>
-	friend void 			swap( GeometryGroup<S>& A, GeometryGroup<S>& B );
+  template <typename S>
+  friend void swap(GeometryGroup<S> &A, GeometryGroup<S> &B);
 
-	void					setGeomOpMatrix();
+  void setGeomOpMatrix();
 
-	void					geomOpAdd( GeometryComponent<T>* newGeom );
-	void					geomOpRemove( GeometryComponent<T>* newGeom );
-	void					geomOp( GeometryComponent<T>* newGeom, Grid<char>::GPU* geomOpMatrix );
+  void geomOpAdd(GeometryComponent<T> *newGeom);
+  void geomOpRemove(GeometryComponent<T> *newGeom);
+  void geomOp(GeometryComponent<T> *newGeom, Grid<char>::GPU *geomOpMatrix);
 
-	void					geomOpAdd( Grid<char>::GPU* dom,  Grid<char>::GPU* dom_local ) const;
-	void					geomOpRemove( Grid<char>::GPU* dom,  Grid<char>::GPU* dom_local ) const;
+  void geomOpAdd(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
+  void geomOpRemove(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
 
-	std::vector<GeometryComponent<T>*> _geomComponentList;
+  std::vector<GeometryComponent<T> *> _geomComponentList;
 
-	std::vector<int>		_geomOpList;
-	Grid<char>::GPU*		_geomOpAdd;
-	Grid<char>::GPU*		_geomOpRemove;
-	
-	T						_currentAngle;
-	
-	// Below are the grids defining the augmented discrete representation of the geometry.
-	// These will hold the geometry in the local frame, and are written to whenever create()
-	// is called. Thus, they can never be assumed to hold the geometry in reference frame (theta=0).
+  std::vector<int> _geomOpList;
+  Grid<char>::GPU *_geomOpAdd;
+  Grid<char>::GPU *_geomOpRemove;
 
-	// Specifically, the grids store domain node labels (inside/outside/entry/exit), 
-	// and normals at (exact) boundary location. The _boundaryDistance grid stores
-	// the distance to the exact boundary location (along the trajectory),
-	// for the corresponding grid point.
-	// So the normals stored in grid at integer grid point (x,y) (generally not
-	// coinciding with domain boundary), are actually located in real space at:
-	//
-	// ( x, y + abs(_boundaryDistance(x,y)) )  (when exiting)
-	// ( x, y - abs(_boundaryDistance(x,y)) )  (when entering)
-	//
-	// which are the exact boundary domain locations.
-	
-	// Contains labels for discrete geometry. Label codes:
-	// 0=outside, 1=inside, 2=inside, near boundary entry, 3=inside, near boundary exit
-	Grid<char>::GPU*	_domainLabels;
+  T _currentAngle;
 
-	// Field with boundary normals for discrete geometry (2 fields (x- and y-component)).
-	// Only stored where nodes are labeled 2 or 3.
-	GridGPU*			_normals;
+  // Below are the grids defining the augmented discrete representation of the
+  // geometry. These will hold the geometry in the local frame, and are written
+  // to whenever create() is called. Thus, they can never be assumed to hold the
+  // geometry in reference frame (theta=0).
 
-	// Field with distances between the boundary nodes to the exact location of the geometry,
-	// as measured along the positive gamma trajectory. Only stored where nodes are labeled 2 or 3.
-	GridGPU*			_boundaryDistance;
+  // Specifically, the grids store domain node labels
+  // (inside/outside/entry/exit), and normals at (exact) boundary location. The
+  // _boundaryDistance grid stores the distance to the exact boundary location
+  // (along the trajectory), for the corresponding grid point. So the normals
+  // stored in grid at integer grid point (x,y) (generally not coinciding with
+  // domain boundary), are actually located in real space at:
+  //
+  // ( x, y + abs(_boundaryDistance(x,y)) )  (when exiting)
+  // ( x, y - abs(_boundaryDistance(x,y)) )  (when entering)
+  //
+  // which are the exact boundary domain locations.
 
+  // Contains labels for discrete geometry. Label codes:
+  // 0=outside, 1=inside, 2=inside, near boundary entry, 3=inside, near boundary
+  // exit
+  Grid<char>::GPU *_domainLabels;
 
-	// Geometry domain labels grid in reference/unrotated frame (theta=0)
-	Grid<char>::GPU*	_domain_ref;
+  // Field with boundary normals for discrete geometry (2 fields (x- and
+  // y-component)). Only stored where nodes are labeled 2 or 3.
+  GridGPU *_normals;
+
+  // Field with distances between the boundary nodes to the exact location of
+  // the geometry, as measured along the positive gamma trajectory. Only stored
+  // where nodes are labeled 2 or 3.
+  GridGPU *_boundaryDistance;
+
+  // Geometry domain labels grid in reference/unrotated frame (theta=0)
+  Grid<char>::GPU *_domain_ref;
 };
 
-namespace
-{
+namespace {
 
-template <typename T>
-__device__ void normalize( T & vec_x, T & vec_y )
-{
-	const T norm = (T)1.0/sqrt(vec_x*vec_x + vec_y*vec_y);
-	vec_x *= norm;
-	vec_y *= norm;
-}
-
-
-// Adds *1 to existing *0
-template <typename T>
-__global__ void geomOp_kernel(
-	char *dom0, T *norm0_x, T *norm0_y, T *dist0,
-	char *dom1, T *norm1_x, T *norm1_y, T *dist1,
-	char * geomOpMatrix,
-	const int Nx, const int Ny )
-{
-	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if ( tx < Nx && ty < Ny )
-	{
-		const int idx = ty*Nx + tx;
-	
-		char dom0_val = dom0[idx];
-		char dom1_val = dom1[idx];
-
-		const int geomOpMatrixIdx = dom0_val*4 + dom1_val;
-
-		const T dist0_val = dist0[idx];
-		const T dist1_val = dist1[idx];
-	
-		dom0_val = geomOpMatrix[ geomOpMatrixIdx ];
-		
-		T normal_x, normal_y;
-
-		if ( dom0_val==2 || dom0_val==3 )
-		{
-			normal_x = norm0_x[idx] + norm1_x[idx];
-			normal_y = norm0_y[idx] + norm1_y[idx];
-			
-			normalize( normal_x, normal_y );
-		}
-		else
-		{
-			normal_x = (T)0.0;
-			normal_y = (T)0.0;
-		}
-
-		norm0_x[idx] = normal_x;
-		norm0_y[idx] = normal_y;
-
-		dom0[idx] = dom0_val;
-		dist0[idx] = max( dist0_val, dist1_val );
-	}
-}
-
-
-// Adds *1 to existing *0
-template <typename T>
-__global__ void geomOpAdd_kernel(
-	char* dom0, char* dom1,
-	const int Nx )
-{
-	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if ( tx < Nx && ty < Nx )
-	{
-		const int idx = ty*Nx + tx;
-	
-		if ( dom1[idx] )
-			dom0[idx] = 1;
-	}
+template <typename T> __device__ void normalize(T &vec_x, T &vec_y) {
+  const T norm = (T)1.0 / sqrt(vec_x * vec_x + vec_y * vec_y);
+  vec_x *= norm;
+  vec_y *= norm;
 }
 
 // Adds *1 to existing *0
 template <typename T>
-__global__ void geomOpRemove_kernel(
-	char *dom0, T *norm0_x, T *norm0_y, T *dist0,
-	char *dom1, T *norm1_x, T *norm1_y, T *dist1,
-	char *domTmp,
-	char * geomOpMatrix,
-	const int Nx, const int Ny )
-{
-	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void geomOp_kernel(char *dom0, T *norm0_x, T *norm0_y, T *dist0,
+                              char *dom1, T *norm1_x, T *norm1_y, T *dist1,
+                              char *geomOpMatrix, const int Nx, const int Ny) {
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if ( tx<Nx && ty>0 && ty<Ny-1 )
-	{
-		const int idxm = (ty-1)*Nx + tx;
-		const int idx = ty*Nx + tx;
-		const int idxp = (ty+1)*Nx + tx;
+  if (tx < Nx && ty < Ny) {
+    const int idx = ty * Nx + tx;
 
-		char dom0_val = dom0[idx];
+    char dom0_val = dom0[idx];
+    char dom1_val = dom1[idx];
 
-		const char dom1m_val = dom1[idxm];
-		const char dom1_val = dom1[idx];
-		const char dom1p_val = dom1[idxp];
+    const int geomOpMatrixIdx = dom0_val * 4 + dom1_val;
 
-		T normal_x, normal_y;
-		
-		if ( dom1_val > 0 )
-		{
-			dom0_val = 0;
-		}
-		else if ( dom1p_val == 2 )
-		{
-			if ( dom0_val == 1 )
-			{
-				dom0_val = 3;
-				normal_x = norm0_x[idx] - norm1_x[idxp];
-				normal_y = norm0_y[idx] - norm1_y[idxp];
-				normalize( normal_x, normal_y );
-				norm0_x[idx] = normal_x;
-				norm0_y[idx] = normal_y;
-				dist0[idx] = (T)1.0 - dist1[idxp];
-			}
-		}
-		else if ( dom1m_val == 3 )
-		{
-			if ( dom0_val == 1 )
-			{
-				dom0_val = 2;
-				normal_x = norm0_x[idx] - norm1_x[idxm];
-				normal_y = norm0_y[idx] - norm1_y[idxm];
-				normalize( normal_x, normal_y );
-				norm0_x[idx] = normal_x;
-				norm0_y[idx] = normal_y;
-				dist0[idx] = (T)1.0 - dist1[idxm];				
-			}
-		}
-	
-		domTmp[idx] = dom0_val;
-	}
+    const T dist0_val = dist0[idx];
+    const T dist1_val = dist1[idx];
+
+    dom0_val = geomOpMatrix[geomOpMatrixIdx];
+
+    T normal_x, normal_y;
+
+    if (dom0_val == 2 || dom0_val == 3) {
+      normal_x = norm0_x[idx] + norm1_x[idx];
+      normal_y = norm0_y[idx] + norm1_y[idx];
+
+      normalize(normal_x, normal_y);
+    } else {
+      normal_x = (T)0.0;
+      normal_y = (T)0.0;
+    }
+
+    norm0_x[idx] = normal_x;
+    norm0_y[idx] = normal_y;
+
+    dom0[idx] = dom0_val;
+    dist0[idx] = max(dist0_val, dist1_val);
+  }
 }
 
+// Adds *1 to existing *0
+template <typename T>
+__global__ void geomOpAdd_kernel(char *dom0, char *dom1, const int Nx) {
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (tx < Nx && ty < Nx) {
+    const int idx = ty * Nx + tx;
+
+    if (dom1[idx])
+      dom0[idx] = 1;
+  }
+}
+
+// Adds *1 to existing *0
+template <typename T>
+__global__ void
+geomOpRemove_kernel(char *dom0, T *norm0_x, T *norm0_y, T *dist0, char *dom1,
+                    T *norm1_x, T *norm1_y, T *dist1, char *domTmp,
+                    char *geomOpMatrix, const int Nx, const int Ny) {
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (tx < Nx && ty > 0 && ty < Ny - 1) {
+    const int idxm = (ty - 1) * Nx + tx;
+    const int idx = ty * Nx + tx;
+    const int idxp = (ty + 1) * Nx + tx;
+
+    char dom0_val = dom0[idx];
+
+    const char dom1m_val = dom1[idxm];
+    const char dom1_val = dom1[idx];
+    const char dom1p_val = dom1[idxp];
+
+    T normal_x, normal_y;
+
+    if (dom1_val > 0) {
+      dom0_val = 0;
+    } else if (dom1p_val == 2) {
+      if (dom0_val == 1) {
+        dom0_val = 3;
+        normal_x = norm0_x[idx] - norm1_x[idxp];
+        normal_y = norm0_y[idx] - norm1_y[idxp];
+        normalize(normal_x, normal_y);
+        norm0_x[idx] = normal_x;
+        norm0_y[idx] = normal_y;
+        dist0[idx] = (T)1.0 - dist1[idxp];
+      }
+    } else if (dom1m_val == 3) {
+      if (dom0_val == 1) {
+        dom0_val = 2;
+        normal_x = norm0_x[idx] - norm1_x[idxm];
+        normal_y = norm0_y[idx] - norm1_y[idxm];
+        normalize(normal_x, normal_y);
+        norm0_x[idx] = normal_x;
+        norm0_y[idx] = normal_y;
+        dist0[idx] = (T)1.0 - dist1[idxm];
+      }
+    }
+
+    domTmp[idx] = dom0_val;
+  }
+}
 
 template <typename T>
-__global__ void geomOpRemove_kernel(
-	char* dom0, char* dom1,
-	const int Nx )
-{
-	const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void geomOpRemove_kernel(char *dom0, char *dom1, const int Nx) {
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if ( tx<Nx && ty>0 && ty<Nx-1 )
-	{
-		const int idx = ty*Nx + tx;
+  if (tx < Nx && ty > 0 && ty < Nx - 1) {
+    const int idx = ty * Nx + tx;
 
-		const int dom0_val = int(dom0[idx]);
-		const int dom1_val = int(dom1[idx]);
+    const int dom0_val = int(dom0[idx]);
+    const int dom1_val = int(dom1[idx]);
 
-		dom0[idx] = char( dom0_val*(1-dom1_val) );
-	}
+    dom0[idx] = char(dom0_val * (1 - dom1_val));
+  }
 }
 
-
-
-// Slow operation, so we have two explicit kernels, one for complex and one for real valued.
+// Slow operation, so we have two explicit kernels, one for complex and one for
+// real valued.
 template <typename T>
-__global__ void extendValuesAtBoundary_kernel( //complex
-	char *dom_ptr,
-	T *grid_real, T *grid_imag,
-	int Nx_geom, int Ny_geom,
-	int Nx_target, int Ny_target,
-	int Nx_geom_offset, int Ny_geom_offset,
-	const int numExtend )
-{
-	int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	int ty = blockIdx.y * blockDim.y + threadIdx.y;
-	int tf = blockIdx.z;
-	
-	if ( tx < Nx_target && ty < Ny_target )
-	{
-		int idx_geom = (ty+Ny_geom_offset) * Nx_geom + (tx+Nx_geom_offset);
-	
-		int i, j, idx_neighbor, idx_geom_neighbor;
-	
-		T interp_real = (T)0.0;
-		T interp_imag = (T)0.0;
-	
-		int numNeighbors = 0;
-	
-		if ( dom_ptr[idx_geom] == 0 )
-		{
-			for ( j=-numExtend; j<=numExtend; ++j )
-			{
-				for ( i=-numExtend; i<=numExtend; ++i )
-				{
-					if ( (tx+i) > 0 && (tx+i) < Nx_target && (ty+j) > 0 && (ty+j) < Ny_target )
-					{
-						idx_geom_neighbor = (ty+j+Ny_geom_offset)*Nx_geom + (tx+i+Nx_geom_offset);
+__global__ void extendValuesAtBoundary_kernel( // complex
+    char *dom_ptr, T *grid_real, T *grid_imag, int Nx_geom, int Ny_geom,
+    int Nx_target, int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
+    const int numExtend) {
+  int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  int ty = blockIdx.y * blockDim.y + threadIdx.y;
+  int tf = blockIdx.z;
 
-						if ( dom_ptr[idx_geom_neighbor] > 0 )
-						{
-							idx_neighbor = tf*2*Nx_target*Ny_target + (ty+j)*Nx_target + (tx+i);
+  if (tx < Nx_target && ty < Ny_target) {
+    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
 
-							interp_real += grid_real[idx_neighbor];
-							interp_imag += grid_imag[idx_neighbor];
+    int i, j, idx_neighbor, idx_geom_neighbor;
 
-							numNeighbors++;
-						}
-					}
-				}
-			}	
-		}
-	
-		if ( numNeighbors )
-		{
-			const int idx = tf*2*Nx_target*Ny_target + ty*Nx_target + tx;
-			grid_real[idx] = interp_real / (T)numNeighbors;
-			grid_imag[idx] = interp_imag / (T)numNeighbors;
-		}
-	}
+    T interp_real = (T)0.0;
+    T interp_imag = (T)0.0;
+
+    int numNeighbors = 0;
+
+    if (dom_ptr[idx_geom] == 0) {
+      for (j = -numExtend; j <= numExtend; ++j) {
+        for (i = -numExtend; i <= numExtend; ++i) {
+          if ((tx + i) > 0 && (tx + i) < Nx_target && (ty + j) > 0 &&
+              (ty + j) < Ny_target) {
+            idx_geom_neighbor =
+                (ty + j + Ny_geom_offset) * Nx_geom + (tx + i + Nx_geom_offset);
+
+            if (dom_ptr[idx_geom_neighbor] > 0) {
+              idx_neighbor = tf * 2 * Nx_target * Ny_target +
+                             (ty + j) * Nx_target + (tx + i);
+
+              interp_real += grid_real[idx_neighbor];
+              interp_imag += grid_imag[idx_neighbor];
+
+              numNeighbors++;
+            }
+          }
+        }
+      }
+    }
+
+    if (numNeighbors) {
+      const int idx = tf * 2 * Nx_target * Ny_target + ty * Nx_target + tx;
+      grid_real[idx] = interp_real / (T)numNeighbors;
+      grid_imag[idx] = interp_imag / (T)numNeighbors;
+    }
+  }
 }
-
 
 template <typename T>
-__global__ void extendValuesAtBoundary_kernel( //real
-	char *dom_ptr,
-	T *grid_real,
-	int Nx_geom, int Ny_geom,
-	int Nx_target, int Ny_target,
-	int Nx_geom_offset, int Ny_geom_offset,
-	const int numExtend )
-{
-	int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	int ty = blockIdx.y * blockDim.y + threadIdx.y;
-	int tf = blockIdx.z;
+__global__ void extendValuesAtBoundary_kernel( // real
+    char *dom_ptr, T *grid_real, int Nx_geom, int Ny_geom, int Nx_target,
+    int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
+    const int numExtend) {
+  int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  int ty = blockIdx.y * blockDim.y + threadIdx.y;
+  int tf = blockIdx.z;
 
-	if ( tx < Nx_target && ty < Ny_target )
-	{
-		int idx_geom = (ty+Ny_geom_offset) * Nx_geom + (tx+Nx_geom_offset);
-	
-		int i, j, idx_neighbor, idx_geom_neighbor;
-	
-		T interp_real = (T)0.0;
-	
-		int numNeighbors = 0;
-	
-		if ( dom_ptr[idx_geom] == 0 )
-		{
-			for ( j=-numExtend; j<=numExtend; ++j )
-			{
-				for ( i=-numExtend; i<=numExtend; ++i )
-				{
-					if ( (tx+i) > 0 && (tx+i) < Nx_target && (ty+j) > 0 && (ty+j) < Ny_target )
-					{
-						idx_geom_neighbor = (ty+j+Ny_geom_offset)*Nx_geom + (tx+i+Nx_geom_offset);
+  if (tx < Nx_target && ty < Ny_target) {
+    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
 
-						if ( dom_ptr[idx_geom_neighbor] > 0 )
-						{
-							idx_neighbor = tf*Nx_target*Ny_target + (ty+j)*Nx_target + (tx+i);
+    int i, j, idx_neighbor, idx_geom_neighbor;
 
-							interp_real += grid_real[idx_neighbor];
-						
-							numNeighbors++;
-						}
-					}
-				}
-			}	
-		}
-	
-		if ( numNeighbors )
-		{
-			const int idx = tf*Nx_target*Ny_target + ty*Nx_target + tx;
-			grid_real[idx] = interp_real / (T)numNeighbors;
-		}
-	}
+    T interp_real = (T)0.0;
+
+    int numNeighbors = 0;
+
+    if (dom_ptr[idx_geom] == 0) {
+      for (j = -numExtend; j <= numExtend; ++j) {
+        for (i = -numExtend; i <= numExtend; ++i) {
+          if ((tx + i) > 0 && (tx + i) < Nx_target && (ty + j) > 0 &&
+              (ty + j) < Ny_target) {
+            idx_geom_neighbor =
+                (ty + j + Ny_geom_offset) * Nx_geom + (tx + i + Nx_geom_offset);
+
+            if (dom_ptr[idx_geom_neighbor] > 0) {
+              idx_neighbor =
+                  tf * Nx_target * Ny_target + (ty + j) * Nx_target + (tx + i);
+
+              interp_real += grid_real[idx_neighbor];
+
+              numNeighbors++;
+            }
+          }
+        }
+      }
+    }
+
+    if (numNeighbors) {
+      const int idx = tf * Nx_target * Ny_target + ty * Nx_target + tx;
+      grid_real[idx] = interp_real / (T)numNeighbors;
+    }
+  }
 }
-
 
 template <typename T>
 __global__ void zeroValuesOutsideDomain_kernel(
-	char *dom_ptr,
-	T *target_ptr,
-	int Nx_geom, int Ny_geom,
-	int Nx_target, int Ny_target,
-	int Nx_geom_offset, int Ny_geom_offset, int isComplex )
-{
-	int tx = blockIdx.x * blockDim.x + threadIdx.x;
-	int ty = blockIdx.y * blockDim.y + threadIdx.y;
-	int tf = blockIdx.z;
-	
-	if ( tx < Nx_target && ty < Ny_target )
-	{
-		int idx = tf*(Nx_target*Ny_target*(1+isComplex)) + ty * Nx_target + tx;
+    char *dom_ptr, T *target_ptr, int Nx_geom, int Ny_geom, int Nx_target,
+    int Ny_target, int Nx_geom_offset, int Ny_geom_offset, int isComplex) {
+  int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  int ty = blockIdx.y * blockDim.y + threadIdx.y;
+  int tf = blockIdx.z;
 
-		int idx_geom = (ty+Ny_geom_offset) * Nx_geom + (tx+Nx_geom_offset);
-	
-		if ( dom_ptr[idx_geom] == 0 )
-			target_ptr[idx] = (T)0.0;
-	}
+  if (tx < Nx_target && ty < Ny_target) {
+    int idx =
+        tf * (Nx_target * Ny_target * (1 + isComplex)) + ty * Nx_target + tx;
+
+    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
+
+    if (dom_ptr[idx_geom] == 0)
+      target_ptr[idx] = (T)0.0;
+  }
 }
-} // namespace anonymous
-
+} // namespace
 
 template <typename T>
-GeometryGroup<T>::GeometryGroup() :
-	_domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0)
-{
-	setGeomOpMatrix();
-}
-
-
-template <typename T>
-GeometryGroup<T>::GeometryGroup( const GeometryGroup<T>& other ) :
-	ContextModule<T>(other),
-	_domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0)
-{
-	if ( other._domainLabels )		_domainLabels = new Grid<char>::GPU( *other._domainLabels );
-	if ( other._normals )			_normals = new GridGPU( *other._normals );
-	if ( other._boundaryDistance )	_boundaryDistance = new GridGPU( *other._boundaryDistance );
-	if ( other._domain_ref )		_domain_ref = new Grid<char>::GPU( *other._domain_ref );
-
-	const int Nc = other.getNumGeometryComponents();
-
-	if ( Nc > 0 )
-	{
-		for ( int i=0; i<Nc; ++i )
-		{
-			_geomComponentList.push_back( other._geomComponentList[i]->clone() );
-			_geomOpList.push_back( other._geomOpList[i] );
-		}
-	}
-
-	setGeomOpMatrix();
-}
-
-
-template <typename T>
-GeometryGroup<T>::GeometryGroup( Context<T>* ctx ) :
-	ContextModule<T>(ctx),
-	_domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0), _geomOpList(0)
-{
-	std::cout << "GeometryGroup<T>::GeometryGroup( Context<T>* )\n";
-
-	ctx->set( this );
-	
-	// Set operation matrices
-	setGeomOpMatrix();
-}
-
-
-template <typename T>
-GeometryGroup<T>::~GeometryGroup()
-{
-	std::cout << "~GeometryGroup()\n";
-	
-	if ( _domainLabels ) delete _domainLabels;
-	if ( _normals ) delete _normals;
-	if ( _boundaryDistance ) delete _boundaryDistance;
-	if ( _domain_ref ) delete _domain_ref;
-	if ( _geomOpAdd ) delete _geomOpAdd;
-	if ( _geomOpRemove ) delete _geomOpRemove;
-	
-	for ( int i=0; i<getNumGeometryComponents(); ++i )
-		delete _geomComponentList[i];
-}
-
-
-template <typename T>
-GeometryGroup<T>& GeometryGroup<T>::operator=( GeometryGroup<T> other )
-{
-	swap(&this,other);
-	return *this;
-}
-
-
-template <typename T>
-void swap( GeometryGroup<T>& A, GeometryGroup<T>& B )
-{
-	std::swap(A._geomComponentList, B._geomComponentList);
-	std::swap(A._geomOpList, B._geomOpList );
-	std::swap(A._geomOpAdd, B._geomOpAdd );
-	std::swap(A._geomOpRemove, B._geomOpRemove );
-	std::swap(A._currentAngle, B._currentAngle );
-	std::swap(A._domainLabels, B._domainLabels );
-	std::swap(A._normals, B._normals );
-	std::swap(A._boundaryDistance, B._boundaryDistance );
-	std::swap(A._domain_ref, B._domain_ref );
-}
-
-
-template <typename T>
-int GeometryGroup<T>::initialize()
-{
-	std::cout << "GeometryGroup<T>::initialize()\n";
-	int N = ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
-	
-	// Initialize grids with data for ONE angle
-	GridGPU::initializeGrid( _normals, N, N, 2, Type::real );
-	GridGPU::initializeGrid( _boundaryDistance, N, N, 1, Type::real );
-	Grid<char>::GPU::initializeGrid( _domainLabels, N, N, 1, Type::real );
-
-	if ( _domain_ref )
-		delete _domain_ref;
-
-	_domain_ref = createDomain(N);
-
-	return 0;
-}
-
-
-template <typename T>
-void GeometryGroup<T>::setGeomOpMatrix()
-{
-	char op_add[16] 	= {	0,1,2,3,
-							1,1,1,1,
-							2,1,2,1,
-							3,1,1,3	};
-
-	char op_remove[16]	= {	0,0,0,0,
-							1,0,3,2,
-							2,0,0,2,
-							3,0,3,0	};
-	
-	_geomOpAdd = new Grid<char>::GPU(16,1,1,Type::real);
-	_geomOpRemove = new Grid<char>::GPU(16,1,1,Type::real);
-	
-	_geomOpAdd->setData( op_add, 16 );
-	_geomOpRemove->setData( op_remove, 16 );
-}
-
-
-template <typename T>
-void GeometryGroup<T>::create( const T angle )
-{
-	_currentAngle = angle;
-
-	// Initialize compound geom grids
-	_domainLabels->setZero();
-	_normals->setZero();
-	_boundaryDistance->setZero();
-		
-	GeometryComponent<T>* tmpGeom;
-	
-	// Perform operations for each element
-	for ( int i=0; i<getNumGeometryComponents(); ++i )
-	{
-		tmpGeom = _geomComponentList[i];
-		tmpGeom->create( angle );
-		
-		if ( _geomOpList[i] == Type::add )
-			geomOpAdd( tmpGeom );
-
-		if ( _geomOpList[i] == Type::remove )
-			geomOpRemove( tmpGeom );
-	}
-}
-
-
-template <typename T>
-Grid<char>::GPU* GeometryGroup<T>::createDomain( const int N )
-{
-	const int N_r = ContextModule<T>::getParameters()->calcGridResolutionRotated(N);
-
-	// Initialize compound geom grids
-	Grid<char>::GPU* dom_r = new Grid<char>::GPU(N_r,N_r,1,Type::real);
-	dom_r->setZero();
-
-	// Perform operations for each element
-	for ( int i=0; i<getNumGeometryComponents(); ++i )
-	{
-		Grid<char>::GPU* dom_local = _geomComponentList[i]->createDomain( N_r );
-		
-		if ( _geomOpList[i] == Type::add )
-			geomOpAdd( dom_r, dom_local );
-
-		if ( _geomOpList[i] == Type::remove )
-			geomOpRemove( dom_r, dom_local );
-
-		delete dom_local;
-	}
-
-	Grid<char>::GPU* dom = new Grid<char>::GPU(N,N,1,Type::real);
-	dom->setZero();
-	dom->insertGrid(dom_r);
-
-	delete dom_r;
-
-	return dom;
+GeometryGroup<T>::GeometryGroup()
+    : _domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0) {
+  setGeomOpMatrix();
 }
 
 template <typename T>
-int GeometryGroup<T>::add( GeometryComponent<T>* newComponent, Type::type operation )
-{
-	// Add new Geometry component
-	//
-	newComponent->setParameters( ContextModule<T>::getParameters() );
+GeometryGroup<T>::GeometryGroup(const GeometryGroup<T> &other)
+    : ContextModule<T>(other), _domainLabels(0), _normals(0),
+      _boundaryDistance(0), _domain_ref(0) {
+  if (other._domainLabels)
+    _domainLabels = new Grid<char>::GPU(*other._domainLabels);
+  if (other._normals)
+    _normals = new GridGPU(*other._normals);
+  if (other._boundaryDistance)
+    _boundaryDistance = new GridGPU(*other._boundaryDistance);
+  if (other._domain_ref)
+    _domain_ref = new Grid<char>::GPU(*other._domain_ref);
 
-	_geomComponentList.push_back( newComponent );
-	
-	// Set geometry operation
-	_geomOpList.push_back( int(operation) );
+  const int Nc = other.getNumGeometryComponents();
 
-	return getNumGeometryComponents();
+  if (Nc > 0) {
+    for (int i = 0; i < Nc; ++i) {
+      _geomComponentList.push_back(other._geomComponentList[i]->clone());
+      _geomOpList.push_back(other._geomOpList[i]);
+    }
+  }
+
+  setGeomOpMatrix();
 }
-
-
 
 template <typename T>
-void GeometryGroup<T>::set( GeometryComponent<T>* newComponent, Type::type operation, int geomIdx )
-{
-	newComponent->setParameters( ContextModule<T>::getParameters() );
+GeometryGroup<T>::GeometryGroup(Context<T> *ctx)
+    : ContextModule<T>(ctx), _domainLabels(0), _normals(0),
+      _boundaryDistance(0), _domain_ref(0), _geomOpList(0) {
+  std::cout << "GeometryGroup<T>::GeometryGroup( Context<T>* )\n";
 
-	if ( geomIdx >= 0 && geomIdx < getNumGeometryComponents() )
-	{
-		delete _geomComponentList[geomIdx];
-		
-		_geomComponentList[geomIdx] = newComponent;
-		_geomOpList[geomIdx] = int(operation);
-	}
-	else
-	{
-		std::cout << "GeometryGroup<T>::setGeometryComponent(): Nothing added, index out of range\n";
-	}
+  ctx->set(this);
+
+  // Set operation matrices
+  setGeomOpMatrix();
 }
 
+template <typename T> GeometryGroup<T>::~GeometryGroup() {
+  std::cout << "~GeometryGroup()\n";
+
+  if (_domainLabels)
+    delete _domainLabels;
+  if (_normals)
+    delete _normals;
+  if (_boundaryDistance)
+    delete _boundaryDistance;
+  if (_domain_ref)
+    delete _domain_ref;
+  if (_geomOpAdd)
+    delete _geomOpAdd;
+  if (_geomOpRemove)
+    delete _geomOpRemove;
+
+  for (int i = 0; i < getNumGeometryComponents(); ++i)
+    delete _geomComponentList[i];
+}
 
 template <typename T>
-GeometryComponent<T>* GeometryGroup<T>::getGeometryComponent( const int comp ) const
-{
-	int compLim = min(getNumGeometryComponents()-1,comp);
-	compLim = max(0,compLim);
-	
-	return _geomComponentList[compLim];
+GeometryGroup<T> &GeometryGroup<T>::operator=(GeometryGroup<T> other) {
+  swap(&this, other);
+  return *this;
 }
 
+template <typename T> void swap(GeometryGroup<T> &A, GeometryGroup<T> &B) {
+  std::swap(A._geomComponentList, B._geomComponentList);
+  std::swap(A._geomOpList, B._geomOpList);
+  std::swap(A._geomOpAdd, B._geomOpAdd);
+  std::swap(A._geomOpRemove, B._geomOpRemove);
+  std::swap(A._currentAngle, B._currentAngle);
+  std::swap(A._domainLabels, B._domainLabels);
+  std::swap(A._normals, B._normals);
+  std::swap(A._boundaryDistance, B._boundaryDistance);
+  std::swap(A._domain_ref, B._domain_ref);
+}
+
+template <typename T> int GeometryGroup<T>::initialize() {
+  std::cout << "GeometryGroup<T>::initialize()\n";
+  int N = ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
+
+  // Initialize grids with data for ONE angle
+  GridGPU::initializeGrid(_normals, N, N, 2, Type::real);
+  GridGPU::initializeGrid(_boundaryDistance, N, N, 1, Type::real);
+  Grid<char>::GPU::initializeGrid(_domainLabels, N, N, 1, Type::real);
+
+  if (_domain_ref)
+    delete _domain_ref;
+
+  _domain_ref = createDomain(N);
+
+  return 0;
+}
+
+template <typename T> void GeometryGroup<T>::setGeomOpMatrix() {
+  char op_add[16] = {0, 1, 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 3};
+
+  char op_remove[16] = {0, 0, 0, 0, 1, 0, 3, 2, 2, 0, 0, 2, 3, 0, 3, 0};
+
+  _geomOpAdd = new Grid<char>::GPU(16, 1, 1, Type::real);
+  _geomOpRemove = new Grid<char>::GPU(16, 1, 1, Type::real);
+
+  _geomOpAdd->setData(op_add, 16);
+  _geomOpRemove->setData(op_remove, 16);
+}
+
+template <typename T> void GeometryGroup<T>::create(const T angle) {
+  _currentAngle = angle;
+
+  // Initialize compound geom grids
+  _domainLabels->setZero();
+  _normals->setZero();
+  _boundaryDistance->setZero();
+
+  GeometryComponent<T> *tmpGeom;
+
+  // Perform operations for each element
+  for (int i = 0; i < getNumGeometryComponents(); ++i) {
+    tmpGeom = _geomComponentList[i];
+    tmpGeom->create(angle);
+
+    if (_geomOpList[i] == Type::add)
+      geomOpAdd(tmpGeom);
+
+    if (_geomOpList[i] == Type::remove)
+      geomOpRemove(tmpGeom);
+  }
+}
 
 template <typename T>
-void GeometryGroup<T>::geomOp( GeometryComponent<T>* newGeom, Grid<char>::GPU* geomOpMatrix )
-{
-	int Nx, Ny;
-	getGridDimensions( Nx, Ny );
+Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) {
+  const int N_r =
+      ContextModule<T>::getParameters()->calcGridResolutionRotated(N);
 
-	dim3 bpg, tpb;
-	_domainLabels->getKernelDimensions(bpg,tpb);
-	
-	geomOp_kernel<T><<<bpg,tpb>>>(
-		getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
-		newGeom->getDomainLabels(), newGeom->getNormals(0), newGeom->getNormals(1),
-		newGeom->getBoundaryDistance(), geomOpMatrix->getDataPointer(),
-		Nx, Ny );
+  // Initialize compound geom grids
+  Grid<char>::GPU *dom_r = new Grid<char>::GPU(N_r, N_r, 1, Type::real);
+  dom_r->setZero();
+
+  // Perform operations for each element
+  for (int i = 0; i < getNumGeometryComponents(); ++i) {
+    Grid<char>::GPU *dom_local = _geomComponentList[i]->createDomain(N_r);
+
+    if (_geomOpList[i] == Type::add)
+      geomOpAdd(dom_r, dom_local);
+
+    if (_geomOpList[i] == Type::remove)
+      geomOpRemove(dom_r, dom_local);
+
+    delete dom_local;
+  }
+
+  Grid<char>::GPU *dom = new Grid<char>::GPU(N, N, 1, Type::real);
+  dom->setZero();
+  dom->insertGrid(dom_r);
+
+  delete dom_r;
+
+  return dom;
 }
-
 
 template <typename T>
-void GeometryGroup<T>::geomOpAdd( GeometryComponent<T> * newGeom )
-{
-	geomOp( newGeom, _geomOpAdd );
-}
+int GeometryGroup<T>::add(GeometryComponent<T> *newComponent,
+                          Type::type operation) {
+  // Add new Geometry component
+  //
+  newComponent->setParameters(ContextModule<T>::getParameters());
 
+  _geomComponentList.push_back(newComponent);
+
+  // Set geometry operation
+  _geomOpList.push_back(int(operation));
+
+  return getNumGeometryComponents();
+}
 
 template <typename T>
-void GeometryGroup<T>::geomOpRemove( GeometryComponent<T>* newGeom )
-{
-	int Nx, Ny;
-	getGridDimensions( Nx, Ny );
+void GeometryGroup<T>::set(GeometryComponent<T> *newComponent,
+                           Type::type operation, int geomIdx) {
+  newComponent->setParameters(ContextModule<T>::getParameters());
 
-	dim3 bpg, tpb;
-	_domainLabels->getKernelDimensions(bpg,tpb);
+  if (geomIdx >= 0 && geomIdx < getNumGeometryComponents()) {
+    delete _geomComponentList[geomIdx];
 
-	Grid<char>::GPU* domResult = _domainLabels;
-
-	Grid<char>::GPU* domTmp(0);
-	Grid<char>::GPU::initializeGrid( domTmp, domResult );
-	domTmp->setZero();
-	
-	geomOpRemove_kernel<T><<<bpg,tpb>>>(
-		getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
-		newGeom->getDomainLabels(), newGeom->getNormals(0), newGeom->getNormals(1), newGeom->getBoundaryDistance(),
-		domTmp->getDataPointer(),
-		_geomOpRemove->getDataPointer(),
-		Nx, Ny );		
-	
-	_domainLabels = domTmp;
-	delete domResult;
+    _geomComponentList[geomIdx] = newComponent;
+    _geomOpList[geomIdx] = int(operation);
+  } else {
+    std::cout << "GeometryGroup<T>::setGeometryComponent(): Nothing added, "
+                 "index out of range\n";
+  }
 }
-
 
 template <typename T>
-void GeometryGroup<T>::geomOpAdd( Grid<char>::GPU* dom, Grid<char>::GPU* dom_local ) const
-{
-	int N = dom->dimX();
+GeometryComponent<T> *
+GeometryGroup<T>::getGeometryComponent(const int comp) const {
+  int compLim = min(getNumGeometryComponents() - 1, comp);
+  compLim = max(0, compLim);
 
-	dim3 bpg, tpb;
-	Grid<T>::GPU::getKernelDimensions(bpg,tpb,N,N);
-	
-	geomOpAdd_kernel<T><<<bpg,tpb>>>(
-		dom->getDataPointer(), 
-		dom_local->getDataPointer(), 
-		N );
+  return _geomComponentList[compLim];
 }
-
 
 template <typename T>
-void GeometryGroup<T>::geomOpRemove(  Grid<char>::GPU* dom, Grid<char>::GPU* dom_local ) const
-{
-	int N = dom->dimX();
+void GeometryGroup<T>::geomOp(GeometryComponent<T> *newGeom,
+                              Grid<char>::GPU *geomOpMatrix) {
+  int Nx, Ny;
+  getGridDimensions(Nx, Ny);
 
-	dim3 bpg, tpb;
-	Grid<T>::GPU::getKernelDimensions(bpg,tpb,N,N);
+  dim3 bpg, tpb;
+  _domainLabels->getKernelDimensions(bpg, tpb);
 
-	geomOpRemove_kernel<T><<<bpg,tpb>>>(
-		dom->getDataPointer(), 
-		dom_local->getDataPointer(), 
-		N );
+  geomOp_kernel<T><<<bpg, tpb>>>(
+      getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
+      newGeom->getDomainLabels(), newGeom->getNormals(0),
+      newGeom->getNormals(1), newGeom->getBoundaryDistance(),
+      geomOpMatrix->getDataPointer(), Nx, Ny);
 }
-
-
 
 template <typename T>
-T GeometryGroup<T>::area( int discrete )
-{
-	create(0.0);
-
-	typename Vector<char>::CPU data_cpu = *(_domainLabels->getVector());
-	char* data_ptr = thrust::raw_pointer_cast(data_cpu.data());
-	
-	int area = 0, border = 0;
-	char node;
-
-	for ( int i=0; i<data_cpu.size(); ++i )
-	{
-		node = data_ptr[i];
-		
-		if ( node == 1 )
-			area++;
-		if ( node == 2 || node == 3 )
-			border++;
-	}			
-	
-	T h = ContextModule<T>::getParameters()->getGridElementSize();
-
-	if ( discrete )
-		h = 1.0;
-		
-	return ((T)area + (T)border * 1.0) * h*h;
+void GeometryGroup<T>::geomOpAdd(GeometryComponent<T> *newGeom) {
+  geomOp(newGeom, _geomOpAdd);
 }
 
+template <typename T>
+void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
+  int Nx, Ny;
+  getGridDimensions(Nx, Ny);
+
+  dim3 bpg, tpb;
+  _domainLabels->getKernelDimensions(bpg, tpb);
+
+  Grid<char>::GPU *domResult = _domainLabels;
+
+  Grid<char>::GPU *domTmp(0);
+  Grid<char>::GPU::initializeGrid(domTmp, domResult);
+  domTmp->setZero();
+
+  geomOpRemove_kernel<T><<<bpg, tpb>>>(
+      getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
+      newGeom->getDomainLabels(), newGeom->getNormals(0),
+      newGeom->getNormals(1), newGeom->getBoundaryDistance(),
+      domTmp->getDataPointer(), _geomOpRemove->getDataPointer(), Nx, Ny);
+
+  _domainLabels = domTmp;
+  delete domResult;
+}
+
+template <typename T>
+void GeometryGroup<T>::geomOpAdd(Grid<char>::GPU *dom,
+                                 Grid<char>::GPU *dom_local) const {
+  int N = dom->dimX();
+
+  dim3 bpg, tpb;
+  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+
+  geomOpAdd_kernel<T>
+      <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
+}
+
+template <typename T>
+void GeometryGroup<T>::geomOpRemove(Grid<char>::GPU *dom,
+                                    Grid<char>::GPU *dom_local) const {
+  int N = dom->dimX();
+
+  dim3 bpg, tpb;
+  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+
+  geomOpRemove_kernel<T>
+      <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
+}
+
+template <typename T> T GeometryGroup<T>::area(int discrete) {
+  create(0.0);
+
+  typename Vector<char>::CPU data_cpu = *(_domainLabels->getVector());
+  char *data_ptr = thrust::raw_pointer_cast(data_cpu.data());
+
+  int area = 0, border = 0;
+  char node;
+
+  for (int i = 0; i < data_cpu.size(); ++i) {
+    node = data_ptr[i];
+
+    if (node == 1)
+      area++;
+    if (node == 2 || node == 3)
+      border++;
+  }
+
+  T h = ContextModule<T>::getParameters()->getGridElementSize();
+
+  if (discrete)
+    h = 1.0;
+
+  return ((T)area + (T)border * 1.0) * h * h;
+}
 
 // Compute field aveage, only accounting for nodes inside geometry
 template <typename T>
-cplx<T> GeometryGroup<T>::fieldAverage( GridGPU* data, const int field )
-{
-	create(0.0);
+cplx<T> GeometryGroup<T>::fieldAverage(GridGPU *data, const int field) {
+  create(0.0);
 
-	typename Vector<T>::CPU vec_cpu = *(_domainLabels->getVector());
-	typename Grid<T>::CPU data_cpu = *data;
+  typename Vector<T>::CPU vec_cpu = *(_domainLabels->getVector());
+  typename Grid<T>::CPU data_cpu = *data;
 
-	const int complex = data->isComplex();
-	
-	// Pointers
-	T *data_re = data_cpu->getDataPointer( field, Type::real );	
-	T *data_im = data_cpu->getDataPointer( field, Type::imag );	
-	
-	char *dom = thrust::raw_pointer_cast(vec_cpu.data());
+  const int complex = data->isComplex();
 
-	// Dimensions
-	int Nx_data = data->dimX();
-	int Ny_data = data->dimY();
-	
-	int Nx_dom = _domainLabels->dimX();
-	int Ny_dom = _domainLabels->dimY();
+  // Pointers
+  T *data_re = data_cpu->getDataPointer(field, Type::real);
+  T *data_im = data_cpu->getDataPointer(field, Type::imag);
 
-	int domOffsetX = (Nx_dom-Nx_data)/2;
-	int domOffsetY = (Ny_dom-Ny_data)/2;
+  char *dom = thrust::raw_pointer_cast(vec_cpu.data());
 
-	cplx<T> sum(0.0, 0.0);
+  // Dimensions
+  int Nx_data = data->dimX();
+  int Ny_data = data->dimY();
 
-	int idx_data, idx_dom, num_discrete = 0;
-	
-	for ( int j=0; j<Ny_data; ++j )
-	{
-		for ( int i=0; i<Nx_data; ++i )
-		{
-			idx_data = j*Nx_data + i;
-			idx_dom = (j+domOffsetY)*Nx_dom + (i+domOffsetX);
-	
-			if ( dom[idx_dom] == 1 )
-			{
-				sum.x += data_re[idx_data];
-				if ( complex )
-					sum.y += data_im[idx_data];
-				num_discrete++;
-			}
-		}
-	}
+  int Nx_dom = _domainLabels->dimX();
+  int Ny_dom = _domainLabels->dimY();
 
-	return sum / (T)num_discrete;
+  int domOffsetX = (Nx_dom - Nx_data) / 2;
+  int domOffsetY = (Ny_dom - Ny_data) / 2;
+
+  cplx<T> sum(0.0, 0.0);
+
+  int idx_data, idx_dom, num_discrete = 0;
+
+  for (int j = 0; j < Ny_data; ++j) {
+    for (int i = 0; i < Nx_data; ++i) {
+      idx_data = j * Nx_data + i;
+      idx_dom = (j + domOffsetY) * Nx_dom + (i + domOffsetX);
+
+      if (dom[idx_dom] == 1) {
+        sum.x += data_re[idx_data];
+        if (complex)
+          sum.y += data_im[idx_data];
+        num_discrete++;
+      }
+    }
+  }
+
+  return sum / (T)num_discrete;
 }
 
-
 template <typename T>
-void GeometryGroup<T>::countBoundariesAlongTrajectory( int Nx, int Ny,
-	char* dom_ptr, int* idx_in_ptr, int* idx_out_ptr, int* numBndIsect_ptr, int& sum_idx_in, int& sum_idx_out )
-{
-	int i, j, idx;
-	
-	int *num_in = new int[Nx];
-	int *num_out = new int[Nx];
-	
-	// Initialize entry/exit counters for current angle
-	for ( i=0; i<Nx; ++i )
-	{
-		num_in[i] = 0;
-		num_out[i] = 0;
-	}
+void GeometryGroup<T>::countBoundariesAlongTrajectory(
+    int Nx, int Ny, char *dom_ptr, int *idx_in_ptr, int *idx_out_ptr,
+    int *numBndIsect_ptr, int &sum_idx_in, int &sum_idx_out) {
+  int i, j, idx;
 
-	// Trace along trajectories to find entry/exit points
-	for ( i=0; i<Nx; ++i )
-	{
-		for ( j=0; j<Ny; ++j )
-		{
-			idx = j*Nx + i;
+  int *num_in = new int[Nx];
+  int *num_out = new int[Nx];
 
-			if ( dom_ptr[idx] == 2 )
-				num_in[i] += 1;
-				
-			if ( dom_ptr[idx] == 3 )
-				num_out[i] += 1;
-		}
+  // Initialize entry/exit counters for current angle
+  for (i = 0; i < Nx; ++i) {
+    num_in[i] = 0;
+    num_out[i] = 0;
+  }
 
-		// Number of times this trajectory terminates at a boundary (for reflection)
-		numBndIsect_ptr[i] = num_out[i];
-	}
+  // Trace along trajectories to find entry/exit points
+  for (i = 0; i < Nx; ++i) {
+    for (j = 0; j < Ny; ++j) {
+      idx = j * Nx + i;
 
-	// Calculate indices to sparse storage
-	for ( i=0; i<Nx; ++i )
-	{
-		if ( num_in[i] == 0 )
-			idx_in_ptr[i] = -1;
-		else
-			idx_in_ptr[i] = sum_idx_in;
-		
-		sum_idx_in += num_in[i];
+      if (dom_ptr[idx] == 2)
+        num_in[i] += 1;
 
-		if ( num_out[i] == 0 )
-			idx_out_ptr[i] = -1;
-		else
-			idx_out_ptr[i] = sum_idx_out;
-		
-		sum_idx_out += num_out[i];
-	}
-	
-	delete[] num_in;
-	delete[] num_out;
+      if (dom_ptr[idx] == 3)
+        num_out[i] += 1;
+    }
+
+    // Number of times this trajectory terminates at a boundary (for reflection)
+    numBndIsect_ptr[i] = num_out[i];
+  }
+
+  // Calculate indices to sparse storage
+  for (i = 0; i < Nx; ++i) {
+    if (num_in[i] == 0)
+      idx_in_ptr[i] = -1;
+    else
+      idx_in_ptr[i] = sum_idx_in;
+
+    sum_idx_in += num_in[i];
+
+    if (num_out[i] == 0)
+      idx_out_ptr[i] = -1;
+    else
+      idx_out_ptr[i] = sum_idx_out;
+
+    sum_idx_out += num_out[i];
+  }
+
+  delete[] num_in;
+  delete[] num_out;
 }
 
-
 template <typename T>
-void GeometryGroup<T>::countBoundariesAlongNegativeTrajectory( int Nx, int Ny,
-	char* dom_ptr, int* idx_in_ptr, int* idx_out_ptr, int* numBndIsect_ptr, int& sum_idx_in, int& sum_idx_out )
-{
-	int i, j, idx;
-	
-	int *num_in = new int[Nx];
-	int *num_out = new int[Nx];
-	
-	// Initialize entry/exit counters for current angle
-	for ( i=0; i<Nx; ++i )
-	{
-		num_in[i] = 0;
-		num_out[i] = 0;
-	}
+void GeometryGroup<T>::countBoundariesAlongNegativeTrajectory(
+    int Nx, int Ny, char *dom_ptr, int *idx_in_ptr, int *idx_out_ptr,
+    int *numBndIsect_ptr, int &sum_idx_in, int &sum_idx_out) {
+  int i, j, idx;
 
-	// Trace along trajectories to find entry/exit points
-	for ( i=0; i<Nx; ++i )
-	{
-		for ( j=Ny-1; j>=0; --j )
-		{
-			idx = j*Nx + i;
+  int *num_in = new int[Nx];
+  int *num_out = new int[Nx];
 
-			if ( dom_ptr[idx] == 3 )
-				num_in[i] += 1;
-				
-			if ( dom_ptr[idx] == 2 )
-				num_out[i] += 1;
-		}
+  // Initialize entry/exit counters for current angle
+  for (i = 0; i < Nx; ++i) {
+    num_in[i] = 0;
+    num_out[i] = 0;
+  }
 
-		numBndIsect_ptr[i] = num_out[i];
-	}
+  // Trace along trajectories to find entry/exit points
+  for (i = 0; i < Nx; ++i) {
+    for (j = Ny - 1; j >= 0; --j) {
+      idx = j * Nx + i;
 
-	// Calculate indices to sparse storage
-	for ( i=0; i<Nx; ++i )
-	{
-		if ( num_in[i] == 0 )
-			idx_in_ptr[i] = -1;
-		else
-			idx_in_ptr[i] = sum_idx_in;
-		
-		sum_idx_in += num_in[i];
+      if (dom_ptr[idx] == 3)
+        num_in[i] += 1;
 
-		if ( num_out[i] == 0 )
-			idx_out_ptr[i] = -1;
-		else
-			idx_out_ptr[i] = sum_idx_out;
-		
-		sum_idx_out += num_out[i];
-	}
-	
-	delete[] num_in;
-	delete[] num_out;
+      if (dom_ptr[idx] == 2)
+        num_out[i] += 1;
+    }
+
+    numBndIsect_ptr[i] = num_out[i];
+  }
+
+  // Calculate indices to sparse storage
+  for (i = 0; i < Nx; ++i) {
+    if (num_in[i] == 0)
+      idx_in_ptr[i] = -1;
+    else
+      idx_in_ptr[i] = sum_idx_in;
+
+    sum_idx_in += num_in[i];
+
+    if (num_out[i] == 0)
+      idx_out_ptr[i] = -1;
+    else
+      idx_out_ptr[i] = sum_idx_out;
+
+    sum_idx_out += num_out[i];
+  }
+
+  delete[] num_in;
+  delete[] num_out;
 }
 
-
 template <typename T>
-void GeometryGroup<T>::findBoundaryCrossingsAlongTrajectory( int Nx, int Ny, char *dom_p, int *& coord_ptr )
-{
-	int i, j, idx;
+void GeometryGroup<T>::findBoundaryCrossingsAlongTrajectory(int Nx, int Ny,
+                                                            char *dom_p,
+                                                            int *&coord_ptr) {
+  int i, j, idx;
 
-	for ( i=0; i<Nx; ++i )
-	{
-		for ( j=0; j<Ny; ++j )
-		{
-			idx = j*Nx + i;
+  for (i = 0; i < Nx; ++i) {
+    for (j = 0; j < Ny; ++j) {
+      idx = j * Nx + i;
 
-			if ( dom_p[idx] == 3 )
-			{
-				*coord_ptr = j;
-				coord_ptr++;
-			}
-		}
-	}
+      if (dom_p[idx] == 3) {
+        *coord_ptr = j;
+        coord_ptr++;
+      }
+    }
+  }
 }
 
-
 template <typename T>
-void GeometryGroup<T>::findBoundaryCrossingsAlongNegativeTrajectory( int Nx, int Ny, char *dom_p, int *& coord_ptr )
-{
-	int i, j, idx;
+void GeometryGroup<T>::findBoundaryCrossingsAlongNegativeTrajectory(
+    int Nx, int Ny, char *dom_p, int *&coord_ptr) {
+  int i, j, idx;
 
-	for ( i=0; i<Nx; ++i )
-	{
-		for ( j=Ny-1; j>=0; --j )
-		{
-			idx = j*Nx + i;
+  for (i = 0; i < Nx; ++i) {
+    for (j = Ny - 1; j >= 0; --j) {
+      idx = j * Nx + i;
 
-			if ( dom_p[idx] == 2 )
-			{
-				*coord_ptr = j;
-				coord_ptr++;
-			}
-		}
-	}
+      if (dom_p[idx] == 2) {
+        *coord_ptr = j;
+        coord_ptr++;
+      }
+    }
+  }
 }
 
-
-
-
 template <typename T>
-void GeometryGroup<T>::extendValuesAtBoundary( GridGPU* grid, const int numExtend ) const
-{
-	char *dom_ptr = getDomainLabels();
+void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid,
+                                              const int numExtend) const {
+  char *dom_ptr = getDomainLabels();
 
-	int Nx_geom, Ny_geom, Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset;
+  int Nx_geom, Ny_geom, Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset;
 
-	getGridDimensions( Nx_geom, Ny_geom );
-	
-	Nx_target = grid->dimX();
-	Ny_target = grid->dimY();
-	
-	Nx_geom_offset = (Nx_geom - Nx_target) / 2;
-	Ny_geom_offset = (Ny_geom - Ny_target) / 2;
-	
-	int Nf = grid->numFields();
-	
-	// Set kernel dimensions
-	dim3 bpg, tpb;
+  getGridDimensions(Nx_geom, Ny_geom);
 
-	grid->getKernelDimensionsFields( bpg, tpb );
+  Nx_target = grid->dimX();
+  Ny_target = grid->dimY();
 
-	if ( grid->isComplex() )
-		extendValuesAtBoundary_kernel<T><<<bpg,tpb>>>(
-			dom_ptr,
-			grid->getDataPointer( 0, Type::real ),
-			grid->getDataPointer( 0, Type::imag ),
-			Nx_geom, Ny_geom,
-			Nx_target, Ny_target,
-			Nx_geom_offset, Ny_geom_offset,
-			numExtend );
-	else
-		extendValuesAtBoundary_kernel<T><<<bpg,tpb>>>(
-			dom_ptr,
-			grid->getDataPointer( 0, Type::real ),
-			Nx_geom, Ny_geom,
-			Nx_target, Ny_target,
-			Nx_geom_offset, Ny_geom_offset,
-			numExtend );
+  Nx_geom_offset = (Nx_geom - Nx_target) / 2;
+  Ny_geom_offset = (Ny_geom - Ny_target) / 2;
 
+  int Nf = grid->numFields();
+
+  // Set kernel dimensions
+  dim3 bpg, tpb;
+
+  grid->getKernelDimensionsFields(bpg, tpb);
+
+  if (grid->isComplex())
+    extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
+        dom_ptr, grid->getDataPointer(0, Type::real),
+        grid->getDataPointer(0, Type::imag), Nx_geom, Ny_geom, Nx_target,
+        Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
+  else
+    extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
+        dom_ptr, grid->getDataPointer(0, Type::real), Nx_geom, Ny_geom,
+        Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
 }
 
-
 template <typename T>
-void GeometryGroup<T>::zeroValuesOutsideDomain( GridGPU* target )
-{
-	if ( getCurrentAngle() > (T)0.0 || getCurrentAngle() < (T)0.0 )
-		create(0.0);
-	
-	char *data_dom = _domainLabels->getDataPointer( 0, Type::real );
-	
-	int Nx_dom = _domainLabels->dimX();
-	int Ny_dom = _domainLabels->dimY();
-	
-	int Nx_img = target->dimX();
-	int Ny_img = target->dimY();
+void GeometryGroup<T>::zeroValuesOutsideDomain(GridGPU *target) {
+  if (getCurrentAngle() > (T)0.0 || getCurrentAngle() < (T)0.0)
+    create(0.0);
 
-	int Nx_diff = (Nx_dom - Nx_img)/2;
-	int Ny_diff = (Ny_dom - Ny_img)/2;
-	
-	dim3 grid, block;
-	target->getKernelDimensionsFields( grid, block );
-		
-	zeroValuesOutsideDomain_kernel<<<grid,block>>>(
-		_domainLabels->getDataPointer( 0, Type::real ),
-		target->getDataPointer( 0, Type::real ),
-		Nx_dom, Ny_dom, Nx_img, Ny_img, Nx_diff, Ny_diff, int(target->isComplex()) );
-		
-	if ( target->isComplex() )
-		zeroValuesOutsideDomain_kernel<<<grid,block>>>(
-			_domainLabels->getDataPointer( 0, Type::real ),
-			target->getDataPointer( 0, Type::imag ),
-			Nx_dom, Ny_dom, Nx_img, Ny_img, Nx_diff, Ny_diff, int(target->isComplex()) );
+  char *data_dom = _domainLabels->getDataPointer(0, Type::real);
+
+  int Nx_dom = _domainLabels->dimX();
+  int Ny_dom = _domainLabels->dimY();
+
+  int Nx_img = target->dimX();
+  int Ny_img = target->dimY();
+
+  int Nx_diff = (Nx_dom - Nx_img) / 2;
+  int Ny_diff = (Ny_dom - Ny_img) / 2;
+
+  dim3 grid, block;
+  target->getKernelDimensionsFields(grid, block);
+
+  zeroValuesOutsideDomain_kernel<<<grid, block>>>(
+      _domainLabels->getDataPointer(0, Type::real),
+      target->getDataPointer(0, Type::real), Nx_dom, Ny_dom, Nx_img, Ny_img,
+      Nx_diff, Ny_diff, int(target->isComplex()));
+
+  if (target->isComplex())
+    zeroValuesOutsideDomain_kernel<<<grid, block>>>(
+        _domainLabels->getDataPointer(0, Type::real),
+        target->getDataPointer(0, Type::imag), Nx_dom, Ny_dom, Nx_img, Ny_img,
+        Nx_diff, Ny_diff, int(target->isComplex()));
 }
 
-
 template <typename T>
-void GeometryGroup<T>::getGridDimensions( int & Nx, int & Ny ) const
-{
-	Nx = _domainLabels->dimX();
-	Ny = _domainLabels->dimY();
+void GeometryGroup<T>::getGridDimensions(int &Nx, int &Ny) const {
+  Nx = _domainLabels->dimX();
+  Ny = _domainLabels->dimY();
 }
 
-
-template <typename T>
-int GeometryGroup<T>::getNumAngles() const
-{
-	return ContextModule<T>::getParameters()->getAngularResolution();
+template <typename T> int GeometryGroup<T>::getNumAngles() const {
+  return ContextModule<T>::getParameters()->getAngularResolution();
 }
 
-
-template <typename T>
-char* GeometryGroup<T>::getDomainLabels() const
-{
-	return _domainLabels->getDataPointer();
+template <typename T> char *GeometryGroup<T>::getDomainLabels() const {
+  return _domainLabels->getDataPointer();
 }
 
-
-template <typename T>
-T* GeometryGroup<T>::getNormals( const int dim ) const 
-{
-	return _normals->getDataPointer( dim );
+template <typename T> T *GeometryGroup<T>::getNormals(const int dim) const {
+  return _normals->getDataPointer(dim);
 }
 
-
-template <typename T>
-T* GeometryGroup<T>::getBoundaryDistance() const
-{
-	return _boundaryDistance->getDataPointer();
+template <typename T> T *GeometryGroup<T>::getBoundaryDistance() const {
+  return _boundaryDistance->getDataPointer();
 }
 #endif
-

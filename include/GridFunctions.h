@@ -2,9 +2,7 @@
 #define _GRIDFUNCTIONS_H
 
 // Declaring the fully templated version, so we can specialize below.
-template <typename T, typename DEV>
-struct GridFunctions
-{};
+template <typename T, typename DEV> struct GridFunctions {};
 
 #include <GridFunctions_CPU.h>
 #ifdef __CUDACC__

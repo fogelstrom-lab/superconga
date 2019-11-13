@@ -4,12 +4,18 @@
 #ifndef _TYPE_H
 #define _TYPE_H
 
-struct Type
-{
-	enum type { real=1, imag=2, complex=3, modulus=4, all=5, add=6, remove=7 };
-	enum location { start=1, begin=1, end=2 };
-	enum coherence { singlet=1, triplet=4 };
+struct Type {
+  enum type {
+    real = 1,
+    imag = 2,
+    complex = 3,
+    modulus = 4,
+    all = 5,
+    add = 6,
+    remove = 7
+  };
+  enum location { start = 1, begin = 1, end = 2 };
+  enum coherence { singlet = 1, triplet = 4 };
 };
 
 #endif
-
