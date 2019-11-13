@@ -1,5 +1,5 @@
-#ifndef _COMPUTEFREEENERGY2_H
-#define _COMPUTEFREEENERGY2_H
+#ifndef COMPUTEFREEENERGY2_H
+#define COMPUTEFREEENERGY2_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubara.h>
@@ -188,4 +188,4 @@ template <typename T> void ComputeFreeEnergy2<T>::computePropertyFromGreens() {
   }
 }
 
-#endif
+#endif // COMPUTEFREEENERGY2_H

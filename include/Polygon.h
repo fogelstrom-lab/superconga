@@ -1,5 +1,5 @@
-#ifndef _POLYGON_H
-#define _POLYGON_H
+#ifndef POLYGON_H
+#define POLYGON_H
 
 #include <Grid.h>
 #include <iostream>
@@ -136,4 +136,5 @@ void Polygon<T>::transformPhysicalToNormalized(const int numVertices, T *px,
     py[i] = y;
   }
 }
-#endif
+
+#endif // POLYGON_H

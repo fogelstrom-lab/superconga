@@ -1,5 +1,5 @@
-#ifndef _GRADIENTACCELERATOR_H
-#define _GRADIENTACCELERATOR_H
+#ifndef GRADIENTACCELERATOR_H
+#define GRADIENTACCELERATOR_H
 
 #include <Grid.h>
 
@@ -157,4 +157,5 @@ int GradientAccelerator<T>::step(T residual, GridGPU *grid) {
 
   return (_criterionMet && _relaxFinal >= 20);
 }
-#endif
+
+#endif // GRADIENTACCELERATOR_H

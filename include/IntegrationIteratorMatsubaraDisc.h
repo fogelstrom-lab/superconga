@@ -1,5 +1,5 @@
-#ifndef _INTEGRATIONITERATORMATSUBARADISC_H
-#define _INTEGRATIONITERATORMATSUBARADISC_H
+#ifndef INTEGRATIONITERATORMATSUBARADISC_H
+#define INTEGRATIONITERATORMATSUBARADISC_H
 
 #include <ComputeProperty.h>
 #include <Context.h>
@@ -458,4 +458,5 @@ template <typename T> void IntegrationIteratorMatsubaraDisc<T>::compute() {
 
   I::increaseIterationCount();
 }
-#endif
+
+#endif // INTEGRATIONITERATORMATSUBARADISC_H

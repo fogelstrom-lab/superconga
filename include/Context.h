@@ -1,5 +1,5 @@
-#ifndef _CONTEXT_H
-#define _CONTEXT_H
+#ifndef CONTEXT_H
+#define CONTEXT_H
 
 #include <ContextModule.h>
 #include <util/csecond.c>
@@ -273,4 +273,5 @@ template <typename T> int Context<T>::isConverged() const {
     return getComputeObject(0)->isConverged();
   }
 }
-#endif
+
+#endif // CONTEXT_H

@@ -1,5 +1,5 @@
-#ifndef _RICCATISOLVERBULK_H
-#define _RICCATISOLVERBULK_H
+#ifndef RICCATISOLVERBULK_H
+#define RICCATISOLVERBULK_H
 
 #include <RiccatiSolver.h>
 
@@ -218,4 +218,5 @@ void RiccatiSolverBulk<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   cudaStreamDestroy(s1);
   cudaStreamDestroy(s2);
 }
-#endif
+
+#endif // RICCATISOLVERBULK_H

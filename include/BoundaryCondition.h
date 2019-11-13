@@ -1,5 +1,5 @@
-#ifndef _BOUNDARYCONDITION_H
-#define _BOUNDARYCONDITION_H
+#ifndef BOUNDARYCONDITION_H
+#define BOUNDARYCONDITION_H
 
 #include <Context.h>
 #include <Grid.h>
@@ -9,7 +9,7 @@ template <typename T> class BoundaryCondition {
   typedef typename Grid<T>::CPU GridCPU;
 
 public:
-  BoundaryCondition() : /*ContextModule<T>(),*/ _bc_map(0) {}
+  BoundaryCondition() : _bc_map(0) {}
   virtual ~BoundaryCondition() {
     if (_bc_map)
       delete _bc_map;
@@ -45,4 +45,4 @@ private:
   Grid<char> *_bc_map;
 };
 
-#endif
+#endif // BOUNDARYCONDITION_H

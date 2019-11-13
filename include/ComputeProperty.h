@@ -3,8 +3,8 @@
 // 'hooks' which gets called by IntegrationIterator as it integrates over
 // energies and angles.
 
-#ifndef _COMPUTEPROPERTY_H
-#define _COMPUTEPROPERTY_H
+#ifndef COMPUTEPROPERTY_H
+#define COMPUTEPROPERTY_H
 
 #include <ContextModule.h>
 #include <GeometryGroup.h>
@@ -168,4 +168,5 @@ ComputeProperty<T>::computeSFMomentum(Parameters<T> *param,
 
   return phaseGradient;
 }
-#endif
+
+#endif // COMPUTEPROPERTY_H

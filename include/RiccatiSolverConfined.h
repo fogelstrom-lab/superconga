@@ -1,5 +1,5 @@
-#ifndef _RICCATISOLVERCONFINED_H
-#define _RICCATISOLVERCONFINED_H
+#ifndef RICCATISOLVERCONFINED_H
+#define RICCATISOLVERCONFINED_H
 
 #include <RiccatiSolver.h>
 
@@ -517,4 +517,5 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
 }
-#endif
+
+#endif // RICCATISOLVERCONFINED_H

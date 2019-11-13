@@ -1,5 +1,5 @@
-#ifndef _COMPUTEFREEENERGY_H
-#define _COMPUTEFREEENERGY_H
+#ifndef COMPUTEFREEENERGY_H
+#define COMPUTEFREEENERGY_H
 
 #include "LocalGreens.h"
 #include <ComputeProperty.h>
@@ -354,4 +354,5 @@ template <typename T> T ComputeFreeEnergy<T>::freeEnergyT0_S() {
   // Free energy
   return area * (-0.5 * D0 * D0 + PI * PI / 3.0 * T_Tc * T_Tc);
 }
-#endif
+
+#endif // COMPUTEFREEENERGY_H

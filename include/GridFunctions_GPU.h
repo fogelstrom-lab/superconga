@@ -1,5 +1,5 @@
-#ifndef _GRIDFUNCTIONS_GPU_H
-#define _GRIDFUNCTIONS_GPU_H
+#ifndef GRIDFUNCTIONS_GPU_H
+#define GRIDFUNCTIONS_GPU_H
 
 #include <thrust/device_vector.h>
 
@@ -1012,4 +1012,4 @@ int GridFunctions<T, thrust::device_vector<T>>::checkCudaError(
     return 0;
 }
 
-#endif
+#endif // GRIDFUNCTIONS_GPU_H

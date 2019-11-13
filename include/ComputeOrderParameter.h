@@ -1,5 +1,5 @@
-#ifndef _COMPUTEORDERPARAMETER_H
-#define _COMPUTEORDERPARAMETER_H
+#ifndef COMPUTEORDERPARAMETER_H
+#define COMPUTEORDERPARAMETER_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubara.h>
@@ -247,4 +247,5 @@ T ComputeOrderParameter<T>::computeResidual(OrderParameter<T> *old) const {
   }
   return residual;
 }
-#endif
+
+#endif // COMPUTEORDERPARAMETER_H

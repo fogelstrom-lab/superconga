@@ -1,8 +1,8 @@
 //
 // This class provides a basic shape implementation for a disc.
 //
-#ifndef _DISC_H
-#define _DISC_H
+#ifndef DISC_H
+#define DISC_H
 
 template <typename T> class Disc {
 public:
@@ -59,4 +59,5 @@ template <typename T> void Disc<T>::setRadius(const T radius) {
 template <typename T> void Disc<T>::setPosX(const T pos_x) { _pos_x = pos_x; }
 
 template <typename T> void Disc<T>::setPosY(const T pos_y) { _pos_y = pos_y; }
-#endif
+
+#endif // DISC_H

@@ -1,5 +1,5 @@
-#ifndef _GRIDFUNCTIONS_H
-#define _GRIDFUNCTIONS_H
+#ifndef GRIDFUNCTIONS_H
+#define GRIDFUNCTIONS_H
 
 // Declaring the fully templated version, so we can specialize below.
 template <typename T, typename DEV> struct GridFunctions {};
@@ -8,4 +8,5 @@ template <typename T, typename DEV> struct GridFunctions {};
 #ifdef __CUDACC__
 #include <GridFunctions_GPU.h>
 #endif
-#endif
+
+#endif // GRIDFUNCTIONS_H

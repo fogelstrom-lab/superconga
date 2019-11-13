@@ -1,5 +1,5 @@
-#ifndef _VECTORPOTENTIAL_KERNEL_H
-#define _VECTORPOTENTIAL_KERNEL_H
+#ifndef VECTORPOTENTIAL_KERNEL_H
+#define VECTORPOTENTIAL_KERNEL_H
 
 #include <cuda.h>
 
@@ -31,4 +31,5 @@ computeEnergyShift_internal_kernel(T *eShift, const T *jx, const T *jy,
     eShift[idx] +=
         T(M_PI) * (cos(system_angle) * jx[idx] + sin(system_angle) * jy[idx]);
 }
-#endif
+
+#endif // VECTORPOTENTIAL_KERNEL_H

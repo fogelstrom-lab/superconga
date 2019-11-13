@@ -1,5 +1,5 @@
-#ifndef _COMPUTECURRENT_H
-#define _COMPUTECURRENT_H
+#ifndef COMPUTECURRENT_H
+#define COMPUTECURRENT_H
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorMatsubara.h>
@@ -169,4 +169,5 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
       C::setConverged();
   }
 }
-#endif
+
+#endif // COMPUTECURRENT_H
