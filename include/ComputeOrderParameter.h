@@ -1,9 +1,10 @@
 #ifndef COMPUTEORDERPARAMETER_H
 #define COMPUTEORDERPARAMETER_H
 
-#include <ComputeProperty.h>
-#include <IntegrationIteratorMatsubara.h>
-#include <IntegrationIteratorOzaki.h>
+#include "ComputeProperty.h"
+#include "IntegrationIteratorMatsubara.h"
+#include "IntegrationIteratorOzaki.h"
+#include "Optimizer.h"
 
 template <typename T> class ComputeOrderParameter : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -47,14 +48,19 @@ public:
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  // Helper function to compute residual
-  T computeResidual(OrderParameter<T> *old) const;
+  // Set optimizer, e.g. OptimizerFixedPoint.
+  void setOptimizer(Optimizer<T> *opt) { _opt = opt; }
 
 private:
   // Computed order parameter will be stored here at end of
   // IntegrationIterator::compute() function.
   OrderParameter<T> *_delta;
-  GridGPU *_delta_fields; // Each component stored in a separate field.
+
+  // Optimizer.
+  Optimizer<T> *_opt;
+
+  // Each component stored in a separate field.
+  GridGPU *_delta_fields;
 
   // Temp storage for computation of order parameter
   GridGPU *_deltaTmp;
@@ -62,11 +68,12 @@ private:
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter()
-    : ComputeProperty<T>(), _delta(0), _deltaTmp(0), _delta_fields(0) {}
+    : ComputeProperty<T>(), _delta(0), _delta_fields(0), _deltaTmp(0), _opt() {}
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), _delta(0), _deltaTmp(0), _delta_fields(0) {
+    : ComputeProperty<T>(ctx), _delta(0), _delta_fields(0), _deltaTmp(0),
+      _opt() {
   ctx->add(this);
 }
 
@@ -78,11 +85,12 @@ template <typename T> ComputeOrderParameter<T>::~ComputeOrderParameter() {
     delete _deltaTmp;
   if (_delta_fields)
     delete _delta_fields;
+  if (_opt)
+    delete _opt;
 }
 
 template <typename T> int ComputeOrderParameter<T>::initialize() {
   std::cout << "ComputeOrderParameter<T>::initialize()\n";
-
   typedef ContextModule<T> C;
 
   // Make a local copy of order parameter, store new order parameter in this.
@@ -214,38 +222,20 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
 
     // Compute residual
     OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
-    T residual = computeResidual(deltaOld);
+    _opt->step(*_delta, *deltaOld);
+    const T residual = _opt->getResidual();
     C::setResidual(residual);
+    // TODO(niclas): Not sure if this is needed.
+    *_delta = *deltaOld;
 
     if (residual < param->getConvergenceCriterion())
       C::setConverged();
-
-    // Update main order parameter
-    *deltaOld = *_delta;
 
     // Copy results to grid with one field per order parameter component
     for (int i = 0; i < Nc; ++i)
       _delta->getOrderParameterComponentField(i)->copyFieldTo(_delta_fields, 0,
                                                               i);
   }
-}
-
-template <typename T>
-T ComputeOrderParameter<T>::computeResidual(OrderParameter<T> *old) const {
-  T residual = 0.0;
-  const int numDelta = _delta->getNumOrderParameterComponents();
-
-  for (int i = 0; i < numDelta; ++i) {
-    // Compute residual for each component
-    GridGPU *deltaNew =
-        _delta->getOrderParameterComponent(i)->getOrderParameterField();
-    GridGPU *deltaOld =
-        old->getOrderParameterComponent(i)->getOrderParameterField();
-
-    residual +=
-        GridGPU::differenceMagnitude(*deltaOld, *deltaNew) / sqrt(numDelta);
-  }
-  return residual;
 }
 
 #endif // COMPUTEORDERPARAMETER_H

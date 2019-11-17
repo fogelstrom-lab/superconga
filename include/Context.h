@@ -12,7 +12,6 @@ template <typename> class ComputeOrderParameter;
 template <typename> class ComputeProperty;
 template <typename> class Context;
 template <typename> class GeometryGroup;
-template <typename> class GradientAccelerator;
 template <typename> class IntegrationIterator;
 template <typename> class OrderParameter;
 template <typename> class OrderParameterComponent;
@@ -32,7 +31,6 @@ public:
   void set(OrderParameter<T> *delta) { _delta = delta; }
   void set(RiccatiSolver<T> *solver) { _solver = solver; }
   void set(IntegrationIterator<T> *iter) { _iter = iter; }
-  void set(GradientAccelerator<T> *acc) { _acc = acc; }
   int add(ComputeOrderParameter<T> *compute) {
     _compute_delta = compute;
     return add(static_cast<ComputeProperty<T> *>(compute));
@@ -64,7 +62,6 @@ public:
   }
   RiccatiSolver<T> *getRiccatiSolver() const { return _solver; }
   IntegrationIterator<T> *getIntegrationIterator() const { return _iter; }
-  GradientAccelerator<T> *getGradientAccelerator() const { return _acc; }
 
   int getNumComputeObjects() const { return _computeObjectList.size(); }
   ComputeProperty<T> *getComputeObject(int idx) const {
@@ -94,7 +91,6 @@ private:
   OrderParameter<T> *_delta;
   RiccatiSolver<T> *_solver;
   IntegrationIterator<T> *_iter;
-  GradientAccelerator<T> *_acc;
 
   std::vector<ComputeProperty<T> *> _computeObjectList;
 
@@ -110,9 +106,8 @@ private:
 
 template <typename T>
 Context<T>::Context()
-    : _param(0), _geom(0), _delta(0), _solver(0), _iter(0), _acc(0),
-      _compute_current(0), _compute_delta(0), _compute_time(0.0),
-      _numIterations(0) {}
+    : _param(0), _geom(0), _delta(0), _solver(0), _iter(0), _compute_current(0),
+      _compute_delta(0), _compute_time(0.0), _numIterations(0) {}
 
 template <typename T> Context<T>::~Context() {
   using namespace std;
@@ -138,10 +133,6 @@ template <typename T> Context<T>::~Context() {
   if (_iter) {
     delete _iter;
     cout << "~Context(): Deleted IntegrationIterator\n";
-  }
-  if (_acc) {
-    delete _acc;
-    cout << "~Context(): Deleted GradientAccelerator\n";
   }
 
   for (int i = 0; i < getNumComputeObjects(); ++i) {
@@ -204,13 +195,6 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
     ContextModule<T>::checkCudaError("Context<T>::initialize(): RiccatiSolver");
   }
 
-  if (_acc) {
-    cout << "Context::initialize() --> Initializing GradientAccelerator\n";
-    _acc->initialize();
-    ContextModule<T>::checkCudaError(
-        "Context<T>::initialize(): GradientAccelerator");
-  }
-
   for (int i = 0; i < getNumComputeObjects(); ++i) {
     cout << "Context::initialize() --> Initializing ComputeObject " << i
          << ":\n";
@@ -238,16 +222,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
 template <typename T> void Context<T>::compute() {
   _compute_time = csecond();
-
   _iter->compute();
-
-  // Only use accelerator if we are computing order parameter
-  ComputeOrderParameter<T> *compute_delta = getComputeOrderParameter();
-  if (_acc && compute_delta) {
-    _acc->step(compute_delta->getResidual(),
-               _delta->getOrderParameterComponent(0)->getOrderParameterField());
-  }
-
   _compute_time = csecond() - _compute_time;
   _numIterations++;
 }
@@ -263,10 +238,7 @@ template <typename T> int Context<T>::isConverged() const {
   // If we are computing order parameter self-consistently, use it to
   // determine convergence.
   if (getComputeOrderParameter()) {
-    if (_acc)
-      return _acc->isConverged();
-    else
-      return getComputeOrderParameter()->isConverged();
+    return getComputeOrderParameter()->isConverged();
   } else
   // If no order parameter, use first compute object to determine convergence
   {
