@@ -2,7 +2,7 @@
 #define CONTEXT_H
 
 #include <ContextModule.h>
-#include <util/csecond.c>
+#include <util/csecond.h>
 
 template <typename> class CoherenceFunctions;
 template <typename> class ComputeCurrent;
