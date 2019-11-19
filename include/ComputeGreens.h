@@ -46,6 +46,7 @@ public:
   virtual void computePropertyFromGreens();
 
   // Helper function to compute residual
+  // TODO(niclas): This function is never used!
   T computeResidual(OrderParameter<T> *old) const;
 
 private:

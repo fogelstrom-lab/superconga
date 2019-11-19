@@ -6,7 +6,6 @@
 template <typename> class ComputeProperty;
 template <typename> class Context;
 template <typename> class GeometryGroup;
-template <typename> class GradientAccelerator;
 template <typename> class IntegrationIterator;
 template <typename> class OrderParameter;
 template <typename> class Parameters;
@@ -39,9 +38,6 @@ public:
   }
   IntegrationIterator<T> *getIntegrationIterator() const {
     return _context->getIntegrationIterator();
-  }
-  GradientAccelerator<T> *getGradientAccelerator() const {
-    return _context->getGradientAccelerator();
   }
 
   int getNumComputeObjects() const { return _context->getNumComputeObjects(); }

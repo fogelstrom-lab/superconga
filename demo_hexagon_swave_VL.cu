@@ -38,18 +38,18 @@
 #include <ComputeProperty.h> // Pure virtual for compute properties (observables etc). The observables to be computed are added to a list of compute objects.
 #include <RiccatiSolverConfined.h> // Riccati solver for confined geometries
 //#include <ComputeLDOS.h> // Compute Local Density of States (!! note !! more
-//convenient to run in a separate program using the Keldysh iterator, reading a
-//fully converged solution as start file)
+// convenient to run in a separate program using the Keldysh iterator, reading a
+// fully converged solution as start file)
 #include <BoundaryConditionSpecular.h> // Boundary condition for perfect specular reflection
 #include <BoundaryStorage.h> // Storage for coherence functions on the system edges - we save memory by only saving on boundaries between self-consistent iterations. These are the start point for each new energy and angle.
 #include <IntegrationIterator.h> // Pure virtual for different energy integration schemes (Ozaki, Matsubara, Keldysh, ...)
 #include <IntegrationIteratorOzaki.h> // Calculate energy integral through Ozaki summation
 //#include <IntegrationIteratorMatsubara.h> // Matsubara sum, deprecated by
-//Ozaki method #include <IntegrationIteratorKeldysh.h> // Used for calculating
-//observables on the real energy axsis (e.g. DOS)
+// Ozaki method #include <IntegrationIteratorKeldysh.h> // Used for calculating
+// observables on the real energy axsis (e.g. DOS)
+#include "OptimizerRollingBall.h"
 #include <Context.h> // The context that connects all classes (helpful since enacpsulation is used)
 #include <ContextModule.h> // Pure virtual for context modules (e.g. Parameters, ComputeProperty, GradientAccelerator, RiccatiSolver, OrderParameter, GeometryGroup, IntegrationIterator)
-#include <GradientAccelerator.h> // Naive method for speeding up self-consistent iterations. Should be replaced by Anderson accelerator or similar.
 #include <GreensFunctionStatic.h> // Misc. Green function calculations
 #include <Initial.h> // Used for generating initial guess for order parameter
 #include <Visualization.h> // Live visualization of desired observables through OpenGL
@@ -94,9 +94,10 @@ typedef double T;
 //*******************************************************
 Context<T> *ctx = new Context<T>();
 Visualization<T> *vis;
-GradientAccelerator<T> *acc;
+ComputeOrderParameter<T> *op;
 ComputeFreeEnergy<T> *freeEnergyObj;
 ComputeCurrent<T> *current;
+OptimizerRollingBall<T> *opt;
 
 //*******************************************************
 // Misc. definitions
@@ -143,8 +144,6 @@ const int Ne = 10;          // Number of Ozaki poles
 
 const int MAXLOOPS = 25000; // 1000;//5000;
 const int MINLOOPS = 150;   // 300;
-const int RELAXCOUNT = 5;   // 30;
-const int RELAXFINAL = 50;  // 30;
 
 T T_Tc = 0.5;        // Temperature: T/T_c
 T fluxQuanta = 90.0; // Number of flux quanta per unit area
@@ -213,7 +212,7 @@ int main(int argc, char *argv[]) {
   OrderParameter<T> *delta = new OrderParameter<T>(ctx);
   OrderParameterComponent_S<T> *deltaComponent =
       new OrderParameterComponent_S<T>(param);
-  // deltaComponent->setLatticeOrientation( latticeOrientation ); // Set crystal
+  // deltaComponent->setLatticeOrientation(latticeOrientation); // Set crystal
   // ab-axes rotation (used for d-wave)
 
   // srand (time(NULL)); // Randomize seed
@@ -269,15 +268,12 @@ int main(int argc, char *argv[]) {
   delta->add(deltaComponent);
 
   // Create compute object(s) for observable(s)
-  new ComputeOrderParameter<T>(ctx);
+  op = new ComputeOrderParameter<T>(ctx);
+  opt = new OptimizerRollingBall<T>();
+  op->setOptimizer(opt);
   current = new ComputeCurrent<T>(ctx);
   freeEnergyObj = new ComputeFreeEnergy<T>(ctx);
   freeEnergyObj->setCompute(0);
-
-  // Convergence acceleration
-  acc = new GradientAccelerator<T>(ctx);
-  acc->setRelaxCount(RELAXCOUNT);
-  acc->setRelaxFinal(RELAXFINAL);
 
   // Number of plots in visualization = numPlotsY * numPlotsX
   int numPlotsY = 2;
@@ -563,7 +559,7 @@ bool runWrapper() {
 
   // Check for convergence or maximum number of loops (can add user termination
   // through OpenGL hook - check myKeyboardFunc)
-  if ((acc->isConverged() || numLoops > MAXLOOPS) && numLoops > MINLOOPS) {
+  if ((ctx->isConverged() || numLoops > MAXLOOPS) && numLoops > MINLOOPS) {
     Parameters<T> *param = ctx->getParameters();
 
     freeEnergyObj->setCompute(1);
