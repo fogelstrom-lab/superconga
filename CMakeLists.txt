@@ -43,8 +43,14 @@ set_target_properties(demo_hexagon_swave_VL PROPERTIES CXX_STANDARD 14
 # NOTE: FindCUDA is formally deprecated, but no standalone 
 # alternative exists as of yet for automatic detection of 
 # GPU architecture, so we use it
-find_package(CUDA) 
-cuda_select_nvcc_arch_flags(ARCH_FLAGS Auto)
+set(CUDA_ARCH "" CACHE STRING "User-specified CUDA architecture (autodetected otherwise)")
+if (CUDA_ARCH)
+  message(STATUS "Setting user-defined arch: ${CUDA_ARCH}")
+  set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
+else()
+  find_package(CUDA) 
+  cuda_select_nvcc_arch_flags(ARCH_FLAGS Auto)
+endif()
 string(REPLACE ";" " " ARCH_FLAGS_DISPLAY "${ARCH_FLAGS}")
 message(STATUS "Add CUDA architecture flags: ${ARCH_FLAGS_DISPLAY}")
 
