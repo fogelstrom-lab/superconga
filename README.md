@@ -22,3 +22,10 @@ ninja
 ./demo_hexagon_swave_VL
 ```
 where `build_type` is `Debug` or `Release`.
+
+### Build with custom CUDA architecture
+By default, CMake tries to autodetect the appropriate CUDA architecture. One can override this by using the command-line option `-DCUDA_ARCH`, i.e.
+```
+cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ..
+```
+where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.).
