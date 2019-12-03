@@ -1,7 +1,9 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
+#include "Grid.h"
 #include <ContextModule.h>
+#include <iostream>
 #include <util/csecond.h>
 
 template <typename> class CoherenceFunctions;
@@ -11,6 +13,7 @@ template <typename> class ComputeLDOS;
 template <typename> class ComputeOrderParameter;
 template <typename> class ComputeProperty;
 template <typename> class Context;
+template <typename> class FermiSurface;
 template <typename> class GeometryGroup;
 template <typename> class IntegrationIterator;
 template <typename> class OrderParameter;
@@ -31,6 +34,7 @@ public:
   void set(OrderParameter<T> *delta) { _delta = delta; }
   void set(RiccatiSolver<T> *solver) { _solver = solver; }
   void set(IntegrationIterator<T> *iter) { _iter = iter; }
+  void set(FermiSurface<T> *fermiSurface) { _fermiSurface = fermiSurface; }
   int add(ComputeOrderParameter<T> *compute) {
     _compute_delta = compute;
     return add(static_cast<ComputeProperty<T> *>(compute));
@@ -56,6 +60,7 @@ public:
   // Getters
   Parameters<T> *getParameters() const { return _param; }
   GeometryGroup<T> *getGeometry() const { return _geom; }
+  FermiSurface<T> *getFermiSurface() const { return _fermiSurface; }
   OrderParameter<T> *getOrderParameter() const { return _delta; }
   OrderParameterComponent<T> *getOrderParameterComponent(int idx) const {
     return _delta->getOrderParameterComponent(idx);
@@ -91,6 +96,7 @@ private:
   OrderParameter<T> *_delta;
   RiccatiSolver<T> *_solver;
   IntegrationIterator<T> *_iter;
+  FermiSurface<T> *_fermiSurface;
 
   std::vector<ComputeProperty<T> *> _computeObjectList;
 
@@ -110,34 +116,38 @@ Context<T>::Context()
       _compute_delta(0), _compute_time(0.0), _numIterations(0) {}
 
 template <typename T> Context<T>::~Context() {
-  using namespace std;
-  cout << "~Context()\n";
+  std::cout << "~Context()\n";
 
   if (_param) {
     delete _param;
-    cout << "~Context(): Deleted Parameters\n";
+    std::cout << "~Context(): Deleted Parameters\n";
   }
 
   if (_geom) {
     delete _geom;
-    cout << "~Context(): Deleted Geometry\n";
+    std::cout << "~Context(): Deleted Geometry\n";
   }
   if (_delta) {
     delete _delta;
-    cout << "~Context(): Deleted OrderParameter\n";
+    std::cout << "~Context(): Deleted OrderParameter\n";
   }
   if (_solver) {
     delete _solver;
-    cout << "~Context(): Deleted RiccatiSolver\n";
+    std::cout << "~Context(): Deleted RiccatiSolver\n";
   }
   if (_iter) {
     delete _iter;
-    cout << "~Context(): Deleted IntegrationIterator\n";
+    std::cout << "~Context(): Deleted IntegrationIterator\n";
+  }
+
+  if (_fermiSurface) {
+    delete _fermiSurface;
+    std::cout << "~Context(): Deleted FermiSurface\n";
   }
 
   for (int i = 0; i < getNumComputeObjects(); ++i) {
     delete _computeObjectList[i];
-    cout << "~Context(): Deleted ComputeObject " << i << "\n";
+    std::cout << "~Context(): Deleted ComputeObject " << i << "\n";
   }
 
   Grid<float>::CPU::printAllocatedMemTotal();
@@ -158,10 +168,8 @@ template <typename T> int Context<T>::add(ComputeProperty<T> *property) {
 }
 
 template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
-  using namespace std;
-
   if (_iter == 0 && getNumComputeObjects() > 0) {
-    cout << "Context::initialize() --> Creating IntegrationIterator\n";
+    std::cout << "Context::initialize() --> Creating IntegrationIterator\n";
     _computeObjectList[0]->createIntegrationIterator(
         numEnergiesPerBlock); // sets _iter member
     ContextModule<T>::checkCudaError(
@@ -169,20 +177,26 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   }
 
   if (_geom) {
-    cout << "Context::initialize() --> Initializing Geometry\n";
+    std::cout << "Context::initialize() --> Initializing Geometry\n";
     _geom->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): GeometryGroup");
   }
 
+  if (_fermiSurface) {
+    std::cout << "Context::initialize() --> Initializing FermiSurface\n";
+    _fermiSurface->initialize();
+    ContextModule<T>::checkCudaError("Context<T>::initialize(): FermiSurface");
+  }
+
   if (_delta) {
-    cout << "Context::initialize() --> Initializing OrderParameter\n";
+    std::cout << "Context::initialize() --> Initializing OrderParameter\n";
     _delta->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): OrderParameter");
   }
 
   if (_iter) {
-    cout << "Context::initialize() --> Initializing IntegrationIterator\n";
+    std::cout << "Context::initialize() --> Initializing IntegrationIterator\n";
     _iter->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): IntegrationIterator");
@@ -190,14 +204,14 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   // RiccatiSolver requires IntegrationIterator to be initialized first
   if (_solver) {
-    cout << "Context::initialize() --> Initializing RiccatiSolver\n";
+    std::cout << "Context::initialize() --> Initializing RiccatiSolver\n";
     _solver->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): RiccatiSolver");
   }
 
   for (int i = 0; i < getNumComputeObjects(); ++i) {
-    cout << "Context::initialize() --> Initializing ComputeObject " << i
-         << ":\n";
+    std::cout << "Context::initialize() --> Initializing ComputeObject " << i
+              << ":\n";
     _computeObjectList[i]->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): ComputeProperty");
@@ -205,7 +219,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   _numIterations = 0;
 
-  cout << "\n\nContext::initialize() --> Initialization complete!\n";
+  std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
 
   Grid<float>::CPU::printAllocatedMemTotal();
   Grid<double>::CPU::printAllocatedMemTotal();

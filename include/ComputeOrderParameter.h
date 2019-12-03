@@ -42,7 +42,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -175,11 +175,20 @@ void ComputeOrderParameter<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
 template <typename T>
 void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                    const T angle) {
+                                                    const int angleIdx) {
   typedef ComputeProperty<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = C::getGreensCurrentAngle();
+
+    FermiSurface<T> *fermiSurface = C::getFermiSurface();
+    const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+
+    T momentumX;
+    T momentumY;
+    fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
+
+    const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
 
     for (int i = 0; i < _delta->getNumOrderParameterComponents(); ++i) {
       _deltaTmp->setZero();
@@ -187,14 +196,17 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
       // Compensate for numerical diffusion from interpolation during rotation
       geom->extendValuesAtBoundary(greens, 1);
 
-      // Rotate back to reference frame and add momentum dependence
-      _deltaTmp->insertRotatedGrid(greens, angle);
+      // Rotate back to reference frame and add momentum dependence.
+      _deltaTmp->insertRotatedGrid(greens, systemAngle);
+
+      // It should be the complex conjugate of the basis function!
+      const bool conjugateBasis = true;
       _delta->getOrderParameterComponent(i)->computeMomentumDependence(
-          _deltaTmp, angle);
+          _deltaTmp, momentumX, momentumY, conjugateBasis);
 
       // Add angle contribution (angle integration)
       *(_delta->getOrderParameterComponent(i)->getOrderParameterField()) +=
-          *_deltaTmp;
+          *_deltaTmp * integrandFactor;
     }
   }
 }
@@ -213,10 +225,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
       // Compute new delta from anomalous greens function
       OrderParameterComponent<T> *component =
           _delta->getOrderParameterComponent(i);
-
-      component->computeCouplingConstant();
-
-      *(component->getOrderParameterField()) *= 1.0 / (T)Na;
+      component->applyCouplingConstant();
     }
 
     // Compute residual
@@ -224,6 +233,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     _opt->step(*_delta, *deltaOld);
     const T residual = _opt->getResidual();
     C::setResidual(residual);
+
     // TODO(niclas): Not sure if this is needed.
     *_delta = *deltaOld;
 

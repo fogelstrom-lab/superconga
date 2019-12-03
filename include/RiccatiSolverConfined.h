@@ -1,7 +1,8 @@
 #ifndef RICCATISOLVERCONFINED_H
 #define RICCATISOLVERCONFINED_H
 
-#include <RiccatiSolver.h>
+#include "RiccatiSolver.h"
+#include <cmath>
 
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
@@ -22,12 +23,12 @@ public:
   virtual void
   computeInitialCondition(const ParameterIterator<int> &energy_iter,
                           const GridGPU *energies, const GridGPU *delta,
-                          const int angle_idx);
+                          const int angleIdx);
 
   virtual void
   computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
                             const GridGPU *energies, const GridGPU *delta,
-                            const int angle_idx);
+                            const int angleIdx);
 
   void gammaSymmetryTransform();
 
@@ -39,15 +40,14 @@ namespace {
 
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionTemplate_new_kernel(
-    const T h, const int N, const int Ne, const int energyIdx_offset,
-    const int idx_x_min, const int idx_x_max, const int idx_y_min,
-    const int idx_y_max, const int angle_idx, const T system_angle,
-    const T momentum_angle, const T B, T *energies_re, T *energies_im,
-    T *energy_shift, T *gamma_real, T *gamma_imag, T *delta_real, T *delta_imag,
-    char *domainLabel, T *domainNormals_x, T *domainNormals_y,
-    T *boundaryDistance, int *idx_in_gamma, int *idx_out_gamma,
-    T *bnd_in_gamma_real, T *bnd_in_gamma_imag, T *bnd_out_gamma_real,
-    T *bnd_out_gamma_imag) {
+    const T h, const T fermiSpeed, const int N, const int Ne,
+    const int energyIdx_offset, const int idx_x_min, const int idx_x_max,
+    const int idx_y_min, const int idx_y_max, const int angleIdx, const T B,
+    T *energies_re, T *energies_im, T *energy_shift, T *gamma_real,
+    T *gamma_imag, T *delta_real, T *delta_imag, char *domainLabel,
+    T *domainNormals_x, T *domainNormals_y, T *boundaryDistance,
+    int *idx_in_gamma, int *idx_out_gamma, T *bnd_in_gamma_real,
+    T *bnd_in_gamma_imag, T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
   const int x =
       blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;   // x-coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y; // energy coordinate
@@ -55,10 +55,10 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
   cplx<T> g, g0((T)0.0, (T)0.0), g_bnd, energy;
   cplx<T> delta, D2, D_bnd;
 
-  T dh;
-
   int idx, gamma_idx, idx_sparse;
   char nodeType;
+
+  const T step = h / fermiSpeed;
 
   if (x <= idx_x_max) {
     energy.x = energies_re[e_idx];
@@ -99,29 +99,30 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
       if (nodeType == 1) // Inside domain:
       {
-        GAMMA::computeGamma_local(delta, g0, energy, h, 1, g);
+        GAMMA::computeGamma_local(delta, g0, energy, step, 1, g);
       } else if (nodeType == ENTRY) // Domain boundary entry:
       {
         // Read gamma from boundary storage, and calc first gamma to grid,
         // using fractional step.
         idx_sparse = BoundaryStorage<T>::getSparseIndex(
-            angle_idx, e_idx + energyIdx_offset, x, boundary_entry_count, Ne, N,
+            angleIdx, e_idx + energyIdx_offset, x, boundary_entry_count, Ne, N,
             idx_in_gamma);
 
         g0.x = bnd_in_gamma_real[idx_sparse];
         g0.y = bnd_in_gamma_imag[idx_sparse];
 
         // Distance to exact boundary location
-        dh = h * abs(boundaryDistance[idx]);
+        const T distance = fabsf(boundaryDistance[idx]);
+        const T fractionalStep = distance * step;
 
         // Extrapolate delta at boundary from domain values
         D2.x = delta_real[(y + DIR) * N + x];
         D2.y = delta_imag[(y + DIR) * N + x];
 
-        D_bnd = delta - (D2 - delta) * (dh / h);
+        D_bnd = delta - (D2 - delta) * distance;
 
         // Compute gamma at current grid point, using exact distance to boundary
-        GAMMA::computeGamma_local(D_bnd, g0, energy, dh, 1, g);
+        GAMMA::computeGamma_local(D_bnd, g0, energy, fractionalStep, 1, g);
 
         boundary_entry_count++;
       } else if (nodeType == EXIT) // Domain boundary exit:
@@ -131,14 +132,15 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         GAMMA::computeGamma_local(delta, g0, energy, h, 1, g);
 
         // Distance to exact boundary location
-        dh = h * abs(boundaryDistance[idx]);
+        const T fractionalStep = fabsf(boundaryDistance[idx]) * step;
 
         // Calc at exact boundary location
-        GAMMA::computeGamma_local(delta, g0, energy, dh + h, 1, g_bnd);
+        GAMMA::computeGamma_local(delta, g0, energy, step + fractionalStep, 1,
+                                  g_bnd);
 
         // Store boundary gammas
         idx_sparse = BoundaryStorage<T>::getSparseIndex(
-            angle_idx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
+            angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
             idx_out_gamma);
 
         bnd_out_gamma_real[idx_sparse] = g_bnd.x;
@@ -162,13 +164,12 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const T h, const int N, const int Ne, const int energyIdx_offset,
-    const int idx_x_offset, const int angle_idx, const T system_angle,
-    const T momentum_angle, const T B, T *energies_re, T *energies_im,
-    T *energy_shift, T *gamma_real, T *gamma_imag, T *delta_real, T *delta_imag,
-    char *domainLabel, T *domainNormals_x, T *domainNormals_y,
-    T *boundaryDistance, int *idx_in_gamma, int *idx_out_gamma,
-    T *bnd_in_gamma_real, T *bnd_in_gamma_imag, T *bnd_out_gamma_real,
-    T *bnd_out_gamma_imag) {
+    const int idx_x_offset, const int angleIdx, const T B, T *energies_re,
+    T *energies_im, T *energy_shift, T *gamma_real, T *gamma_imag,
+    T *delta_real, T *delta_imag, char *domainLabel, T *domainNormals_x,
+    T *domainNormals_y, T *boundaryDistance, int *idx_in_gamma,
+    int *idx_out_gamma, T *bnd_in_gamma_real, T *bnd_in_gamma_imag,
+    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
   const int x =
       blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset; // x-coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;  // energy coordinate
@@ -209,7 +210,7 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
 
         // Compute gammas and store
         idx_sparse = BoundaryStorage<T>::getSparseIndex(
-            angle_idx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
+            angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
             idx_out_gamma);
 
         // Compute gamma at current grid point
@@ -307,13 +308,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   int idx_y_max =
       (storage->getTrajectoryRangeY()->getDataPointer(1))[current_angle_idx];
 
-  // System and gamma angle
-  T system_angle = ((T)current_angle_idx / (T)numAngles) * (2.0 * M_PI);
-  T gamma_angle = system_angle + 0.5 * M_PI;
-
-  if (gamma_angle >= 2.0 * M_PI)
-    gamma_angle -= 2.0 * M_PI;
-
   // Gives 10-15% speedup with streams
   cudaStream_t s1, s2;
   cudaStreamCreate(&s1);
@@ -332,13 +326,14 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   computeEnergyShift<T, POTENTIAL>(this, ps, eShift, doInducedBfield,
                                    current_angle_idx);
 
+  const T fermiSpeed = C::getFermiSurface()->getFermiSpeed(current_angle_idx);
+
   // 	Solve gamma by propagating riccati trajectories along positive y
   computeGammaFunctionTemplate_new_kernel<T, typename GAMMA<T>::Gamma, 2, 3, 1>
       <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
           // Model parameters and energy values
-          h, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
-          idx_x_max, idx_y_min, idx_y_max, current_angle_idx, system_angle,
-          gamma_angle, B,
+          h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
+          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx, B,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -365,9 +360,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
                                           -1>
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
-          h, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
-          idx_x_max, idx_y_min, idx_y_max, current_angle_idx, system_angle,
-          gamma_angle, B,
+          h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
+          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx, B,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -452,13 +446,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
                               numEnergiesCurrentBlock, current_angle_idx);
 
-  // System and gamma angle
-  T system_angle = ((T)current_angle_idx / (T)numAngles) * (2.0 * M_PI);
-  T gamma_angle = system_angle + 0.5 * M_PI;
-
-  if (gamma_angle >= 2.0 * M_PI)
-    gamma_angle -= 2.0 * M_PI;
-
   // Get energy shift from magnetic field
   GridGPU *eShift = R::getEnergyShift();
 
@@ -467,7 +454,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
       T, typename GAMMA<T>::Gamma, 2, 3, 1><<<blocksPerGrid, threadsPerBlock>>>(
       // Model parameters and energy values
       h, N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
-      current_angle_idx, system_angle, gamma_angle, B,
+      current_angle_idx, B,
       energies->getDataPointer(0, Type::real) + energyIdxOffset,
       energies->getDataPointer(0, Type::imag) + energyIdxOffset,
       eShift->getDataPointer(),
@@ -495,7 +482,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
       <<<blocksPerGrid, threadsPerBlock>>>(
           // Model parameters and energy values
           h, N, numEnergies_storage, energyIdxOffset_storage,
-          trajectoryIdx_start, current_angle_idx, system_angle, gamma_angle, B,
+          trajectoryIdx_start, current_angle_idx, B,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),

@@ -1,6 +1,7 @@
 #ifndef COMPUTECURRENT_H
 #define COMPUTECURRENT_H
 
+#include "utils.h"
 #include <ComputeProperty.h>
 #include <IntegrationIteratorOzaki.h>
 
@@ -37,7 +38,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -128,25 +129,36 @@ void ComputeCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
 template <typename T>
 void ComputeCurrent<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                             const T angle) {
+                                             const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens, 1);
 
+    const int numAngles =
+        ComputeProperty<T>::getParameters()->getAngularResolution();
+    const T systemAngle =
+        ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
+
+    T fermiVelocityX;
+    T fermiVelocityY;
+    ComputeProperty<T>::getFermiSurface()->getFermiVelocity(
+        angleIdx, fermiVelocityX, fermiVelocityY);
+
+    const T integrandFactor =
+        ComputeProperty<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
+
     // Add momentum dependence and rotate back to reference frame:
     // x-component
     *_tmp = *greens;
-    *_tmp *= cos(angle + 0.5 * M_PI);
-
-    _current->insertRotatedGridAdditive(_tmp, angle, 0);
+    *_tmp *= fermiVelocityX * integrandFactor;
+    _current->insertRotatedGridAdditive(_tmp, systemAngle, 0);
 
     // y-component
     *_tmp = *greens;
-    *_tmp *= sin(angle + 0.5 * M_PI);
-
-    _current->insertRotatedGridAdditive(_tmp, angle, 1);
+    *_tmp *= fermiVelocityY * integrandFactor;
+    _current->insertRotatedGridAdditive(_tmp, systemAngle, 1);
   }
 }
 
@@ -160,7 +172,7 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     GridGPU current_old = *_current_real;
 
     _current_real->insertGrid(_current);
-    *_current_real *= T_Tc / (T)numAngles;
+    *_current_real *= T_Tc;
 
     T residual = GridGPU::differenceMagnitude(current_old, *_current_real);
 

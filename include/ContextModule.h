@@ -5,6 +5,7 @@
 
 template <typename> class ComputeProperty;
 template <typename> class Context;
+template <typename> class FermiSurface;
 template <typename> class GeometryGroup;
 template <typename> class IntegrationIterator;
 template <typename> class OrderParameter;
@@ -30,6 +31,9 @@ public:
   Parameters<T> *getParameters() const { return _context->getParameters(); }
 
   GeometryGroup<T> *getGeometry() const { return _context->getGeometry(); }
+  FermiSurface<T> *getFermiSurface() const {
+    return _context->getFermiSurface();
+  }
   OrderParameter<T> *getOrderParameter() const {
     return _context->getOrderParameter();
   }

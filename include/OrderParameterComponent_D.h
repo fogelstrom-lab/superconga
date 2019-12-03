@@ -1,10 +1,13 @@
-#ifndef ORDERPARAMETERCOMPONENT_D_H
-#define ORDERPARAMETERCOMPONENT_D_H
+#ifndef ORDERPARAMETERCOMPONENT_D_H_
+#define ORDERPARAMETERCOMPONENT_D_H_
 
-#include <Grid.h>
-#include <OrderParameterComponent.h>
-#include <OrderParameterComponent_Kernel.h>
-#include <Parameters.h>
+#include "Grid.h"
+#include "OrderParameterBasis.h"
+#include "OrderParameterComponent.h"
+#include "Parameters.h"
+#include "cplx.h"
+#include "utils.h"
+#include <cmath>
 #include <cuda.h>
 
 template <typename T>
@@ -24,7 +27,11 @@ public:
 
   virtual OrderParameterComponent_D<T> *clone() const;
 
-  virtual void computeMomentumDependence(GridGPU *target, const T angle);
+  virtual void computeMomentumDependence(GridGPU *target, const T pX,
+                                         const T pY,
+                                         bool conjugateBasis = false);
+
+  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface);
 
   virtual double deltaBulk() const;
 
@@ -40,6 +47,9 @@ private:
     std::swap(A._latticeOrientationGrid, B._latticeOrientationGrid);
   }
 
+  // Factor to make <|eta|^2> = 1.
+  T m_basisNormalization;
+
   // Specified in radians, as a rotational offset from the default.
   // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
   T _latticeOrientation;
@@ -48,8 +58,8 @@ private:
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D()
-    : OrderParameterComponent<T>(), _latticeOrientation(0.0),
-      _latticeOrientationGrid(0) {
+    : OrderParameterComponent<T>(), m_basisNormalization(0.0),
+      _latticeOrientation(0.0), _latticeOrientationGrid(0) {
   OrderParameterComponent<T>::setType((char *)"d");
 }
 
@@ -57,6 +67,7 @@ template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(
     const OrderParameterComponent_D<T> &other)
     : OrderParameterComponent<T>(other),
+      m_basisNormalization(other.m_basisNormalization),
       _latticeOrientation(other._latticeOrientation),
       _latticeOrientationGrid(0) {
 
@@ -67,8 +78,8 @@ OrderParameterComponent_D<T>::OrderParameterComponent_D(
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(Parameters<T> *param,
                                                         T Tcthis_Tc)
-    : OrderParameterComponent<T>(param, Tcthis_Tc), _latticeOrientation(0.0),
-      _latticeOrientationGrid(0) {
+    : OrderParameterComponent<T>(param, Tcthis_Tc), m_basisNormalization(0.0),
+      _latticeOrientation(0.0), _latticeOrientationGrid(0) {
   OrderParameterComponent<T>::setType((char *)"d");
 }
 
@@ -79,8 +90,8 @@ OrderParameterComponent_D<T>::~OrderParameterComponent_D() {
 }
 
 template <typename T>
-OrderParameterComponent_D<T> &
-OrderParameterComponent_D<T>::operator=(OrderParameterComponent_D<T> other) {
+OrderParameterComponent_D<T> &OrderParameterComponent_D<T>::
+operator=(OrderParameterComponent_D<T> other) {
   swap(*this, other);
   return *this;
 }
@@ -91,31 +102,41 @@ OrderParameterComponent_D<T> *OrderParameterComponent_D<T>::clone() const {
 }
 
 template <typename T>
-void OrderParameterComponent_D<T>::computeMomentumDependence(GridGPU *target,
-                                                             const T angle) {
-  // Add 0.5*PI to angle because zero rotation of order parameter field is
-  // equivalent to momentum direction PI/2 (Riccati trajectory solver integrates
-  // along positive y (for reasons of optimal memory access pattern))
-  if (_latticeOrientationGrid) {
-    int Nx = target->dimX();
+void OrderParameterComponent_D<T>::computeMomentumDependence(
+    GridGPU *target, const T pX, const T pY, bool conjugateBasis) {
+  T pXRotated;
+  T pYRotated;
+  utils::rotate(_latticeOrientation, pX, pY, pXRotated, pYRotated);
+  const cplx<T> basis = Basis_D<T>::compute(pXRotated, pYRotated);
+  (*target) *= m_basisNormalization * (conjugateBasis ? basis.conj() : basis);
+}
 
-    if (Nx == _latticeOrientationGrid->dimX()) {
-      dim3 bpg, tpb;
-      target->getKernelDimensions(bpg, tpb);
+template <typename T>
+void OrderParameterComponent_D<T>::initBasisNormalization(
+    FermiSurface<T> *fermiSurface) {
+  const int numAngles = fermiSurface->getNumAngles();
+  T avgBasisSquared = static_cast<T>(0.0);
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    // Get Fermi momentum.
+    T momentumX;
+    T momentumY;
+    fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
 
-      computeMomentumDependence_kernel<T, Basis_D>
-          <<<bpg, tpb>>>(target->getDataPointer(0, Type::real),
-                         target->getDataPointer(0, Type::imag),
-                         _latticeOrientationGrid->getDataPointer(),
-                         _latticeOrientation, angle, Nx, Nx);
-    }
-  } else {
-    (*target) *= Basis_D<T>::compute(angle + _latticeOrientation + 0.5 * M_PI);
+    // Evaluate the basis function.
+    const cplx<T> eta = Basis_D<T>::compute(momentumX, momentumY);
+
+    // Get integrand factor.
+    const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
+
+    // Accumulate.
+    avgBasisSquared += eta.cabsSq() * integrandFactor;
   }
+  m_basisNormalization = static_cast<T>(1.0) / std::sqrt(avgBasisSquared);
+  printf("D-wave Basis Normalization: %f\n", m_basisNormalization);
 }
 
 template <typename T> double OrderParameterComponent_D<T>::deltaBulk() const {
   return OrderParameterComponent<T>::deltaBulk() * 1.5 / 1.76;
 }
 
-#endif // ORDERPARAMETERCOMPONENT_D_H
+#endif // ORDERPARAMETERCOMPONENT_D_H_

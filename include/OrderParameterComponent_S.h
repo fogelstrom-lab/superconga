@@ -22,7 +22,14 @@ public:
 
   virtual OrderParameterComponent_S<T> *clone() const;
 
-  virtual void computeMomentumDependence(GridGPU *target, const T angle) {}
+  // There is no momentum dependence.
+  virtual void computeMomentumDependence(GridGPU *target, const T pX,
+                                         const T pY,
+                                         bool conjugateBasis = false) {}
+
+  // Because there is no momentum dependence the basis function normalization is
+  // trivially satisfied.
+  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface){};
 
   virtual double deltaBulk() const;
 

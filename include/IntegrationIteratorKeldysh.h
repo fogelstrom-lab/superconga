@@ -1,6 +1,7 @@
 #ifndef INTEGRATIONITERATORKELDYSH_H
 #define INTEGRATIONITERATORKELDYSH_H
 
+#include "utils.h"
 #include <ComputeProperty.h>
 #include <Context.h>
 #include <GeometryGroup.h>
@@ -147,7 +148,6 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
 
   // Get some parameters and variables
   const int numAngles = C::getParameters()->getAngularResolution();
-  T angle_rad;
 
   GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
                          // local frame
@@ -162,20 +162,19 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
   if (!energy_iter->isDone()) {
     // Do angle loop (integrate over momentum angles)
     //
-    for (int angle_idx = 0; angle_idx < numAngles; ++angle_idx) {
-      // Angle (in radians) of system in local frame
-      I::setCurrentAngleIndex(angle_idx);
-      angle_rad = I::getCurrentAngleRadians();
-
+    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
       // Rotate order parameter field to current angle
-      deltaRotated = delta->getOrderParameterFieldRotated(-angle_rad);
+      deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
+
+      // Angle (in radians) of system in local frame
+      const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
 
       // Create discrete geometry data for current angle
-      geom->create(-angle_rad);
+      geom->create(-systemAngle);
 
       // Compute coherence functions and store on boundary as initial condition
       riccati->computeInitialCondition(*energy_iter, energies, deltaRotated,
-                                       angle_idx);
+                                       angleIdx);
     }
   }
 
@@ -189,7 +188,6 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
   // Get some parameters and variables
   const int numAngles = C::getParameters()->getAngularResolution();
-  T angle_rad;
 
   GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
                          // local frame
@@ -229,16 +227,15 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   if (!energy_iter->isDone()) {
     // Do angle loop (integrate over momentum angles)
     //
-    for (int angle_idx = 0; angle_idx < numAngles; ++angle_idx) {
-      // Angle (in radians) of system in local frame
-      I::setCurrentAngleIndex(angle_idx);
-      angle_rad = I::getCurrentAngleRadians();
-
+    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
       // Rotate order parameter field to current angle
-      deltaRotated = delta->getOrderParameterFieldRotated(-angle_rad);
+      deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
+
+      // Angle (in radians) of system in local frame
+      const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
 
       // Create discrete geometry data for current angle
-      geom->create(-angle_rad);
+      geom->create(-systemAngle);
 
       // Solve riccati equations for current angle and compute appropriate
       // greens function
@@ -246,7 +243,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
         C::getComputeObject(i)->initializeGreensAngle();
 
       riccati->computeCoherenceFunctions(*energy_iter, energies, deltaRotated,
-                                         angle_idx);
+                                         angleIdx);
 
       for (int i = 0; i < NC; ++i)
         C::getComputeObject(i)->computeGreensAngle(
@@ -254,7 +251,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
       // Add integration contribution of greens function from current angle
       for (int i = 0; i < NC; ++i)
-        C::getComputeObject(i)->integrateGreensAngle(geom, angle_rad);
+        C::getComputeObject(i)->integrateGreensAngle(geom, angleIdx);
     }
 
     // Compute updated order parameter (components)

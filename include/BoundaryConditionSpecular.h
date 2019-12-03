@@ -1,7 +1,11 @@
-#ifndef BOUNDARYCONDITIONSPECULAR_H
-#define BOUNDARYCONDITIONSPECULAR_H
+#ifndef BOUNDARYCONDITIONSPECULAR_H_
+#define BOUNDARYCONDITIONSPECULAR_H_
 
-#include <BoundaryCondition.h>
+#include "BoundaryCondition.h"
+#include "BoundaryStorage.h"
+#include "FermiSurface.h"
+#include "utils.h"
+#include <cmath>
 #include <cuda.h>
 
 template <typename T>
@@ -18,429 +22,230 @@ public:
 private:
 };
 
-namespace {
+namespace detail {
 template <typename T>
-__device__ T calcReflection(T dir_x, T dir_y, T n_x, T n_y) {
-  T dir_dot_n = dir_x * n_x + dir_y * n_y;
-  T alpha =
-      acos(dir_x * dir_x + dir_y * dir_y - (T)2.0 * (dir_dot_n * dir_dot_n));
+__device__ void computeReflectedMomentum(const T inMomentumX,
+                                         const T inMomentumY, const T inNormalX,
+                                         const T inNormalY, T &outMomentumX,
+                                         T &outMomentumY) {
+  // Two times the dot product of the momentum and surface normal.
+  const T twoDot =
+      static_cast<T>(2.0) * (inMomentumX * inNormalX + inMomentumY * inNormalY);
 
-  if (n_x < (T)0.0)
-    alpha = (T)2.0 * M_PI - alpha;
-
-  return alpha;
+  // The projection of the momentum on the normal is given by (p dot n)n.
+  // By subtracting it twice from the incoming momentum we reverse the component
+  // parallel to the normal (orthogonal to the surface), i.e. specular
+  // reflection.
+  outMomentumX = inMomentumX - twoDot * inNormalX;
+  outMomentumY = inMomentumY - twoDot * inNormalY;
 }
 
+// TODO(niclas): Why is is the OUT pointers unchanged, and not IN? The
+// nomenclature is a little bit odd, as they refer to direction to the bulk, not
+// the scatterer.
 template <typename T>
-__device__ T calcReflectionNegative(T dir_x, T dir_y, T n_x, T n_y) {
-  T dir_dot_n = dir_x * n_x + dir_y * n_y;
-  T alpha =
-      acos(dir_x * dir_x + dir_y * dir_y - (T)2.0 * (dir_dot_n * dir_dot_n));
-
-  if (n_x > (T)0.0)
-    alpha = (T)2.0 * M_PI - alpha;
-
-  return alpha;
-}
-
-template <typename T>
-__global__ void boundaryConditionSpecular_gamma_kernel(
-    const int Nx, const int Ne, const int Na, const int angle,
-    const int idx_x_min, const int idx_x_max, const int idx_y_min,
-    const int idx_y_max, const int N_bnd_in_gamma, const int N_bnd_out_gamma,
-    char *domainLabel, T *boundaryNormals_x, T *boundaryNormals_y,
-    T *boundaryDistance, int *sparse_idx_in_gamma, int *sparse_idx_out_gamma,
-    int *numBoundaryIntersect_gamma, int *coordBoundaryIntersect_gamma,
-    T *bnd_in_gamma_real, T *bnd_in_gamma_imag, T *bnd_out_gamma_real,
-    T *bnd_out_gamma_imag) {
-  const int x =
-      threadIdx.x + blockDim.x * blockIdx.x + idx_x_min; // x-coordinate
-  const int e = threadIdx.y + blockDim.y * blockIdx.y;   // energy coordinate
-
-  T h, phi, angle_norm, pt_idx_frac, angle_idx_frac;
-  T boundary_pt_x, boundary_pt_y, boundary_pt_rot_x, boundary_pt_rot_y;
-  T val_bnd_real, val_bnd_imag, val_bnd_interp_real, val_bnd_interp_imag;
-
-  T total_weight, y_coord_diff;
-
-  T rot_pt_angle[2], angle_weight[2], pt_weight[2];
-
-  int y, rot, pt;
-  int idx, idx_sparse_in, idx_sparse_out, angle_idx[2], idx_interp[2];
-  int num_isect, isect, isect_current, sparse_idx;
-
-  char nodeType;
+__global__ void boundaryConditionSpecularKernel(
+    const int numX, const int numEnergies, const int numAngles,
+    const int angleIdx, const int xIdxMin, const int xIdxMax, const int yIdxMin,
+    const int yIdxMax, const T momentumX, const T momentumY,
+    const T momentumOffsetX, const T momentumOffsetY,
+    const T *const systemAngles, const int direction,
+    const char *const domainLabel, const char boundaryLabel,
+    const T *const boundaryNormalsX, const T *const boundaryNormalsY,
+    const T *const boundaryDistance, const int *const sparseIdxInCoherence,
+    const int *const sparseIdxOutCoherence,
+    const int *const numBoundaryIntersections,
+    const int *const coordBoundaryIntersections,
+    T *const boundaryInCoherenceReal, T *const boundaryInCoherenceImag,
+    const T *const boundaryOutCoherenceReal,
+    const T *const boundaryOutCoherenceImag) {
+  // x-coordinate index.
+  const int xIdx = threadIdx.x + blockDim.x * blockIdx.x + xIdxMin;
+  // Energy index.
+  const int eIdx = threadIdx.y + blockDim.y * blockIdx.y;
 
   // Use variable 'offset' when transforming grid index to coordinates with
   // origin in center of grid matrix.
-  const T coord_offset = (Nx - 1) * (T)0.5;
+  const T coordOffset = static_cast<T>(numX - 1) * static_cast<T>(0.5);
 
-  if (x <= idx_x_max) {
-    int boundary_entry_count = 0;
+  // Get the system angle.
+  const T systemAngle = systemAngles[angleIdx];
 
-    // Reflect gamma
-    //
-    for (y = idx_y_min; y <= idx_y_max; ++y) {
+  if (xIdx <= xIdxMax) {
+    int numBoundaryEntry = 0;
+
+    // The number of y-coordinates.
+    const int numY = yIdxMax - yIdxMin + 1;
+
+    for (int y = 0; y < numY; ++y) {
+      // Depending on the coherence function, gamma (gamma tilde), we need to go
+      // forward (backward) along the trajectory.
+      const int yIdx = direction > 0 ? (yIdxMin + y) : (yIdxMax - y);
+
       // Index to 2d-grids
-      idx = y * Nx + x;
+      const int idx = yIdx * numX + xIdx;
 
-      nodeType = domainLabel[idx];
+      // Get the node type.
+      const char nodeType = domainLabel[idx];
 
       // At boundary, going in. Now we need to find where trajectory comes from
-      if (nodeType == 2) {
-        // Distance to exact boundary location
-        h = abs(boundaryDistance[idx]);
+      if (nodeType == boundaryLabel) {
+        // Compute the reflected momentum in the local frame.
+        T reflectedMomentumX;
+        T reflectedMomentumY;
+        computeReflectedMomentum(momentumX, momentumY, boundaryNormalsX[idx],
+                                 boundaryNormalsY[idx], reflectedMomentumX,
+                                 reflectedMomentumY);
 
-        // Calc angle between outgoing and incoming trajectory
-        phi = calcReflection((T)0.0, (T)1.0, boundaryNormals_x[idx],
-                             boundaryNormals_y[idx]);
+        // Rotate the reflected momentum to the global frame.
+        utils::rotate(systemAngle, reflectedMomentumX, reflectedMomentumY);
 
-        // Exact angle (in reference frame, normalized 0 to 1) of trajectory
-        // towards boundary
-        angle_norm = (T)angle / (T)Na + phi / ((T)2.0 * PI);
-
-        // Wrap angle to stay inside range
-        if (angle_norm < (T)0.0)
-          angle_norm = angle_norm + (T)1.0;
-
-        if (angle_norm >= (T)1.0)
-          angle_norm = angle_norm - (T)1.0;
+        // Get the fractional angle index.
+        const T fractionalAngleIdx = fermisurface::getFractionalAngleIndex(
+            reflectedMomentumX, reflectedMomentumY, momentumOffsetX,
+            momentumOffsetY, numAngles);
 
         // Find corresponding indices of trajectories towards boundary
-        // (must interpolate from two angles)
-        angle_idx[0] = angle_norm * Na;
-        angle_idx[1] = angle_idx[0] + 1;
-
-        angle_idx_frac = angle_norm * Na - (T)angle_idx[0];
-
-        // Wrap index to stay inside range
-        if (angle_idx[0] < 0)
-          angle_idx[0] = angle_idx[0] + Na;
-
-        if (angle_idx[0] > (Na - 1))
-          angle_idx[0] = angle_idx[0] - Na;
-
-        if (angle_idx[1] < 0)
-          angle_idx[1] = angle_idx[1] + Na;
-
-        if (angle_idx[1] > (Na - 1))
-          angle_idx[1] = angle_idx[1] - Na;
-
-        // Weights for interpolation of discrete angles
+        // (must interpolate from two angles).
+        // Wrap index to stay inside range.
+        const int interpAngleIdx0 = utils::wrapToRange(
+            static_cast<int>(fractionalAngleIdx), 0, numAngles);
+        const int interpAngleIdx1 = utils::wrapToRange(
+            static_cast<int>(fractionalAngleIdx) + 1, 0, numAngles);
+        const int interpAngleIdx[2] = {interpAngleIdx0, interpAngleIdx1};
 
         // Interpolate gammas from outgoing trajectory from stored
         // boundary values.
 
-        // Rotate point on boundary
-        boundary_pt_x = x - coord_offset;
-        boundary_pt_y = y - coord_offset - h;
+        // Get the remainder after subtracting the integer angle index.
+        const T interpAngleIdxFraction =
+            fractionalAngleIdx - floor(fractionalAngleIdx);
 
-        angle_weight[0] = (T)1.0 - angle_idx_frac;
-        angle_weight[1] = angle_idx_frac;
+        // Weights for interpolation of discrete angles.
+        const T angleWeights[2] = {static_cast<T>(1.0) - interpAngleIdxFraction,
+                                   interpAngleIdxFraction};
 
-        rot_pt_angle[0] = (T)(angle - angle_idx[0]) / (T)Na * (T)2.0 * M_PI;
-        rot_pt_angle[1] = (T)(angle - angle_idx[1]) / (T)Na * (T)2.0 * M_PI;
-
-        // Rotated coordinate above will generally fall between two
-        // discrete grid points, so an interpolation from these needs
-        // to be made.
-
+        // TODO(niclas): Is the comment below still relevant?
         // Only works for one entry/exit per trajectory
-        //
+
+        // Boundary point to be rotated.
+        const T boundaryPointX = static_cast<T>(xIdx) - coordOffset;
+
+        // Distance to exact boundary location.
+        // TODO(niclas): For gamma we have boundaryLabel = 2, i.e. entering.
+        // Which means that it is -h. For gammaTilde we have boundaryLabel = 3,
+        // i.e. exiting. Thus +h. It should probably be done in a nicer way.
+        const T h = abs(boundaryDistance[idx]);
+        const T boundaryPointY = static_cast<T>(yIdx) -
+                                 static_cast<T>(utils::sign(direction)) * h -
+                                 coordOffset;
+
+        const T rot_pt_angle[2] = {
+            systemAngle - systemAngles[interpAngleIdx[0]],
+            systemAngle - systemAngles[interpAngleIdx[1]]};
 
         // NEW ALGORITHM:
-        // Make energy innermost loop. Need to make Ne-sized arrays for
+        // Make energy innermost loop. Need to make numEnergies-sized arrays for
         // intermediate interpolation values.
         // Sparse storage majority: Angle, energy, trajectory
 
-        val_bnd_real = (T)0.0;
-        val_bnd_imag = (T)0.0;
+        T val_bnd_interp_real = static_cast<T>(0.0);
+        T val_bnd_interp_imag = static_cast<T>(0.0);
+        T totalWeight = static_cast<T>(0.0);
 
-        val_bnd_interp_real = (T)0.0;
-        val_bnd_interp_imag = (T)0.0;
-
-        total_weight = (T)0.0;
-
-        for (rot = 0; rot < 2; ++rot) {
-          // Rotate boundary point to originating frame
-          boundary_pt_rot_x = boundary_pt_x * cos(rot_pt_angle[rot]) -
-                              boundary_pt_y * sin(rot_pt_angle[rot]);
-          boundary_pt_rot_y = boundary_pt_x * sin(rot_pt_angle[rot]) +
-                              boundary_pt_y * cos(rot_pt_angle[rot]);
-
-          // Transform coordinate to index
-          boundary_pt_rot_x += coord_offset;
-          boundary_pt_rot_y += coord_offset;
-
-          // Interpolation (points) indices
-          idx_interp[0] = boundary_pt_rot_x;
-          idx_interp[1] = idx_interp[0] + 1;
-
-          // Interpolation (points) weights
-          pt_idx_frac = boundary_pt_rot_x - idx_interp[0];
-
-          pt_weight[0] = (T)1.0 - pt_idx_frac;
-          pt_weight[1] = pt_idx_frac;
-
-          for (pt = 0; pt < 2; ++pt) {
-            // Find number of boundary intersections for current trajectory
-            num_isect = numBoundaryIntersect_gamma[angle_idx[rot] * Nx +
-                                                   idx_interp[pt]];
-
-            isect_current = 0;
-
-            // Find which intersection corresponds to current point
-            for (isect = 0; isect < num_isect; ++isect) {
-              sparse_idx =
-                  sparse_idx_out_gamma[angle_idx[rot] * Nx + idx_interp[pt]] +
-                  isect;
-
-              y_coord_diff = abs((T)coordBoundaryIntersect_gamma[sparse_idx] -
-                                 boundary_pt_rot_y);
-
-              if (y_coord_diff < (T)2.0)
-                isect_current = isect;
-            }
-
-            // Get sparse index for intersection
-            idx_sparse_out = BoundaryStorage<T>::getSparseIndex(
-                angle_idx[rot], e, idx_interp[pt], isect_current, Ne, Nx,
-                sparse_idx_out_gamma);
-
-            if (idx_sparse_out > -1) {
-              val_bnd_real =
-                  bnd_out_gamma_real[idx_sparse_out]; // Maybe pre-load these to
-                                                      // shared mem
-              val_bnd_imag = bnd_out_gamma_imag[idx_sparse_out];
-
-              total_weight += pt_weight[pt] * angle_weight[rot];
-            } else {
-              val_bnd_real = (T)0.0;
-              val_bnd_imag = (T)0.0;
-            }
-
-            // Add interpolation contribution to final value
-            val_bnd_interp_real +=
-                val_bnd_real * pt_weight[pt] * angle_weight[rot];
-            val_bnd_interp_imag +=
-                val_bnd_imag * pt_weight[pt] * angle_weight[rot];
-          }
-        }
-
-        idx_sparse_in = BoundaryStorage<T>::getSparseIndex(
-            angle, e, x, boundary_entry_count, Ne, Nx, sparse_idx_in_gamma);
-
-        if (total_weight > (T)0.0) {
-          bnd_in_gamma_real[idx_sparse_in] = val_bnd_interp_real / total_weight;
-          bnd_in_gamma_imag[idx_sparse_in] = val_bnd_interp_imag / total_weight;
-        } else {
-          bnd_in_gamma_real[idx_sparse_in] = (T)0.0;
-          bnd_in_gamma_imag[idx_sparse_in] = (T)0.0;
-        }
-
-        boundary_entry_count++;
-      }
-    }
-  }
-}
-
-template <typename T>
-__global__ void boundaryConditionSpecular_gammabar_kernel(
-    const int Nx, const int Ne, const int Na, const int angle,
-    const int idx_x_min, const int idx_x_max, const int idx_y_min,
-    const int idx_y_max, int N_bnd_in_gammabar, int N_bnd_out_gammabar,
-    char *domainLabel, T *boundaryNormals_x, T *boundaryNormals_y,
-    T *boundaryDistance, int *sparse_idx_in_gammabar,
-    int *sparse_idx_out_gammabar, int *numBoundaryIntersect_gammabar,
-    int *coordBoundaryIntersect_gammabar, T *bnd_in_gammabar_real,
-    T *bnd_in_gammabar_imag, T *bnd_out_gammabar_real,
-    T *bnd_out_gammabar_imag) {
-
-  const int x =
-      threadIdx.x + blockDim.x * blockIdx.x + idx_x_min; // x-coordinate
-  const int e = threadIdx.y + blockDim.y * blockIdx.y;   // energy coordinate
-
-  T h, phi, angle_norm, pt_idx_frac, angle_idx_frac;
-  T boundary_pt_x, boundary_pt_y, boundary_pt_rot_x, boundary_pt_rot_y;
-  T val_bnd_real, val_bnd_imag, val_bnd_interp_real, val_bnd_interp_imag;
-
-  T total_weight, y_coord_diff;
-
-  T rot_pt_angle[2], angle_weight[2], pt_weight[2];
-
-  int y, rot, pt;
-  int idx, idx_sparse_in, idx_sparse_out, angle_idx[2], idx_interp[2];
-  int num_isect, isect, isect_current, sparse_idx;
-
-  char nodeType;
-
-  // Use variable 'offset' when transforming grid index to coordinates with
-  // origin in center of grid matrix.
-  const T coord_offset = (Nx - 1) * (T)0.5;
-
-  if (x <= idx_x_max) {
-    int boundary_entry_count = 0;
-
-    // Reflect gammabar
-    //
-    for (y = idx_y_max; y >= idx_y_min; --y) {
-      // Index to 2d-grids
-      idx = y * Nx + x;
-
-      nodeType = domainLabel[idx];
-
-      // At boundary, going in. Now we need to find where trajectory comes from
-      if (nodeType == 3) {
-        // Distance to exact boundary location
-        h = abs(boundaryDistance[idx]);
-
-        // Calc angle between outgoing and incoming trajectory
-        phi = calcReflection((T)0.0, -(T)1.0, boundaryNormals_x[idx],
-                             boundaryNormals_y[idx]);
-
-        // Exact angle (in reference frame, normalized 0 to 1) of trajectory
-        // towards boundary
-        angle_norm = (T)angle / (T)Na - phi / ((T)2.0 * M_PI);
-
-        // Wrap angle to stay inside range
-        if (angle_norm < (T)0.0)
-          angle_norm = angle_norm + (T)1.0;
-
-        if (angle_norm >= (T)1.0)
-          angle_norm = angle_norm - (T)1.0;
-
-        // Find corresponding indices of trajectories towards boundary
-        // (must interpolate from two angles)
-        angle_idx[0] = angle_norm * Na;
-        angle_idx[1] = angle_idx[0] + 1;
-
-        angle_idx_frac = angle_norm * Na - (T)angle_idx[0];
-
-        // Wrap index to stay inside range
-        if (angle_idx[0] < 0)
-          angle_idx[0] = angle_idx[0] + Na;
-
-        if (angle_idx[0] > (Na - 1))
-          angle_idx[0] = angle_idx[0] - Na;
-
-        if (angle_idx[1] < 0)
-          angle_idx[1] = angle_idx[1] + Na;
-
-        if (angle_idx[1] > (Na - 1))
-          angle_idx[1] = angle_idx[1] - Na;
-
-        // Weights for interpolation of discrete angles
-        angle_weight[0] = (T)1.0 - angle_idx_frac;
-        angle_weight[1] = angle_idx_frac;
-
-        // Interpolate gammas from outgoing trajectory from stored
-        // boundary values.
-
-        // Rotate point on boundary
-        boundary_pt_x = x - coord_offset;
-        boundary_pt_y = y - coord_offset + h;
-
-        rot_pt_angle[0] = (T)(angle - angle_idx[0]) / (T)Na * (T)2.0 * M_PI;
-        rot_pt_angle[1] = (T)(angle - angle_idx[1]) / (T)Na * (T)2.0 * M_PI;
-
-        // Rotated coordinate above will generally fall between two
-        // discrete grid points, so an interpolation from these needs
-        // to be made.
-        val_bnd_real = (T)0.0;
-        val_bnd_imag = (T)0.0;
-
-        val_bnd_interp_real = (T)0.0;
-        val_bnd_interp_imag = (T)0.0;
-
-        total_weight = (T)0.0;
-
-        for (rot = 0; rot < 2; ++rot) {
-
+        for (int rot = 0; rot < 2; ++rot) {
+          // TODO(niclas): What is the "discrete frame"?
           // Rotate boundary point to discrete frame
-          boundary_pt_rot_x = boundary_pt_x * cos(rot_pt_angle[rot]) -
-                              boundary_pt_y * sin(rot_pt_angle[rot]);
-          boundary_pt_rot_y = boundary_pt_x * sin(rot_pt_angle[rot]) +
-                              boundary_pt_y * cos(rot_pt_angle[rot]);
-
           // Transform coordinate to index
-          boundary_pt_rot_x += coord_offset;
-          boundary_pt_rot_y += coord_offset;
+          T boundary_pt_rot_x;
+          T boundary_pt_rot_y;
+          utils::rotate(rot_pt_angle[rot], boundaryPointX, boundaryPointY,
+                        boundary_pt_rot_x, boundary_pt_rot_y);
+          boundary_pt_rot_x += coordOffset;
+          boundary_pt_rot_y += coordOffset;
 
           // Interpolation (points) indices
-          idx_interp[0] = boundary_pt_rot_x;
-          idx_interp[1] = idx_interp[0] + 1;
+          const int idx_interp[2] = {static_cast<int>(boundary_pt_rot_x),
+                                     static_cast<int>(boundary_pt_rot_x) + 1};
 
           // Interpolation (points) weights
-          pt_idx_frac = boundary_pt_rot_x - idx_interp[0];
+          const T pt_idx_frac = boundary_pt_rot_x - floor(boundary_pt_rot_x);
 
-          pt_weight[0] = (T)1.0 - pt_idx_frac;
-          pt_weight[1] = pt_idx_frac;
+          const T pt_weight[2] = {static_cast<T>(1.0) - pt_idx_frac,
+                                  pt_idx_frac};
 
-          for (pt = 0; pt < 2; ++pt) {
-            // Find number of boundary intersections for current trajectory
-            num_isect = numBoundaryIntersect_gammabar[angle_idx[rot] * Nx +
-                                                      idx_interp[pt]];
+          for (int pt = 0; pt < 2; ++pt) {
+            // Find the number of boundary intersections for current trajectory.
+            const int num_isect =
+                numBoundaryIntersections[interpAngleIdx[rot] * numX +
+                                         idx_interp[pt]];
 
-            isect_current = 0;
+            int isect_current = 0;
 
             // Find which intersection corresponds to current point
-            for (isect = 0; isect < num_isect; ++isect) {
-              sparse_idx = sparse_idx_out_gammabar[angle_idx[rot] * Nx +
-                                                   idx_interp[pt]] +
-                           isect;
+            for (int isect = 0; isect < num_isect; ++isect) {
+              const int sparse_idx =
+                  (sparseIdxOutCoherence[interpAngleIdx[rot] * numX +
+                                         idx_interp[pt]] +
+                   isect);
 
-              y_coord_diff =
-                  abs((T)coordBoundaryIntersect_gammabar[sparse_idx] -
+              const T y_coord_diff =
+                  abs(static_cast<T>(coordBoundaryIntersections[sparse_idx]) -
                       boundary_pt_rot_y);
 
-              if (y_coord_diff < (T)2.0)
+              // TODO(niclas): What does this check? Why 2?
+              if (y_coord_diff < static_cast<T>(2.0)) {
                 isect_current = isect;
-            }
+              }
+            } // for isect
 
             // Get sparse index for intersection
-            idx_sparse_out = BoundaryStorage<T>::getSparseIndex(
-                angle_idx[rot], e, idx_interp[pt], isect_current, Ne, Nx,
-                sparse_idx_out_gammabar);
+            const int idx_sparse_out = BoundaryStorage<T>::getSparseIndex(
+                interpAngleIdx[rot], eIdx, idx_interp[pt], isect_current,
+                numEnergies, numX, sparseIdxOutCoherence);
 
-            if (idx_sparse_out > -1) {
-              val_bnd_real =
-                  bnd_out_gammabar_real[idx_sparse_out]; // Maybe pre-load these
-                                                         // to shared mem
-              val_bnd_imag = bnd_out_gammabar_imag[idx_sparse_out];
+            // TODO(niclas): What does it mean?
+            const bool isIdxSparseOutOk = (idx_sparse_out > -1);
 
-              total_weight += pt_weight[pt] * angle_weight[rot];
-            } else {
-              val_bnd_real = (T)0.0;
-              val_bnd_imag = (T)0.0;
-            }
+            // Maybe pre-load these [bnd_out_gamma...] to shared memory.
+            const T val_bnd_real =
+                isIdxSparseOutOk ? boundaryOutCoherenceReal[idx_sparse_out]
+                                 : static_cast<T>(0.0);
+            const T val_bnd_imag =
+                isIdxSparseOutOk ? boundaryOutCoherenceImag[idx_sparse_out]
+                                 : static_cast<T>(0.0);
+            totalWeight += isIdxSparseOutOk
+                               ? (pt_weight[pt] * angleWeights[rot])
+                               : static_cast<T>(0.0);
 
             // Add interpolation contribution to final value
             val_bnd_interp_real +=
-                val_bnd_real * pt_weight[pt] * angle_weight[rot];
+                val_bnd_real * pt_weight[pt] * angleWeights[rot];
             val_bnd_interp_imag +=
-                val_bnd_imag * pt_weight[pt] * angle_weight[rot];
-          }
-        }
+                val_bnd_imag * pt_weight[pt] * angleWeights[rot];
+          } // for pt
+        }   // for rot
 
-        idx_sparse_in = BoundaryStorage<T>::getSparseIndex(
-            angle, e, x, boundary_entry_count, Ne, Nx, sparse_idx_in_gammabar);
+        const int idx_sparse_in = BoundaryStorage<T>::getSparseIndex(
+            angleIdx, eIdx, xIdx, numBoundaryEntry, numEnergies, numX,
+            sparseIdxInCoherence);
 
-        if (total_weight > (T)0.0) {
-          bnd_in_gammabar_real[idx_sparse_in] =
-              val_bnd_interp_real / total_weight;
-          bnd_in_gammabar_imag[idx_sparse_in] =
-              val_bnd_interp_imag / total_weight;
+        if (totalWeight > static_cast<T>(0.0)) {
+          boundaryInCoherenceReal[idx_sparse_in] =
+              val_bnd_interp_real / totalWeight;
+          boundaryInCoherenceImag[idx_sparse_in] =
+              val_bnd_interp_imag / totalWeight;
         } else {
-          bnd_in_gammabar_real[idx_sparse_in] = (T)0.0;
-          bnd_in_gammabar_imag[idx_sparse_in] = (T)0.0;
+          boundaryInCoherenceReal[idx_sparse_in] = static_cast<T>(0.0);
+          boundaryInCoherenceImag[idx_sparse_in] = static_cast<T>(0.0);
         }
 
-        boundary_entry_count++;
+        numBoundaryEntry++;
       }
     }
   }
 }
-} // namespace
+} // namespace detail
 
 template <typename T>
 void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
@@ -448,55 +253,74 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   GeometryGroup<T> *geom = ctx->getGeometry();
   RiccatiSolver<T> *riccati = ctx->getRiccatiSolver();
   BoundaryStorage<T> *bnd = riccati->getBoundaryStorage();
+  FermiSurface<T> *fermiSurface = ctx->getFermiSurface();
 
-  const int Na = ctx->getParameters()->getAngularResolution();
-  const int Ne = iterator->getNumEnergiesInterval();
+  const int numAngles = ctx->getParameters()->getAngularResolution();
+  const int numEnergies = iterator->getNumEnergiesInterval();
 
-  T angle_rad;
-  const int angle_idx = iterator->getCurrentAngleIndex();
-
-  int Nx, Ny;
-  geom->getGridDimensions(Nx, Ny);
-
-  const int N_bnd_in_gamma = bnd->getBoundaryIn_gamma()->dimX() / Ne;
-  const int N_bnd_out_gamma = bnd->getBoundaryOut_gamma()->dimX() / Ne;
-  const int N_bnd_in_gammabar = bnd->getBoundaryIn_gammabar()->dimX() / Ne;
-  const int N_bnd_out_gammabar = bnd->getBoundaryOut_gammabar()->dimX() / Ne;
+  int numX, numY;
+  geom->getGridDimensions(numX, numY);
 
   // Somewhat faster with streams
   cudaStream_t s1, s2;
   cudaStreamCreate(&s1);
   cudaStreamCreate(&s2);
 
-  for (int angle_idx = 0; angle_idx < Na; ++angle_idx) {
-    // Current angle in radians
-    angle_rad = (T)angle_idx / (T)Na * ((T)2.0 * M_PI);
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    // Get the sample angle for this angle index.
+    const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+
+    // Get the Fermi momentum in the global frame.
+    T momentumX;
+    T momentumY;
+    fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
+
+    // Rotate the momentum to the local frame.
+    utils::rotate(-systemAngle, momentumX, momentumY);
 
     // Set per angle optimized kernel dimensions
-    int idx_x_min = (bnd->getTrajectoryRangeX()->getDataPointer(0))[angle_idx];
-    int idx_x_max = (bnd->getTrajectoryRangeX()->getDataPointer(1))[angle_idx];
-    int idx_y_min = (bnd->getTrajectoryRangeY()->getDataPointer(0))[angle_idx];
-    int idx_y_max = (bnd->getTrajectoryRangeY()->getDataPointer(1))[angle_idx];
+    const int xIdxMin =
+        (bnd->getTrajectoryRangeX()->getDataPointer(0))[angleIdx];
+    const int xIdxMax =
+        (bnd->getTrajectoryRangeX()->getDataPointer(1))[angleIdx];
+    const int yIdxMin =
+        (bnd->getTrajectoryRangeY()->getDataPointer(0))[angleIdx];
+    const int yIdxMax =
+        (bnd->getTrajectoryRangeY()->getDataPointer(1))[angleIdx];
 
-    int numTrajectories = idx_x_max - idx_x_min + 1;
+    const int numTrajectories = xIdxMax - xIdxMin + 1;
 
     dim3 bpg, tpb;
-    GridGPU::getKernelDimensions(bpg, tpb, numTrajectories, Ne);
+    GridGPU::getKernelDimensions(bpg, tpb, numTrajectories, numEnergies);
 
     // Create geometry for current angle
-    geom->create(-angle_rad);
+    geom->create(-systemAngle);
+
+    const char *const domainLabel =
+        geom->getDomainLabelsGrid()->getDataPointer();
+    const T *const boundaryNormalsX = geom->getNormalsGrid()->getDataPointer(0);
+    const T *const boundaryNormalsY = geom->getNormalsGrid()->getDataPointer(1);
+    const T *const boundaryDistance =
+        geom->getBoundaryDistanceGrid()->getDataPointer();
+
+    const T *const systemAnglesPtr = fermiSurface->getSystemAnglePointer();
+
+    T momentumOffsetX;
+    T momentumOffsetY;
+    fermiSurface->getMomentumOffset(momentumOffsetX, momentumOffsetY);
 
     // Compute reflection
-    boundaryConditionSpecular_gamma_kernel<T><<<bpg, tpb, 0, s1>>>(
+    // TODO(niclas): Don't check the numerical value, use enum!
+    const char boundaryLabel = 2;
+    const int direction = 1;
+    detail::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
         // Model parameters
-        Nx, Ne, Na, angle_idx, idx_x_min, idx_x_max, idx_y_min, idx_y_max,
-        // Array dimensions for sparse storage
-        N_bnd_in_gamma, N_bnd_out_gamma,
+        numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
+        yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
+        systemAnglesPtr, direction,
         // Grids for domain info/data
-        geom->getDomainLabelsGrid()->getDataPointer(),
-        geom->getNormalsGrid()->getDataPointer(0),
-        geom->getNormalsGrid()->getDataPointer(1),
-        geom->getBoundaryDistanceGrid()->getDataPointer(),
+        domainLabel, boundaryLabel, boundaryNormalsX, boundaryNormalsY,
+        boundaryDistance,
         // Data relating to sparse storage for gammas
         bnd->getIndexSparseIn_gamma()->getDataPointer(),
         bnd->getIndexSparseOut_gamma()->getDataPointer(),
@@ -507,16 +331,17 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
         bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
         bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
-    boundaryConditionSpecular_gammabar_kernel<T><<<bpg, tpb, 0, s2>>>(
+    // TODO(niclas): Don't check the numerical value, use enum!
+    const char boundaryLabelTilde = 3;
+    const int directionTilde = -1;
+    detail::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
         // Model parameters
-        Nx, Ne, Na, angle_idx, idx_x_min, idx_x_max, idx_y_min, idx_y_max,
-        // Array dimensions for sparse storage
-        N_bnd_in_gammabar, N_bnd_out_gammabar,
+        numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
+        yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
+        systemAnglesPtr, directionTilde,
         // Grids for domain info/data
-        geom->getDomainLabelsGrid()->getDataPointer(),
-        geom->getNormalsGrid()->getDataPointer(0),
-        geom->getNormalsGrid()->getDataPointer(1),
-        geom->getBoundaryDistanceGrid()->getDataPointer(),
+        domainLabel, boundaryLabelTilde, boundaryNormalsX, boundaryNormalsY,
+        boundaryDistance,
         // Data relating to sparse storage for gammas
         bnd->getIndexSparseIn_gammabar()->getDataPointer(),
         bnd->getIndexSparseOut_gammabar()->getDataPointer(),
@@ -532,4 +357,4 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   cudaStreamDestroy(s2);
 }
 
-#endif // BOUNDARYCONDITIONSPECULAR_H
+#endif // BOUNDARYCONDITIONSPECULAR_H_

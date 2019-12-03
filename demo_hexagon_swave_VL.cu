@@ -14,43 +14,29 @@
 //*******************************************************
 // API libraries
 //*******************************************************
-#include <Disc.h> // Used for adding/subtracting discs from sample geometry
-#include <DiscGeometry.h>
-#include <GeometryComponent.h> // Pure virtual geometry object class - base class for discs, polygons etcetera
-#include <GeometryGroup.h> // The geometry group stores a list of polygons/discs/... that togheter define the sample geometry (container class for GeometryComponent)
-#include <Grid.h>          // Data type for observables defined on the lattice
-#include <OrderParameter.h> // Container class for order parameter components
-#include <OrderParameterComponent.h> // Pure virtul for s-wave, d-wave, ... components
-#include <OrderParameterComponent_S.h> // s-wave
-#include <ParameterIterator.h> // Used for sweeping parameters (e.g. energy, temperature)
-#include <Parameters.h> // Parameters specifying which the superconducting system to simulate
-#include <Polygon.h> // Used for adding/subtracting polygons from sample geometry (!! currently limited to convex hull !!)
-#include <PolygonGeometry.h>
-#include <cplx.h> // Complex number datatype
-//#include <OrderParameterComponent_D.h> // d-wave
-//#include <OrderParameterComponent_P.h> // p-wave (p_x part)
-#include <RiccatiSolver.h> // Pure virtual for different kinds of Riccati solvers
-//#include <RiccatiSolverBulk.h> // Riccati solver for bulk
+#include "BoundaryConditionSpecular.h" // Boundary condition for perfect specular reflection
+#include "ComputeCurrent.h"    // Compute charge current
+#include "ComputeFreeEnergy.h" // Compute free energy (Eilenberger functional)
+#include "ComputeOrderParameter.h" // Compute order parameter
 #include "ComputeVectorPotential.h"
-#include <ComputeCurrent.h>    // Compute charge current
-#include <ComputeFreeEnergy.h> // Compute free energy (Eilenberger functional)
-#include <ComputeOrderParameter.h> // Compute order parameter
-#include <ComputeProperty.h> // Pure virtual for compute properties (observables etc). The observables to be computed are added to a list of compute objects.
-#include <RiccatiSolverConfined.h> // Riccati solver for confined geometries
-//#include <ComputeLDOS.h> // Compute Local Density of States (!! note !! more
-// convenient to run in a separate program using the Keldysh iterator, reading a
-// fully converged solution as start file)
-#include <BoundaryConditionSpecular.h> // Boundary condition for perfect specular reflection
-#include <BoundaryStorage.h> // Storage for coherence functions on the system edges - we save memory by only saving on boundaries between self-consistent iterations. These are the start point for each new energy and angle.
-#include <IntegrationIteratorOzaki.h> // Calculate energy integral through Ozaki summation
-// #include <IntegrationIteratorKeldysh.h> // Used for calculating
-// observables on the real energy axsis (e.g. DOS)
+#include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
+#include "Disc.h" // Used for adding/subtracting discs from sample geometry
+#include "DiscGeometry.h"
+#include "FermiSurfaceTightBinding.h"
+#include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that togheter define the sample geometry (container class for GeometryComponent)
+#include "GreensFunctionStatic.h" // Misc. Green function calculations
+#include "Grid.h"    // Data type for observables defined on the lattice
+#include "Initial.h" // Used for generating initial guess for order parameter
+#include "IntegrationIteratorOzaki.h" // Calculate energy integral through Ozaki summation
 #include "OptimizerRollingBall.h"
-#include <Context.h> // The context that connects all classes (helpful since enacpsulation is used)
-#include <ContextModule.h> // Pure virtual for context modules (e.g. Parameters, ComputeProperty, GradientAccelerator, RiccatiSolver, OrderParameter, GeometryGroup, IntegrationIterator)
-#include <GreensFunctionStatic.h> // Misc. Green function calculations
-#include <Initial.h> // Used for generating initial guess for order parameter
-#include <Visualization.h> // Live visualization of desired observables through OpenGL
+#include "OrderParameter.h" // Container class for order parameter components
+#include "OrderParameterComponent_D.h"
+#include "ParameterIterator.h" // Used for sweeping parameters (e.g. energy, temperature)
+#include "Parameters.h" // Parameters specifying which the superconducting system to simulate
+#include "Polygon.h" // Used for adding/subtracting polygons from sample geometry (!! currently limited to convex hull !!)
+#include "PolygonGeometry.h"
+#include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
+#include "Visualization.h" // Live visualization of desired observables through OpenGL
 
 //*******************************************************
 // Defines
@@ -59,11 +45,6 @@
 #ifndef MYEPSILON
 #define MYEPSILON (double)1E-7
 #endif
-
-//*******************************************************
-// Namespaces
-//*******************************************************
-using namespace std;
 
 //*******************************************************
 // Forward declarations
@@ -85,7 +66,7 @@ void updateBfromFile();
 //*******************************************************
 // Run with double or single floating point precision, double is highly
 // recommended
-typedef double T;
+typedef float T;
 
 //*******************************************************
 // Global objects
@@ -95,6 +76,7 @@ Visualization<T> *vis;
 ComputeOrderParameter<T> *op;
 ComputeFreeEnergy<T> *freeEnergyObj;
 ComputeCurrent<T> *current;
+FermiSurfaceTightBinding<T> *fermiSurface;
 OptimizerRollingBall<T> *opt;
 
 //*******************************************************
@@ -133,12 +115,52 @@ const char *projectName = (char *)"square_VL";
 char *start_base = (char *)"projects/EilenbergerRiccati/data/demo/";
 const char *start_project = (char *)"square_VL";
 
-// const T latticeOrientation = 0.25*M_PI; // Crystal ab-axis rotation
+// const T latticeOrientation = 0.0 * M_PI; // Crystal ab-axis rotation
+const T systemOrientation = 0.25 * M_PI;
 
-const int Nx = 401;         // Number of lattice points
-const int Na = 60;          // Number of discrete trajectory angles
-const T convergence = 1E-8; // Convergence criterion
-const int Ne = 10;          // Number of Ozaki poles
+// Tight-binding parameters.
+// TODO(niclas): The values
+// (1.0, 0.2, 0.1, -1.0)
+// (1.0, 0.3, 0.1, -1.0)
+// (1.0, 0.4, 0.1, -1.0)
+// are problematic for some  reason. Investigate!
+const T hoppingNN = static_cast<T>(1.0);
+const T hoppingNNN = static_cast<T>(-0.477);
+const T hoppingNNNN = static_cast<T>(0.156);
+const T chemicalPoentatial = static_cast<T>(1.267);
+
+// Number of lattice points
+const int Nx = 401;
+
+// Number of discrete trajectory angles
+// TODO(niclas): Just a hunch that a prime number of angles is better. Then we
+// are sure that no angle is redundant at least, i.e. two angles that probe
+// equivalent points on the Fermi surface (provided that the dydyrm geometry
+// obeys the same gemoetrical symmetries).
+// Cheat sheet :
+// 2 3 5 7 11 	13 	17 	19 	23 29 	31 	37 	41 	43 47 53
+// 59 	61 	67 71 	73 	79 	83 	89 97 	101 103 107 109 113
+// 127 	131 	137 	139 	149 	151 	157 	163 167 173
+// 179 	181 	191 	193 	197 	199 	211 223 227 229
+// 233 	239 	241 	251 	257 	263 	269 271 277 281
+// 283 	293 	307 	311 	313 	317 	331 337 347 349
+// 353 	359 	367 	373 	379 	383 	389 397 401 409
+// 419 	421 	431 	433 	439 	443 	449 457 461 463
+// 467 	479 	487 	491 	499 	503 	509 521 523 541
+// 547 	557 	563 	569 	571 	577 	587 593 599 601
+// 607 	613 	617 	619 	631 	641 	643 647 653 659
+// 661 	673 	677 	683 	691 	701 	709 719 727 733
+// 739 	743 	751 	757 	761 	769 	773 787 797 809
+// 811 	821 	823 	827 	829 	839 	853 857 859 863
+// 877 	881 	883 	887 	907 	911 	919 929 937 941
+// 947 	953 	967 	971 	977 	983 	991 	997
+const int Na = 59;
+
+// Convergence criterion
+const T convergence = 1E-7;
+
+// Number of Ozaki poles
+const int Ne = 20;
 
 const int MAXLOOPS = 25000; // 1000;//5000;
 const int MINLOOPS = 150;   // 300;
@@ -194,9 +216,10 @@ int main(int argc, char *argv[]) {
       0.5 / sqrt(T(2.0)); // Bleeding edge size, make sure to use smaller
                           // sidelength than this, or interpolation will explode
 
-  geom->add(new PolygonGeometry<T>(6, outerRadius * hexScale, M_PI / 6.0),
-            Type::add);
-  // geom->add( new DiscGeometry<T>( outerRadius ), Type::add );
+  geom->add(
+      new PolygonGeometry<T>(4, outerRadius * hexScale, systemOrientation),
+      Type::add);
+  // geom->add(new DiscGeometry<T>(0.25 * outerRadius), Type::remove);
 
   RiccatiSolver<T> *solver; // Create Riccati solver
   // Specify external field gauge/orientation (use VectorPotential::None for
@@ -208,8 +231,8 @@ int main(int argc, char *argv[]) {
 
   // Initialize order parameter, add s-wave order parameter
   OrderParameter<T> *delta = new OrderParameter<T>(ctx);
-  OrderParameterComponent_S<T> *deltaComponent =
-      new OrderParameterComponent_S<T>(param);
+  OrderParameterComponent_D<T> *deltaComponent =
+      new OrderParameterComponent_D<T>(param);
   // deltaComponent->setLatticeOrientation(latticeOrientation); // Set crystal
   // ab-axes rotation (used for d-wave)
 
@@ -238,28 +261,31 @@ int main(int argc, char *argv[]) {
   sprintf(runFile, "%s/delta.grd", runPath);
   sprintf(startFile, "%s/delta_start.grd", startPath);
 
-  cout << "\n=================================================================="
-          "=============="
-       << endl;
-  cout << "New run" << endl;
-  cout << "flux quanta = " << int(fluxQuanta) << endl;
-  cout << "T/Tc = " << T_Tc << endl;
-  cout << "NEW FILE: " << runPath << endl;
-  cout << "===================================================================="
-          "============\n"
-       << endl;
+  std::cout
+      << "\n=================================================================="
+         "=============="
+      << std::endl;
+  std::cout << "New run" << std::endl;
+  std::cout << "flux quanta = " << int(fluxQuanta) << std::endl;
+  std::cout << "T/Tc = " << T_Tc << std::endl;
+  std::cout << "NEW FILE: " << runPath << std::endl;
+  std::cout
+      << "===================================================================="
+         "============\n"
+      << std::endl;
 
   // Read and initialize OP from file
   if (startFileExists(runFile) || startFileExists(startFile)) {
-    cout << "Initial::read" << endl;
+    std::cout << "Initial::read" << std::endl;
     if (startFileExists(startFile))
       Initial<T>::read(deltaComponent, startFile);
     else
       Initial<T>::read(deltaComponent, runFile);
     // Start with phase winding guess (good for finding Abrikosov vortices)
   } else {
-    cout << "Initial::phaseWinding" << endl;
-    Initial<T>::phaseWinding(deltaComponent, fluxQuanta, 0.0, 0.0);
+    std::cout << "Initial::random" << std::endl;
+    const T mix = static_cast<T>(0.1);
+    Initial<T>::random(deltaComponent, mix);
   }
 
   // Add the initialized order parameter component
@@ -272,6 +298,10 @@ int main(int argc, char *argv[]) {
   current = new ComputeCurrent<T>(ctx);
   freeEnergyObj = new ComputeFreeEnergy<T>(ctx);
   freeEnergyObj->setCompute(0);
+
+  fermiSurface = new FermiSurfaceTightBinding<T>(ctx);
+  fermiSurface->setTightBindingParameters(hoppingNN, hoppingNNN, hoppingNNNN,
+                                          chemicalPoentatial);
 
   // Number of plots in visualization = numPlotsY * numPlotsX
   int numPlotsY = 2;
@@ -287,19 +317,24 @@ int main(int argc, char *argv[]) {
   ctx->initialize();
 
   // Output data
-  cout << endl << "##################################################" << endl;
-  cout << "Area analytical square: R = " << coherenceLengths * coherenceLengths
-       << endl;
-  cout << "Area compute = " << geom->area() << endl;
-  cout << "Area lattice nodes = " << geom->area(1) << endl;
-  cout << "h = " << param->getGridElementSize() << endl;
-  cout << "Delta bulk = "
-       << Initial<T>::computeDeltaBulk(param->getTemperature()) << endl;
-  cout << "N0 (gridResolutionBase): " << param->getGridResolutionBase() << endl;
-  cout << "N1 (gridResolutionCoherence): "
-       << param->getGridResolutionCoherence() << endl;
-  cout << "numFreq: " << param->getNumMatsubaraFrequencies() << "\n";
-  cout << "##################################################" << endl;
+  std::cout << std::endl
+            << "##################################################"
+            << std::endl;
+  std::cout << "Area analytical square: R = "
+            << coherenceLengths * coherenceLengths << std::endl;
+  std::cout << "Area compute = " << geom->area() << std::endl;
+  std::cout << "Area lattice nodes = " << geom->area(1) << std::endl;
+  std::cout << "h = " << param->getGridElementSize() << std::endl;
+  std::cout << "Delta bulk = "
+            << Initial<T>::computeDeltaBulk(param->getTemperature())
+            << std::endl;
+  std::cout << "N0 (gridResolutionBase): " << param->getGridResolutionBase()
+            << std::endl;
+  std::cout << "N1 (gridResolutionCoherence): "
+            << param->getGridResolutionCoherence() << std::endl;
+  std::cout << "numFreq: " << param->getNumMatsubaraFrequencies() << "\n";
+  std::cout << "##################################################"
+            << std::endl;
 
   // Save parameters to file
   char paramFile[512];
@@ -352,18 +387,18 @@ void printIterationStatus() {
   std::cout << "Time = " << ctx->getComputeTime() << ", ";
   std::cout << "fluxQuanta = " << fluxQuanta << ", ";
   std::cout << "B = " << ctx->getParameters()->getMagneticFieldStrength()
-            << endl;
+            << std::endl;
 }
 
 // Append data to text file
-int appendLineToTextFile(const char *filename, ostream &os,
-                         ios_base::openmode mode = ios_base::app) {
-  ofstream outfile;
+int appendLineToTextFile(const char *filename, std::ostream &os,
+                         std::ios_base::openmode mode = std::ios_base::app) {
+  std::ofstream outfile;
 
-  stringstream oss;
+  std::stringstream oss;
   oss << os.rdbuf();
   outfile.open(filename, mode);
-  outfile << oss.str() << endl;
+  outfile << oss.str() << std::endl;
   outfile.close();
 
   return 0;
@@ -373,15 +408,15 @@ int appendLineToTextFile(const char *filename, ostream &os,
 int saveFreeEnergy(const char *filename) {
   // Add header if file does not exist
   if (!boost::filesystem::exists(filename)) {
-    stringstream ss_header;
+    std::stringstream ss_header;
     ss_header << "# run res freeE fluxQuanta area internalLatticePoints";
     // ss_header << "# run res freeE";
     appendLineToTextFile(filename, ss_header);
   }
 
   // Append line with energy and other information
-  stringstream ss;
-  const streamsize prec = ss.precision();
+  std::stringstream ss;
+  const std::streamsize prec = ss.precision();
 
   ss << numLoops << " ";
   ss << ctx->getResidual(0) << " ";
@@ -401,15 +436,15 @@ int saveParamsMetaData(const char *filename) {
   Parameters<T> *param = ctx->getParameters();
 
   // Add header
-  stringstream ss_header;
+  std::stringstream ss_header;
   ss_header
       << "# R T pairing pairBreaking outerRadius reducedLength reducedEnergy ";
   ss_header << "solenoid geomShape areaCompute internalLatticePoints gauge ";
   ss_header << "B_external fluxQuanta Nx Na energyCutoff initDelta";
-  appendLineToTextFile(filename, ss_header, ios_base::trunc);
+  appendLineToTextFile(filename, ss_header, std::ios_base::trunc);
 
   // Append line with energy and other information
-  stringstream ss;
+  std::stringstream ss;
   ss << coherenceLengths << " ";
   ss << param->getTemperature() << " ";
   ss << "s"
@@ -464,7 +499,7 @@ void saveDataFile(const int numIteration) {
   ctx->getGeometry()->zeroValuesOutsideDomain(delta_save);
 
   if (delta_save->write(delta_file, param)) {
-    cout << "Could not save Order Parameter to file." << endl;
+    std::cout << "Could not save Order Parameter to file." << std::endl;
     exit(0);
   }
 
@@ -473,18 +508,18 @@ void saveDataFile(const int numIteration) {
   ctx->getGeometry()->zeroValuesOutsideDomain(current_save);
 
   if (current_save->write(current_file, param)) {
-    cout << "Could not save Current to file." << endl;
+    std::cout << "Could not save Current to file." << std::endl;
     exit(0);
   }
 
   // Save delta and current to file
   if (numIteration > 0) {
     if (delta_save->write(delta_files, param)) {
-      cout << "Could not save Order Parameter to file." << endl;
+      std::cout << "Could not save Order Parameter to file." << std::endl;
       exit(0);
     }
     if (current_save->write(current_files, param)) {
-      cout << "Could not save Current to file." << endl;
+      std::cout << "Could not save Current to file." << std::endl;
       exit(0);
     }
   }
@@ -626,7 +661,8 @@ void runInTerminal() {
 // Detect keypresses in OpenGL instance - useful for changing parameters live,
 // saving data or quitting the program
 void myKeyboardFunc(unsigned char key, int x, int y) {
-  cout << "key pressed: " << key << ", at (" << x << ", " << y << ")" << endl;
+  std::cout << "key pressed: " << key << ", at (" << x << ", " << y << ")"
+            << std::endl;
   if (key == 's')
     g_forceSave = 1;
 }
@@ -636,35 +672,35 @@ int readCommandLineArguments(int ___argc, char *const *___argv) {
   int ___verbose = 0;
 
   if (___verbose)
-    cout << "readCommandLineArguments(): " << ___argc
-         << " number of arguments found." << endl;
+    std::cout << "readCommandLineArguments(): " << ___argc
+              << " number of arguments found." << std::endl;
   int numUpdates = 0;
 
   for (int i = 0; i < ___argc; i++) {
     if (i + 1 != ___argc) // Check that we haven't finished parsing already
     {
-      string thisArg = ___argv[i];
-      string nextArg = ___argv[i + 1];
+      std::string thisArg = ___argv[i];
+      std::string nextArg = ___argv[i + 1];
 
       if (thisArg == "--w") {
         numUpdates += 1;
         if (___verbose)
-          cout << "Updated fluxQuanta from command line arguments, from "
-               << fluxQuanta << " to " << nextArg << endl;
+          std::cout << "Updated fluxQuanta from command line arguments, from "
+                    << fluxQuanta << " to " << nextArg << std::endl;
         fluxQuanta = T(stod(nextArg));
       } else if (thisArg == "--T") {
         numUpdates += 1;
         if (___verbose)
-          cout << "Updated T_Tc from command line arguments, from " << T_Tc
-               << " to " << nextArg << endl;
+          std::cout << "Updated T_Tc from command line arguments, from " << T_Tc
+                    << " to " << nextArg << std::endl;
         T_Tc = T(stod(nextArg));
       }
     }
   }
 
   if (___verbose)
-    cout << "readCommandLineArguments(): " << numUpdates
-         << " arguments updated." << endl;
+    std::cout << "readCommandLineArguments(): " << numUpdates
+              << " arguments updated." << std::endl;
 
   return 0;
 }
@@ -725,16 +761,16 @@ void saveInducedB() {
 // Update parameters LIVE from data file - reads data file between each
 // self-consistent iteration
 void updateBfromFile() {
-  string paramFile = "demo_hexagon_swave_VL.dat";
+  std::string paramFile = "demo_hexagon_swave_VL.dat";
   if (boost::filesystem::exists(paramFile)) {
     Parameters<T> *param = ctx->getParameters();
 
-    ifstream fq_param_file(paramFile.c_str());
-    string fq_line;
+    std::ifstream fq_param_file(paramFile.c_str());
+    std::string fq_line;
     while (getline(fq_param_file, fq_line)) {
-      stringstream fq_linestream(fq_line);
-      string fq_first;
-      string fq_second;
+      std::stringstream fq_linestream(fq_line);
+      std::string fq_first;
+      std::string fq_second;
       T fq_fluxQuanta;
       T fq_T_Tc;
       int changes = 0;
@@ -742,14 +778,14 @@ void updateBfromFile() {
 
       fq_linestream >> fq_first >> fq_second;
       if (fq_first == "#") {
-        // cout << "  Run header:\t\"" << fef_line << "\"" << endl;
+        // std::cout << "  Run header:\t\"" << fef_line << "\"" << std::endl;
       } else {
 
         if (fq_first != "same") {
           fq_fluxQuanta = stod(fq_first);
           if (abs(fq_fluxQuanta - fluxQuanta) > MYEPSILON) {
-            cout << "Updated fluxQuanta from " << fluxQuanta << " to "
-                 << fq_fluxQuanta << endl;
+            std::cout << "Updated fluxQuanta from " << fluxQuanta << " to "
+                      << fq_fluxQuanta << std::endl;
             changes++;
             fluxQuanta = fq_fluxQuanta;
             B_external = fluxQuanta / area;
@@ -760,7 +796,8 @@ void updateBfromFile() {
         if (fq_second != "same") {
           fq_T_Tc = stod(fq_second);
           if (abs(fq_T_Tc - T_Tc) > MYEPSILON) {
-            cout << "Updated T_Tc from " << T_Tc << " to " << fq_T_Tc << endl;
+            std::cout << "Updated T_Tc from " << T_Tc << " to " << fq_T_Tc
+                      << std::endl;
             changes++;
             T_Tc = fq_T_Tc;
             param->setTemperature(T_Tc);
@@ -777,7 +814,7 @@ void updateBfromFile() {
       }
     }
   } else {
-    cout << "Tried updating params from file, ";
-    cout << "but could not find demo_hexagon_swave_VL.dat" << endl;
+    std::cout << "Tried updating params from file, ";
+    std::cout << "but could not find demo_hexagon_swave_VL.dat" << std::endl;
   }
 }

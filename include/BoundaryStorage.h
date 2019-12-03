@@ -6,6 +6,8 @@ template <typename T> class BoundaryStorage;
 template <typename T> class IntegrationIterator;
 template <typename T> class ComputeProperty;
 
+#include "FermiSurface.h"
+#include "utils.h"
 #include <ComputeProperty.h>
 #include <GeometryGroup.h>
 #include <Grid.h>
@@ -21,16 +23,16 @@ public:
   BoundaryStorage();
   virtual ~BoundaryStorage();
 
-  BoundaryStorage(GeometryGroup<T> *geom);
+  BoundaryStorage(GeometryGroup<T> *geom, FermiSurface<T> *fermiSurface);
 
   void initialize(const int numTrajectoriesPerAngle, const int numEnergies,
                   const int numAngles);
   void setBoundaryZero();
 
-  __device__ static int getSparseIndex(const int idx_a, const int idx_e,
-                                       const int idx_x, const int boundaryCount,
-                                       const int Ne, const int Nx,
-                                       int *sparseIndices);
+  __device__ static int getSparseIndex(const int angleIdx, const int energyIdx,
+                                       const int xIdx, const int boundaryCount,
+                                       const int numEnergies, const int numX,
+                                       const int *const sparseIndices);
 
   // Storage getters
   Grid<int>::GPU *getIndexSparseIn_gamma() const {
@@ -69,8 +71,8 @@ public:
   Grid<int>::CPU *getTrajectoryRangeX() const { return _trajectoryRange_x; }
   Grid<int>::CPU *getTrajectoryRangeY() const { return _trajectoryRange_y; }
 
-  int getNumIntersectingTrajectoriesAngle(const int angle_idx) const;
-  int getTrajectoryStartIndexAngle(const int angle_idx) const;
+  int getNumIntersectingTrajectoriesAngle(const int angleIdx) const;
+  int getTrajectoryStartIndexAngle(const int angleIdx) const;
 
 private:
   void allocMemSparseStorage(const int numElemGammaIn,
@@ -83,6 +85,7 @@ private:
   void computeIntersectingTrajectories(const int numAngles);
 
   GeometryGroup<T> *_geom;
+  FermiSurface<T> *_fermiSurface;
 
   int _numSparseIn_gamma;
   int _numSparseOut_gamma;
@@ -145,14 +148,17 @@ private:
 // in finding sparse index))
 
 template <typename T>
-__device__ int BoundaryStorage<T>::getSparseIndex(
-    const int idx_a, const int idx_e, const int idx_x, const int boundaryCount,
-    const int Ne, const int Nx, int *sparseIndices) {
+__device__ int
+BoundaryStorage<T>::getSparseIndex(const int angleIdx, const int energyIdx,
+                                   const int xIdx, const int boundaryCount,
+                                   const int numEnergies, const int numX,
+                                   const int *const sparseIndices) {
   // Find sparse index. Majority: angle, trajectory, energy
-  int sparse_idx =
-      (sparseIndices[idx_a * Nx + idx_x] + boundaryCount) * Ne + idx_e;
+  const int sparseIdx =
+      (sparseIndices[angleIdx * numX + xIdx] + boundaryCount) * numEnergies +
+      energyIdx;
 
-  return sparse_idx;
+  return sparseIdx;
 }
 
 template <typename T>
@@ -207,7 +213,8 @@ template <typename T> BoundaryStorage<T>::~BoundaryStorage() {
 }
 
 template <typename T>
-BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> *geom)
+BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> *geom,
+                                    FermiSurface<T> *fermiSurface)
     : _index_sparse_in_gamma(0), _index_sparse_out_gamma(0),
       _index_sparse_in_gammabar(0), _index_sparse_out_gammabar(0),
       _coord_bnd_intersect_gamma(0), _coord_bnd_intersect_gammabar(0),
@@ -216,9 +223,11 @@ BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> *geom)
       _boundary_out_gammabar(0), _trajectoryRange_x(0), _trajectoryRange_y(0),
       _trajectoryRangeAllStart_y(0), _trajectoryRangeAllEnd_y(0),
       _numEnergies(0) {
-  std::cout << "BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> * geom)\n";
+  std::cout << "BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> * geom, "
+               "FermiSurface<T> *fermiSurface)\n";
 
   _geom = geom;
+  _fermiSurface = fermiSurface;
 }
 
 template <typename T>
@@ -302,36 +311,36 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
 
   Grid<int>::CPU index_sparse_in_gamma = *_index_sparse_in_gamma;
 
-  for (int a = 0; a < numAngles; ++a) {
-    idx_x_start[a] = 0;
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    idx_x_start[angleIdx] = 0;
 
-    int *sparse_idx = index_sparse_in_gamma.getDataPointer(a);
+    int *sparse_idx = index_sparse_in_gamma.getDataPointer(angleIdx);
 
-    int *y_start = trajectoryRangeAllStart_y.getDataPointer(a);
-    int *y_end = trajectoryRangeAllEnd_y.getDataPointer(a);
+    int *y_start = trajectoryRangeAllStart_y.getDataPointer(angleIdx);
+    int *y_end = trajectoryRangeAllEnd_y.getDataPointer(angleIdx);
 
     // Look left->right for starting x-index
     for (int i = 0; i < numPossibleTrajectories; ++i) {
       if (sparse_idx[i] > -1) {
         // idxStart = i;
-        idx_x_start[a] = i;
+        idx_x_start[angleIdx] = i;
         break;
       }
     }
 
     // Look right->left for ending x-index
-    idx_x_end[a] = idx_x_start[a];
-    for (int i = numPossibleTrajectories - 1; i >= idx_x_start[a]; --i) {
+    idx_x_end[angleIdx] = idx_x_start[angleIdx];
+    for (int i = numPossibleTrajectories - 1; i >= idx_x_start[angleIdx]; --i) {
       if (sparse_idx[i] > -1) {
         // idxEnd = i;
-        idx_x_end[a] = i;
+        idx_x_end[angleIdx] = i;
         break;
       }
     }
 
     // Find start and end y-indices
-    T angle = T(a) / T(numAngles) * 2.0 * M_PI;
-    _geom->create(-angle);
+    const T systemAngle = _fermiSurface->getSystemAngle(angleIdx);
+    _geom->create(-systemAngle);
 
     Grid<char>::CPU dom = *(_geom->getDomainLabelsGrid());
     char *dom_p = dom.getDataPointer();
@@ -339,19 +348,19 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
     int Nx = dom.dimX();
     int Ny = dom.dimY();
 
-    idx_y_start[a] = Ny - 1;
-    idx_y_end[a] = 0;
+    idx_y_start[angleIdx] = Ny - 1;
+    idx_y_end[angleIdx] = 0;
 
     int idx;
 
-    for (int i = idx_x_start[a]; i <= idx_x_end[a]; ++i) {
+    for (int i = idx_x_start[angleIdx]; i <= idx_x_end[angleIdx]; ++i) {
       // Find y_start by stepping forward from 0
       for (int j = 0; j < Ny; ++j) {
         idx = j * Nx + i;
         if (dom_p[idx] > 0) {
           y_start[i] = j;
-          if (j < idx_y_start[a]) {
-            idx_y_start[a] = j;
+          if (j < idx_y_start[angleIdx]) {
+            idx_y_start[angleIdx] = j;
             break;
           }
         }
@@ -362,8 +371,8 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
         idx = j * Nx + i;
         if (dom_p[idx] > 0) {
           y_end[i] = j;
-          if (j > idx_y_end[a]) {
-            idx_y_end[a] = j;
+          if (j > idx_y_end[angleIdx]) {
+            idx_y_end[angleIdx] = j;
             break;
           }
         }
@@ -377,16 +386,15 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
 
 template <typename T>
 int BoundaryStorage<T>::getNumIntersectingTrajectoriesAngle(
-    const int angle_idx) const {
-  int xMin = (_trajectoryRange_x->getDataPointer(0))[angle_idx];
-  int xMax = (_trajectoryRange_x->getDataPointer(1))[angle_idx];
+    const int angleIdx) const {
+  int xMin = (_trajectoryRange_x->getDataPointer(0))[angleIdx];
+  int xMax = (_trajectoryRange_x->getDataPointer(1))[angleIdx];
   return xMax - xMin + 1;
 }
 
 template <typename T>
-int BoundaryStorage<T>::getTrajectoryStartIndexAngle(
-    const int angle_idx) const {
-  return (_trajectoryRange_x->getDataPointer(0))[angle_idx];
+int BoundaryStorage<T>::getTrajectoryStartIndexAngle(const int angleIdx) const {
+  return (_trajectoryRange_x->getDataPointer(0))[angleIdx];
 }
 
 template <typename T>
@@ -400,9 +408,7 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   int *idx_in_p, *idx_out_p, *numBndIsect_p;
   char *dom_p;
 
-  int Nx, Ny, a;
-  T phi;
-
+  int Nx, Ny;
   _geom->getGridDimensions(Nx, Ny);
 
   int X = _index_sparse_in_gamma->dimX();
@@ -421,30 +427,30 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   std::cout << "BoundaryStorage<T>::computeSparseIndices(): Nx,Ny = " << Nx
             << " " << Ny << "\n";
 
-  for (a = 0; a < numAngles; ++a) {
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Current angle in radians
-    phi = (T)a / (T)numAngles * ((T)2.0 * PI);
+    const T systemAngle = _fermiSurface->getSystemAngle(angleIdx);
 
     // Create geometry data for current angle
-    _geom->create(-phi);
+    _geom->create(-systemAngle);
 
     // Copy data to CPU
     dom_cpu = *(_geom->getDomainLabelsGrid());
     dom_p = dom_cpu.getDataPointer();
 
     // Get pointers, and find boundaries for gamma trajectory (positive y)
-    idx_in_p = index_sparse_in_gamma.getDataPointer(a);
-    idx_out_p = index_sparse_out_gamma.getDataPointer(a);
-    numBndIsect_p = num_bnd_intersect_gamma.getDataPointer(a);
+    idx_in_p = index_sparse_in_gamma.getDataPointer(angleIdx);
+    idx_out_p = index_sparse_out_gamma.getDataPointer(angleIdx);
+    numBndIsect_p = num_bnd_intersect_gamma.getDataPointer(angleIdx);
 
     _geom->countBoundariesAlongTrajectory(Nx, Ny, dom_p, idx_in_p, idx_out_p,
                                           numBndIsect_p, sum_idx_in_gamma,
                                           sum_idx_out_gamma);
 
     // Get pointers, and find boundaries for gammabar trajectory (negative y)
-    idx_in_p = index_sparse_in_gammabar.getDataPointer(a);
-    idx_out_p = index_sparse_out_gammabar.getDataPointer(a);
-    numBndIsect_p = num_bnd_intersect_gammabar.getDataPointer(a);
+    idx_in_p = index_sparse_in_gammabar.getDataPointer(angleIdx);
+    idx_out_p = index_sparse_out_gammabar.getDataPointer(angleIdx);
+    numBndIsect_p = num_bnd_intersect_gammabar.getDataPointer(angleIdx);
 
     _geom->countBoundariesAlongNegativeTrajectory(
         Nx, Ny, dom_p, idx_in_p, idx_out_p, numBndIsect_p, sum_idx_in_gammabar,
@@ -478,12 +484,12 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   int *coord_gamma_ptr = coord_bnd_intersect_gamma.getDataPointer();
   int *coord_gammabar_ptr = coord_bnd_intersect_gammabar.getDataPointer();
 
-  for (a = 0; a < numAngles; ++a) {
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Current angle in radians
-    phi = (T)a / (T)numAngles * ((T)2.0 * M_PI);
+    const T systemAngle = _fermiSurface->getSystemAngle(angleIdx);
 
     // Create geometry data for current angle
-    _geom->create(-phi);
+    _geom->create(-systemAngle);
 
     // Copy data to CPU
     dom_cpu = *(_geom->getDomainLabelsGrid());

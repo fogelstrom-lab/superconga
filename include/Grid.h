@@ -7,7 +7,8 @@
 #define _DEV_
 #endif
 
-#include <GridData.h>
+#include "GridData.h"
+#include <cuda.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 

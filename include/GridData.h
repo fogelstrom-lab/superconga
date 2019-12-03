@@ -1148,10 +1148,9 @@ template <typename T, typename DEV> void GridData<T, DEV>::print() const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::printDimensions() const {
-  using namespace std;
-  cout << "Nx = " << dimX() << ", Ny = " << dimY();
-  cout << ", Num fields = " << numFields() << ", Complex = " << int(isComplex())
-       << endl;
+  std::cout << "Nx = " << dimX() << ", Ny = " << dimY();
+  std::cout << ", Num fields = " << numFields()
+            << ", Complex = " << int(isComplex()) << std::endl;
 }
 
 /* ==================== FILE ====================*/
@@ -1176,8 +1175,6 @@ int GridData<T, DEV>::write(const char *filename, int num,
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::read(const char *filename, Parameters<T> *param) {
-  using namespace std;
-
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1188,7 +1185,7 @@ int GridData<T, DEV>::read(const char *filename, Parameters<T> *param) {
 
   int storeParameters, parametersVersion;
 
-  ifstream file(filename, ios::in | ios::binary);
+  std::ifstream file(filename, std::ios::in | std::ios::binary);
 
   if (file.is_open()) {
     int *header = new int[32];
@@ -1260,8 +1257,6 @@ int GridData<T, DEV>::read(const char *filename, Parameters<T> *param) {
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
-  using namespace std;
-
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1279,7 +1274,8 @@ int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
   int isComplex_out = int(isComplex());
 
   // Open file for writing
-  ofstream file(filename, ios::out | ios::binary | ios::trunc);
+  std::ofstream file(filename,
+                     std::ios::out | std::ios::binary | std::ios::trunc);
 
   if (file.is_open()) {
     // copyDataToCPU();
@@ -1320,12 +1316,10 @@ int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
-  using namespace std;
-
   const int MAX_TOKENS_PER_LINE = 16384;
 
   // create a file-reading object
-  ifstream fin;
+  std::ifstream fin;
   fin.open(filename);
 
   if (!fin.good())
@@ -1336,7 +1330,7 @@ int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
 
   int n_delimit = 0, found = 0, found_last = 1;
 
-  string line;
+  std::string line;
   getline(fin, line);
 
   while (line.find('#', 0) <= line.length() || line.length() == 0)
@@ -1421,9 +1415,9 @@ int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
       for (int i = 0; i < n_delimit - 1; ++i) {
         int start = idx_delimit[i] + 1;
         int num = idx_delimit[i + 1] - start;
-        string sub = line.substr(start, num);
+        std::string sub = line.substr(start, num);
 
-        stringstream tmp;
+        std::stringstream tmp;
         tmp << sub;
         tmp >> subfloat;
         data_ptr[j++] = subfloat;
@@ -1443,10 +1437,9 @@ int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
 template <typename T, typename DEV>
 int GridData<T, DEV>::writeNumpyArray(const char *filename,
                                       Type::type representation) {
-  using namespace std;
-
   // Open file for writing
-  ofstream file(filename, ios::out | ios::binary | ios::trunc);
+  std::ofstream file(filename,
+                     std::ios::out | std::ios::binary | std::ios::trunc);
 
   if (file.is_open()) {
     GridData<T, thrust::host_vector<T>> grid_tmp = *this;
@@ -1525,8 +1518,6 @@ int GridData<T, DEV>::readParameters(const char *filename, int num,
 template <typename T, typename DEV>
 int GridData<T, DEV>::readParameters(const char *filename,
                                      Parameters<T> *param) {
-  using namespace std;
-
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1534,7 +1525,7 @@ int GridData<T, DEV>::readParameters(const char *filename,
 
   Parameters<T> param_read;
 
-  ifstream file(filename, ios::in | ios::binary);
+  std::ifstream file(filename, std::ios::in | std::ios::binary);
 
   if (file.is_open()) {
     int *header = new int[32];

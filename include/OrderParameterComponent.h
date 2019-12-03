@@ -5,8 +5,11 @@
 #ifndef ORDERPARAMETERCOMPONENT_H
 #define ORDERPARAMETERCOMPONENT_H
 
-#include <Grid.h>
-#include <Parameters.h>
+#include "FermiSurface.h"
+#include "Grid.h"
+#include "Parameters.h"
+#include <cmath>
+#include <stdexcept>
 
 template <typename T> class OrderParameterComponent {
   typedef typename Grid<T>::GPU GridGPU;
@@ -23,7 +26,7 @@ public:
   virtual OrderParameterComponent<T> *clone() const = 0;
 
   // Functions
-  int initialize();
+  virtual int initialize();
 
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
@@ -32,16 +35,16 @@ public:
   T getRelativeTc() const { return _Tcthis_Tc; }
   void setRelativeTc(const T Tc) { _Tcthis_Tc = Tc; }
 
-  virtual void computeMomentumDependence(GridGPU *target, const T angle) = 0;
+  virtual void computeMomentumDependence(GridGPU *target, const T pX,
+                                         const T pY,
+                                         bool conjugateBasis = false) = 0;
 
-  virtual void initCouplingConstant(const T *energies, const T *residues);
+  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface) = 0;
 
-  virtual void computeCouplingConstant();
-  virtual void computeCouplingConstant(GridGPU *target);
+  void initCouplingConstant(const T *energies, const T *residues);
 
-  virtual void computeCouplingConstant(const T *energies, const T *residues);
-  virtual void computeCouplingConstant(GridGPU *target, const T *energies,
-                                       const T *residues);
+  void applyCouplingConstant();
+  void applyCouplingConstant(GridGPU *target);
 
   virtual double deltaBulk() const;
 
@@ -61,10 +64,10 @@ private:
 
   // Store coupling constant, calculate only once
   // CAUTION!!! Upon changing T_Tc/energies/similar, need to re-calculate
-  T _couplingConstant;
+  T m_couplingConstant;
   // True if coupling constant has been initialized, then it never needs to be
   // re-calculated
-  int _initCouplingConstant;
+  bool m_isCouplingConstantInitialized;
 
   // Order parameter component
   GridGPU *_deltaComp;
@@ -74,15 +77,15 @@ private:
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent()
-    : _param(0), _deltaComp(0), _Tcthis_Tc(1.0), _couplingConstant(0),
-      _initCouplingConstant(0) {}
+    : _param(0), _deltaComp(0), _Tcthis_Tc(1.0), m_couplingConstant(0),
+      m_isCouplingConstantInitialized(false) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
     const OrderParameterComponent<T> &other)
     : _param(other._param), _Tcthis_Tc(other._Tcthis_Tc),
-      _couplingConstant(other._couplingConstant),
-      _initCouplingConstant(other._initCouplingConstant) {
+      m_couplingConstant(other.m_couplingConstant),
+      m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized) {
   _type = other._type;
   if (other._deltaComp)
     _deltaComp = new GridGPU(*other._deltaComp);
@@ -91,8 +94,8 @@ OrderParameterComponent<T>::OrderParameterComponent(
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(Parameters<T> *param,
                                                     T Tcthis_Tc)
-    : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc), _couplingConstant(0),
-      _initCouplingConstant(0) {
+    : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
+      m_couplingConstant(0), m_isCouplingConstantInitialized(false) {
   // Do an initialization on creation so we can set initial value
   initialize();
 }
@@ -108,8 +111,9 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A._Tcthis_Tc, B._Tcthis_Tc);
   std::swap(A._deltaComp, B._deltaComp);
   std::swap(A._type, B._type);
-  std::swap(A._couplingConstant, B._couplingConstant);
-  std::swap(A._initCouplingConstant, B._initCouplingConstant);
+  std::swap(A.m_couplingConstant, B.m_couplingConstant);
+  std::swap(A.m_isCouplingConstantInitialized,
+            B.m_isCouplingConstantInitialized);
 }
 
 template <typename T> int OrderParameterComponent<T>::initialize() {
@@ -126,71 +130,42 @@ template <typename T> int OrderParameterComponent<T>::initialize() {
 template <typename T>
 void OrderParameterComponent<T>::initCouplingConstant(const T *energies,
                                                       const T *residues) {
-  const double T_Tc = _param->getTemperature();
-  const int numFrequencies = _param->getNumFrequencies();
+  // Get some info.
+  const T T_Tc = _param->getTemperature();
+  const int numEnergies = _param->getNumFrequencies();
 
-  double energySum = 0.0;
+  // For convenience.
+  const T piT = static_cast<T>(M_PI) * T_Tc;
 
-  for (int i = 0; i < numFrequencies; ++i)
+  // Compute (inverted) energy sum.
+  T energySum = static_cast<T>(0.0);
+  for (int i = 0; i < numEnergies; ++i) {
     energySum += residues[i] / energies[i];
-
-  _couplingConstant =
-      (M_PI * T_Tc /
-       (log(T_Tc) + log(1.0 / _Tcthis_Tc) + 2.0 * M_PI * T_Tc * energySum));
-  std::cout << "_couplingConstant: " << _couplingConstant << std::endl;
-
-  _initCouplingConstant = 1;
-}
-
-template <typename T>
-void OrderParameterComponent<T>::computeCouplingConstant() {
-  computeCouplingConstant(_deltaComp);
-}
-
-template <typename T>
-void OrderParameterComponent<T>::computeCouplingConstant(GridGPU *target) {
-  if (!_initCouplingConstant) {
-    const double T_Tc = _param->getTemperature();
-    const int numFrequencies = _param->getNumMatsubaraFrequencies();
-
-    double matsubaraSum = 0.0;
-
-    for (int i = 0; i < numFrequencies; ++i)
-      matsubaraSum += 1.0 / (2.0 * double(i) + 1.0);
-
-    _couplingConstant =
-        (M_PI * T_Tc /
-         (log(T_Tc) + log(1.0 / _Tcthis_Tc) + 2.0 * matsubaraSum));
   }
+  // A factor of two because we are excluding negative energies.
+  energySum *= static_cast<T>(2.0) * piT;
 
-  (*target) *= _couplingConstant;
+  // Note, that here we implicitly assume that the basis functions are
+  // normalized. I.e. <|eta|^2> = 1. Otherwise the energySum would be scaled by
+  // <|eta|^2>.
+  m_couplingConstant = (piT / (std::log(T_Tc / _Tcthis_Tc) + energySum));
+  m_isCouplingConstantInitialized = true;
+
+  // Print the value.
+  std::cout << "m_couplingConstant: " << m_couplingConstant << "\n";
+}
+
+template <typename T> void OrderParameterComponent<T>::applyCouplingConstant() {
+  applyCouplingConstant(_deltaComp);
 }
 
 template <typename T>
-void OrderParameterComponent<T>::computeCouplingConstant(const T *energies,
-                                                         const T *residues) {
-  computeCouplingConstant(_deltaComp, energies, residues);
-}
-
-template <typename T>
-void OrderParameterComponent<T>::computeCouplingConstant(GridGPU *target,
-                                                         const T *energies,
-                                                         const T *residues) {
-  if (!_initCouplingConstant) {
-    const double T_Tc = _param->getTemperature();
-    const int numFrequencies = _param->getNumFrequencies();
-
-    double energySum = 0.0;
-
-    for (int i = 0; i < numFrequencies; ++i)
-      energySum += residues[i] / energies[i];
-
-    _couplingConstant =
-        (M_PI * T_Tc /
-         (log(T_Tc) + log(1.0 / _Tcthis_Tc) + 2.0 * M_PI * T_Tc * energySum));
+void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) {
+  if (m_isCouplingConstantInitialized) {
+    (*target) *= m_couplingConstant;
+  } else {
+    throw std::logic_error("Coupling constant not initialized.");
   }
-
-  (*target) *= _couplingConstant;
 }
 
 template <typename T> double OrderParameterComponent<T>::deltaBulk() const {

@@ -48,7 +48,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -226,14 +226,24 @@ void ComputeFreeEnergy<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
 template <typename T>
 void ComputeFreeEnergy<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                const T angle) {
+                                                const int angleIdx) {
   // Sums 'I' over spatial grid points, and adds result to total angle
   // integration. (Variable _freeEnergy_angle is 'I')
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     geom->extendValuesAtBoundary(greens, 2);
-    _freeEnergyGrid->insertRotatedGridAdditive(greens, angle);
+
+    const int numAngles =
+        ContextModule<T>::getParameters()->getAngularResolution();
+    const T systemAngle =
+        ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
+
+    const T integrandFactor =
+        ComputeProperty<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
+    *greens *= integrandFactor;
+
+    _freeEnergyGrid->insertRotatedGridAdditive(greens, systemAngle);
   }
 }
 
@@ -276,7 +286,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     OrderParameter<T> *delta = C::getOrderParameter();
     const GridGPU &delta_field = *(delta->getOrderParameterField());
 
-    _freeEnergy_unitArea = -2.0 / (T)numAngles * T_Tc * freeNew_re;
+    _freeEnergy_unitArea = -2.0 * T_Tc * freeNew_re;
 
     for (int i = 0; i < delta_field.numFields(); ++i) {
       double mult =
@@ -297,10 +307,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     if (residual < C::getParameters()->getConvergenceCriterion())
       ComputeProperty<T>::setConverged();
 
-    using namespace std;
-
-    cout << "Area = " << C::getGeometry()->area() << endl;
-    cout << "_freeEnergy_unitArea = " << _freeEnergy_unitArea << endl;
+    std::cout << "Area = " << C::getGeometry()->area() << std::endl;
+    std::cout << "_freeEnergy_unitArea = " << _freeEnergy_unitArea << std::endl;
   } else {
     _freeEnergy = 0.0;
   }

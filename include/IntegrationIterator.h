@@ -46,12 +46,6 @@ public:
   void initIterators();
   virtual void initEnergies() = 0;
 
-  // Angles
-  int getCurrentAngleIndex() const { return _currentAngleIndex; }
-  T getCurrentAngleRadians() const;
-
-  void setCurrentAngleIndex(int angle_idx) { _currentAngleIndex = angle_idx; }
-
   // Getters
   GridGPU *getEnergies() const { return _energies; }
   GridGPU *getResidues() const { return _residues; }
@@ -86,7 +80,7 @@ public:
   }
 
   // Debug
-  void setDebug(int angle_idx) { _debug_store_angle = angle_idx; }
+  void setDebug(int angleIdx) { _debug_store_angle = angleIdx; }
   GridGPU *getDebugGrid() const { return _debug_store_grid; }
   // void			computeDebug();
 
@@ -112,7 +106,6 @@ private:
 
   // Angle
   int _numAngles;
-  int _currentAngleIndex;
 
   int _numIter;
 };
@@ -154,12 +147,7 @@ template <typename T> int IntegrationIterator<T>::initialize() {
 template <typename T> void IntegrationIterator<T>::initIterators() {
   _numAngles =
       ContextModule<T>::getContext()->getParameters()->getAngularResolution();
-  setCurrentAngleIndex(0);
   _numIter = 0;
-}
-
-template <typename T> T IntegrationIterator<T>::getCurrentAngleRadians() const {
-  return ((T)_currentAngleIndex / (T)_numAngles) * (T)2.0 * PI;
 }
 
 template <typename T>

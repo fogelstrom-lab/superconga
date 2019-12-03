@@ -264,9 +264,7 @@ template <typename T> T Parameters<T>::getAngleIncrement() const {
 }
 
 template <typename T> int Parameters<T>::read(std::string filename) {
-  using namespace std;
-
-  ifstream file(filename.c_str(), ios::in | ios::binary);
+  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
   int res = read(file, _version);
   file.close();
 
@@ -275,14 +273,12 @@ template <typename T> int Parameters<T>::read(std::string filename) {
 
 template <typename T>
 int Parameters<T>::read(std::string filename, const int version) {
-  using namespace std;
-
   int res;
 
   if (version == _version)
     return read(filename);
   else {
-    ifstream file(filename.c_str(), ios::in | ios::binary);
+    std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
     res = read(file, version);
     file.close();
     return res;
@@ -291,8 +287,6 @@ int Parameters<T>::read(std::string filename, const int version) {
 
 template <typename T>
 int Parameters<T>::read(std::ifstream &file, const int version) {
-  using namespace std;
-
   if (file.is_open()) {
     if (version == _version) {
       int numBytes = sizeof(*this);
@@ -327,24 +321,23 @@ int Parameters<T>::read(std::ifstream &file, const int version) {
       return 0;
     }
   } else {
-    cout << "Could not load file, version: " << version << "\n";
+    std::cout << "Could not load file, version: " << version << "\n";
     return 1;
   }
 }
 
 template <typename T> int Parameters<T>::write(std::string filename) const {
-  using namespace std;
-
   int numBytes = sizeof(*this);
 
-  ofstream file(filename.c_str(), ios::out | ios::binary | ios::trunc);
+  std::ofstream file(filename.c_str(),
+                     std::ios::out | std::ios::binary | std::ios::trunc);
 
   if (file.is_open()) {
     file.write((char *)(this), numBytes);
     file.close();
     return 0;
   } else {
-    cout << "Could not save file: " << filename << endl;
+    std::cout << "Could not save file: " << filename << std::endl;
     return 1;
   }
 }
@@ -366,19 +359,17 @@ int Parameters<T>::calcGridResolutionRotated(const int N_grid_base) {
 }
 
 template <typename T> void Parameters<T>::print() const {
-  using namespace std;
-
-  cout << "Grid Resolution Base: " << _N_grid_base << endl;
-  cout << "Grid Width: " << _gridWidth << endl;
-  cout << "Grid Element Size: " << _gridElementSize << endl;
-  cout << "Angular Resolution: " << _angularResolution << endl;
-  cout << "Temperature: " << _T_Tc << endl;
-  cout << "Magnetic Field Strength: " << _magneticField << endl;
-  cout << "Spectral energy range: (" << _energyMin << ", " << _energyMax << ")"
-       << endl;
-  cout << "Spectral energy levels: " << _numEnergies << endl;
-  cout << "Convergence Criterion: " << _convergence << endl;
-  cout << "Cutoff parameter: " << _cutOff << endl;
+  std::cout << "Grid Resolution Base: " << _N_grid_base << std::endl;
+  std::cout << "Grid Width: " << _gridWidth << std::endl;
+  std::cout << "Grid Element Size: " << _gridElementSize << std::endl;
+  std::cout << "Angular Resolution: " << _angularResolution << std::endl;
+  std::cout << "Temperature: " << _T_Tc << std::endl;
+  std::cout << "Magnetic Field Strength: " << _magneticField << std::endl;
+  std::cout << "Spectral energy range: (" << _energyMin << ", " << _energyMax
+            << ")" << std::endl;
+  std::cout << "Spectral energy levels: " << _numEnergies << std::endl;
+  std::cout << "Convergence Criterion: " << _convergence << std::endl;
+  std::cout << "Cutoff parameter: " << _cutOff << std::endl;
 }
 
 #endif // PARAMETERS_H

@@ -24,37 +24,37 @@ public:
 
 private:
   // The previous order parameter.
-  OrderParameter<T> *_deltaKMinusOne;
+  OrderParameter<T> *m_deltaKMinusOne;
 
   // Temporary order parameter needed for updating.
-  OrderParameter<T> *_deltaTmp;
+  OrderParameter<T> *m_deltaTmp;
 
   // Whether the previous order parameter is initialized or not.
-  bool _isDeltaInitialized;
+  bool m_isDeltaInitialized;
 
   // Iteration index.
-  int _iterationIndex;
+  int m_iterationIndex;
 
   // The number of warmup iterations. The first step is always a pure
   // fixed-point step. But after that the weight of the ineratial term  is
   // gradually increased to its maximum value during this number of iterations.
-  const int _nWarmupIterations = 10;
+  const int m_nWarmupIterations = 10;
 
   // The maximum weight of the ineartial term.
-  const T _ineartialWeight = static_cast<T>(0.9);
+  const T m_ineratialWeight = static_cast<T>(0.9);
 };
 
 template <typename T>
 OptimizerRollingBall<T>::OptimizerRollingBall()
-    : Optimizer<T>(), _deltaKMinusOne(0), _deltaTmp(0),
-      _isDeltaInitialized(false), _iterationIndex(0) {}
+    : Optimizer<T>(), m_deltaKMinusOne(0), m_deltaTmp(0),
+      m_isDeltaInitialized(false), m_iterationIndex(0) {}
 
 template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
-  if (_deltaKMinusOne) {
-    delete _deltaKMinusOne;
+  if (m_deltaKMinusOne) {
+    delete m_deltaKMinusOne;
   }
-  if (_deltaTmp) {
-    delete _deltaTmp;
+  if (m_deltaTmp) {
+    delete m_deltaTmp;
   }
 }
 
@@ -65,7 +65,7 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
   // Compute the residual.
   Optimizer<T>::computeResidual(rhsK, deltaK);
 
-  if (_iterationIndex > 0) {
+  if (m_iterationIndex > 0) {
     const int nComponents = deltaK.getNumOrderParameterComponents();
     for (int i = 0; i < nComponents; ++i) {
       // Extract fields.
@@ -73,16 +73,16 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
           *(rhsK.getOrderParameterComponent(i)->getOrderParameterField());
       GridGPU &d =
           *(deltaK.getOrderParameterComponent(i)->getOrderParameterField());
-      GridGPU &dp = *(_deltaKMinusOne->getOrderParameterComponent(i)
+      GridGPU &dp = *(m_deltaKMinusOne->getOrderParameterComponent(i)
                           ->getOrderParameterField());
-      GridGPU &dt =
-          *(_deltaTmp->getOrderParameterComponent(i)->getOrderParameterField());
+      GridGPU &dt = *(
+          m_deltaTmp->getOrderParameterComponent(i)->getOrderParameterField());
 
       // Compute ineartial weight.
-      const T warmupFraction = static_cast<T>(_iterationIndex) /
-                               static_cast<T>(_nWarmupIterations + 1);
+      const T warmupFraction = static_cast<T>(m_iterationIndex) /
+                               static_cast<T>(m_nWarmupIterations + 1);
       const T weight =
-          _ineartialWeight * std::min(static_cast<T>(1.0), warmupFraction);
+          m_ineratialWeight * std::min(static_cast<T>(1.0), warmupFraction);
 
       // Update the order parameter with a rolling ball step.
       // Set tmp to new order parameter.
@@ -95,26 +95,26 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
       d = dt;
     }
   } else {
-    if (_isDeltaInitialized) {
+    if (m_isDeltaInitialized) {
       // Update previous order parameter.
-      *_deltaKMinusOne = deltaK;
+      *m_deltaKMinusOne = deltaK;
     } else {
       // Delete previous order parameter.
-      if (_deltaKMinusOne) {
-        delete _deltaKMinusOne;
+      if (m_deltaKMinusOne) {
+        delete m_deltaKMinusOne;
       }
 
       // Delete tmp order parameter.
-      if (_deltaTmp) {
-        delete _deltaTmp;
+      if (m_deltaTmp) {
+        delete m_deltaTmp;
       }
 
       // Initialize the internal order parameters.
-      _deltaKMinusOne = new OrderParameter<T>(deltaK);
-      _deltaTmp = new OrderParameter<T>(deltaK);
+      m_deltaKMinusOne = new OrderParameter<T>(deltaK);
+      m_deltaTmp = new OrderParameter<T>(deltaK);
 
       // Set flag to true.
-      _isDeltaInitialized = true;
+      m_isDeltaInitialized = true;
     }
 
     // Update the order parameter with a fixed point step.
@@ -122,7 +122,7 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
   }
 
   // Increase iteration index.
-  _iterationIndex++;
+  m_iterationIndex++;
 }
 
 #endif // OPTIMIZERROLLINGBALL_H_
