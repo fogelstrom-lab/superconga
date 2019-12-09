@@ -2,7 +2,6 @@
 #define COMPUTEORDERPARAMETER_H
 
 #include "ComputeProperty.h"
-#include "IntegrationIteratorMatsubara.h"
 #include "IntegrationIteratorOzaki.h"
 #include "Optimizer.h"
 

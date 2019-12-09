@@ -2,7 +2,6 @@
 #define COMPUTECURRENT_H
 
 #include <ComputeProperty.h>
-#include <IntegrationIteratorMatsubara.h>
 #include <IntegrationIteratorOzaki.h>
 
 template <typename T> class ComputeCurrent : public ComputeProperty<T> {
