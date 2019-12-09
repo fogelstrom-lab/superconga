@@ -42,10 +42,8 @@
 // fully converged solution as start file)
 #include <BoundaryConditionSpecular.h> // Boundary condition for perfect specular reflection
 #include <BoundaryStorage.h> // Storage for coherence functions on the system edges - we save memory by only saving on boundaries between self-consistent iterations. These are the start point for each new energy and angle.
-#include <IntegrationIterator.h> // Pure virtual for different energy integration schemes (Ozaki, Matsubara, Keldysh, ...)
 #include <IntegrationIteratorOzaki.h> // Calculate energy integral through Ozaki summation
-//#include <IntegrationIteratorMatsubara.h> // Matsubara sum, deprecated by
-// Ozaki method #include <IntegrationIteratorKeldysh.h> // Used for calculating
+// #include <IntegrationIteratorKeldysh.h> // Used for calculating
 // observables on the real energy axsis (e.g. DOS)
 #include "OptimizerRollingBall.h"
 #include <Context.h> // The context that connects all classes (helpful since enacpsulation is used)

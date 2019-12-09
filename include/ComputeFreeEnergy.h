@@ -4,7 +4,6 @@
 #include "LocalGreens.h"
 #include <ComputeProperty.h>
 #include <Initial.h>
-#include <IntegrationIteratorMatsubara.h>
 #include <IntegrationIteratorOzaki.h>
 #include <cplx.h>
 #include <stdio.h>
