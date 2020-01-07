@@ -40,7 +40,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -137,13 +137,20 @@ void ComputeLDOS<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
 template <typename T>
 void ComputeLDOS<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                          const T angle) {
+                                          const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens, 1);
-    _ldos->insertRotatedGridAdditive(greens, angle, -1, 0, 0, Type::imag);
+
+    const T integrandFactor =
+        ContextModule<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
+    *greens *= integrandFactor;
+
+    const T systemAngle =
+        ContextModule<T>::getFermiSurface()->getSystemAngle(angleIdx);
+    _ldos->insertRotatedGridAdditive(greens, systemAngle, -1, 0, 0, Type::imag);
   }
 }
 
@@ -165,7 +172,7 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     GridGPU *energies = C::getIntegrationIterator()->getEnergies();
 
     // Compute LDOS
-    *_ldos *= -1.0 / (T)numAngles;
+    *_ldos *= -1.0;
 
     // Add fermifunction
     if (_multFermiFunction) {

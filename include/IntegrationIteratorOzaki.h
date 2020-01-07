@@ -1,6 +1,8 @@
 #ifndef INTEGRATIONITERATOROZAKI_H
 #define INTEGRATIONITERATOROZAKI_H
 
+#include "FermiSurface.h"
+#include "utils.h"
 #include <ComputeProperty.h>
 #include <Context.h>
 #include <GeometryGroup.h>
@@ -221,7 +223,6 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
 
   // Get some parameters and variables
   const int numAngles = ctx->getParameters()->getAngularResolution();
-  T angle_rad;
 
   GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
                          // local frame
@@ -232,24 +233,24 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
   RiccatiSolver<T> *riccati = ctx->getRiccatiSolver();
   GeometryGroup<T> *geom = ctx->getGeometry();
   OrderParameter<T> *delta = ctx->getOrderParameter();
+  FermiSurface<T> *const fermiSurface = ctx->getFermiSurface();
 
   // Do angle loop (integrate over momentum angles)
   //
-  for (int angle_idx = 0; angle_idx < numAngles; ++angle_idx) {
-    // Angle (in radians) of system in local frame
-    I::setCurrentAngleIndex(angle_idx);
-    angle_rad = I::getCurrentAngleRadians();
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    // Angle (in radians) of system in local frame.
+    const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
 
     // Rotate order parameter field to current angle
-    deltaRotated = delta->getOrderParameterFieldRotated(-angle_rad);
+    deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
 
     // Create discrete geometry data for current angle
-    geom->create(-angle_rad);
+    geom->create(-systemAngle);
 
     // Compute coherence functions and store on boundary as initial condition
     for (energy_iter->begin(); !energy_iter->isDone(); energy_iter->next()) {
       riccati->computeInitialCondition(*energy_iter, energies, deltaRotated,
-                                       angle_idx);
+                                       angleIdx);
     }
   }
 
@@ -268,7 +269,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
 
   // Get some parameters and variables
   const int numAngles = ctx->getParameters()->getAngularResolution();
-  T angle_rad;
+  FermiSurface<T> *const fermiSurface = ctx->getFermiSurface();
 
   GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
                          // local frame
@@ -301,14 +302,10 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
   riccati->computeInducedMagneticField();
 
   // Do angle loop (=momentum integral, and sum over energies)
-  //
-  for (int angle_idx = 0; angle_idx < numAngles; ++angle_idx) {
-    // Angle (in radians) of system in local frame
-    I::setCurrentAngleIndex(angle_idx);
-    angle_rad = I::getCurrentAngleRadians();
-
-    // Rotate order parameter field to current angle
-    deltaRotated = delta->getOrderParameterFieldRotated(-angle_rad);
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    // Rotate order parameter field to current angle.
+    // A negative index is equivalent to a negative angle.
+    deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
 
     // If we are computing free energy with Luttinger-Ward functional, the order
     // parameter is multiplied by a constant (which is
@@ -316,8 +313,10 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
     deltaRotatedMultFactor =
         (*deltaRotated) * riccati->getOrderParameterMultFactor();
 
-    // Create discrete geometry data for current angle
-    geom->create(-angle_rad);
+    // Create discrete geometry data for current angle.
+    // Angle (in radians) of system in local frame.
+    const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+    geom->create(-systemAngle);
 
     // Solve riccati equations for current angle and compute appropriate greens
     // function
@@ -327,7 +326,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
     // Iterate over (possibly) several blocks of energies.
     for (energy_iter->begin(); !energy_iter->isDone(); energy_iter->next()) {
       riccati->computeCoherenceFunctions(*energy_iter, energies,
-                                         &deltaRotatedMultFactor, angle_idx);
+                                         &deltaRotatedMultFactor, angleIdx);
 
       for (int i = 0; i < NC; ++i)
         ctx->getComputeObject(i)->computeGreensAngle(
@@ -336,7 +335,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
 
     // Add integration contribution of greens function from current angle
     for (int i = 0; i < NC; ++i)
-      ctx->getComputeObject(i)->integrateGreensAngle(geom, angle_rad);
+      ctx->getComputeObject(i)->integrateGreensAngle(geom, angleIdx);
   }
 
   // Compute updated order parameter (components)

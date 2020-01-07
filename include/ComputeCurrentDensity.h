@@ -34,7 +34,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -153,19 +153,29 @@ void ComputeCurrentDensity<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
 template <typename T>
 void ComputeCurrentDensity<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                    const T angle) {
+                                                    const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens, 1);
 
-    const T momentum_angle = angle + 0.5 * M_PI;
+    const int numAngles =
+        ContextModule<T>::getParameters()->getAngularResolution();
+    const T systemAngle =
+        ContextModule<T>::getFermiSurface()->getSystemAngle(angleIdx);
 
-    _tmp->insertRotatedGrid(greens, angle, 0, 0, Type::imag);
+    T fermiVelocityX;
+    T fermiVelocityY;
+    ContextModule<T>::getFermiSurface()->(angleIdx, fermiVelocityX,
+                                          fermiVelocityY);
 
-    *_lcurrent_x += *_tmp * cos(momentum_angle);
-    *_lcurrent_y += *_tmp * sin(momentum_angle);
+    const T integrandFactor =
+        ContextModule<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
+
+    _tmp->insertRotatedGrid(greens, systemAngle, 0, 0, Type::imag);
+    *_lcurrent_x += *_tmp * fermiVelocityX * integrandFactor;
+    *_lcurrent_y += *_tmp * fermiVelocityY * integrandFactor;
   }
 }
 
@@ -203,6 +213,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
           numEnergiesCurrentBlock, _lcurrent_y->dimX());
     }
 
+    // TODO(niclas): Is this correct for non-circular FS???
     *_lcurrent_x *= -1.0 / (2.0 * M_PI * (T)numAngles);
     *_lcurrent_y *= -1.0 / (2.0 * M_PI * (T)numAngles);
 

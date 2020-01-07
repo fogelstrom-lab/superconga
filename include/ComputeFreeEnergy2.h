@@ -2,7 +2,7 @@
 #define COMPUTEFREEENERGY2_H
 
 #include <ComputeProperty.h>
-#include <IntegrationIteratorMatsubara.h>
+#include <IntegrationIteratorOzaki.h>
 #include <cuda.h>
 
 template <typename T> class ComputeFreeEnergy2 : public ComputeProperty<T> {
@@ -38,7 +38,7 @@ public:
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle);
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
@@ -94,8 +94,8 @@ template <typename T> int ComputeFreeEnergy2<T>::initialize() {
 template <typename T>
 IntegrationIterator<T> *
 ComputeFreeEnergy2<T>::createIntegrationIterator(int numEnergiesPerBlock) {
-  return new IntegrationIteratorMatsubara<T>(ContextModule<T>::getContext(),
-                                             numEnergiesPerBlock);
+  return new IntegrationIteratorOzaki<T>(ContextModule<T>::getContext(),
+                                         numEnergiesPerBlock);
 }
 
 template <typename T>
@@ -150,7 +150,7 @@ __global__ void free_energy_kernel(T *result_re, T *result_im, T *D_re, T *D_im,
 
 template <typename T>
 void ComputeFreeEnergy2<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                 const T angle) {
+                                                 const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
     GridGPU *delta_p = ComputeProperty<T>::getOrderParameter()
@@ -173,8 +173,18 @@ void ComputeFreeEnergy2<T>::integrateGreensAngle(GeometryGroup<T> *geom,
         _f_tilde->getDataPointer(0, Type::real),
         _f_tilde->getDataPointer(0, Type::imag), greens->dimX());
 
-    // Rotate back to reference frame and add
-    _free_energy->insertRotatedGridAdditive(greens, angle, 0);
+    const int numAngles =
+        ComputeProperty<T>::getParameters()->getAngularResolution();
+    ComputeProperty<T>::getParameters()->getAngularResolution();
+    const T systemAngle =
+        ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
+
+    const T integrandFactor =
+        ComputeProperty<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
+    *greens *= integrandFactor;
+
+    // Rotate back to reference frame and add.
+    _free_energy->insertRotatedGridAdditive(greens, systemAngle, 0);
   }
 }
 
@@ -184,7 +194,7 @@ template <typename T> void ComputeFreeEnergy2<T>::computePropertyFromGreens() {
         ComputeProperty<T>::getParameters()->getAngularResolution();
     const T T_Tc = ComputeProperty<T>::getParameters()->getTemperature();
 
-    *_free_energy *= 2.0 * M_PI * T_Tc / T(numAngles);
+    *_free_energy *= 2.0 * M_PI * T_Tc;
   }
 }
 

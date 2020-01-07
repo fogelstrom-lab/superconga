@@ -335,11 +335,9 @@ template <typename T> void Parameters<T>::initEnergies() {
 }
 
 template <typename T> int Parameters<T>::read(std::string filename) {
-  using namespace std;
-
   int numBytes = sizeof(*this);
 
-  ifstream file(filename.c_str(), ios::in | ios::binary);
+  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
 
   if (file.is_open()) {
     file.read((char *)this, numBytes);
@@ -348,43 +346,40 @@ template <typename T> int Parameters<T>::read(std::string filename) {
     initEnergies();
     return 0;
   } else {
-    cout << "Could not load file\n";
+    std::cout << "Could not load file\n";
     return 1;
   }
 }
 
 template <typename T> int Parameters<T>::write(std::string filename) const {
-  using namespace std;
-
   int numBytes = sizeof(*this);
 
-  ofstream file(filename.c_str(), ios::out | ios::binary | ios::trunc);
+  std::ofstream file(filename.c_str(),
+                     std::ios::out | std::ios::binary | std::ios::trunc);
 
   if (file.is_open()) {
     file.write((char *)(this), numBytes);
     file.close();
     return 0;
   } else {
-    cout << "Could not save file: " << filename << endl;
+    std::cout << "Could not save file: " << filename << std::endl;
     return 1;
   }
 }
 
 template <typename T> void Parameters<T>::print() const {
-  using namespace std;
-
-  cout << "Grid Resolution Base: " << _N_grid_base << endl;
-  cout << "Grid Width: " << _gridWidth << endl;
-  cout << "Grid Element Size: " << _gridElementSize << endl;
-  cout << "Angular Resolution: " << _angularResolution << endl;
-  cout << "Matsubara Frequencies: " << _numFrequencies << endl;
-  cout << "Energy levels: " << _numEnergies << endl;
-  cout << "Temperature: " << _T_Tc << endl;
-  cout << "Magnetic Field Strength: " << _magneticField << endl;
-  cout << "LDOS energy range: (" << _LDOS_energyMin << ", " << _LDOS_energyMax
-       << ")" << endl;
-  cout << "Convergence Criterion: " << _convergence << endl;
-  cout << "GridData energies: ";
+  std::cout << "Grid Resolution Base: " << _N_grid_base << std::endl;
+  std::cout << "Grid Width: " << _gridWidth << std::endl;
+  std::cout << "Grid Element Size: " << _gridElementSize << std::endl;
+  std::cout << "Angular Resolution: " << _angularResolution << std::endl;
+  std::cout << "Matsubara Frequencies: " << _numFrequencies << std::endl;
+  std::cout << "Energy levels: " << _numEnergies << std::endl;
+  std::cout << "Temperature: " << _T_Tc << std::endl;
+  std::cout << "Magnetic Field Strength: " << _magneticField << std::endl;
+  std::cout << "LDOS energy range: (" << _LDOS_energyMin << ", "
+            << _LDOS_energyMax << ")" << std::endl;
+  std::cout << "Convergence Criterion: " << _convergence << std::endl;
+  std::cout << "GridData energies: ";
 }
 } // namespace v1
 

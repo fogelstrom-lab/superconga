@@ -5,7 +5,7 @@
 
 template <typename T, template <typename> class POTENTIAL>
 __global__ void
-computeEnergyShift_external_kernel(T *eShift, const T system_angle, const T B,
+computeEnergyShift_external_kernel(T *eShift, const T systemAngle, const T B,
                                    const int N, const T h) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x;
   const int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -14,14 +14,14 @@ computeEnergyShift_external_kernel(T *eShift, const T system_angle, const T B,
 
   if (x < N && y < N) {
     eShift[idx] = T(M_PI) * POTENTIAL<T>::computeVectorPotential_local(
-                                (T)x, (T)y, B, system_angle, N, h);
+                                (T)x, (T)y, B, systemAngle, N, h);
   }
 }
 
 template <typename T>
 __global__ void
 computeEnergyShift_internal_kernel(T *eShift, const T *jx, const T *jy,
-                                   const T system_angle, const int N) {
+                                   const T systemAngle, const int N) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x;
   const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -29,7 +29,7 @@ computeEnergyShift_internal_kernel(T *eShift, const T *jx, const T *jy,
 
   if (x < N && y < N)
     eShift[idx] +=
-        T(M_PI) * (cos(system_angle) * jx[idx] + sin(system_angle) * jy[idx]);
+        T(M_PI) * (cos(systemAngle) * jx[idx] + sin(systemAngle) * jy[idx]);
 }
 
 #endif // VECTORPOTENTIAL_KERNEL_H

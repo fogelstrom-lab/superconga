@@ -64,7 +64,8 @@ public:
   // Gets called once for each angle, after all calls (per angle) to
   // computeGreensAngle() are finished. Adds the result from
   // computeGreensAngle() to total.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const T angle) = 0;
+  virtual void integrateGreensAngle(GeometryGroup<T> *geom,
+                                    const int angleIdx) = 0;
 
   // Gets called once per iteration, after all angle integration of greens
   // functions are finished. Computes physical property from greens function.

@@ -8,6 +8,7 @@
 #include "LocalGamma.h"
 #include "LocalVectorPotential.h"
 #include "VectorPotential_Kernel.h"
+#include "utils.h"
 #include <BoundaryCondition.h>
 #include <BoundaryStorage.h>
 #include <ComputeCurrent.h>
@@ -26,7 +27,7 @@
 // parameter issues
 template <typename T, template <typename> class VP>
 void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *eShift,
-                        const int angle_idx);
+                        const int angleIdx);
 
 template <typename T> class RiccatiSolver : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -80,14 +81,14 @@ public:
   virtual void
   computeInitialCondition(const ParameterIterator<int> &energy_iter,
                           const GridGPU *energies, const GridGPU *delta,
-                          const int angle_idx) = 0;
+                          const int angleIdx) = 0;
 
   virtual void computeBoundaryConditions();
 
   virtual void
   computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
                             const GridGPU *energies, const GridGPU *deltaRot,
-                            const int angle_idx) = 0;
+                            const int angleIdx) = 0;
 
   // For Computation of Free energy (as in ComputeFreeEnergy2 class)
   T getOrderParameterMultFactor() const { return _orderParameterMult; }
@@ -98,7 +99,7 @@ public:
                            const int numEnergies);
 
   void getKernelDimensionsOptim(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
-                                const int numEnergies, const int angle_idx);
+                                const int numEnergies, const int angleIdx);
 
 private:
   // START ELIMINATING GAMMA AS CLASS MEMBERS!!! USE CoherenceFunctions CLASS
@@ -138,7 +139,7 @@ private:
 template <typename T, template <typename> class VP>
 void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *ps,
                         typename Grid<T>::GPU *eShift, const int computeInduced,
-                        const int angle_idx) {
+                        const int angleIdx) {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
 
@@ -150,13 +151,14 @@ void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *ps,
   const T B = param->getMagneticFieldStrength();
   const T h = param->getGridElementSize();
   const int Na = param->getAngularResolution();
-  const T system_angle = 2.0 * M_PI * T(angle_idx) / T(Na);
+
+  const T systemAngle = mod->getFermiSurface()->getSystemAngle(angleIdx);
 
   dim3 bpg, tpb;
   eShift->getKernelDimensions(bpg, tpb);
 
   computeEnergyShift_external_kernel<T, VP>
-      <<<bpg, tpb>>>(eShift->getDataPointer(), system_angle, B, N1, h);
+      <<<bpg, tpb>>>(eShift->getDataPointer(), systemAngle, B, N1, h);
 
   // Add contribution from internal magnetic field induced by currents
   ComputeCurrent<T> *j_compute = mod->getContext()->getComputeCurrent();
@@ -164,11 +166,11 @@ void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *ps,
   if (j_compute && computeInduced) {
     GridGPU ps_rot(N1, N1, 2, Type::real);
     ps_rot.setZero();
-    ps_rot.insertRotatedGrid(ps, -system_angle);
+    ps_rot.insertRotatedGrid(ps, -systemAngle);
 
     computeEnergyShift_internal_kernel<T>
         <<<bpg, tpb>>>(eShift->getDataPointer(), ps_rot.getDataPointer(0),
-                       ps_rot.getDataPointer(1), system_angle, N1);
+                       ps_rot.getDataPointer(1), systemAngle, N1);
   }
 }
 
@@ -221,7 +223,7 @@ template <typename T> void RiccatiSolver<T>::initializeBoundaryStorage() {
   if (_storage != 0)
     delete _storage;
 
-  _storage = new BoundaryStorage<T>(C::getGeometry());
+  _storage = new BoundaryStorage<T>(C::getGeometry(), C::getFermiSurface());
 
   int numTrajectories = C::getParameters()->getGridResolutionCoherence();
   int numAngles = C::getParameters()->getAngularResolution();
@@ -338,9 +340,8 @@ template <typename T>
 void RiccatiSolver<T>::getKernelDimensionsOptim(dim3 &blocksPerGrid,
                                                 dim3 &threadsPerBlock,
                                                 const int numEnergies,
-                                                const int angle_idx) {
-  int numTrajectories =
-      _storage->getNumIntersectingTrajectoriesAngle(angle_idx);
+                                                const int angleIdx) {
+  int numTrajectories = _storage->getNumIntersectingTrajectoriesAngle(angleIdx);
 
   int tpb_x, tpb_y, bpg_x, bpg_y;
 

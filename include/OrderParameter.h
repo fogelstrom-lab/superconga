@@ -1,6 +1,7 @@
 #ifndef ORDERPARAMETER_H
 #define ORDERPARAMETER_H
 
+#include "utils.h"
 #include <Context.h>
 #include <ContextModule.h>
 #include <Grid.h>
@@ -31,8 +32,8 @@ public:
   GridGPU *getOrderParameterComponentField(int delta_idx) const;
 
   GridGPU *getOrderParameterField();
-  GridGPU *getOrderParameterFieldRotated(
-      const T angle); // Perform rotation and return pointer
+  // Perform rotation and return pointer
+  GridGPU *getOrderParameterFieldRotated(const int angleIdx);
   GridGPU *getOrderParameterFieldRotated() const {
     return _orderParameterCompoundRotated;
   } // Return pointer to current rotational frame
@@ -75,9 +76,7 @@ OrderParameter<T>::OrderParameter(const OrderParameter<T> &other)
 template <typename T>
 OrderParameter<T>::OrderParameter(Context<T> *ctx)
     : ContextModule<T>(ctx), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0)
-
-{
+      _orderParameterCompoundRotated(0) {
   ctx->set(this);
 }
 
@@ -111,9 +110,12 @@ template <typename T> int OrderParameter<T>::initialize() {
   GridGPU::initializeGrid(_orderParameterCompound, N0, N0);
   GridGPU::initializeGrid(_orderParameterCompoundRotated, N1, N1);
 
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i)
-    _orderParameterComponentList[i]->initialize();
+  FermiSurface<T> *fermiSurface = ContextModule<T>::getFermiSurface();
 
+  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
+    _orderParameterComponentList[i]->initialize();
+    _orderParameterComponentList[i]->initBasisNormalization(fermiSurface);
+  }
   return 0;
 }
 
@@ -135,6 +137,8 @@ OrderParameterComponent<T> *
 OrderParameter<T>::getOrderParameterComponent(int delta_idx) const {
   const int Nc = getNumOrderParameterComponents();
 
+  // TODO(niclas): Is this behaviour really what a user expects? Shouldn't we
+  // throw an exception?
   if (delta_idx >= Nc)
     delta_idx = Nc - 1;
 
@@ -161,10 +165,20 @@ typename Grid<T>::GPU *OrderParameter<T>::getOrderParameterField() {
 
 template <typename T>
 typename Grid<T>::GPU *
-OrderParameter<T>::getOrderParameterFieldRotated(const T angle) {
+OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   // Get global model parameters
   int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
   int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+
+  FermiSurface<T> *const fermiSurface = ContextModule<T>::getFermiSurface();
+  const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+
+  // Rotating the order parameter field PHI degrees is equivalent to solving
+  // the trajectories along -PHI, hence the minus sign in the function call
+  // below.
+  T momentumX;
+  T momentumY;
+  fermiSurface->getFermiMomentum(-angleIdx, momentumX, momentumY);
 
   // Add delta components together in rotated frame
   OrderParameterComponent<T> *delta_tmp;
@@ -177,13 +191,10 @@ OrderParameter<T>::getOrderParameterFieldRotated(const T angle) {
     delta_tmp = getOrderParameterComponent(i);
     delta_comp_tmp = *(delta_tmp->getOrderParameterField());
 
-    // Rotating the order parameter field PHI degrees is equivalent to solving
-    // the trajectories along -PHI, hence the minus sign in the function call
-    // below.
-    delta_tmp->computeMomentumDependence(&delta_comp_tmp, -angle);
+    delta_tmp->computeMomentumDependence(&delta_comp_tmp, momentumX, momentumY);
 
     _orderParameterCompoundRotated->insertRotatedGridAdditive(&delta_comp_tmp,
-                                                              angle, 0);
+                                                              systemAngle, 0);
   }
 
   return _orderParameterCompoundRotated;
