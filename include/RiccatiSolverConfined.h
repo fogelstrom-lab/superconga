@@ -129,7 +129,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       {
         // Calc gamma to current grid node, then calc gamma with fractional
         // step at exact boundary location, and save in boundary storage.
-        GAMMA::computeGamma_local(delta, g0, energy, h, 1, g);
+        GAMMA::computeGamma_local(delta, g0, energy, step, 1, g);
 
         // Distance to exact boundary location
         const T fractionalStep = fabsf(boundaryDistance[idx]) * step;
