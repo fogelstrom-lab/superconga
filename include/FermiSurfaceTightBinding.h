@@ -12,6 +12,10 @@
 // Forward declaration, it is defined below.
 template <typename> struct TightBindingParameters;
 
+// Fermi surface from a tight-binding dispersion.
+// Note, there are tacit assumptions:
+// 1. A single species of atom
+// 2. A Square lattice
 template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
   // Constructor.
@@ -92,9 +96,16 @@ template <typename T> struct TightBindingParameters {
               << ", chemicalPotential = " << chemicalPotential << "\n";
   }
 
+  // Nearest neighbour.
   T hoppingNN;
+
+  // Next-nearest neighbour.
   T hoppingNNN;
+
+  // Next-next-nearest neighbour.
   T hoppingNNNN;
+
+  // Chemical potential (or rather, Fermi level).
   T chemicalPotential;
 };
 
