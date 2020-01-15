@@ -2,7 +2,7 @@
 #define RICCATISOLVERCONFINED_H
 
 #include "RiccatiSolver.h"
-#include <cmath>
+#include <math.h>
 
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
@@ -112,7 +112,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         g0.y = bnd_in_gamma_imag[idx_sparse];
 
         // Distance to exact boundary location
-        const T distance = fabsf(boundaryDistance[idx]);
+        const T distance = abs(boundaryDistance[idx]);
         const T fractionalStep = distance * step;
 
         // Extrapolate delta at boundary from domain values
@@ -132,7 +132,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         GAMMA::computeGamma_local(delta, g0, energy, step, 1, g);
 
         // Distance to exact boundary location
-        const T fractionalStep = fabsf(boundaryDistance[idx]) * step;
+        const T fractionalStep = abs(boundaryDistance[idx]) * step;
 
         // Calc at exact boundary location
         GAMMA::computeGamma_local(delta, g0, energy, step + fractionalStep, 1,
