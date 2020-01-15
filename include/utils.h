@@ -9,8 +9,8 @@ namespace utils {
 template <typename T>
 __host__ __device__ T wrapToRange(const T value, const T low, const T high) {
   const T diff = high - low;
-  const T tmp = fmod(value - low, diff) + low;
-  const T wrappedValue = tmp < low ? tmp + diff : tmp;
+  const T tmp = value < low ? value + diff : value;
+  const T wrappedValue = fmod(tmp - low, diff) + low;
   return wrappedValue;
 }
 
@@ -18,8 +18,8 @@ template <>
 __host__ __device__ int wrapToRange<int>(const int value, const int low,
                                          const int high) {
   const int diff = high - low;
-  const int tmp = ((value - low) % diff) + low;
-  const int wrappedValue = tmp < low ? tmp + diff : tmp;
+  const int tmp = value < low ? value + diff : value;
+  const int wrappedValue = ((tmp - low) % diff) + low;
   return wrappedValue;
 }
 
