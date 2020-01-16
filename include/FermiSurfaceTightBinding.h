@@ -53,12 +53,14 @@ public:
   void getMomentumOffset(T &outOffsetX, T &outOffsetY);
 
 private:
-  // We find the Fermi surface with an iterative method (bisection), so we
-  // need to set the maximum number of iterations, and when we consider
+  // We find the Fermi surface with an iterative method (bisection and Newton),
+  // so we need to set the maximum number of iterations, and when we consider
   // ourselves done.
   const int m_numIterations = 100;
+
+  // The convergence criterion could probably be descreased, but not by much.
   const T m_convergence =
-      static_cast<T>(10.0) * std::numeric_limits<T>::epsilon();
+      static_cast<T>(1e2) * std::numeric_limits<T>::epsilon();
 
   // For integrand factor, phi derivative.
   // Note, this is radians.
@@ -216,6 +218,10 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
   // Have we converged?
   bool isConverged = false;
 
+  // Should we do a bisection or Newton step?
+  bool doBisectionStep = true;
+
+  T error = std::numeric_limits<T>::max();
   for (int i = 0; i < inNumIterations; ++i) {
     // Form the momentum.
     const T kX = k * cosPhi + inOffsetX;
@@ -224,12 +230,14 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
     // Compute the dispersion.
     const T dispersion = computeDispersion(inParameters, kX, kY);
 
-    // The error is simply the magnitude of the dispersion. We are looking for
-    // zeros.
-    const T error = std::abs(dispersion);
+    // The error is simply the magnitude of the dispersion.
+    // We are looking for zeros.
+    error = std::abs(dispersion);
 
-    // Do a bisection step or decide that we're done.
-    if (error > inConvergence) {
+    // Decide what to do depending on the error.
+    if ((error > std::sqrt(inConvergence)) && doBisectionStep) {
+      // Do a bisection step.
+
       // Update the interval.
       if (utils::sign(dispersion) == utils::sign(eA)) {
         eA = dispersion;
@@ -241,6 +249,26 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
 
       // Update the momentum.
       k = static_cast<T>(0.5) * (kA + kB);
+    } else if (error > inConvergence) {
+      // Do a newton step.
+
+      // Continue with Newton steps.
+      doBisectionStep = false;
+
+      // Compute the gradient along the radial direction.
+      T dEdX;
+      T dEdY;
+      computeDispersionDerivative(inParameters, kX, kY, dEdX, dEdY);
+      // dXdK = cos(phi), dYdK = sin(phi)
+      const T dEdK = dEdX * cosPhi + dEdY * sinPhi;
+
+      // Update the momentum.
+      if (std::abs(dEdK) > static_cast<T>(0.0)) {
+        k -= dispersion / dEdK;
+      } else {
+        // We cannot go any further.
+        break;
+      }
     } else {
       // Success!!
       isConverged = true;
@@ -259,7 +287,9 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
 
   // Print info if failure.
   if (!isConverged) {
-    printf("The Fermi momentum did not converge!\n");
+    printf("The Fermi momentum did not converge! Error = %e - Error / Limit = "
+           "%f\n",
+           error, error / inConvergence);
   }
   if (!isSane) {
     printf("The Fermi momentum magnitude is negative!\n");

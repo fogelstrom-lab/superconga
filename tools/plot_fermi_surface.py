@@ -30,6 +30,28 @@ def computeDispersion(kx, ky, parameters):
     return (ct + cp + cq - parameters.mu)
 
 
+# Compute the partial derivatives of the dispersion.
+def computeDispersionDerivative(kx, ky, parameters):
+    # Nearest neighbour.
+    factorNN = 2.0 * parameters.tt
+    termNNdX = factorNN * np.sin(kx)
+    termNNdY = factorNN * np.sin(ky)
+
+    # Next-nearest neighbour.
+    factorNNN = 4.0 * parameters.tp
+    termNNNdX = factorNNN * np.sin(kx) * np.cos(ky)
+    termNNNdY = factorNNN * np.cos(kx) * np.sin(ky)
+
+    # Next-next-nearest neighbour.
+    factorNNNN = 4.0 * parameters.tq
+    termNNNNdX = factorNNNN * np.sin(2.0 * kx)
+    termNNNNdY = factorNNNN * np.sin(2.0 * ky)
+
+    dEdX = (termNNdX + termNNNdX + termNNNNdX)
+    dEdY = (termNNdY + termNNNdY + termNNNNdY)
+    return dEdX, dEdY
+
+
 # Compute the Fermi momenta using the bisection method.
 def computeFermiMomentum(parameters,
                          angles,
@@ -59,7 +81,11 @@ def computeFermiMomentum(parameters,
     # Initial guess.
     k = 0.5 * (kA + kB)
 
+    # Start with bisection updates.
+    doBisection = np.ones_like(k)
+
     # The main loop.
+    isConverged = False
     for _ in range(numIterations):
         # Form the momentum.
         kX = k * cosPhi + offset[:, 0]
@@ -72,6 +98,12 @@ def computeFermiMomentum(parameters,
         # We are looking for zeros.
         error = np.abs(dispersion)
 
+        # Check convergence.
+        isConverged = (np.amax(error) < convergenceCriteration)
+        if isConverged:
+            break
+
+        # ========== BISECTION ========== #
         # Compare signs.
         cond = np.sign(dispersion) == np.sign(eA)
 
@@ -83,11 +115,27 @@ def computeFermiMomentum(parameters,
         kA = np.where(cond, k, kA)
         kB = np.where(cond, kB, k)
 
+        # Bisection update.
+        kBisection = 0.5 * (kA + kB)
+
+        # =========== NEWTON =========== #
+        # Compute derivative along the radial direction.
+        dEdX, dEdY = computeDispersionDerivative(kX, kY, parameters)
+        dEdK = dEdX * cosPhi + dEdY * sinPhi
+
+        # Newton update.
+        kNewton = k - dispersion / dEdK
+
+        # Switch to doing Newton steps when the error is sufficently small.
+        doBisection = np.logical_and(error > np.sqrt(convergenceCriteration),
+                                     doBisection)
+
         # Update the momentum.
-        k = 0.5 * (kA + kB)
+        k = np.where(doBisection, kBisection, kNewton)
 
     # Check that everything has converged.
-    assert (np.amax(error) < convergenceCriteration)
+    if (not isConverged):
+        print("WARNING! Did not converge.")
 
     # Form the final momenta.
     kX = k * cosPhi + offset[:, 0]
@@ -138,7 +186,9 @@ def computeFermiSurface(parameters, numGrid, numAngles):
                extent=[-np.pi, np.pi, -np.pi, np.pi])
 
     # Compute Fermi momenta using the bisection method.
-    angles = np.linspace(-np.pi, np.pi, numAngles)
+    minAngle = 0.0
+    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numAngles)
+    angles = np.linspace(minAngle, maxAngle, numAngles)
     kx, ky = computeFermiMomentum(parameters, angles, offset)
     plt.scatter(kx, ky, c='r', linewidths=0.1, marker='.')
 
