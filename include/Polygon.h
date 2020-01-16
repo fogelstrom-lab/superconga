@@ -1,8 +1,8 @@
-#ifndef POLYGON_H
-#define POLYGON_H
+#ifndef POLYGON_H_
+#define POLYGON_H_
 
 #include <Grid.h>
-#include <iostream>
+#include <math.h>
 
 // This class provides a basic shape implementation for a polygon.
 // Polygons must be defined in a counterclockwise fashion.
@@ -15,126 +15,158 @@ public:
   ~Polygon();
 
   // Copy constructor
-  Polygon(const Polygon &other);
+  Polygon(const Polygon &inOther);
 
   // Initialize the polygon to an approximation of a disc
-  // numVertices = 4 will produce a square. cx, cy is the center coordinate
-  Polygon(const int numVertices, T radius, T angle = 0.0, T cx = 0.0,
-          T cy = 0.0);
+  // numVertices = 4 will produce a square. inCenterX, inCenterY is the center
+  // coordinate.
+  Polygon(const int inNumVertices, const T inRadius,
+          const T inAngle = static_cast<T>(0.0),
+          const T inCenterX = static_cast<T>(0.0),
+          const T inCenterY = static_cast<T>(0.0));
 
-  // Initialize the polygon to a predefined vertex set
-  Polygon(const int numVertices, T *vertX, T *vertY);
+  // Initialize the polygon to a predefined vertex set.
+  Polygon(const int inNumVertices, const T *const inVerticesX,
+          const T *const inVerticesY);
 
-  Polygon &operator=(Polygon other);
+  Polygon &operator=(Polygon inOther);
 
-  int getNumVertices() const { return _numVertices; }
-  GridGPU *getVertices() const { return _vertices; }
+  int getNumVertices() const { return m_numVertices; }
+  GridGPU *getVertices() const { return m_vertices; }
 
-  // Copy vertices from arrays vertX and vertY
-  void setVertices(const T *vertX, const T *vertY);
+  // Copy vertices from arrays inVerticesX and inVerticesY.
+  void setVertices(const T *const inVerticesX, const T *const inVerticesY);
 
-  // Approximate a disc (this gets called from corresponding constructor)
-  void setVerticesRadial(const int N, T radius, T angle, T cx, T cy);
+  // Approximate a disc (this gets called from corresponding constructor).
+  void setVerticesRadial(const int inNumVertices, const T inRadius,
+                         const T inAngle, const T inCenterX, const T inCenterY);
 
   // Polygon vertex coordinates needs to be in normalized coordinates (-0.5 to
   // 0.5). This helper function transforms coordinates in physical space to
   // normalized space, should you want to enter coordinates in physical space.
-  static void transformPhysicalToNormalized(const int numVertices, T *px, T *py,
-                                            const T physical_width);
+  static void transformPhysicalToNormalized(const int inNumVertices,
+                                            const T inPhysicalWidth,
+                                            T *const inOutVerticesX,
+                                            T *const inOutVerticesY);
 
 private:
   friend void swap(Polygon &A, Polygon &B) {
-    std::swap(A._numVertices, B._numVertices);
-    std::swap(A._vertices, B._vertices);
+    std::swap(A.m_numVertices, B.m_numVertices);
+    std::swap(A.m_vertices, B.m_vertices);
   }
 
-  int _numVertices;
-  GridGPU *_vertices;
+  // We are dealing with 2D polygons.
+  const int m_dimension = 2;
+
+  int m_numVertices;
+  GridGPU *m_vertices;
 };
 
-template <typename T> Polygon<T>::Polygon() : _vertices(0), _numVertices(0) {}
+template <typename T> Polygon<T>::Polygon() : m_vertices(0), m_numVertices(0) {}
 
 template <typename T>
-Polygon<T>::Polygon(const Polygon<T> &other)
-    : _vertices(0), _numVertices(other._numVertices) {
-  if (other._vertices)
-    _vertices = new GridGPU(*other._vertices);
+Polygon<T>::Polygon(const Polygon<T> &inOther)
+    : m_vertices(0), m_numVertices(inOther.m_numVertices) {
+  if (inOther.m_vertices)
+    m_vertices = new GridGPU(*inOther.m_vertices);
 }
 
 template <typename T>
-Polygon<T>::Polygon(const int numVertices, T radius, T angle, T cx, T cy)
-    : _numVertices(numVertices) {
-  int Nx = numVertices;
-  int Ny = 1;
-  int dim = 2;
+Polygon<T>::Polygon(const int inNumVertices, const T inRadius, const T inAngle,
+                    const T inCenterX, const T inCenterY)
+    : m_numVertices(inNumVertices) {
+  // Essentially, for every dimension create an array of length inNumVertices.
+  const int numX = inNumVertices;
+  const int numY = 1;
 
-  _vertices = new GridGPU(Nx, Ny, dim, Type::real);
+  m_vertices = new GridGPU(numX, numY, m_dimension, Type::real);
 
-  setVerticesRadial(numVertices, radius, angle, cx, cy);
+  setVerticesRadial(inNumVertices, inRadius, inAngle, inCenterX, inCenterY);
 }
 
 template <typename T>
-Polygon<T>::Polygon(const int numVertices, T *vertX, T *vertY)
-    : _numVertices(numVertices) {
-  int dim = 2;
+Polygon<T>::Polygon(const int inNumVertices, const T *const inVerticesX,
+                    const T *const inVerticesY)
+    : m_numVertices(inNumVertices) {
+  // Essentially, for every dimension create an array of length inNumVertices.
+  const int numX = inNumVertices;
+  const int numY = 1;
 
-  _vertices = new GridGPU(numVertices, 1, dim, Type::real);
+  m_vertices = new GridGPU(numX, numY, m_dimension, Type::real);
 
-  setVertices(vertX, vertY);
+  setVertices(inVerticesX, inVerticesY);
 }
 
 template <typename T> Polygon<T>::~Polygon() {
-  if (_vertices)
-    delete _vertices;
+  if (m_vertices)
+    delete m_vertices;
 }
 
-template <typename T> Polygon<T> &Polygon<T>::operator=(Polygon<T> other) {
-  swap(*this, other);
+template <typename T> Polygon<T> &Polygon<T>::operator=(Polygon<T> inOther) {
+  swap(*this, inOther);
   return *this;
 }
 
-template <typename T> void Polygon<T>::setVertices(const T *px, const T *py) {
-  typename Vector<T>::GPU &vert = *(_vertices->getVector());
-  const int offset = _vertices->getFieldComponentOffset(1);
+template <typename T>
+void Polygon<T>::setVertices(const T *const inVerticesX,
+                             const T *const inVerticesY) {
+  typename Vector<T>::GPU &vertices = *(m_vertices->getVector());
+  const int offset = m_vertices->getFieldComponentOffset(1);
 
-  for (int i = 0; i < _numVertices; ++i) {
-    vert[i] = px[i];
-    vert[i + offset] = py[i];
+  for (int i = 0; i < m_numVertices; ++i) {
+    vertices[i] = inVerticesX[i];
+    vertices[i + offset] = inVerticesY[i];
   }
 }
 
 template <typename T>
-void Polygon<T>::setVerticesRadial(const int numVertices, T radius, T angle,
-                                   T cx, T cy) {
-  if (numVertices == _numVertices) {
-    T px[numVertices], py[numVertices];
+void Polygon<T>::setVerticesRadial(const int inNumVertices, const T inRadius,
+                                   const T inAngle, const T inCenterX,
+                                   const T inCenterY) {
+  if (inNumVertices == m_numVertices) {
+    T verticesX[inNumVertices];
+    T verticesY[inNumVertices];
 
-    for (int p = 0; p < numVertices; ++p) {
-      T phi = M_PI / (T)numVertices * (1.0 + 2.0 * p) + angle;
+    // The angle between vertices.
+    const T angleStep =
+        static_cast<T>(2.0 * M_PI) / static_cast<T>(inNumVertices);
 
-      px[p] = radius * cos(phi) + cx;
-      py[p] = radius * sin(phi) + cy;
+    // A matter of taste if the first vertex should be on the x-axis or not.
+    // Here it is not.
+    const T angleOffset = angleStep * static_cast<T>(0.5) + inAngle;
+
+    for (int i = 0; i < inNumVertices; ++i) {
+      const T angle = angleStep * static_cast<T>(i) + angleOffset;
+
+      verticesX[i] = inRadius * cos(angle) + inCenterX;
+      verticesY[i] = inRadius * sin(angle) + inCenterY;
     }
 
-    setVertices(px, py);
+    setVertices(verticesX, verticesY);
   }
 }
 
 template <typename T>
-void Polygon<T>::transformPhysicalToNormalized(const int numVertices, T *px,
-                                               T *py, const T w) {
-  const T wn = 0.35;
+void Polygon<T>::transformPhysicalToNormalized(const int inNumVertices,
+                                               const T inPhysicalWidth,
+                                               T *const inOutVerticesX,
+                                               T *const inOutVerticesY) {
+  // TODO(niclas): I think this comes from 1 / (2 sqrt(2)) = 0.35355339059327373
+  const T wn = static_cast<T>(0.35);
 
-  for (int i = 0; i < numVertices; ++i) {
-    T x = px[i];
-    T y = py[i];
+  // For convenience.
+  const T scale = static_cast<T>(2.0) * wn / inPhysicalWidth;
+  const T offset = -wn;
 
-    x = (x / w - 0.5) * 2.0 * wn;
-    y = (y / w - 0.5) * 2.0 * wn;
+  for (int i = 0; i < inNumVertices; ++i) {
+    const T xPhysical = inOutVerticesX[i];
+    const T yPhysical = inOutVerticesY[i];
 
-    px[i] = x;
-    py[i] = y;
+    // Previously it was written e.g.:
+    // xNormalized = (xPhysical / inPhysicalWidth - 0.5) * 2.0 * wn;
+    inOutVerticesX[i] = xPhysical * scale + offset;
+    inOutVerticesY[i] = yPhysical * scale + offset;
   }
 }
 
-#endif // POLYGON_H
+#endif // POLYGON_H_
