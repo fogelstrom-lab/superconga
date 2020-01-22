@@ -541,7 +541,7 @@ template <typename T> void GeometryGroup<T>::create(const T angle) {
 template <typename T>
 Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) {
   const int N_r =
-      ContextModule<T>::getParameters()->calcGridResolutionRotated(N);
+      ContextModule<T>::getParameters()->computeGridResolutionRotated(N);
 
   // Initialize compound geom grids
   Grid<char>::GPU *dom_r = new Grid<char>::GPU(N_r, N_r, 1, Type::real);

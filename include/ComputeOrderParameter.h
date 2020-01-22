@@ -219,7 +219,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     Parameters<T> *param = C::getParameters();
     const int Na = param->getAngularResolution();
     int Nc = _delta->getNumOrderParameterComponents();
-    int numEnergies = param->getNumFrequencies();
+    int numEnergies = param->getNumMatsubaraEnergies();
 
     for (int i = 0; i < Nc; ++i) {
       // Compute new delta from anomalous greens function

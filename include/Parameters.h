@@ -1,5 +1,5 @@
-#ifndef PARAMETERS_H
-#define PARAMETERS_H
+#ifndef PARAMETERS_H_
+#define PARAMETERS_H_
 
 #include <ContextModule.h>
 #include <fstream>
@@ -9,151 +9,183 @@
 
 template <typename, typename> class GridData;
 
-// TODO(niclas): Move old into this file instead, if it is used.
-#include <Parameters_old.h>
-
 template <typename T> class Parameters : public ContextModule<T> {
 public:
-  Parameters() : _version(2) {}
+  Parameters() : m_version(2) {}
   ~Parameters() {}
 
-  Parameters(Context<T> *ctx);
+  Parameters(Context<T> *inOutContext);
 
-  Parameters &operator=(const Parameters &right);
+  Parameters &operator=(const Parameters &inOther);
 
-  template <typename T2> Parameters<T> &operator=(const Parameters<T2> &right);
+  template <typename T2>
+  Parameters<T> &operator=(const Parameters<T2> &inOther);
 
-  template <typename T2> Parameters<T> &operatorEq(const Parameters<T2> &right);
+  template <typename T2>
+  Parameters<T> &operatorEq(const Parameters<T2> &inOther);
 
   template <typename T2> operator Parameters<T2>() const;
 
   virtual int initialize() { return 0; }
 
   // Getters
-  int getGridResolutionBase() const { return _N_grid_base; }
-  int getGridResolutionCoherence() const { return _N_grid_coherence; }
-  int getGridResolutionDeltaRotated() const { return _N_grid_coherence; }
+  int getGridResolutionBase() const { return m_numGridBase; }
+  int getGridResolutionCoherence() const { return m_numGridCoherence; }
+  int getGridResolutionDeltaRotated() const { return m_numGridCoherence; }
 
-  T getGridWidth() const { return _gridWidth; }
-  T getGridElementSize() const { return _gridElementSize; }
-  int getAngularResolution() const { return _angularResolution; }
+  T getGridWidth() const { return m_gridWidth; }
+  T getGridElementSize() const { return m_gridElementSize; }
+  int getAngularResolution() const { return m_numAngles; }
   T getAngleIncrement() const;
 
-  int getNumFrequencies() const;
-  int getNumMatsubaraFrequencies() const { return getNumFrequencies(); }
-  T getTemperature() const { return _T_Tc; }
-  T getMagneticFieldStrength() const { return _magneticField; }
+  int getNumMatsubaraEnergies() const;
+  T getTemperature() const { return m_T_Tc; }
+  T getMagneticFieldStrength() const { return m_magneticFieldStrength; }
 
-  T getConvergenceCriterion() const { return _convergence; }
+  T getConvergenceCriterion() const { return m_convergenceCriterion; }
 
-  T getCutOff() const { return _cutOff; }
+  T getCutOff() const { return m_energyCutoff; }
 
-  T getEnergyMin() const { return _energyMin; }
-  T getEnergyMax() const { return _energyMax; }
-  int getNumEnergies() const { return _numEnergies; }
-  T getSmearingFactor() const { return _smearingFactor; }
+  T getEnergyMin() const { return m_energyMin; }
+  T getEnergyMax() const { return m_energyMax; }
+  int getNumEnergies() const { return m_numEnergies; }
+  T getSmearingFactor() const { return m_smearingFactor; }
 
-  T getPenetrationDepth() const { return _param2; }
+  T getPenetrationDepth() const { return m_penetrationDepth; }
 
-  int isValid() const { return _isValid; }
+  int isValid() const { return m_isValid; }
 
   // Setters
-  void setGridWidth(T gridWidth);
-  void setGridResolution(const int N_grid_base);
-  void setAngularResolution(int angularResolution);
+  void setGridWidth(const T inGridWidth);
+  void setGridResolution(const int inNumGridBase);
+  void setAngularResolution(const int inNumAngles) {
+    m_numAngles = inNumAngles;
+  }
 
-  void setCutOff(T cutOff);
-  void setNumMatsubaraFrequencies(const int Ne) { _param1 = Ne; }
-  void setNumFrequencies(const int Ne) { _param1 = Ne; }
-  void setTemperature(T T_Tc);
-  void setMagneticFieldStrength(T magneticField);
+  void setCutoff(const T inCutoff) { m_energyCutoff = inCutoff; }
 
-  void setEnergyRange(T e_min, T e_max, int numEnergies,
-                      T smearingFactor = 0.01);
-  void setNumEnergies(int numEnergies) { _numEnergies = numEnergies; }
+  void setNumMatsubaraEnergies(const int inNumMatsubaraEnergies) {
+    m_numMatsubaraEnergies = inNumMatsubaraEnergies;
+  }
 
-  void setConvergenceCriterion(T convergence);
+  void setTemperature(const T inTemperature) { m_T_Tc = inTemperature; }
+  void setMagneticFieldStrength(const T inMagneticFieldStrength) {
+    m_magneticFieldStrength = inMagneticFieldStrength;
+  }
 
-  void setPenetrationDepth(T penetrationDepth) { _param2 = penetrationDepth; }
+  void setEnergyRange(const T inEnergyMin, const T inEnergyMax,
+                      const int inNumEnergies,
+                      const T inSmearingFactor = static_cast<T>(0.01));
+  void setNumEnergies(const int inNumEnergies) {
+    m_numEnergies = inNumEnergies;
+  }
 
-  void setDebug();
+  void setConvergenceCriterion(const T inConvergenceCriterion) {
+    m_convergenceCriterion = inConvergenceCriterion;
+  }
 
-  void setValid() { _isValid = 1; }
-  void setInvalid() { _isValid = 0; }
+  void setPenetrationDepth(const T inPenetrationDepth) {
+    m_penetrationDepth = inPenetrationDepth;
+  }
+
+  void setValid() { m_isValid = 1; }
+  void setInvalid() { m_isValid = 0; }
 
   // File I/O
-  int read(std::string filename);
-  int read(std::ifstream &file, const int version);
-  int read(std::string filename, const int version);
-  int write(std::string filename) const;
+  int read(const std::string &inFileName);
+  int read(std::ifstream &inFile, const int inVersion);
+  int read(const std::string &inFileName, const int inVersion);
+  int write(const std::string &inFileName) const;
 
   // Helpers
-  static int calcGridResolutionRotated(const int N_base);
-  int getVersion() const { return _version; }
+  static int computeGridResolutionRotated(const int numGridBase);
+  int getVersion() const { return m_version; }
   void print() const;
 
 private:
-  // Discrete properties
-  int _N_grid_boundary;  // Number of elements for boundary/initial grid
-  int _N_grid_coherence; // Number of elements for coherence functions
-                         // (gamma,gammabar) grid
-  int _N_grid_base;      // Number of elements for order parameter solution
+  // =========== Discrete properties =========== //
 
-  T _gridWidth;       // In natural units: h_bar * vF / (kB*Tc)
-  T _gridElementSize; // Width of one grid element
+  // Number of elements for coherence functions (gamma,gammabar) grid.
+  int m_numGridCoherence;
 
-  int _angularResolution; // Number of angles to solve for
-  int _numEnergies;       // Number of spectral energies
+  // Number of elements for order parameter solution.
+  int m_numGridBase;
 
-  // Physical properties
-  T _cutOff;
-  T _T_Tc; // T/T_c
-  T _magneticField;
-  T _magneticFlux;
+  // In natural units: h_bar * <vF> / (kB * Tc).
+  T m_gridWidth;
 
-  // Spare parameters
-  T _param1, _param2, _param3, _param4, _param5;
+  // Width of one grid element.
+  T m_gridElementSize;
 
-  //	int		_signEnergy;
+  // Number of angles to solve for.
+  int m_numAngles;
 
-  T _energyMin; // Lowest energy to compute LDOS for
-  T _energyMax; // Highest    "     "
-  T _smearingFactor;
+  // Number of spectral energies.
+  int m_numEnergies;
 
-  // Numerical properties
-  T _convergence;
+  // ===========Physical properties =========== //
+
+  // Energy cutoff.
+  T m_energyCutoff;
+
+  // Temperature, T/T_c.
+  // TODO(niclas): Rename this!?
+  T m_T_Tc;
+
+  // Magnetic field.
+  T m_magneticFieldStrength;
+
+  // The penetration depth used when solving for the vector potential.
+  // TODO(niclas): In what units? I guess coherence lengths.
+  T m_penetrationDepth;
+
+  // The number of Matsubara energies.
+  T m_numMatsubaraEnergies;
+
+  // Lowest energy to compute LDOS for.
+  T m_energyMin;
+
+  // Highest energy to compute LDOS for.
+  T m_energyMax;
+
+  // Energy smearing factor (for e.g. retarded properties).
+  T m_smearingFactor;
+
+  // Numerical properties.
+  T m_convergenceCriterion;
 
   // Other
-  const int _version;
-  int _isValid;
+  const int m_version;
+  int m_isValid;
 
   // Helper functions
   void setGridElementSize();
 };
 
 template <typename T>
-Parameters<T>::Parameters(Context<T> *ctx)
-    : _gridWidth(1.0), _angularResolution(0), _cutOff(10), _T_Tc(0.5),
-      _magneticField(0.0), _convergence(0.0001), _numEnergies(0),
-      _energyMin(0.0), _energyMax(0.0), _smearingFactor(0.01), _param1(0.0),
-      _param2(100.0), _param3(0.0), _param4(0.0), _param5(0.0), _version(2),
-      _isValid(1) {
-  ContextModule<T>::setContext(ctx);
-  ctx->set(this);
-
-  setGridResolution(101);
+Parameters<T>::Parameters(Context<T> *const inOutContext)
+    : m_gridWidth(1.0), m_numAngles(0), m_energyCutoff(10), m_T_Tc(0.5),
+      m_magneticFieldStrength(0.0), m_convergenceCriterion(0.0001),
+      m_numEnergies(0), m_energyMin(0.0), m_energyMax(0.0),
+      m_smearingFactor(0.01), m_numMatsubaraEnergies(0),
+      m_penetrationDepth(100.0), m_version(2), m_isValid(1) {
+  ContextModule<T>::setContext(inOutContext);
+  inOutContext->set(this);
+  // TODO(niclas): This is ugly.
+  const int numGridBase = 101;
+  setGridResolution(numGridBase);
 }
 
 template <typename T>
-Parameters<T> &Parameters<T>::operator=(const Parameters<T> &right) {
-  operatorEq(right);
+Parameters<T> &Parameters<T>::operator=(const Parameters<T> &inOther) {
+  operatorEq(inOther);
   return *this;
 }
 
 template <typename T>
 template <typename T2>
-Parameters<T> &Parameters<T>::operator=(const Parameters<T2> &right) {
-  operatorEq(right);
+Parameters<T> &Parameters<T>::operator=(const Parameters<T2> &inOther) {
+  operatorEq(inOther);
   return *this;
 }
 
@@ -168,168 +200,121 @@ Parameters<T>::operator Parameters<T2>() const {
 // Is this necessary?
 template <typename T>
 template <typename T2>
-Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &right) {
-  if (_version != right.getVersion())
+Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
+  if (m_version != inOther.getVersion())
     std::cout << "Parameters<T>::operator=(): Warning, differing versions of "
                  "Parameters class\n";
 
-  _gridWidth = right.getGridWidth();
-  _angularResolution = right.getAngularResolution();
-  _cutOff = right.getCutOff();
-  _T_Tc = right.getTemperature();
-  _magneticField = right.getMagneticFieldStrength();
-  _convergence = right.getConvergenceCriterion();
-  _numEnergies = right.getNumEnergies();
-  _energyMin = right.getEnergyMin();
-  _energyMax = right.getEnergyMax();
-  _smearingFactor = right.getSmearingFactor();
-  _isValid = right.isValid();
+  m_gridWidth = inOther.getGridWidth();
+  m_numAngles = inOther.getAngularResolution();
+  m_energyCutoff = inOther.getCutOff();
+  m_T_Tc = inOther.getTemperature();
+  m_magneticFieldStrength = inOther.getMagneticFieldStrength();
+  m_convergenceCriterion = inOther.getConvergenceCriterion();
+  m_numEnergies = inOther.getNumEnergies();
+  m_energyMin = inOther.getEnergyMin();
+  m_energyMax = inOther.getEnergyMax();
+  m_smearingFactor = inOther.getSmearingFactor();
+  m_isValid = inOther.isValid();
 
-  _param1 = right._param1;
-  _param2 = right._param2;
+  m_numMatsubaraEnergies = inOther.m_numMatsubaraEnergies;
+  m_penetrationDepth = inOther.m_penetrationDepth;
 
-  setGridResolution(right.getGridResolutionBase());
+  setGridResolution(inOther.getGridResolutionBase());
 
   return *this;
 }
 
-template <typename T> int Parameters<T>::getNumFrequencies() const {
-  if (_param1 != 0.0)
-    return _param1;
-  else
-    return (_cutOff / _T_Tc + 2);
+template <typename T> int Parameters<T>::getNumMatsubaraEnergies() const {
+  if (m_numMatsubaraEnergies > 0) {
+    // If it is larger than zero, then it has been set by the user.
+    return m_numMatsubaraEnergies;
+  } else {
+    // Compute it from the cutoff and temperature instead.
+    // TODO(niclas): Shouldn't it be n = (cutoff / (pi * T) - 1 ) / 2 ?
+    const T ratio = m_energyCutoff / m_T_Tc;
+    return (static_cast<int>(ratio) + 2);
+  }
 }
 
 template <typename T>
-void Parameters<T>::setEnergyRange(T e_min, T e_max, int numEnergies,
-                                   T smearingFactor) {
-  _energyMin = e_min;
-  _energyMax = e_max;
-  _smearingFactor = smearingFactor;
+void Parameters<T>::setEnergyRange(const T inEnergyMin, const T inEnergyMax,
+                                   const int inNumEnergies,
+                                   const T inSmearingFactor) {
+  m_energyMin = inEnergyMin;
+  m_energyMax = inEnergyMax;
+  m_smearingFactor = inSmearingFactor;
 
-  if (e_max == 0.0 || e_max == e_min)
-    _numEnergies = 1;
-  else
-    _numEnergies = numEnergies;
-
-  if (numEnergies == 0)
-    _numEnergies = 0;
+  // Do the limits make sense?
+  // TODO(niclas): Shouldn't we check that min < max? And why set the number of
+  // energies to 1 if max = 0?
+  if (inEnergyMax == 0.0 || inEnergyMax == inEnergyMin) {
+    m_numEnergies = 1;
+  } else {
+    m_numEnergies = inNumEnergies;
+  }
 }
 
-template <typename T> void Parameters<T>::setGridWidth(T gridWidth) {
-  _gridWidth = gridWidth;
+template <typename T> void Parameters<T>::setGridWidth(const T inGridWidth) {
+  m_gridWidth = inGridWidth;
   setGridElementSize();
 }
 
 template <typename T>
-void Parameters<T>::setGridResolution(const int N_grid_base) {
-  _N_grid_base = N_grid_base;
-  _N_grid_coherence = calcGridResolutionRotated(N_grid_base);
+void Parameters<T>::setGridResolution(const int inNumGridBase) {
+  m_numGridBase = inNumGridBase;
+  m_numGridCoherence = computeGridResolutionRotated(inNumGridBase);
 
-  // Set new grid element width
+  // Set new grid element width.
   setGridElementSize();
 }
 
 template <typename T> void Parameters<T>::setGridElementSize() {
-  _gridElementSize = _gridWidth / ((T)_N_grid_base - 1);
+  m_gridElementSize =
+      m_gridWidth / (static_cast<T>(m_numGridBase) - static_cast<T>(1.0));
 }
-
-template <typename T>
-void Parameters<T>::setAngularResolution(int angularResolution) {
-  _angularResolution = angularResolution;
-}
-
-template <typename T> void Parameters<T>::setCutOff(T cutOff) {
-  _cutOff = cutOff;
-}
-
-template <typename T> void Parameters<T>::setTemperature(T T_Tc) {
-  _T_Tc = T_Tc;
-}
-
-template <typename T>
-void Parameters<T>::setMagneticFieldStrength(T magneticField) {
-  _magneticField = magneticField;
-}
-
-template <typename T>
-void Parameters<T>::setConvergenceCriterion(T convergence) {
-  _convergence = convergence;
-}
-
-template <typename T> void Parameters<T>::setDebug() {}
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
-  return 2.0 * M_PI / (T)_angularResolution;
+  return static_cast<T>(2.0 * M_PI) / static_cast<T>(m_numAngles);
 }
 
-template <typename T> int Parameters<T>::read(std::string filename) {
-  std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
-  int res = read(file, _version);
+template <typename T> int Parameters<T>::read(const std::string &inFileName) {
+  std::ifstream file(inFileName.c_str(), std::ios::in | std::ios::binary);
+  const int result = read(file, m_version);
   file.close();
-
-  return res;
+  return result;
 }
 
 template <typename T>
-int Parameters<T>::read(std::string filename, const int version) {
-  int res;
-
-  if (version == _version)
-    return read(filename);
+int Parameters<T>::read(const std::string &inFileName, const int inVersion) {
+  if (inVersion == m_version)
+    return read(inFileName);
   else {
-    std::ifstream file(filename.c_str(), std::ios::in | std::ios::binary);
-    res = read(file, version);
+    std::ifstream file(inFileName.c_str(), std::ios::in | std::ios::binary);
+    const int result = read(file, inVersion);
     file.close();
-    return res;
+    return result;
   }
 }
 
 template <typename T>
-int Parameters<T>::read(std::ifstream &file, const int version) {
-  if (file.is_open()) {
-    if (version == _version) {
-      int numBytes = sizeof(*this);
+int Parameters<T>::read(std::ifstream &inFile, const int inVersion) {
+  if (inFile.is_open() && (inVersion == m_version)) {
+    const int numBytes = sizeof(*this);
+    inFile.read((char *)this, numBytes);
+    return 0;
 
-      file.read((char *)this, numBytes);
-
-      return 0;
-    } else {
-      v1::Parameters<T> pr;
-      int numBytes = sizeof(pr);
-
-      file.read((char *)&pr, numBytes);
-      pr.setInvalid();
-
-      setGridResolution(pr.getGridResolutionBase());
-      setGridWidth(pr.getGridWidth());
-      setAngularResolution(pr.getAngularResolution());
-      setCutOff(pr.getCutOff());
-      setMagneticFieldStrength(pr.getMagneticFieldStrength());
-      setTemperature(pr.getTemperature());
-      setConvergenceCriterion(pr.getConvergenceCriterion());
-
-      T e_min = pr.getLDOSEnergyMin();
-      T e_max = pr.getLDOSEnergyMax();
-      int numEnergies = pr.getNumEnergies();
-
-      if (e_min != e_max && numEnergies != pr.getNumMatsubaraFrequencies())
-        setEnergyRange(pr.getLDOSEnergyMin(), pr.getLDOSEnergyMax(),
-                       pr.getSmearingFactor(), numEnergies);
-      else
-        setEnergyRange(0.0, 0.0, 0.01, 0);
-      return 0;
-    }
   } else {
-    std::cout << "Could not load file, version: " << version << "\n";
+    std::cout << "Could not load file, version: " << inVersion << "\n";
     return 1;
   }
 }
 
-template <typename T> int Parameters<T>::write(std::string filename) const {
-  int numBytes = sizeof(*this);
+template <typename T>
+int Parameters<T>::write(const std::string &inFileName) const {
+  const int numBytes = sizeof(*this);
 
-  std::ofstream file(filename.c_str(),
+  std::ofstream file(inFileName.c_str(),
                      std::ios::out | std::ios::binary | std::ios::trunc);
 
   if (file.is_open()) {
@@ -337,39 +322,44 @@ template <typename T> int Parameters<T>::write(std::string filename) const {
     file.close();
     return 0;
   } else {
-    std::cout << "Could not save file: " << filename << std::endl;
+    std::cout << "Could not save file: " << inFileName << std::endl;
     return 1;
   }
 }
 
 template <typename T>
-int Parameters<T>::calcGridResolutionRotated(const int N_grid_base) {
-  int baseIsOdd = N_grid_base % 2;
+int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) {
+  // Check if odd.
+  const int baseIsOdd = inNumGridBase % 2;
 
-  // Set N_grid_rotated
-  int N_grid_rotated =
-      sqrt(2.0) * N_grid_base + 1; // Add 1 to make sure rotation fits inside
+  // Compute the minimum size when rotated 45 degrees.
+  // Note, use ceil because casting to int will floor.
+  const int minNumGridRotated = static_cast<int>(
+      ceil(sqrt(static_cast<T>(2.0)) * static_cast<T>(inNumGridBase)));
 
-  int gammaIsOdd = N_grid_rotated % 2;
+  // Check if odd.
+  const int rotatedIsOdd = minNumGridRotated % 2;
 
-  if (baseIsOdd != gammaIsOdd)
-    N_grid_rotated += 1;
+  // If both are not odd/equal add one.
+  const int numGridRotated =
+      (baseIsOdd == rotatedIsOdd) ? minNumGridRotated : minNumGridRotated + 1;
 
-  return N_grid_rotated;
+  return numGridRotated;
 }
 
 template <typename T> void Parameters<T>::print() const {
-  std::cout << "Grid Resolution Base: " << _N_grid_base << std::endl;
-  std::cout << "Grid Width: " << _gridWidth << std::endl;
-  std::cout << "Grid Element Size: " << _gridElementSize << std::endl;
-  std::cout << "Angular Resolution: " << _angularResolution << std::endl;
-  std::cout << "Temperature: " << _T_Tc << std::endl;
-  std::cout << "Magnetic Field Strength: " << _magneticField << std::endl;
-  std::cout << "Spectral energy range: (" << _energyMin << ", " << _energyMax
+  std::cout << "Grid Resolution Base: " << m_numGridBase << std::endl;
+  std::cout << "Grid Width: " << m_gridWidth << std::endl;
+  std::cout << "Grid Element Size: " << m_gridElementSize << std::endl;
+  std::cout << "Angular Resolution: " << m_numAngles << std::endl;
+  std::cout << "Temperature: " << m_T_Tc << std::endl;
+  std::cout << "Magnetic Field Strength: " << m_magneticFieldStrength
+            << std::endl;
+  std::cout << "Spectral energy range: (" << m_energyMin << ", " << m_energyMax
             << ")" << std::endl;
-  std::cout << "Spectral energy levels: " << _numEnergies << std::endl;
-  std::cout << "Convergence Criterion: " << _convergence << std::endl;
-  std::cout << "Cutoff parameter: " << _cutOff << std::endl;
+  std::cout << "Spectral energy levels: " << m_numEnergies << std::endl;
+  std::cout << "Convergence Criterion: " << m_convergenceCriterion << std::endl;
+  std::cout << "Cutoff parameter: " << m_energyCutoff << std::endl;
 }
 
-#endif // PARAMETERS_H
+#endif // PARAMETERS_H_

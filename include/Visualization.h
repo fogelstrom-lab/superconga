@@ -717,7 +717,7 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
 
     int numE = param->getNumEnergies();
     if (numE == 0)
-      numE = param->getNumFrequencies();
+      numE = param->getNumMatsubaraEnergies();
 
     char txt[256];
     sprintf(
