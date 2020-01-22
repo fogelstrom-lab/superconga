@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
                       (2.0 * outerRadius));
   param->setAngularResolution(Na); // Number of discrete steps in momentum angle
   param->setConvergenceCriterion(convergence); // Set convergence criterion
-  param->setNumMatsubaraFrequencies(Ne);       // Set number of Ozaki poles
+  param->setNumMatsubaraEnergies(Ne);          // Set number of Ozaki poles
 
   B_external =
       fluxQuanta / area; // Strength of external magnetic field (normal to the
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
             << std::endl;
   std::cout << "N1 (gridResolutionCoherence): "
             << param->getGridResolutionCoherence() << std::endl;
-  std::cout << "numFreq: " << param->getNumMatsubaraFrequencies() << "\n";
+  std::cout << "numFreq: " << param->getNumMatsubaraEnergies() << "\n";
   std::cout << "##################################################"
             << std::endl;
 

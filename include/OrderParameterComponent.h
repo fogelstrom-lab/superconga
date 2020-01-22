@@ -132,7 +132,7 @@ void OrderParameterComponent<T>::initCouplingConstant(const T *energies,
                                                       const T *residues) {
   // Get some info.
   const T T_Tc = _param->getTemperature();
-  const int numEnergies = _param->getNumFrequencies();
+  const int numEnergies = _param->getNumMatsubaraEnergies();
 
   // For convenience.
   const T piT = static_cast<T>(M_PI) * T_Tc;

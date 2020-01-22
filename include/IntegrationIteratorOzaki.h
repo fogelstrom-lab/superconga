@@ -78,7 +78,7 @@ template <typename T> int IntegrationIteratorOzaki<T>::initialize() {
   std::cout << "IntegrationIteratorOzaki::initialize()\n";
   IntegrationIterator<T>::initialize();
 
-  int numEnergies = ContextModule<T>::getParameters()->getNumFrequencies();
+  int numEnergies = ContextModule<T>::getParameters()->getNumMatsubaraEnergies();
 
   initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
 
@@ -142,7 +142,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
   const Parameters<T> *param = ContextModule<T>::getParameters();
 
   T T_Tc = param->getTemperature();
-  int numEnergies = param->getNumFrequencies();
+  int numEnergies = param->getNumMatsubaraEnergies();
 
   // Set ozaki energies
   GridCPU *ozakiEnergies_cpu = new GridCPU(numEnergies, 1);
