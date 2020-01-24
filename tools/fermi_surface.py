@@ -213,39 +213,7 @@ def computeFermiSurfaceAverage(x, factors):
     return numer / denom
 
 
-def wrapToRange(x, offset=0.0):
-    # For convenience.
-    twoPi = 2.0 * np.pi
-
-    # Wrap kX to [-pi, pi].
-    low = offset - np.pi
-    high = offset + np.pi
-    y = np.where(x < low, x + twoPi, x)
-    y = np.where(x > high, x - twoPi, x)
-    return y
-
-
-def computeFermiSurface(parameters, numGrid, numAngles):
-    # Just print the tight-binding parameters.
-    print(parameters)
-
-    # Is the Fermi surface centered around (0, 0)?
-    isCentered = isFermiSurfaceCentered(parameters)
-    print('Is the Fermi surface centered around (0, 0)?', isCentered)
-
-    # If it is not centered around the origin, then it is centered around (pi, pi).
-    if isCentered:
-        offset = np.array([0.0, 0.0])
-    else:
-        offset = np.array([np.pi, np.pi])
-
-    # Compute Fermi momenta.
-    # Note that K is wrapped to [-pi, pi].
-    minAngle = 0.0
-    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numAngles)
-    angles = np.linspace(minAngle, maxAngle, numAngles)
-    kX, kY = computeFermiMomentum(parameters, angles, offset)
-
+def printPaperStuff(kX, kY, offset, parameters):
     # Compute the Fermi velocities.
     vx, vy = computeDispersionDerivative(kX, kY, parameters)
 
@@ -273,8 +241,34 @@ def computeFermiSurface(parameters, numGrid, numAngles):
     print('Inv Fermi Momentum: FS Avg = %f - Mean = %f' %
           (avgInvFermiMomentum, np.mean(invFermiMomentum)))
 
-    # ================ PLOTS ================ #
 
+def wrapToRange(x, offset=0.0):
+    # For convenience.
+    twoPi = 2.0 * np.pi
+
+    # Wrap kX to [-pi, pi].
+    low = offset - np.pi
+    high = offset + np.pi
+    y = np.where(x < low, x + twoPi, x)
+    y = np.where(x > high, x - twoPi, x)
+    return y
+
+
+def computeFermiSurface(parameters, numGrid, numMomenta, numVelocities):
+    # Just print the tight-binding parameters.
+    print(parameters)
+
+    # Is the Fermi surface centered around (0, 0)?
+    isCentered = isFermiSurfaceCentered(parameters)
+    print('Is the Fermi surface centered around (0, 0)?', isCentered)
+
+    # If it is not centered around the origin, then it is centered around (pi, pi).
+    if isCentered:
+        offset = np.array([0.0, 0.0])
+    else:
+        offset = np.array([np.pi, np.pi])
+
+    # ==================== DISPERSION ==================== #
     # Create meshgrid.
     v = np.linspace(-np.pi, np.pi, numGrid)
     kxMesh, kyMesh = np.meshgrid(v, v)
@@ -288,12 +282,36 @@ def computeFermiSurface(parameters, numGrid, numAngles):
                interpolation='none',
                extent=[-np.pi, np.pi, -np.pi, np.pi])
 
+    # ==================== FERMI MOMENTA ==================== #
+
+    # Note that K is wrapped to [-pi, pi].
+    minAngle = 0.0
+    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numMomenta)
+    angles = np.linspace(minAngle, maxAngle, numMomenta)
+
+    # Compute Fermi momenta.
+    kX, kY = computeFermiMomentum(parameters, angles, offset)
+
+    # Just to compare with Micke.
+    printPaperStuff(kX, kY, offset, parameters)
+
     # Plot the Fermi momenta.
     plt.scatter(kX, kY, c='r', linewidths=0.1, marker='.')
+
+    # ==================== FERMI VELOCITIES ==================== #
+    # Note that K is wrapped to [-pi, pi].
+    minAngle = 0.0
+    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numVelocities)
+    angles = np.linspace(minAngle, maxAngle, numVelocities)
+    kX, kY = computeFermiMomentum(parameters, angles, offset)
+
+    # Compute the Fermi velocities.
+    vx, vy = computeDispersionDerivative(kX, kY, parameters)
 
     # Plot the Fermi velocities.
     plt.quiver(kX, kY, vx, vy, color='b')
 
+    # ================ MISC ================ #
     # Set axis labels.
     plt.gca().set_xlabel('k_x')
     plt.gca().set_ylabel('k_y')
@@ -338,11 +356,18 @@ def main():
         type=int,
         default=1000,
         help='Number of grid points per side. (default: %(default)s)')
-    parser.add_argument('-angles',
-                        '--num-angles',
-                        type=int,
-                        default=100,
-                        help='Number of angles. (default: %(default)s)')
+    parser.add_argument(
+        '-nk',
+        '--num-momenta',
+        type=int,
+        default=1000,
+        help='Number of momentum angles. (default: %(default)s)')
+    parser.add_argument(
+        '-nv',
+        '--num-velocities',
+        type=int,
+        default=100,
+        help='Number of velocity angles. (default: %(default)s)')
     args = parser.parse_args()
 
     # Set tight-binding parameters.
@@ -354,7 +379,8 @@ def main():
     # Compute (and plot) the Fermi surface.
     computeFermiSurface(parameters,
                         numGrid=args.num_grid,
-                        numAngles=args.num_angles)
+                        numMomenta=args.num_momenta,
+                        numVelocities=args.num_velocities)
 
 
 if __name__ == '__main__':
