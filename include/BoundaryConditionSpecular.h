@@ -101,7 +101,7 @@ __global__ void boundaryConditionSpecularKernel(
         utils::rotate(systemAngle, reflectedMomentumX, reflectedMomentumY);
 
         // Get the fractional angle index.
-        const T fractionalAngleIdx = fermisurface::getFractionalAngleIndex(
+        const T fractionalAngleIdx = FermiSurface<T>::getFractionalAngleIndex(
             reflectedMomentumX, reflectedMomentumY, momentumOffsetX,
             momentumOffsetY, numAngles);
 
