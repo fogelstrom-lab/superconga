@@ -1,8 +1,9 @@
-#ifndef POLYGON_GEOMETRY_H_
-#define POLYGON_GEOMETRY_H_
+#ifndef POLYGONGEOMETRY_H
+#define POLYGONGEOMETRY_H
 
 #include "GeometryComponent.h"
 #include "Polygon.h"
+#include "defines.h"
 #include <cuda.h>
 
 template <typename T> class PolygonGeometry : public GeometryComponent<T> {
@@ -13,50 +14,63 @@ public:
   PolygonGeometry(const PolygonGeometry &other);
 
   // Initialize the polygon to an approximation of a disc
-  // numVertices = 4 will produce a square. cx, cy is the center coordinate
-  PolygonGeometry(const int numVertices, T radius, T angle = 0.0, T cx = 0.0,
-                  T cy = 0.0);
+  // numVertices = 4 will produce a square. inDiameter gives the diameter of the
+  // disc relative to the available simulation space (to be padded by the grain
+  // margin). inAngle specifies the rotation of the polygon, and (inCenterX,
+  // inCenterY) is the center coordinate
+  PolygonGeometry(const int inNumVertices,
+                  const T inDiameter = static_cast<T>(1.0),
+                  const T inAngle = static_cast<T>(0.0),
+                  const T inCenterX = static_cast<T>(0.0),
+                  const T inCenterY = static_cast<T>(0.0));
 
   // Initialize the polygon to a predefined vertex set
-  PolygonGeometry(const int numVertices, T *vertX, T *vertY);
+  // TODO: (Patric) This should throw an exception if inNumVertices is not the
+  // same length as inVerticesX and inVerticesY. Better yet, remove
+  // use of inNumvertices, and throw an exception if X and Y vertices are not
+  // same length.
+  PolygonGeometry(const int inNumVertices, const T *const inVerticesX,
+                  const T *const inVerticesY);
 
   PolygonGeometry &operator=(PolygonGeometry other);
 
   virtual PolygonGeometry *clone() const { return new PolygonGeometry(*this); }
 
-  virtual void create(const T angle);
+  virtual void create(const T inAngle);
   virtual Grid<char>::GPU *createDomain(const int N);
 
-  Polygon<T> *getPolygon() const { return _poly; }
+  Polygon<T> *getPolygon() const { return m_polygon; }
 
 private:
   friend void swap(PolygonGeometry &A, PolygonGeometry &B) {
     swap(static_cast<GeometryComponent<T> &>(A),
          static_cast<GeometryComponent<T> &>(B));
-    std::swap(A._poly, B._poly);
+    std::swap(A.m_polygon, B.m_polygon);
   }
 
-  Polygon<T> *_poly;
+  Polygon<T> *m_polygon;
 };
 
 namespace {
 
 template <typename T, int NV>
-__global__ void
-generatePolygonGeometry_Kernel(char *dom_p, T *normX_p, T *normY_p, T *dist_p,
-                               const int Nx, const int Ny, const T phi,
-                               const int numVertices, T *vertX, T *vertY) {
+__global__ void generatePolygonGeometry_Kernel(
+    char *const outDomainLabels, T *const outNormalsX, T *const outNormalsY,
+    T *const outBoundaryDistances, const int Nx, const int Ny, const T inAngle,
+    const int inNumVertices, const T *const inVerticesX,
+    const T *const inVerticesY) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
   int i;
 
-  T ptX_R[NV], ptY_R[NV], lineVectX, lineVectY, crossZ, normX, normY, norm_tmp;
+  T ptX_R[NV], ptY_R[NV], lineVectX, lineVectY, crossZ, tmp_normalX,
+      tmp_normalY, norm_tmp;
 
-  T isect_out, normX_out, normY_out;
+  T boundaryDistance, normalX, normalY;
 
-  T m, k, isect;
-  T cosPhi, sinPhi;
+  T m, k, tmp_boundaryDistance;
+  T cosAngle, sinAngle;
 
   if (tx < Nx && ty < Ny) {
     const int idx = ty * Nx + tx;
@@ -65,22 +79,24 @@ generatePolygonGeometry_Kernel(char *dom_p, T *normX_p, T *normY_p, T *dist_p,
     const T coordY = (T)ty - (T)(Ny - 1) * (T)0.5;
 
     // Rotate vertices to local frame
-    cosPhi = cos(phi);
-    sinPhi = sin(phi);
+    cosAngle = cos(inAngle);
+    sinAngle = sin(inAngle);
 
-    for (i = 0; i < numVertices; ++i) {
-      ptX_R[i] = (cosPhi * vertX[i] - sinPhi * vertY[i]) * (Nx - 1);
-      ptY_R[i] = (sinPhi * vertX[i] + cosPhi * vertY[i]) * (Nx - 1);
+    for (i = 0; i < inNumVertices; ++i) {
+      ptX_R[i] =
+          (cosAngle * inVerticesX[i] - sinAngle * inVerticesY[i]) * (Nx - 1);
+      ptY_R[i] =
+          (sinAngle * inVerticesX[i] + cosAngle * inVerticesY[i]) * (Nx - 1);
     }
 
     // Compute stuff
     int ip, sum_cross = 0;
 
-    isect_out = (T)100000.0;
+    boundaryDistance = (T)100000.0;
 
-    for (i = 0; i < numVertices; ++i) {
+    for (i = 0; i < inNumVertices; ++i) {
       ip = i + 1;
-      if (ip == numVertices)
+      if (ip == inNumVertices)
         ip = 0;
 
       // Vector for polygon line segment
@@ -95,43 +111,46 @@ generatePolygonGeometry_Kernel(char *dom_p, T *normX_p, T *normY_p, T *dist_p,
         sum_cross++;
 
       // Normals
-      normX = -lineVectY;
-      normY = lineVectX;
+      tmp_normalX = -lineVectY;
+      tmp_normalY = lineVectX;
 
-      norm_tmp = (T)1.0 / sqrt(normX * normX + normY * normY);
+      norm_tmp =
+          (T)1.0 / sqrt(tmp_normalX * tmp_normalX + tmp_normalY * tmp_normalY);
 
-      normX *= norm_tmp;
-      normY *= norm_tmp;
+      tmp_normalX *= norm_tmp;
+      tmp_normalY *= norm_tmp;
 
       // Compute distance to boundary
       if (abs(lineVectX) > (T)0.00001) {
         k = lineVectY / lineVectX;
         m = ptY_R[i] - k * ptX_R[i];
 
-        isect = abs(k * coordX + m - coordY);
+        tmp_boundaryDistance = abs(k * coordX + m - coordY);
       } else {
-        isect = (T)10000.0;
+        tmp_boundaryDistance = (T)10000.0;
       }
 
-      if (isect < isect_out) {
-        isect_out = isect;
-        normX_out = normX;
-        normY_out = normY;
+      if (tmp_boundaryDistance < boundaryDistance) {
+        boundaryDistance = tmp_boundaryDistance;
+        normalX = tmp_normalX;
+        normalY = tmp_normalY;
       }
     }
 
     // Store computed data
-    dom_p[idx] = (char)(int)(sum_cross == numVertices);
-    dist_p[idx] = isect_out;
-    normX_p[idx] = normX_out;
-    normY_p[idx] = normY_out;
+    outDomainLabels[idx] = (char)(int)(sum_cross == inNumVertices);
+    outBoundaryDistances[idx] = boundaryDistance;
+    outNormalsX[idx] = normalX;
+    outNormalsY[idx] = normalY;
   }
 }
 
 template <typename T, int NV>
-__global__ void generatePolygonGeometry_Kernel(char *dom_p,
-                                               const int numVertices, T *vertX,
-                                               T *vertY, const int Nx) {
+__global__ void generatePolygonGeometry_Kernel(char *const outDomainLabels,
+                                               const int inNumVertices,
+                                               const T *const inVerticesX,
+                                               const T *const inVerticesY,
+                                               const int Nx) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -143,17 +162,17 @@ __global__ void generatePolygonGeometry_Kernel(char *dom_p,
     const T coordX = (T)tx - (T)(Nx - 1) * (T)0.5;
     const T coordY = (T)ty - (T)(Nx - 1) * (T)0.5;
 
-    for (int i = 0; i < numVertices; ++i) {
-      ptX_R[i] = vertX[i] * (Nx - 1);
-      ptY_R[i] = vertY[i] * (Nx - 1);
+    for (int i = 0; i < inNumVertices; ++i) {
+      ptX_R[i] = inVerticesX[i] * (Nx - 1);
+      ptY_R[i] = inVerticesY[i] * (Nx - 1);
     }
 
     // Compute stuff
     int ip, sum_cross = 0;
 
-    for (int i = 0; i < numVertices; ++i) {
+    for (int i = 0; i < inNumVertices; ++i) {
       ip = i + 1;
-      if (ip == numVertices)
+      if (ip == inNumVertices)
         ip = 0;
 
       // Vector for polygon line segment
@@ -169,55 +188,64 @@ __global__ void generatePolygonGeometry_Kernel(char *dom_p,
     }
 
     // Store computed data
-    dom_p[idx] = (char)(int)(sum_cross == numVertices);
+    outDomainLabels[idx] = (char)(int)(sum_cross == inNumVertices);
   }
 }
 
 template <typename T>
-__global__ void maskNormals_Kernel(char *dom_p, T *normX_p, T *normY_p,
-                                   T *dist_p, const int Nx, const int Ny) {
+__global__ void
+maskNormals_Kernel(const char *const inDomainLabels, T *const inOutNormalsX,
+                   T *const inOutNormalsY, T *const inOutBoundaryDistances,
+                   const int Nx, const int Ny) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
   const int idx = ty * Nx + tx;
 
   if (tx < Nx && ty < Ny) {
-    T mult = T(int(dom_p[idx]) > 1);
+    const T mult = T(int(inDomainLabels[idx]) > 1);
 
     // Store computed data
-    dist_p[idx] *= mult;
-    normX_p[idx] *= mult;
-    normY_p[idx] *= mult;
+    inOutBoundaryDistances[idx] *= mult;
+    inOutNormalsX[idx] *= mult;
+    inOutNormalsY[idx] *= mult;
   }
 }
 } // namespace
 
 template <typename T>
-PolygonGeometry<T>::PolygonGeometry() : GeometryComponent<T>(), _poly(0) {}
+PolygonGeometry<T>::PolygonGeometry() : GeometryComponent<T>(), m_polygon(0) {}
 
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry(const PolygonGeometry<T> &other)
-    : GeometryComponent<T>(other), _poly(0) {
-  if (other._poly)
-    _poly = new Polygon<T>(*other._poly);
+    : GeometryComponent<T>(other), m_polygon(0) {
+  if (other.m_polygon)
+    m_polygon = new Polygon<T>(*other.m_polygon);
 }
 
 template <typename T>
-PolygonGeometry<T>::PolygonGeometry(const int numVertices, T radius, T angle,
-                                    T cx, T cy)
+PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
+                                    const T inAngle, const T inCenterX,
+                                    const T inCenterY)
     : GeometryComponent<T>() {
-  _poly = new Polygon<T>(numVertices, radius, angle, cx, cy);
+  // Apply margin to radius
+  const T polygonRadiusPadded =
+      inDiameter * static_cast<T>(0.5) * qcs::GRAIN_SIZE_FRACTION;
+  m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
+                             inCenterX, inCenterY);
 }
 
 template <typename T>
-PolygonGeometry<T>::PolygonGeometry(const int numVertices, T *vertX, T *vertY)
+PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
+                                    const T *const inVerticesX,
+                                    const T *const inVerticesY)
     : GeometryComponent<T>() {
-  _poly = new Polygon<T>(numVertices, vertX, vertY);
+  m_polygon = new Polygon<T>(inNumVertices, inVerticesX, inVerticesY);
 }
 
 template <typename T> PolygonGeometry<T>::~PolygonGeometry() {
-  if (_poly)
-    delete _poly;
+  if (m_polygon)
+    delete m_polygon;
 }
 
 template <typename T>
@@ -226,7 +254,7 @@ PolygonGeometry<T> &PolygonGeometry<T>::operator=(PolygonGeometry<T> other) {
   return *this;
 }
 
-template <typename T> void PolygonGeometry<T>::create(const T angle) {
+template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
   typedef GeometryComponent<T> G;
 
   G::allocateMem();
@@ -240,9 +268,9 @@ template <typename T> void PolygonGeometry<T>::create(const T angle) {
   // Calc inside/outside, distance, normals
   generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
       G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-      G::getBoundaryDistance(), Nx, Ny, angle, _poly->getNumVertices(),
-      _poly->getVertices()->getDataPointer(0),
-      _poly->getVertices()->getDataPointer(1));
+      G::getBoundaryDistance(), Nx, Ny, inAngle, m_polygon->getNumVertices(),
+      m_polygon->getVertices()->getDataPointer(0),
+      m_polygon->getVertices()->getDataPointer(1));
 
   G::labelBoundaryNodes();
 
@@ -260,12 +288,11 @@ Grid<char>::GPU *PolygonGeometry<T>::createDomain(const int N) {
   Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
 
   // Calc inside/outside, distance, normals
-  generatePolygonGeometry_Kernel<T, 256>
-      <<<bpg, tpb>>>(dom_component->getDataPointer(), _poly->getNumVertices(),
-                     _poly->getVertices()->getDataPointer(0),
-                     _poly->getVertices()->getDataPointer(1), N);
+  generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
+      dom_component->getDataPointer(), m_polygon->getNumVertices(),
+      m_polygon->getVertices()->getDataPointer(0),
+      m_polygon->getVertices()->getDataPointer(1), N);
 
   return dom_component;
 }
-
 #endif // POLYGON_GEOMETRY_H_

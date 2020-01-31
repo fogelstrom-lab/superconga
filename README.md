@@ -6,8 +6,6 @@ Here goes the list of external libraries and packages required to compile and ru
 - Lapack
 - BLAS
 - gfortran
-- boost_system
-- boost_filesystem
 - OpenGL
 - GLUT
 - Ninja
@@ -19,7 +17,7 @@ In order to compile and run the simple example, use the following commands:
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type ..
 ninja
-./demo_hexagon_swave_VL
+./examples/dwave_octagon
 ```
 where `build_type` is `Debug` or `Release`.
 

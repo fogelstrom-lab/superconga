@@ -2,6 +2,7 @@
 #define RICCATI_SOLVER_CONFINED_H_
 
 #include "RiccatiSolver.h"
+#include "cplx.h"
 #include <math.h>
 
 template <typename T, template <typename> class GAMMA,
@@ -36,7 +37,6 @@ private:
 };
 
 namespace {
-#include "cplx.h"
 
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionTemplate_new_kernel(

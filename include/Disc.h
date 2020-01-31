@@ -12,52 +12,59 @@ public:
   // Copy constructor
   Disc(const Disc &other);
 
-  Disc(const T radius, const T pos_x = 0.0, const T pos_y = 0.0);
+  Disc(const T inRadius, const T inCenterX = static_cast<T>(0.0),
+       const T inCenterY = static_cast<T>(0.0));
 
   Disc &operator=(Disc other);
 
-  void setRadius(const T radius);
-  void setPosX(const T pos_x);
-  void setPosY(const T pos_y);
+  void setRadius(const T inRadius);
+  void setPosX(const T inCenterX);
+  void setPosY(const T inCenterY);
 
-  T getRadius() const { return _radius; }
-  T getPosX() const { return _pos_x; }
-  T getPosY() const { return _pos_y; }
+  T getRadius() const { return m_radius; }
+  T getPosX() const { return m_centerX; }
+  T getPosY() const { return m_centerY; }
 
 private:
   friend void swap(Disc &A, Disc &B) {
-    std::swap(A._radius, B._radius);
-    std::swap(A._pos_x, B._pos_x);
-    std::swap(A._pos_y, B._pos_y);
+    std::swap(A.m_radius, B.m_radius);
+    std::swap(A.m_centerX, B.m_centerX);
+    std::swap(A.m_centerY, B.m_centerY);
   }
 
-  T _radius; // Radius of disc
-  T _pos_x,
-      _pos_y; // Center of disc, stored in centered coordinates -0.5 < x,y < 0.5
+  // Radius of disc
+  T m_radius;
+  // Center of disc, stored in centered coordinates -0.5 < x,y < 0.5
+  T m_centerX, m_centerY;
 };
 
 template <typename T>
-Disc<T>::Disc() : _radius(0.5), _pos_x(0.0), _pos_y(0.0) {}
+Disc<T>::Disc() : m_radius(0.5), m_centerX(0.0), m_centerY(0.0) {}
 
 template <typename T>
-Disc<T>::Disc(const T radius, const T pos_x, const T pos_y)
-    : _radius(radius), _pos_x(pos_x), _pos_y(pos_y) {}
+Disc<T>::Disc(const T inRadius, const T inCenterX, const T inCenterY)
+    : m_radius(inRadius), m_centerX(inCenterX), m_centerY(inCenterY) {}
 
 template <typename T>
 Disc<T>::Disc(const Disc<T> &other)
-    : _radius(other._radius), _pos_x(other._pos_x), _pos_y(other._pos_y) {}
+    : m_radius(other.m_radius), m_centerX(other.m_centerX),
+      m_centerY(other.m_centerY) {}
 
 template <typename T> Disc<T> &Disc<T>::operator=(Disc<T> other) {
   swap(*this, other);
   return *this;
 }
 
-template <typename T> void Disc<T>::setRadius(const T radius) {
-  _radius = radius;
+template <typename T> void Disc<T>::setRadius(const T inRadius) {
+  m_radius = inRadius;
 }
 
-template <typename T> void Disc<T>::setPosX(const T pos_x) { _pos_x = pos_x; }
+template <typename T> void Disc<T>::setPosX(const T inCenterX) {
+  m_centerX = inCenterX;
+}
 
-template <typename T> void Disc<T>::setPosY(const T pos_y) { _pos_y = pos_y; }
+template <typename T> void Disc<T>::setPosY(const T inCenterY) {
+  m_centerY = inCenterY;
+}
 
 #endif // DISC_H_

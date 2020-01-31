@@ -5,11 +5,13 @@
 #include "OrderParameter.h"
 #include <algorithm>
 
-/*
-See p. 12 of Polyak (1964):
-https://www.researchgate.net/publication/243648538_Some_methods_of_speeding_up_the_convergence_of_iteration_methods
-*/
-template <typename T> class OptimizerRollingBall : public Optimizer<T> {
+// See p. 12 of Polyak (1964):
+// https://www.researchgate.net/publication/243648538_Some_methods_of_speeding_up_the_convergence_of_iteration_methods
+
+// TODO: (Patric) Implement warmup/burnin and final relaxation at end of
+// simulation, with getters and setters.
+template <typename T>
+class OptimizerRollingBall : public Optimizer<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
 public:
@@ -61,7 +63,6 @@ template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
 template <typename T>
 void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
                                    OrderParameter<T> &deltaK) {
-
   // Compute the residual.
   Optimizer<T>::computeResidual(rhsK, deltaK);
 

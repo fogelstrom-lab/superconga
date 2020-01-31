@@ -6,6 +6,7 @@
 
 #include "Disc.h"
 #include "GeometryComponent.h"
+#include "defines.h"
 #include <cuda.h>
 
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
@@ -15,33 +16,39 @@ public:
 
   DiscGeometry(const DiscGeometry &other);
 
-  DiscGeometry(const T radius, const T pos_x = 0.0, const T pos_y = 0.0);
+  // Initialize a disc. inDiameter gives the diameter of the
+  // disc relative to the available simulation space (to be padded by the grain
+  // margin). The center coordinate is (inCenterX, inCenterY)
+  DiscGeometry(const T inDiameter = static_cast<T>(1.0),
+               const T inCenterX = static_cast<T>(0.0),
+               const T inCenterY = static_cast<T>(0.0));
 
   DiscGeometry &operator=(DiscGeometry other);
 
   virtual DiscGeometry *clone() const { return new DiscGeometry(*this); }
 
-  virtual void create(const T angle);
+  virtual void create(const T inAngle);
   virtual Grid<char>::GPU *createDomain(const int N);
 
-  Disc<T> *getDisc() const { return _disc; }
+  Disc<T> *getDisc() const { return m_disc; }
 
 private:
   friend void swap(DiscGeometry &A, DiscGeometry &B) {
     swap(static_cast<GeometryComponent<T> &>(A),
          static_cast<GeometryComponent<T> &>(B));
-    std::swap(A._disc, B._disc);
+    std::swap(A.m_disc, B.m_disc);
   }
 
-  Disc<T> *_disc;
+  Disc<T> *m_disc;
 };
 
 namespace {
 template <typename T>
-__global__ void generateDisc_Kernel(char *dom_p, T *normX_p, T *normY_p,
-                                    T *dist_p, const int Nx, const int Ny,
-                                    const T radius, const T pos_x,
-                                    const T pos_y, const T angle) {
+__global__ void
+generateDisc_Kernel(char *const outDomainLabels, T *const outNormalsX,
+                    T *const outNormalsY, T *const outBoundaryDistances,
+                    const int Nx, const int Ny, const T inRadius,
+                    const T inRotatedCenterX, const T inRotatedCenterY) {
   int i;
 
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -51,76 +58,82 @@ __global__ void generateDisc_Kernel(char *dom_p, T *normX_p, T *normY_p,
     const int idx = ty * Nx + tx;
 
     T coord_x, coord_y[3], distSq[3];
-    T radiusSq = radius * radius;
+    const T radiusSquared = inRadius * inRadius;
 
-    coord_x = (T)tx - (Nx - 1) * (T)0.5 - pos_x;
+    coord_x = (T)tx - (Nx - 1) * (T)0.5 - inRotatedCenterX;
 
     for (i = 0; i < 3; ++i) {
-      coord_y[i] = (T)(ty - 1 + i) - (Ny - 1) * (T)0.5 - pos_y;
+      coord_y[i] = (T)(ty - 1 + i) - (Ny - 1) * (T)0.5 - inRotatedCenterY;
       distSq[i] = coord_x * coord_x + coord_y[i] * coord_y[i];
     }
 
     // Compute domain labels
-    char label = 0;
+    char domainLabel = 0;
 
-    if (distSq[1] <= radiusSq) {
-      label = 1;
-      if (distSq[0] > radiusSq)
-        label = 2;
-      else if (distSq[2] > radiusSq)
-        label = 3;
+    if (distSq[1] <= radiusSquared) {
+      domainLabel = 1;
+      if (distSq[0] > radiusSquared)
+        domainLabel = 2;
+      else if (distSq[2] > radiusSquared)
+        domainLabel = 3;
 
-      if (distSq[0] > radiusSq && distSq[2] > radiusSq)
-        label = 0;
+      if (distSq[0] > radiusSquared && distSq[2] > radiusSquared)
+        domainLabel = 0;
     }
 
     // Distance along y (trajectory path direction) to exact boundary location
-    T dist_intersect = (T)0.0;
-    T norm_x = (T)0.0;
-    T norm_y = (T)0.0;
+    T boundaryDistance = (T)0.0;
+    T normalX = (T)0.0;
+    T normalY = (T)0.0;
 
-    if (label > 1) {
+    if (domainLabel > 1) {
       // Determine boundary normal at exact boundary location
-      dist_intersect = sqrt(radiusSq - coord_x * coord_x) - abs(coord_y[1]);
-      norm_x = -coord_x / radius;
+      boundaryDistance =
+          sqrt(radiusSquared - coord_x * coord_x) - abs(coord_y[1]);
+      normalX = -coord_x / inRadius;
 
       if (coord_y[1] <= (T)0.0)
-        norm_y = -(coord_y[1] - dist_intersect) / radius;
+        normalY = -(coord_y[1] - boundaryDistance) / inRadius;
       else
-        norm_y = -(coord_y[1] + dist_intersect) / radius;
+        normalY = -(coord_y[1] + boundaryDistance) / inRadius;
     }
 
     // Store computed data
     //
     // (Boundary intersection is regarded as inside.
     // Maybe implement special case for this, to avoid dividing by zero, etc.)
-    dom_p[idx] = label;
-    dist_p[idx] = dist_intersect;
-    normX_p[idx] = norm_x;
-    normY_p[idx] = norm_y;
+    outDomainLabels[idx] = domainLabel;
+    outBoundaryDistances[idx] = boundaryDistance;
+    outNormalsX[idx] = normalX;
+    outNormalsY[idx] = normalY;
   }
 }
 } // namespace
 
 template <typename T>
-DiscGeometry<T>::DiscGeometry() : GeometryComponent<T>(), _disc(0) {}
+DiscGeometry<T>::DiscGeometry() : GeometryComponent<T>(), m_disc(0) {}
 
 template <typename T>
 DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &other)
-    : GeometryComponent<T>(other), _disc(0) {
-  if (other._disc)
-    _disc = new Disc<T>(*other._disc);
+    : GeometryComponent<T>(other), m_disc(0) {
+  if (other.m_disc)
+    m_disc = new Disc<T>(*other.m_disc);
 }
 
 template <typename T>
-DiscGeometry<T>::DiscGeometry(const T radius, const T pos_x, const T pos_y)
+DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
+                              const T inCenterY)
     : GeometryComponent<T>() {
-  _disc = new Disc<T>(radius, pos_x, pos_y);
+
+  // Apply margin to radius
+  const T discRadiusPadded =
+      inDiameter * static_cast<T>(0.5) * qcs::GRAIN_SIZE_FRACTION;
+  m_disc = new Disc<T>(discRadiusPadded, inCenterX, inCenterY);
 }
 
 template <typename T> DiscGeometry<T>::~DiscGeometry() {
-  if (_disc)
-    delete _disc;
+  if (m_disc)
+    delete m_disc;
 }
 
 template <typename T>
@@ -129,7 +142,7 @@ DiscGeometry<T> &DiscGeometry<T>::operator=(DiscGeometry<T> other) {
   return *this;
 }
 
-template <typename T> void DiscGeometry<T>::create(const T angle) {
+template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   typedef GeometryComponent<T> G;
 
   G::allocateMem();
@@ -143,13 +156,15 @@ template <typename T> void DiscGeometry<T>::create(const T angle) {
 
   const int N = G::getParameters()->getGridResolutionBase();
 
-  const T pos_x = _disc->getPosX();
-  const T pos_y = _disc->getPosY();
+  const T centerX = m_disc->getPosX();
+  const T centerY = m_disc->getPosY();
 
-  const T posRot_x = (cos(angle) * pos_x - sin(angle) * pos_y) * (N - 1);
-  const T posRot_y = (sin(angle) * pos_x + cos(angle) * pos_y) * (N - 1);
+  const T rotatedCenterX =
+      (cos(inAngle) * centerX - sin(inAngle) * centerY) * (N - 1);
+  const T rotatedCenterY =
+      (sin(inAngle) * centerX + cos(inAngle) * centerY) * (N - 1);
 
-  const T radius = _disc->getRadius() * T(N - 1);
+  const T radius = m_disc->getRadius() * T(N - 1);
 
   int Nx, Ny;
   dim3 bpg, tpb;
@@ -159,7 +174,7 @@ template <typename T> void DiscGeometry<T>::create(const T angle) {
   // Defines discrete boundary domain and properties
   generateDisc_Kernel<T><<<bpg, tpb>>>(
       G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-      G::getBoundaryDistance(), Nx, Ny, radius, posRot_x, posRot_y, angle);
+      G::getBoundaryDistance(), Nx, Ny, radius, rotatedCenterX, rotatedCenterY);
 }
 
 template <typename T>
@@ -172,5 +187,4 @@ Grid<char>::GPU *DiscGeometry<T>::createDomain(const int N) {
 
   return dom_component;
 }
-
 #endif // DISC_GEOMETRY_H_
