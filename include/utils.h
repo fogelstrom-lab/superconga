@@ -7,19 +7,23 @@
 
 namespace utils {
 template <typename T>
-__host__ __device__ T wrapToRange(const T value, const T low, const T high) {
-  const T diff = high - low;
-  const T tmp = value < low ? value + diff : value;
-  const T wrappedValue = fmod(tmp - low, diff) + low;
+__host__ __device__ T wrapToRange(const T inValue, const T inLow,
+                                  const T inHigh) {
+  // TODO(niclas): Add check that low < high.
+  const T range = inHigh - inLow;
+  const T standardizedValue = (inValue - inLow) / range;
+  const T wrappedValue =
+      (standardizedValue - floor(standardizedValue)) * range + inLow;
   return wrappedValue;
 }
 
 template <>
-__host__ __device__ int wrapToRange<int>(const int value, const int low,
-                                         const int high) {
-  const int diff = high - low;
-  const int tmp = value < low ? value + diff : value;
-  const int wrappedValue = ((tmp - low) % diff) + low;
+__host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
+                                         const int inHigh) {
+  const float value =
+      wrapToRange<float>(static_cast<float>(inValue), static_cast<float>(inLow),
+                         static_cast<float>(inHigh));
+  const int wrappedValue = static_cast<int>(round(value));
   return wrappedValue;
 }
 
