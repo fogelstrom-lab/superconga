@@ -1,3 +1,14 @@
+//===-- FermiSurface.h - Abstract Fermi surface class ---------------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the abstract implementation of Fermi surface.
+///
+//===----------------------------------------------------------------------===//
 #ifndef FERMI_SURFACE_H_
 #define FERMI_SURFACE_H_
 
@@ -5,13 +16,12 @@
 #include "ContextModule.h"
 #include "utils.h"
 #include <cmath>
-#include <math.h>
 
 template <typename T> class FermiSurface : public ContextModule<T> {
 public:
   // Constructor.
   FermiSurface();
-  FermiSurface(Context<T> *ctx);
+  FermiSurface(Context<T> *const inContext);
 
   // Destructor.
   virtual ~FermiSurface(){};
@@ -22,10 +32,14 @@ public:
   // Get the polar angle.
   T getPhi(const int inAngleIdx);
 
+  // Get the angle we should rotate the system for a given angle of the Fermi
+  // velocity.
+  T getSystemAngle(const T inFermiVelocityAngle);
+
   // Get the number of angles.
   int getNumAngles() { return m_numAngles; }
 
-  // The wrapped angle index, i.e. in [0, numAngles - 1].
+  // The wrapped angle index, i.e. in [0, numAngles).
   int getWrappedAngleIndex(const int inAngleIdx);
 
   // Get the Fermi momentum.
@@ -50,9 +64,8 @@ public:
   virtual void getMomentumOffset(T &outOffsetX, T &outOffsetY) = 0;
 
   // This function is called from within a CUDA kernel. Thus it has to be a
-  // separate function. Note, it completely relies on the Fermi surface being
-  // parameterized by
-  // the polar angle of pF.
+  // static method. Note, it completely relies on the Fermi surface being
+  // parameterized by the polar angle of pF.
   __host__ __device__ static T getFractionalAngleIndex(const T inMomentumX,
                                                        const T inMomentumY,
                                                        const T inOffsetX,
@@ -72,19 +85,88 @@ private:
   int m_numAngles;
 };
 
+namespace internal {
+/// \brief Get the angle phi corresponding to some angle index
+///
+/// \param inAngleIdx - The angle index to wrap
+/// \param inNumAngles - The total number of angles
+/// \param inAngleOffset - The angle which has index 0
+///
+/// \return - The angle phi corresponding to inAngleIdx
+template <typename T>
+T getPhi(const int inAngleIdx, const int inNumAngles, const T inAngleOffset) {
+  const T phiUnwrapped = static_cast<T>(M_PI) * static_cast<T>(2 * inAngleIdx) /
+                             static_cast<T>(inNumAngles) +
+                         inAngleOffset;
+  return utils::wrapToRangeTwoPi(phiUnwrapped);
+}
+
+/// \brief Get the system angle corresponding to a Fermi velocity angle
+///
+/// Because the trajectories go along the positive y-axis, the Fermi velocity
+/// angle and the system angle just differ by pi/2.
+///
+/// \param inFermiVelocityAngle - The polar angle of the Fermi velocity
+///
+/// \return - The system angle
+template <typename T> T getSystemAngle(const T inFermiVelocityAngle) {
+  return inFermiVelocityAngle - static_cast<T>(0.5 * M_PI);
+}
+
+/// \brief Compute the fractional angle index
+///
+/// Compute the fractional index a momentum corresponds to
+///
+/// \param inMomentumX - The x-component of the momentum
+/// \param inMomentumY - The y-component of the momentum
+/// \param inOffsetX - The offset of the Fermi surface origin along the x-axis
+/// \param inOffsetY - The offset of the Fermi surface origin along the y-axis
+/// \param inAngleOffset - The angle which has index 0
+/// \param inNumAngles - The total number of angles
+///
+/// \return - The fractional angle index in the range [0.0, inNumAngles)
+template <typename T>
+__host__ __device__ T getFractionalAngleIndex(
+    const T inMomentumX, const T inMomentumY, const T inOffsetX,
+    const T inOffsetY, const T inAngleOffset, const int inNumAngles) {
+  // Wrap x-component.
+  const T xLow = inOffsetX - static_cast<T>(M_PI);
+  const T xHigh = inOffsetX + static_cast<T>(M_PI);
+  const T kX = utils::wrapToRange(inMomentumX, xLow, xHigh);
+
+  // Wrap y-component.
+  const T yLow = inOffsetY - static_cast<T>(M_PI);
+  const T yHigh = inOffsetY + static_cast<T>(M_PI);
+  const T kY = utils::wrapToRange(inMomentumY, yLow, yHigh);
+
+  // Compute unwrapped angle.
+  const T phiUnwrapped = atan2(kY - inOffsetY, kX - inOffsetX) - inAngleOffset;
+
+  // Wrap angle.
+  const T phi = utils::wrapToRangeTwoPi(phiUnwrapped);
+
+  // Convert to index.
+  return static_cast<T>(inNumAngles) * phi / static_cast<T>(2.0 * M_PI);
+}
+} // namespace internal
+
 template <typename T>
 FermiSurface<T>::FermiSurface() : ContextModule<T>(), m_numAngles(0) {}
 
 template <typename T>
-FermiSurface<T>::FermiSurface(Context<T> *ctx) : ContextModule<T>(ctx) {
-  ctx->set(this);
+FermiSurface<T>::FermiSurface(Context<T> *const inContext)
+    : ContextModule<T>(inContext) {
+  inContext->set(this);
   m_numAngles = ContextModule<T>::getParameters()->getAngularResolution();
 }
 
 template <typename T> T FermiSurface<T>::getPhi(const int inAngleIdx) {
-  const int idx = getWrappedAngleIndex(inAngleIdx);
-  const T fraction = static_cast<T>(idx) / static_cast<T>(m_numAngles);
-  return static_cast<T>(2.0 * M_PI) * fraction + m_angleOffset;
+  return internal::getPhi(inAngleIdx, m_numAngles, m_angleOffset);
+}
+
+template <typename T>
+T FermiSurface<T>::getSystemAngle(const T inFermiVelocityAngle) {
+  return internal::getSystemAngle(inFermiVelocityAngle);
 }
 
 template <typename T>
@@ -96,25 +178,9 @@ template <typename T>
 __host__ __device__ T FermiSurface<T>::getFractionalAngleIndex(
     const T inMomentumX, const T inMomentumY, const T inOffsetX,
     const T inOffsetY, const int inNumAngles) {
-  // Wrap x-element.
-  const T xLow = inOffsetX - static_cast<T>(M_PI);
-  const T xHigh = inOffsetX + static_cast<T>(M_PI);
-  const T kX = utils::wrapToRange(inMomentumX, xLow, xHigh);
-
-  // Wrap y-element.
-  const T yLow = inOffsetY - static_cast<T>(M_PI);
-  const T yHigh = inOffsetY + static_cast<T>(M_PI);
-  const T kY = utils::wrapToRange(inMomentumY, yLow, yHigh);
-
-  // Compute unwrapped angle.
-  const T phiUnwrapped =
-      std::atan2(kY - inOffsetY, kX - inOffsetX) - m_angleOffset;
-
-  // Wrap angle.
-  const T phi = utils::wrapToRangeTwoPi(phiUnwrapped);
-
-  // Convert to index.
-  return static_cast<T>(inNumAngles) * phi / static_cast<T>(2.0 * M_PI);
+  return internal::getFractionalAngleIndex(inMomentumX, inMomentumY, inOffsetX,
+                                           inOffsetY, m_angleOffset,
+                                           inNumAngles);
 }
 
 #endif // FERMI_SURFACE_H_

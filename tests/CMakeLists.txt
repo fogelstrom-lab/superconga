@@ -15,21 +15,21 @@ message(STATUS "Add CUDA architecture flags: ${ARCH_FLAGS_DISPLAY}")
 
 set(NVCC_WARN
     "-Wall,\
-               -Wextra,\
-               -Wnon-virtual-dtor,\
-               -Wunused,\
-               -Wduplicated-cond,\
-               -Wduplicated-branches,\
-               -Wlogical-op,\
-               -Wnull-dereference,\
-               -Wdouble-promotion,\
-               -Wformat=2")
+    -Wextra,\
+    -Wnon-virtual-dtor,\
+    -Wunused,\
+    -Wduplicated-cond,\
+    -Wduplicated-branches,\
+    -Wlogical-op,\
+    -Wnull-dereference,\
+    -Wdouble-promotion,\
+    -Wformat=2")
 
 # We need doctest for the tests.
 find_package(doctest REQUIRED)
 
 # Define the main set of source files
-set(SRC utils_test.cu legacy_test.cu)
+set(SRC fermisurface_test.cu legacy_test.cu utils_test.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
