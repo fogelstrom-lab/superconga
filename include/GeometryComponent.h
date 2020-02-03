@@ -84,7 +84,7 @@ private:
   GridGPU *_boundaryDistance;
 };
 
-namespace {
+namespace internal {
 // Label boundary interface nodes
 // Codes:
 // 0 - Outside domain
@@ -132,7 +132,7 @@ __global__ void labelEntryExit_Kernel(char *oldLabels_p, char *newLabels_p,
     newLabels_p[idx] = newLabel;
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 GeometryComponent<T>::GeometryComponent()
@@ -198,8 +198,8 @@ template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
   Grid<char>::GPU *newLabels(0);
   Grid<char>::GPU::initializeGrid(newLabels, oldLabels);
 
-  labelEntryExit_Kernel<T><<<bpg, tpb>>>(oldLabels->getDataPointer(),
-                                         newLabels->getDataPointer(), Nx, Ny);
+  internal::labelEntryExit_Kernel<T><<<bpg, tpb>>>(
+      oldLabels->getDataPointer(), newLabels->getDataPointer(), Nx, Ny);
 
   _domainLabels = newLabels;
   delete oldLabels;

@@ -42,7 +42,7 @@ private:
   Disc<T> *m_disc;
 };
 
-namespace {
+namespace internal {
 template <typename T>
 __global__ void
 generateDisc_Kernel(char *const outDomainLabels, T *const outNormalsX,
@@ -108,7 +108,7 @@ generateDisc_Kernel(char *const outDomainLabels, T *const outNormalsX,
     outNormalsY[idx] = normalY;
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 DiscGeometry<T>::DiscGeometry() : GeometryComponent<T>(), m_disc(0) {}
@@ -172,7 +172,7 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   G::getKernelDimensions(bpg, tpb);
 
   // Defines discrete boundary domain and properties
-  generateDisc_Kernel<T><<<bpg, tpb>>>(
+  internal::generateDisc_Kernel<T><<<bpg, tpb>>>(
       G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
       G::getBoundaryDistance(), Nx, Ny, radius, rotatedCenterX, rotatedCenterY);
 }

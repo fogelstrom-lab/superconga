@@ -87,7 +87,7 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
   static int checkCudaError(std::string msg = "");
 };
 
-namespace {
+namespace internal {
 template <typename T, typename T2>
 __global__ void typeConvert_kernel(const T *data_src, T2 *data_dst,
                                    const int Nx, const int Ny,
@@ -511,7 +511,7 @@ __global__ void resample_kernel(const T *data, T *data_tmp, const int Nx,
     data_tmp[idx_new] = ((T)1.0 - y_frac) * x1_interp + y_frac * x2_interp;
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 template <typename T2>
@@ -522,14 +522,14 @@ void GridFunctions<T, thrust::device_vector<T>>::typeConvert(
 
   int complex = int(grid->isComplex());
 
-  typeConvert_kernel<T, T2><<<bpg, tpb>>>(grid->getDataPointer(0, Type::real),
-                                          other.getDataPointer(0, Type::real),
-                                          grid->_dimX, grid->_dimY, complex);
+  internal::typeConvert_kernel<T, T2><<<bpg, tpb>>>(
+      grid->getDataPointer(0, Type::real), other.getDataPointer(0, Type::real),
+      grid->_dimX, grid->_dimY, complex);
 
   if (complex)
-    typeConvert_kernel<T, T2><<<bpg, tpb>>>(grid->getDataPointer(0, Type::imag),
-                                            other.getDataPointer(0, Type::imag),
-                                            grid->_dimX, grid->_dimY, complex);
+    internal::typeConvert_kernel<T, T2><<<bpg, tpb>>>(
+        grid->getDataPointer(0, Type::imag),
+        other.getDataPointer(0, Type::imag), grid->_dimX, grid->_dimY, complex);
 }
 
 template <typename T>
@@ -552,11 +552,11 @@ GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
   }
 
   for (int i = f_start; i <= f_end; ++i) {
-    transpose_kernel<<<bpg, tpb>>>(grid->getDataPointer(i, Type::real),
-                                   grid->_dimX);
+    internal::transpose_kernel<<<bpg, tpb>>>(
+        grid->getDataPointer(i, Type::real), grid->_dimX);
     if (grid->isComplex())
-      transpose_kernel<<<bpg, tpb>>>(grid->getDataPointer(i, Type::imag),
-                                     grid->_dimX);
+      internal::transpose_kernel<<<bpg, tpb>>>(
+          grid->getDataPointer(i, Type::imag), grid->_dimX);
   }
 
   return *grid;
@@ -568,7 +568,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
   dim3 tpb, bpg;
   getKernelDimensionsFields(bpg, tpb);
 
-  complexMagnitudeSq_kernel<<<bpg, tpb>>>(
+  internal::complexMagnitudeSq_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
       result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY);
 
@@ -581,7 +581,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
   dim3 tpb, bpg;
   getKernelDimensionsFields(bpg, tpb);
 
-  complexPhase_kernel<<<bpg, tpb>>>(
+  internal::complexPhase_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
       result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY);
 
@@ -594,7 +594,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
-  complexPhaseGradient_kernel<<<bpg, tpb>>>(
+  internal::complexPhaseGradient_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
       result->getDataPointer(0, Type::real),
       result->getDataPointer(1, Type::real), h, grid->_dimX, grid->_dimY);
@@ -608,10 +608,10 @@ void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
-  fieldMagnitude_kernel<<<bpg, tpb>>>(grid->getDataPointer(0, Type::real),
-                                      result->getDataPointer(0, Type::real),
-                                      grid->_dimX, grid->_dimY,
-                                      grid->_numFields, int(grid->isComplex()));
+  internal::fieldMagnitude_kernel<<<bpg, tpb>>>(
+      grid->getDataPointer(0, Type::real),
+      result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
+      grid->_numFields, int(grid->isComplex()));
 
   checkCudaError("GridData<T>::fieldMagnitude()");
 }
@@ -622,7 +622,7 @@ void GridFunctions<T, thrust::device_vector<T>>::div(GridGPU *result,
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
-  div_kernel<<<bpg, tpb>>>(
+  internal::div_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
       result->getDataPointer(0, Type::real), h, grid->dimX(), grid->dimY());
 
@@ -635,7 +635,7 @@ void GridFunctions<T, thrust::device_vector<T>>::curl(GridGPU *result,
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
-  curl_kernel<<<bpg, tpb>>>(
+  internal::curl_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
       result->getDataPointer(0, Type::real), h, grid->dimX(), grid->dimY());
 
@@ -651,9 +651,9 @@ void GridFunctions<T, thrust::device_vector<T>>::del2(GridGPU *result,
   const T inv_h2 = 1.0 / (h * h);
 
   for (int c = 0; c < result->numFields(); ++c) {
-    del2_kernel<<<bpg, tpb>>>(result->getDataPointer(c, Type::real),
-                              grid->getDataPointer(c, Type::real), inv_h2,
-                              grid->dimX(), grid->dimY());
+    internal::del2_kernel<<<bpg, tpb>>>(result->getDataPointer(c, Type::real),
+                                        grid->getDataPointer(c, Type::real),
+                                        inv_h2, grid->dimX(), grid->dimY());
   }
 
   checkCudaError("GridData<T>::del2()");
@@ -665,13 +665,13 @@ void GridFunctions<T, thrust::device_vector<T>>::sumFieldComponents(
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
-  sumFieldComponents_kernel<<<bpg, tpb>>>(
+  internal::sumFieldComponents_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real),
       result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
       grid->_numFields, int(grid->isComplex()));
 
   if (grid->isComplex())
-    sumFieldComponents_kernel<<<bpg, tpb>>>(
+    internal::sumFieldComponents_kernel<<<bpg, tpb>>>(
         grid->getDataPointer(0, Type::imag),
         result->getDataPointer(0, Type::imag), grid->_dimX, grid->_dimY,
         grid->_numFields, int(grid->isComplex()));
@@ -717,14 +717,14 @@ void GridFunctions<T, thrust::device_vector<T>>::insertGrid(
   for (int c = 0; c < grid->_numFields; ++c) {
     int c_other = c >= Nf_other ? Nf_other - 1 : c;
 
-    insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+    internal::insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
         grid->getDataPointer(c, Type::real),
         other->getDataPointer(c_other, Type::real), grid->_dimX, grid->_dimY,
         Nx_other, Ny_other, x_start_this, y_start_this, x_start_other,
         y_start_other);
 
     if (grid->isComplex()) {
-      insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::imag),
           other->getDataPointer(c_other, Type::imag), grid->_dimX, grid->_dimY,
           Nx_other, Ny_other, x_start_this, y_start_this, x_start_other,
@@ -759,27 +759,27 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGrid(
       field_other = 0;
 
     if (complex_this && complex_other) {
-      insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::real),
           other->getDataPointer(field_other, Type::real), grid->_dimX,
           grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
 
-      insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::imag),
           other->getDataPointer(field_other, Type::imag), grid->_dimX,
           grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this && !complex_other) {
-      insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::real),
           other->getDataPointer(field_other, Type::real), grid->_dimX,
           grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this) {
-      insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::real),
           other->getDataPointer(field_other, part), grid->_dimX, grid->_dimY,
           Nx_other, Ny_other, phi, x_offset, y_offset);
     } else {
-      insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, part),
           other->getDataPointer(field_other, Type::real), grid->_dimX,
           grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
@@ -824,30 +824,35 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGridAdditive(
       field_other = 0; // Maybe put this to other->numFields()-1 ??
 
     if (complex_this && complex_other) {
-      insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      internal::
+          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+              grid->getDataPointer(c, Type::real),
+              other->getDataPointer(field_other, Type::real), grid->_dimX,
+              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
 
-      insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::imag),
-          other->getDataPointer(field_other, Type::imag), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      internal::
+          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+              grid->getDataPointer(c, Type::imag),
+              other->getDataPointer(field_other, Type::imag), grid->_dimX,
+              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this && !complex_other) {
-      insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      internal::
+          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+              grid->getDataPointer(c, Type::real),
+              other->getDataPointer(field_other, Type::real), grid->_dimX,
+              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this) {
-      insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, part), grid->_dimX, grid->_dimY,
-          Nx_other, Ny_other, phi, x_offset, y_offset);
+      internal::
+          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+              grid->getDataPointer(c, Type::real),
+              other->getDataPointer(field_other, part), grid->_dimX,
+              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else {
-      insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, part),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      internal::
+          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+              grid->getDataPointer(c, part),
+              other->getDataPointer(field_other, Type::real), grid->_dimX,
+              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     }
   }
 
@@ -876,12 +881,12 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
   for (int c = 0; c < numFields; ++c) {
     int fieldOffset = (nx_new * ny_new * (1 + isComplex)) * c;
 
-    resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+    internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
         grid->getDataPointer(c, Type::real), data_tmp + fieldOffset,
         grid->_dimX, grid->_dimY, nx_new, ny_new);
 
     if (isComplex) {
-      resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::imag),
           data_tmp + fieldOffset + (nx_new * ny_new), grid->_dimX, grid->_dimY,
           nx_new, ny_new);
@@ -917,12 +922,12 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(
   getKernelDimensions(blocksPerGrid, threadsPerBlock, nx_new, ny_new);
 
   for (int c = 0; c < numFields; ++c) {
-    resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+    internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
         grid->getDataPointer(c, Type::real),
         target->getDataPointer(c, Type::real), nx, ny, nx_new, ny_new);
 
     if (isComplex) {
-      resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
           grid->getDataPointer(c, Type::imag),
           target->getDataPointer(c, Type::imag), nx, ny, nx_new, ny_new);
     }

@@ -111,7 +111,7 @@ template <typename T> struct TightBindingParameters {
   T chemicalPotential;
 };
 
-namespace detail {
+namespace internal {
 template <typename T>
 T computeDispersion(const TightBindingParameters<T> &inParameters,
                     const T inMomentumX, const T inMomentumY) {
@@ -348,7 +348,7 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
       std::sqrt(inVelocityX * inVelocityX + inVelocityY * inVelocityY);
   return dPdPhi / speed;
 }
-} // namespace detail
+} // namespace internal
 
 template <typename T>
 FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding()
@@ -381,7 +381,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
   m_parameters.print();
 
   // Compute momentum offset.
-  detail::computeMomentumOffset(m_parameters, m_offsetX, m_offsetY);
+  internal::computeMomentumOffset(m_parameters, m_offsetX, m_offsetY);
   printf("FS Offset: (x, y) = (%f, %f)\n", m_offsetX, m_offsetY);
 
   // Get the number of angles.
@@ -411,8 +411,8 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     T pX;
     T pY;
     const bool success =
-        detail::computeFermiMomentum(m_parameters, phi, m_offsetX, m_offsetY,
-                                     m_numIterations, m_convergence, pX, pY);
+        internal::computeFermiMomentum(m_parameters, phi, m_offsetX, m_offsetY,
+                                       m_numIterations, m_convergence, pX, pY);
 
     // Print stuff in case of failure.
     if (!success) {
@@ -423,7 +423,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     // Fermi surface.
     T vX;
     T vY;
-    detail::computeDispersionDerivative(m_parameters, pX, pY, vX, vY);
+    internal::computeDispersionDerivative(m_parameters, pX, pY, vX, vY);
 
     // Update the Fermi momentum arrays.
     momentumX[angleIdx] = pX;
@@ -438,7 +438,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     systemAngle[angleIdx] = FermiSurface<T>::getSystemAngle(fermiVelocityAngle);
 
     // Compute integrand factor.
-    const T factor = detail::computeIntegrandFactor(
+    const T factor = internal::computeIntegrandFactor(
         m_parameters, pX, pY, vX, vY, m_offsetX, m_offsetY, m_numIterations,
         m_convergence, m_angleDelta);
     integrandFactor[angleIdx] = factor;

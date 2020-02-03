@@ -1,5 +1,5 @@
-#ifndef POLYGONGEOMETRY_H
-#define POLYGONGEOMETRY_H
+#ifndef POLYGON_GEOMETRY_H_
+#define POLYGON_GEOMETRY_H_
 
 #include "GeometryComponent.h"
 #include "Polygon.h"
@@ -51,7 +51,7 @@ private:
   Polygon<T> *m_polygon;
 };
 
-namespace {
+namespace internal {
 
 template <typename T, int NV>
 __global__ void generatePolygonGeometry_Kernel(
@@ -211,7 +211,7 @@ maskNormals_Kernel(const char *const inDomainLabels, T *const inOutNormalsX,
     inOutNormalsY[idx] *= mult;
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry() : GeometryComponent<T>(), m_polygon(0) {}
@@ -304,7 +304,7 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
   G::getKernelDimensions(bpg, tpb);
 
   // Calc inside/outside, distance, normals
-  generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
+  internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
       G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
       G::getBoundaryDistance(), Nx, Ny, inAngle, m_polygon->getNumVertices(),
       m_polygon->getVertices()->getDataPointer(0),
@@ -312,9 +312,9 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
 
   G::labelBoundaryNodes();
 
-  maskNormals_Kernel<T><<<bpg, tpb>>>(G::getDomainLabels(), G::getNormals(0),
-                                      G::getNormals(1),
-                                      G::getBoundaryDistance(), Nx, Ny);
+  internal::maskNormals_Kernel<T>
+      <<<bpg, tpb>>>(G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
+                     G::getBoundaryDistance(), Nx, Ny);
 }
 
 template <typename T>
@@ -326,11 +326,12 @@ Grid<char>::GPU *PolygonGeometry<T>::createDomain(const int N) {
   Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
 
   // Calc inside/outside, distance, normals
-  generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
+  internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
       dom_component->getDataPointer(), m_polygon->getNumVertices(),
       m_polygon->getVertices()->getDataPointer(0),
       m_polygon->getVertices()->getDataPointer(1), N);
 
   return dom_component;
 }
+
 #endif // POLYGON_GEOMETRY_H_

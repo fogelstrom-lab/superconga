@@ -22,7 +22,7 @@ public:
 private:
 };
 
-namespace detail {
+namespace internal {
 template <typename T>
 __device__ void computeReflectedMomentum(const T inMomentumX,
                                          const T inMomentumY, const T inNormalX,
@@ -245,7 +245,7 @@ __global__ void boundaryConditionSpecularKernel(
     }
   }
 }
-} // namespace detail
+} // namespace internal
 
 template <typename T>
 void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
@@ -313,7 +313,7 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     // TODO(niclas): Don't check the numerical value, use enum!
     const char boundaryLabel = 2;
     const int direction = 1;
-    detail::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
+    internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
         // Model parameters
         numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
         yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
@@ -334,7 +334,7 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     // TODO(niclas): Don't check the numerical value, use enum!
     const char boundaryLabelTilde = 3;
     const int directionTilde = -1;
-    detail::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
+    internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
         // Model parameters
         numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
         yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,

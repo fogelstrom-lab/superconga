@@ -160,7 +160,7 @@ private:
   Grid<char>::GPU *_domain_ref;
 };
 
-namespace {
+namespace internal {
 
 template <typename T> __device__ void normalize(T &vec_x, T &vec_y) {
   const T norm = (T)1.0 / sqrt(vec_x * vec_x + vec_y * vec_y);
@@ -403,7 +403,7 @@ __global__ void zeroValuesOutsideDomain_kernel(
       target_ptr[idx] = (T)0.0;
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 GeometryGroup<T>::GeometryGroup()
@@ -618,7 +618,7 @@ void GeometryGroup<T>::geomOp(GeometryComponent<T> *newGeom,
   dim3 bpg, tpb;
   _domainLabels->getKernelDimensions(bpg, tpb);
 
-  geomOp_kernel<T><<<bpg, tpb>>>(
+  internal::geomOp_kernel<T><<<bpg, tpb>>>(
       getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
       newGeom->getDomainLabels(), newGeom->getNormals(0),
       newGeom->getNormals(1), newGeom->getBoundaryDistance(),
@@ -644,7 +644,7 @@ void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
   Grid<char>::GPU::initializeGrid(domTmp, domResult);
   domTmp->setZero();
 
-  geomOpRemove_kernel<T><<<bpg, tpb>>>(
+  internal::geomOpRemove_kernel<T><<<bpg, tpb>>>(
       getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
       newGeom->getDomainLabels(), newGeom->getNormals(0),
       newGeom->getNormals(1), newGeom->getBoundaryDistance(),
@@ -662,7 +662,7 @@ void GeometryGroup<T>::geomOpAdd(Grid<char>::GPU *dom,
   dim3 bpg, tpb;
   Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
 
-  geomOpAdd_kernel<T>
+  internal::geomOpAdd_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
 }
 
@@ -674,7 +674,7 @@ void GeometryGroup<T>::geomOpRemove(Grid<char>::GPU *dom,
   dim3 bpg, tpb;
   Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
 
-  geomOpRemove_kernel<T>
+  internal::geomOpRemove_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
 }
 
@@ -912,12 +912,12 @@ void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid,
   grid->getKernelDimensionsFields(bpg, tpb);
 
   if (grid->isComplex())
-    extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
+    internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
         dom_ptr, grid->getDataPointer(0, Type::real),
         grid->getDataPointer(0, Type::imag), Nx_geom, Ny_geom, Nx_target,
         Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
   else
-    extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
+    internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
         dom_ptr, grid->getDataPointer(0, Type::real), Nx_geom, Ny_geom,
         Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
 }
@@ -941,13 +941,13 @@ void GeometryGroup<T>::zeroValuesOutsideDomain(GridGPU *target) {
   dim3 grid, block;
   target->getKernelDimensionsFields(grid, block);
 
-  zeroValuesOutsideDomain_kernel<<<grid, block>>>(
+  internal::zeroValuesOutsideDomain_kernel<<<grid, block>>>(
       _domainLabels->getDataPointer(0, Type::real),
       target->getDataPointer(0, Type::real), Nx_dom, Ny_dom, Nx_img, Ny_img,
       Nx_diff, Ny_diff, int(target->isComplex()));
 
   if (target->isComplex())
-    zeroValuesOutsideDomain_kernel<<<grid, block>>>(
+    internal::zeroValuesOutsideDomain_kernel<<<grid, block>>>(
         _domainLabels->getDataPointer(0, Type::real),
         target->getDataPointer(0, Type::imag), Nx_dom, Ny_dom, Nx_img, Ny_img,
         Nx_diff, Ny_diff, int(target->isComplex()));
