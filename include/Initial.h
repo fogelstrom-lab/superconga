@@ -5,10 +5,6 @@
 #ifndef INITIAL_H
 #define INITIAL_H
 
-#ifndef PI
-#define PI (T)3.1415926535897932384
-#endif
-
 #include "OrderParameterComponent.h"
 #include <cuda.h>
 #include <math.h>
@@ -130,12 +126,12 @@ double Initial<T>::computeDeltaBulk(const double T_Tc,
     matsubaraSum = 0.0;
 
     for (int i = 0; i <= numMatsubara; ++i) {
-      eps = PI * T_Tc * (2.0 * i + 1.0);
+      eps = M_PI * T_Tc * (2.0 * i + 1.0);
       matsubaraSum += 1.0 / sqrt(eps * eps + delta * delta) - 1.0 / eps;
     }
     matsubaraSum *= delta;
 
-    g = delta * log(T_Tc) - 2.0 * PI * T_Tc * matsubaraSum;
+    g = delta * log(T_Tc) - 2.0 * M_PI * T_Tc * matsubaraSum;
     deltaDiff = g * gMix;
     delta += deltaDiff;
 
@@ -238,7 +234,7 @@ void Initial<T>::random(OrderParameterComponent<T> *deltaComponent, const T mix,
         idx = j * N + i;
 
         rand_phase =
-            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * PI * mix;
+            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
 
         data_re[idx] = deltaBulk * cos(phase + rand_phase);
         data_im[idx] = deltaBulk * sin(phase + rand_phase);
@@ -309,7 +305,7 @@ void Initial<T>::perturbedPhaseWinding(
           amplitude = deltaBulk;
 
         rand_phase =
-            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * PI * mix;
+            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
 
         data_re[idx] = amplitude * cos(phase * numWinding + rand_phase);
         data_im[idx] = amplitude * sin(phase * numWinding + rand_phase);
