@@ -1,6 +1,8 @@
 #ifndef GRID_FUNCTIONS_GPU_H_
 #define GRID_FUNCTIONS_GPU_H_
 
+#include "utils.h"
+#include <cmath>
 #include <thrust/device_vector.h>
 
 ///////////////////////////////////////////
@@ -136,47 +138,30 @@ __global__ void complexMagnitudeSq_kernel(const T *data_re, const T *data_im,
 }
 
 template <typename T>
-__global__ void complexPhase_kernel(const T *data_src_re, const T *data_src_im,
-                                    T *data_dst, const int Nx, const int Ny) {
-  // Coordinates to grid
+__global__ void complexPhase_kernel(const T *const inReal,
+                                    const T *const inImag, T *const outPhase,
+                                    const int inNumX, const int inNumY) {
+  // Coordinates to grid.
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
   const int tf = blockIdx.z;
 
-  const int idx_src = tf * 2 * Nx * Ny + ty * Nx + tx;
-  const int idx_dst = tf * Nx * Ny + ty * Nx + tx;
+  // TODO(niclas): This requires some explanation.
+  const int idx_src = tf * 2 * inNumX * inNumY + ty * inNumX + tx;
+  const int idx_dst = tf * inNumX * inNumY + ty * inNumX + tx;
 
-  T x, y, phase;
+  // TODO(niclas): We should check that tf < numFields or something. We souldn't
+  // trust that the kernel call was made with exactly the right number of
+  // threads.
+  if (tx < inNumX && ty < inNumY) {
+    const T real = inReal[idx_src];
+    const T imag = inImag[idx_src];
 
-  if (tx < Nx && ty < Ny) {
-    x = data_src_re[idx_src];
-    y = data_src_im[idx_src];
-
-    phase = (T)0.0;
-
-    // Interior of quadrants
-    if (x > (T)0.0 && y > (T)0.0)
-      phase = atan(y / x);
-    else if (x < (T)0.0 && y > (T)0.0)
-      phase = M_PI + atan(y / x);
-    else if (x < (T)0.0 && y < (T)0.0)
-      phase = M_PI + atan(y / x);
-    else if (x > (T)0.0 && y < (T)0.0)
-      phase = (T)2.0 * M_PI + atan(y / x);
-    // Boundaries
-    else if (x == (T)0.0) {
-      if (y > (T)0.0)
-        phase = (T)0.5 * M_PI;
-      if (y < (T)0.0)
-        phase = (T)1.5 * M_PI;
-    } else if (y == (T)0.0) {
-      if (x > (T)0.0)
-        phase = (T)0.0;
-      if (x < (T)0.0)
-        phase = M_PI;
-    }
-
-    data_dst[idx_dst] = phase;
+    // Note, previously atan2 was implemented by hand with the output being in
+    // the range [0, 2pi), so we'll keep that for now.
+    // TODO: (Niclas) is this necessary?
+    const T phase = atan2(imag, real);
+    outPhase[idx_dst] = utils::wrapToRangeTwoPi(phase);
   }
 }
 

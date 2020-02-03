@@ -1,25 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-project(
-  suprcongpu
-  VERSION 0.0.1
-  LANGUAGES CUDA CXX)
-
-find_package(doctest REQUIRED)
-
-# Define the main set of source files
-set(SRC_TEST utils_test.cu)
-
-# Create command-line executable
-add_executable(utils_test ${SRC_TEST})
-
-# Add extra compile options and flags. Include directories.
-target_include_directories(utils_test PRIVATE ../include doctest::doctest)
-
-# Use C++14 since it is the lates standard CUDA supports
-message(STATUS "Enable C++ standard: C++14")
-set_target_properties(utils_test
-                      PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON)
-
 # NOTE: FindCUDA is formally deprecated, but no standalone alternative exists as
 # of yet for automatic detection of GPU architecture, so we use it
 set(CUDA_ARCH
@@ -35,4 +13,50 @@ endif()
 string(REPLACE ";" " " ARCH_FLAGS_DISPLAY "${ARCH_FLAGS}")
 message(STATUS "Add CUDA architecture flags: ${ARCH_FLAGS_DISPLAY}")
 
-target_compile_options(utils_test PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
+set(NVCC_WARN
+    "-Wall,\
+               -Wextra,\
+               -Wnon-virtual-dtor,\
+               -Wunused,\
+               -Wduplicated-cond,\
+               -Wduplicated-branches,\
+               -Wlogical-op,\
+               -Wnull-dereference,\
+               -Wdouble-promotion,\
+               -Wformat=2")
+
+# We need doctest for the tests.
+find_package(doctest REQUIRED)
+
+# Define the main set of source files
+set(SRC utils_test.cu legacy_test.cu)
+
+foreach(file ${SRC})
+  # string( REPLACE ".cu" "" name ${file})
+  get_filename_component(name ${file} NAME_WE)
+
+  # Create command-line executable
+  add_executable(${name} ${file})
+
+  # ----------------------------------- # Add extra compile options and flags #
+  # ----------------------------------- # Include directories
+  target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include
+                                             doctest::doctest)
+
+  # Use C++14 since it is the lates standard CUDA supports
+  message(STATUS "Enable C++ standard: C++14")
+  set_target_properties(${name}
+                        PROPERTIES CUDA_STANDARD 14 CUDA_STANDARD_REQUIRED ON)
+  set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
+                                                           ON)
+
+  # Set DEBUG compile flags
+  target_compile_options(
+    ${name}
+    PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
+    PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
+    PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
+
+  # Set RELEASE compile flags
+  target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
+endforeach()

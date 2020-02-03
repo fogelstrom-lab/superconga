@@ -2,6 +2,8 @@
 #define GRID_FUNCTIONS_CPU_H_
 
 #include "Type.h"
+#include "utils.h"
+#include <cmath>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
@@ -163,8 +165,7 @@ void iterTwoComplexToReal(const GridData<T, DEV> &src, GridData<T, DEV> &dst,
     for (j = 0; j < Ny; ++j) {
       for (i = 0; i < Nx; ++i) {
         idx = j * Nx + i;
-        data_dst[idx] =
-            functor(data_src_re[idx], data_src_im[idx], data_dst[idx]);
+        data_dst[idx] = functor(data_src_re[idx], data_src_im[idx]);
       }
     }
   }
@@ -212,38 +213,19 @@ template <typename T> struct SubFuncTwo {
 
 template <typename T> struct ComplexMagnitudeSqFunc {
   ComplexMagnitudeSqFunc() {}
-  T operator()(const T &src_re, const T &src_im, const T &dst) {
-    return src_re * src_re + src_im * src_im;
+  T operator()(const T inReal, const T inImag) {
+    return inReal * inReal + inImag * inImag;
   }
 };
 
 template <typename T> struct ComplexPhaseFunc {
   ComplexPhaseFunc() {}
-  T operator()(const T &x, const T &y, const T &dst) {
-    T phase = (T)0.0;
-
-    // Interior of quadrants
-    if (x > (T)0.0 && y > (T)0.0)
-      phase = atan(y / x);
-    else if (x < (T)0.0 && y > (T)0.0)
-      phase = M_PI + atan(y / x);
-    else if (x < (T)0.0 && y < (T)0.0)
-      phase = M_PI + atan(y / x);
-    else if (x > (T)0.0 && y < (T)0.0)
-      phase = (T)2.0 * M_PI + atan(y / x);
-    // Boundaries
-    else if (x == (T)0.0) {
-      if (y > (T)0.0)
-        phase = (T)0.5 * M_PI;
-      if (y < (T)0.0)
-        phase = (T)1.5 * M_PI;
-    } else if (y == (T)0.0) {
-      if (x > (T)0.0)
-        phase = (T)0.0;
-      if (x < (T)0.0)
-        phase = M_PI;
-    }
-    return phase;
+  T operator()(const T inReal, const T inImag) {
+    // Note, previously atan2 was implemented by hand with the output being in
+    // the range [0, 2pi), so we'll keep that for now.
+    // TODO: (Niclas) is this necessary?
+    const T phase = atan2(inImag, inReal);
+    return utils::wrapToRangeTwoPi(phase);
   }
 };
 
