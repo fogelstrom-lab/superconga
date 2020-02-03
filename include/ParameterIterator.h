@@ -1,5 +1,5 @@
-#ifndef PARAMETERITERATOR_H
-#define PARAMETERITERATOR_H
+#ifndef PARAMETER_ITERATOR_H_
+#define PARAMETER_ITERATOR_H_
 
 template <typename T> class ParameterIterator {
 public:
@@ -198,4 +198,4 @@ template <typename T> T ParameterIterator<T>::getNumInterval() const {
     return getIncrement();
 }
 
-#endif // PARAMETERITERATOR_H
+#endif // PARAMETER_ITERATOR_H_

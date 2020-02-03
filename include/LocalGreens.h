@@ -2,8 +2,8 @@
 // Functions to compute local value of Greens functions
 ///////////////////////////////////////////////////////
 
-#ifndef LOCALGREENS_H
-#define LOCALGREENS_H
+#ifndef LOCAL_GREENS_H_
+#define LOCAL_GREENS_H_
 
 #ifdef __CUDACC__
 #ifndef _HD_
@@ -63,4 +63,4 @@ template <typename T> struct Greens_Current {
   }
 };
 
-#endif // LOCALGREENS_H
+#endif // LOCAL_GREENS_H_

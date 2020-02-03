@@ -1,5 +1,5 @@
-#ifndef COMPUTEFREEENERGY_H
-#define COMPUTEFREEENERGY_H
+#ifndef COMPUTE_FREE_ENERGY_H_
+#define COMPUTE_FREE_ENERGY_H_
 
 #include "ComputeProperty.h"
 #include "Initial.h"
@@ -364,4 +364,4 @@ template <typename T> T ComputeFreeEnergy<T>::freeEnergyT0_S() {
   return area * (-0.5 * D0 * D0 + M_PI * M_PI / 3.0 * T_Tc * T_Tc);
 }
 
-#endif // COMPUTEFREEENERGY_H
+#endif // COMPUTE_FREE_ENERGY_H_

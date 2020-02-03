@@ -1,5 +1,5 @@
-#ifndef BOUNDARYCONDITION_H
-#define BOUNDARYCONDITION_H
+#ifndef BOUNDARY_CONDITION_H_
+#define BOUNDARY_CONDITION_H_
 
 #include <Context.h>
 #include <Grid.h>
@@ -45,4 +45,4 @@ private:
   Grid<char> *_bc_map;
 };
 
-#endif // BOUNDARYCONDITION_H
+#endif // BOUNDARY_CONDITION_H_

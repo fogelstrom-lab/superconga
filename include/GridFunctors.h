@@ -1,5 +1,5 @@
-#ifndef GRIDFUNCTORS_H
-#define GRIDFUNCTORS_H
+#ifndef GRID_FUNCTORS_H_
+#define GRID_FUNCTORS_H_
 
 #include <math.h>
 
@@ -22,4 +22,4 @@ template <typename T> struct absVal {
 };
 } // namespace GridFunctors
 
-#endif // GRIDFUNCTORS_H
+#endif // GRID_FUNCTORS_H_

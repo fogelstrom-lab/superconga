@@ -1,5 +1,5 @@
-#ifndef BOUNDARYSTORAGE_H
-#define BOUNDARYSTORAGE_H
+#ifndef BOUNDARY_STORAGE_H_
+#define BOUNDARY_STORAGE_H_
 
 template <typename T> class GeometryGroup;
 template <typename T> class BoundaryStorage;
@@ -563,4 +563,4 @@ template <typename T> void BoundaryStorage<T>::setBoundaryZero() {
   _boundary_out_gammabar->setZero();
 }
 
-#endif // BOUNDARYSTORAGE_H
+#endif // BOUNDARY_STORAGE_H_

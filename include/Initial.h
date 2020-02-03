@@ -2,8 +2,8 @@
 // Collection of functions to set the initial condition of the order parameter.
 // All member functions are static so this struct should not be instantiated.
 //
-#ifndef INITIAL_H
-#define INITIAL_H
+#ifndef INITIAL_H_
+#define INITIAL_H_
 
 #include "OrderParameterComponent.h"
 #include <cuda.h>
@@ -342,4 +342,4 @@ int Initial<T>::read(OrderParameterComponent<T> *deltaComponent,
   return read(deltaComponent, fn);
 }
 
-#endif // INITIAL_H
+#endif // INITIAL_H_

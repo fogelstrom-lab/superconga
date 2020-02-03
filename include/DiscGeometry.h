@@ -1,8 +1,8 @@
 //
 // Handles the discrete representation of a disc shape primitive.
 //
-#ifndef DISCGEOMETRY_H
-#define DISCGEOMETRY_H
+#ifndef DISC_GEOMETRY_H_
+#define DISC_GEOMETRY_H_
 
 #include "GeometryComponent.h"
 #include <Disc.h>
@@ -173,4 +173,4 @@ Grid<char>::GPU *DiscGeometry<T>::createDomain(const int N) {
   return dom_component;
 }
 
-#endif // DISCGEOMETRY_H
+#endif // DISC_GEOMETRY_H_

@@ -1,5 +1,5 @@
-#ifndef COMPUTELDOS_H
-#define COMPUTELDOS_H
+#ifndef COMPUTE_LDOS_H_
+#define COMPUTE_LDOS_H_
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorKeldysh.h>
@@ -226,4 +226,4 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
   }
 }
 
-#endif // COMPUTELDOS_H
+#endif // COMPUTE_LDOS_H_

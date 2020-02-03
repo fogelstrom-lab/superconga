@@ -1,8 +1,8 @@
 //
 // Base class for the Riccati equation solver.
 //
-#ifndef RICCATISOLVER_H
-#define RICCATISOLVER_H
+#ifndef RICCATI_SOLVER_H_
+#define RICCATI_SOLVER_H_
 
 #include "ComputeVectorPotential.h"
 #include "LocalGamma.h"
@@ -364,4 +364,4 @@ void RiccatiSolver<T>::getKernelDimensionsOptim(dim3 &blocksPerGrid,
   blocksPerGrid = dim3(bpg_x, bpg_y);
 }
 
-#endif // RICCATISOLVER_H
+#endif // RICCATI_SOLVER_H_

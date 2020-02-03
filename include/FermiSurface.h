@@ -1,5 +1,5 @@
-#ifndef FERMISURFACE_H_
-#define FERMISURFACE_H_
+#ifndef FERMI_SURFACE_H_
+#define FERMI_SURFACE_H_
 
 #include "Context.h"
 #include "ContextModule.h"
@@ -117,4 +117,4 @@ __host__ __device__ T FermiSurface<T>::getFractionalAngleIndex(
   return static_cast<T>(inNumAngles) * phi / static_cast<T>(2.0 * M_PI);
 }
 
-#endif // FERMISURFACE_H_
+#endif // FERMI_SURFACE_H_

@@ -1,5 +1,5 @@
-#ifndef CONTEXT_H
-#define CONTEXT_H
+#ifndef CONTEXT_H_
+#define CONTEXT_H_
 
 #include "Grid.h"
 #include <ContextModule.h>
@@ -260,4 +260,4 @@ template <typename T> int Context<T>::isConverged() const {
   }
 }
 
-#endif // CONTEXT_H
+#endif // CONTEXT_H_

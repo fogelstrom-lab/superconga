@@ -1,5 +1,5 @@
-#ifndef ORDERPARAMETERCOMPONENT_D_H_
-#define ORDERPARAMETERCOMPONENT_D_H_
+#ifndef ORDER_PARAMETER_COMPONENT_D_H_
+#define ORDER_PARAMETER_COMPONENT_D_H_
 
 #include "Grid.h"
 #include "OrderParameterBasis.h"
@@ -90,8 +90,8 @@ OrderParameterComponent_D<T>::~OrderParameterComponent_D() {
 }
 
 template <typename T>
-OrderParameterComponent_D<T> &OrderParameterComponent_D<T>::
-operator=(OrderParameterComponent_D<T> other) {
+OrderParameterComponent_D<T> &
+OrderParameterComponent_D<T>::operator=(OrderParameterComponent_D<T> other) {
   swap(*this, other);
   return *this;
 }
@@ -139,4 +139,4 @@ template <typename T> double OrderParameterComponent_D<T>::deltaBulk() const {
   return OrderParameterComponent<T>::deltaBulk() * 1.5 / 1.76;
 }
 
-#endif // ORDERPARAMETERCOMPONENT_D_H_
+#endif // ORDER_PARAMETER_COMPONENT_D_H_

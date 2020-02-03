@@ -2,8 +2,8 @@
 // Functions to compute local value of Gammas
 //////////////////////////////////////////////
 
-#ifndef LOCALGAMMA_H
-#define LOCALGAMMA_H
+#ifndef LOCAL_GAMMA_H_
+#define LOCAL_GAMMA_H_
 
 #include <cplx.h>
 #include <cuda.h>
@@ -107,4 +107,4 @@ _HD_ void Gamma::Debug<T>::Gammabar::computeGamma_local(const cplx<T> &D,
   Gamma::computeGamma_local(D, g0, e, h, y, g);
 }
 
-#endif // LOCALGAMMA_H
+#endif // LOCAL_GAMMA_H_

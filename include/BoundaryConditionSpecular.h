@@ -1,5 +1,5 @@
-#ifndef BOUNDARYCONDITIONSPECULAR_H_
-#define BOUNDARYCONDITIONSPECULAR_H_
+#ifndef BOUNDARY_CONDITION_SPECULAR_H_
+#define BOUNDARY_CONDITION_SPECULAR_H_
 
 #include "BoundaryCondition.h"
 #include "BoundaryStorage.h"
@@ -357,4 +357,4 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   cudaStreamDestroy(s2);
 }
 
-#endif // BOUNDARYCONDITIONSPECULAR_H_
+#endif // BOUNDARY_CONDITION_SPECULAR_H_

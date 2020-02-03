@@ -1,5 +1,5 @@
-#ifndef OPTIMIZERFIXEDPOINT_H_
-#define OPTIMIZERFIXEDPOINT_H_
+#ifndef OPTIMIZER_FIXED_POINT_H_
+#define OPTIMIZER_FIXED_POINT_H_
 
 #include "Optimizer.h"
 #include "OrderParameter.h"
@@ -27,4 +27,4 @@ void OptimizerFixedPoint<T>::step(const OrderParameter<T> &rhsK,
   deltaK = rhsK;
 }
 
-#endif // OPTIMIZERFIXEDPOINT_H_
+#endif // OPTIMIZER_FIXED_POINT_H_

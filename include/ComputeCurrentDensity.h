@@ -1,5 +1,5 @@
-#ifndef COMPUTECURRENTDENSITY_H
-#define COMPUTECURRENTDENSITY_H
+#ifndef COMPUTE_CURRENT_DENSITY_H_
+#define COMPUTE_CURRENT_DENSITY_H_
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorKeldysh.h>
@@ -258,4 +258,4 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
   }
 }
 
-#endif // COMPUTECURRENTDENSITY_H
+#endif // COMPUTE_CURRENT_DENSITY_H_

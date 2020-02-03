@@ -1,5 +1,5 @@
-#ifndef ORDERPARAMETER_H
-#define ORDERPARAMETER_H
+#ifndef ORDER_PARAMETER_H_
+#define ORDER_PARAMETER_H_
 
 #include "utils.h"
 #include <Context.h>
@@ -215,4 +215,4 @@ template <typename T> char *OrderParameter<T>::type() const {
   return ret;
 }
 
-#endif // ORDERPARAMETER_H
+#endif // ORDER_PARAMETER_H_
