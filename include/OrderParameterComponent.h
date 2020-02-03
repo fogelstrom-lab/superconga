@@ -1,7 +1,3 @@
-#ifndef PI
-#define PI 3.1415926535897932384
-#endif
-
 #ifndef ORDER_PARAMETER_COMPONENT_H_
 #define ORDER_PARAMETER_COMPONENT_H_
 
@@ -9,6 +5,7 @@
 #include "Grid.h"
 #include "Parameters.h"
 #include <cmath>
+#include <math.h>
 #include <stdexcept>
 
 template <typename T> class OrderParameterComponent {
@@ -191,7 +188,7 @@ template <typename T> double OrderParameterComponent<T>::deltaBulk() const {
     }
     matsubaraSum *= delta;
 
-    g = delta * log(T_Tc) - 2.0 * PI * T_Tc * matsubaraSum;
+    g = delta * log(T_Tc) - 2.0 * M_PI * T_Tc * matsubaraSum;
     deltaDiff = g * gMix;
     delta += deltaDiff;
 

@@ -1,11 +1,12 @@
 #ifndef COMPUTE_FREE_ENERGY_H_
 #define COMPUTE_FREE_ENERGY_H_
 
+#include "ComputeProperty.h"
+#include "Initial.h"
+#include "IntegrationIteratorOzaki.h"
 #include "LocalGreens.h"
-#include <ComputeProperty.h>
-#include <Initial.h>
-#include <IntegrationIteratorOzaki.h>
-#include <cplx.h>
+#include "cplx.h"
+#include <math.h>
 #include <stdio.h>
 
 template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
@@ -344,7 +345,8 @@ T ComputeFreeEnergy<T>::freeEnergy_S(Parameters<T> *param,
   }
 
   // Free energy
-  T freeEnergy = area * D2.x * (log(T_Tc) + 2.0 * PI * T_Tc * D2.x * e_inv_sum);
+  T freeEnergy =
+      area * D2.x * (log(T_Tc) + 2.0 * M_PI * T_Tc * D2.x * e_inv_sum);
   return freeEnergy;
 }
 
@@ -359,7 +361,7 @@ template <typename T> T ComputeFreeEnergy<T>::freeEnergyT0_S() {
   T D0 = Initial<T>::computeDeltaBulk(T_Tc); // = 1.76
 
   // Free energy
-  return area * (-0.5 * D0 * D0 + PI * PI / 3.0 * T_Tc * T_Tc);
+  return area * (-0.5 * D0 * D0 + M_PI * M_PI / 3.0 * T_Tc * T_Tc);
 }
 
 #endif // COMPUTE_FREE_ENERGY_H_
