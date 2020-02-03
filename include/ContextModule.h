@@ -1,5 +1,5 @@
-#ifndef CONTEXTMODULE_H
-#define CONTEXTMODULE_H
+#ifndef CONTEXT_MODULE_H_
+#define CONTEXT_MODULE_H_
 
 #include <cuda.h>
 
@@ -68,4 +68,4 @@ template <typename T> void ContextModule<T>::checkCudaError(std::string msg) {
               << std::endl;
 }
 
-#endif // CONTEXTMODULE_H
+#endif // CONTEXT_MODULE_H_

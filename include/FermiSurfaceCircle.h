@@ -1,5 +1,5 @@
-#ifndef FERMISURFACECIRCLE_H_
-#define FERMISURFACECIRCLE_H_
+#ifndef FERMI_SURFACE_CIRCLE_H_
+#define FERMI_SURFACE_CIRCLE_H_
 
 #include "FermiSurface.h"
 #include "utils.h"
@@ -130,4 +130,4 @@ void FermiSurfaceCircle<T>::getMomentumOffset(T &outOffsetX, T &outOffsetY) {
   outOffsetY = static_cast<T>(0.0);
 }
 
-#endif // FERMISURFACECIRCLE_H_
+#endif // FERMI_SURFACE_CIRCLE_H_

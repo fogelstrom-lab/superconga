@@ -1,5 +1,5 @@
-#ifndef FERMISURFACETIGHTBINDING_H_
-#define FERMISURFACETIGHTBINDING_H_
+#ifndef FERMI_SURFACE_TIGHT_BINDING_H_
+#define FERMI_SURFACE_TIGHT_BINDING_H_
 
 #include "FermiSurface.h"
 #include "utils.h"
@@ -531,4 +531,4 @@ void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
   outOffsetY = m_offsetY;
 }
 
-#endif // FERMISURFACETIGHTBINDING_H_
+#endif // FERMI_SURFACE_TIGHT_BINDING_H_

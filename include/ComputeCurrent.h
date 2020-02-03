@@ -1,5 +1,5 @@
-#ifndef COMPUTECURRENT_H
-#define COMPUTECURRENT_H
+#ifndef COMPUTE_CURRENT_H_
+#define COMPUTE_CURRENT_H_
 
 #include "utils.h"
 #include <ComputeProperty.h>
@@ -181,4 +181,4 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
   }
 }
 
-#endif // COMPUTECURRENT_H
+#endif // COMPUTE_CURRENT_H_

@@ -1,5 +1,5 @@
-#ifndef INTEGRATIONITERATOROZAKI_H
-#define INTEGRATIONITERATOROZAKI_H
+#ifndef INTEGRATION_ITERATOR_OZAKI_H_
+#define INTEGRATION_ITERATOR_OZAKI_H_
 
 #include "FermiSurface.h"
 #include "utils.h"
@@ -78,7 +78,8 @@ template <typename T> int IntegrationIteratorOzaki<T>::initialize() {
   std::cout << "IntegrationIteratorOzaki::initialize()\n";
   IntegrationIterator<T>::initialize();
 
-  int numEnergies = ContextModule<T>::getParameters()->getNumMatsubaraEnergies();
+  int numEnergies =
+      ContextModule<T>::getParameters()->getNumMatsubaraEnergies();
 
   initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
 
@@ -349,4 +350,4 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
   I::increaseIterationCount();
 }
 
-#endif // INTEGRATIONITERATOROZAKI_H
+#endif // INTEGRATION_ITERATOR_OZAKI_H_

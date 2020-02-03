@@ -1,5 +1,5 @@
-#ifndef OPTIMIZERROLLINGBALL_H_
-#define OPTIMIZERROLLINGBALL_H_
+#ifndef OPTIMIZER_ROLLING_BALL_H_
+#define OPTIMIZER_ROLLING_BALL_H_
 
 #include "Optimizer.h"
 #include "OrderParameter.h"
@@ -125,4 +125,4 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
   m_iterationIndex++;
 }
 
-#endif // OPTIMIZERROLLINGBALL_H_
+#endif // OPTIMIZER_ROLLING_BALL_H_

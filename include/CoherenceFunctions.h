@@ -1,5 +1,5 @@
-#ifndef COHERENCEFUNCTIONS_H
-#define COHERENCEFUNCTIONS_H
+#ifndef COHERENCE_FUNCTIONS_H_
+#define COHERENCE_FUNCTIONS_H_
 
 #include <Context.h>
 #include <ContextModule.h>
@@ -97,4 +97,4 @@ template <typename T> int CoherenceFunctions<T>::initialize() {
   return 0;
 }
 
-#endif // COHERENCEFUNCTIONS_H
+#endif // COHERENCE_FUNCTIONS_H_

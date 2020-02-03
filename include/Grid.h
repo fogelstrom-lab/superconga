@@ -1,5 +1,5 @@
-#ifndef GRID_H
-#define GRID_H
+#ifndef GRID_H_
+#define GRID_H_
 
 #ifdef __CUDACC__
 #define _DEV_ __host__ __device__
@@ -38,4 +38,4 @@ template <typename T> struct Grid {
 #endif
 };
 
-#endif // GRID_H
+#endif // GRID_H_
