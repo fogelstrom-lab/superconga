@@ -1,5 +1,5 @@
-#ifndef ORDERPARAMETERBASIS_H_
-#define ORDERPARAMETERBASIS_H_
+#ifndef ORDER_PARAMETER_BASIS_H_
+#define ORDER_PARAMETER_BASIS_H_
 
 #include <cplx.h>
 #include <cuda.h>
@@ -29,4 +29,4 @@ template <typename T> struct Basis_P {
   }
 };
 
-#endif // ORDERPARAMETERBASIS_H_
+#endif // ORDER_PARAMETER_BASIS_H_

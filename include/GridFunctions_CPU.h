@@ -1,5 +1,5 @@
-#ifndef GRIDFUNCTIONS_CPU_H
-#define GRIDFUNCTIONS_CPU_H
+#ifndef GRID_FUNCTIONS_CPU_H_
+#define GRID_FUNCTIONS_CPU_H_
 
 #include <thrust/host_vector.h>
 
@@ -708,4 +708,4 @@ void GridFunctions<T, thrust::host_vector<T>>::minmax(const GridCPU &grid,
   maxv = *result.second;
 }
 
-#endif // GRIDFUNCTIONS_CPU_H
+#endif // GRID_FUNCTIONS_CPU_H_

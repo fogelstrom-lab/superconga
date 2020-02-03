@@ -2,8 +2,8 @@
 // Functions to compute local contribution to energy from a vector potential
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef LOCALVECTORPOTENTIAL_H
-#define LOCALVECTORPOTENTIAL_H
+#ifndef LOCAL_VECTOR_POTENTIAL_H_
+#define LOCAL_VECTOR_POTENTIAL_H_
 
 #ifndef _HD_
 #define _HD_ __host__ __device__
@@ -138,4 +138,4 @@ _HD_ T VectorPotential::Solenoid<T>::computeVectorPotential_local(
           x_global * sin(systemAngle + T(0.5) * T(M_PI)));
 }
 
-#endif // LOCALVECTORPOTENTIAL_H
+#endif // LOCAL_VECTOR_POTENTIAL_H_

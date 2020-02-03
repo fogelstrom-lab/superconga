@@ -1,5 +1,5 @@
-#ifndef GREENSFUNCTIONSTATIC_H
-#define GREENSFUNCTIONSTATIC_H
+#ifndef GREENS_FUNCTION_STATIC_H_
+#define GREENS_FUNCTION_STATIC_H_
 
 #include "LocalGreens.h"
 #include <Grid.h>
@@ -228,4 +228,4 @@ void GreensFunctionStatic<T, GREENS>::getKernelDimensions(dim3 &blocksPerGrid,
   blocksPerGrid = dim3(bpg_x, bpg_y, numEnergies);
 }
 
-#endif // GREENSFUNCTIONSTATIC_H
+#endif // GREENS_FUNCTION_STATIC_H_

@@ -1,5 +1,6 @@
-#ifndef COMPUTEFREEENERGY2_H
-#define COMPUTEFREEENERGY2_H
+// TODO: (niclas) Rename this file!
+#ifndef COMPUTE_FREE_ENERGY_2_H_
+#define COMPUTE_FREE_ENERGY_2_H_
 
 #include <ComputeProperty.h>
 #include <IntegrationIteratorOzaki.h>
@@ -198,4 +199,4 @@ template <typename T> void ComputeFreeEnergy2<T>::computePropertyFromGreens() {
   }
 }
 
-#endif // COMPUTEFREEENERGY2_H
+#endif // COMPUTE_FREE_ENERGY_2_H_

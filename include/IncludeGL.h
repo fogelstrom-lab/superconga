@@ -1,5 +1,5 @@
-#ifndef INCLUDEGL_H
-#define INCLUDEGL_H
+#ifndef INCLUDE_GL_H_
+#define INCLUDE_GL_H_
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -76,4 +76,4 @@ void timerEvent(int value) {
   glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
 }
 
-#endif // INCLUDEGL_H
+#endif // INCLUDE_GL_H_

@@ -1,5 +1,5 @@
-#ifndef POLYGONGEOMETRY_H
-#define POLYGONGEOMETRY_H
+#ifndef POLYGON_GEOMETRY_H_
+#define POLYGON_GEOMETRY_H_
 
 #include "GeometryComponent.h"
 #include "Polygon.h"
@@ -268,4 +268,4 @@ Grid<char>::GPU *PolygonGeometry<T>::createDomain(const int N) {
   return dom_component;
 }
 
-#endif // POLYGONGEOMETRY_H
+#endif // POLYGON_GEOMETRY_H_

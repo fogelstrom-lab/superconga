@@ -2,8 +2,8 @@
 #define PI 3.1415926535897932384
 #endif
 
-#ifndef ORDERPARAMETERCOMPONENT_H
-#define ORDERPARAMETERCOMPONENT_H
+#ifndef ORDER_PARAMETER_COMPONENT_H_
+#define ORDER_PARAMETER_COMPONENT_H_
 
 #include "FermiSurface.h"
 #include "Grid.h"
@@ -202,4 +202,4 @@ template <typename T> double OrderParameterComponent<T>::deltaBulk() const {
   return delta;
 }
 
-#endif // ORDERPARAMETERCOMPONENT_H
+#endif // ORDER_PARAMETER_COMPONENT_H_

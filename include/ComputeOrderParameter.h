@@ -1,5 +1,5 @@
-#ifndef COMPUTEORDERPARAMETER_H
-#define COMPUTEORDERPARAMETER_H
+#ifndef COMPUTE_ORDER_PARAMETER_H_
+#define COMPUTE_ORDER_PARAMETER_H_
 
 #include "ComputeProperty.h"
 #include "IntegrationIteratorOzaki.h"
@@ -247,4 +247,4 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
   }
 }
 
-#endif // COMPUTEORDERPARAMETER_H
+#endif // COMPUTE_ORDER_PARAMETER_H_
