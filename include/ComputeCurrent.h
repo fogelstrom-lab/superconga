@@ -1,9 +1,9 @@
 #ifndef COMPUTE_CURRENT_H_
 #define COMPUTE_CURRENT_H_
 
+#include "ComputeProperty.h"
+#include "IntegrationIteratorOzaki.h"
 #include "utils.h"
-#include <ComputeProperty.h>
-#include <IntegrationIteratorOzaki.h>
 
 template <typename T> class ComputeCurrent : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;

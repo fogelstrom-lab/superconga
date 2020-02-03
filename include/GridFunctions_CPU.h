@@ -1,6 +1,8 @@
 #ifndef GRID_FUNCTIONS_CPU_H_
 #define GRID_FUNCTIONS_CPU_H_
 
+#include "Type.h"
+#include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
 ///////////////////////////////////////////

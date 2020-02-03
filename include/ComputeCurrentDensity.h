@@ -1,8 +1,8 @@
 #ifndef COMPUTE_CURRENT_DENSITY_H_
 #define COMPUTE_CURRENT_DENSITY_H_
 
-#include <ComputeProperty.h>
-#include <IntegrationIteratorKeldysh.h>
+#include "ComputeProperty.h"
+#include "IntegrationIteratorKeldysh.h"
 
 template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;

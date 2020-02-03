@@ -4,20 +4,20 @@
 #ifndef RICCATI_SOLVER_H_
 #define RICCATI_SOLVER_H_
 
+#include "BoundaryCondition.h"
+#include "BoundaryStorage.h"
+#include "ComputeCurrent.h"
 #include "ComputeVectorPotential.h"
+#include "GeometryGroup.h"
+#include "Grid.h"
+#include "IntegrationIterator.h"
 #include "LocalGamma.h"
 #include "LocalVectorPotential.h"
+#include "ParameterIterator.h"
+#include "Parameters.h"
 #include "VectorPotential_Kernel.h"
+#include "cplx.h"
 #include "utils.h"
-#include <BoundaryCondition.h>
-#include <BoundaryStorage.h>
-#include <ComputeCurrent.h>
-#include <GeometryGroup.h>
-#include <Grid.h>
-#include <IntegrationIterator.h>
-#include <ParameterIterator.h>
-#include <Parameters.h>
-#include <cplx.h>
 
 /////////////////////////////////////////////////////////
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE

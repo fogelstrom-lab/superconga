@@ -5,7 +5,7 @@
 #ifndef LOCAL_GAMMA_H_
 #define LOCAL_GAMMA_H_
 
-#include <cplx.h>
+#include "cplx.h"
 #include <cuda.h>
 
 #ifdef __CUDACC__

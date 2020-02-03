@@ -1,8 +1,8 @@
 #ifndef COMPUTE_VECTOR_POTENTIAL_H_
 #define COMPUTE_VECTOR_POTENTIAL_H_
 
-#include <GeometryGroup.h>
-#include <Grid.h>
+#include "GeometryGroup.h"
+#include "Grid.h"
 #include <cuda.h>
 
 template <typename T>

@@ -6,13 +6,13 @@ template <typename T> class BoundaryStorage;
 template <typename T> class IntegrationIterator;
 template <typename T> class ComputeProperty;
 
+#include "ComputeProperty.h"
 #include "FermiSurface.h"
+#include "GeometryGroup.h"
+#include "Grid.h"
+#include "IntegrationIterator.h"
+#include "Type.h"
 #include "utils.h"
-#include <ComputeProperty.h>
-#include <GeometryGroup.h>
-#include <Grid.h>
-#include <IntegrationIterator.h>
-#include <Type.h>
 #include <iostream>
 
 template <typename T> class BoundaryStorage {

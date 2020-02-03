@@ -1,7 +1,7 @@
 #ifndef POLYGON_H_
 #define POLYGON_H_
 
-#include <Grid.h>
+#include "Grid.h"
 #include <math.h>
 
 // This class provides a basic shape implementation for a polygon.

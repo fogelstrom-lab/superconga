@@ -1,12 +1,12 @@
 #ifndef ORDER_PARAMETER_H_
 #define ORDER_PARAMETER_H_
 
+#include "Context.h"
+#include "ContextModule.h"
+#include "Grid.h"
+#include "OrderParameterComponent.h"
+#include "Parameters.h"
 #include "utils.h"
-#include <Context.h>
-#include <ContextModule.h>
-#include <Grid.h>
-#include <OrderParameterComponent.h>
-#include <Parameters.h>
 
 template <typename T> class OrderParameter : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;

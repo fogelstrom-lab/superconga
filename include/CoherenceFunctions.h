@@ -1,9 +1,9 @@
 #ifndef COHERENCE_FUNCTIONS_H_
 #define COHERENCE_FUNCTIONS_H_
 
-#include <Context.h>
-#include <ContextModule.h>
-#include <Grid.h>
+#include "Context.h"
+#include "ContextModule.h"
+#include "Grid.h"
 
 template <typename T> class CoherenceFunctions : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;

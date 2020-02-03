@@ -2,8 +2,8 @@
 #ifndef COMPUTE_FREE_ENERGY_2_H_
 #define COMPUTE_FREE_ENERGY_2_H_
 
-#include <ComputeProperty.h>
-#include <IntegrationIteratorOzaki.h>
+#include "ComputeProperty.h"
+#include "IntegrationIteratorOzaki.h"
 #include <cuda.h>
 
 template <typename T> class ComputeFreeEnergy2 : public ComputeProperty<T> {

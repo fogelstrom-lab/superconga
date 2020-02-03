@@ -11,7 +11,7 @@
 #endif
 #endif
 
-#include <cplx.h>
+#include "cplx.h"
 
 template <typename T> struct Greens {
   _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
