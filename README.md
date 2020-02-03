@@ -29,3 +29,16 @@ By default, CMake tries to autodetect the appropriate CUDA architecture. One can
 cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ..
 ```
 where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.).
+
+## Clang-Format
+We enforce consistent LLVM style with clang-format version 9. On Ubuntu install with
+```
+sudo apt install clang-format-9
+sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
+```
+Our settings are found in the file `.clang-format`.
+If we want to change style, this is done by writing e.g.
+```
+clang-format -style=llvm -dump-config > .clang-format
+```
+to get LLVM format.
