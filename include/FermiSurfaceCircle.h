@@ -8,6 +8,8 @@
 #include <math.h>
 #include <thrust/device_vector.h>
 
+// TODO: (Patric) Choose a circular fermisurface by default if the user does not
+// specify any in the run file.
 template <typename T> class FermiSurfaceCircle : public FermiSurface<T> {
 public:
   // Constructor.

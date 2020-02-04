@@ -2,6 +2,7 @@
 #define PARAMETERS_H_
 
 #include "ContextModule.h"
+#include "defines.h"
 #include <fstream>
 #include <iostream>
 #include <math.h>
@@ -33,13 +34,15 @@ public:
   int getGridResolutionCoherence() const { return m_numGridCoherence; }
   int getGridResolutionDeltaRotated() const { return m_numGridCoherence; }
 
-  T getGridWidth() const { return m_gridWidth; }
+  T getGrainWidthCoherenceLengths() const {
+    return m_grainWidthCoherenceLengths;
+  }
   T getGridElementSize() const { return m_gridElementSize; }
   int getAngularResolution() const { return m_numAngles; }
   T getAngleIncrement() const;
 
   int getNumMatsubaraEnergies() const;
-  T getTemperature() const { return m_T_Tc; }
+  T getTemperature() const { return m_temperature; }
   T getMagneticFieldStrength() const { return m_magneticFieldStrength; }
 
   T getConvergenceCriterion() const { return m_convergenceCriterion; }
@@ -56,7 +59,13 @@ public:
   int isValid() const { return m_isValid; }
 
   // Setters
-  void setGridWidth(const T inGridWidth);
+  // TODO: (Patric) Change name from grid to grain when referring to the
+  // superconducting grain.
+  // TODO: (Patric) Change all internal length units to hbar*vF/(2*pi*kB*Tc)
+  // rather than hbar*vF/(kB*Tc). WARNING! This is not as trivial as it
+  // seems, and will have far-reaching consequences with non-trivial scaling
+  // factors.
+  void setGrainWidthCoherenceLengths(const T inGrainWidthCoherenceLengths);
   void setGridResolution(const int inNumGridBase);
   void setAngularResolution(const int inNumAngles) {
     m_numAngles = inNumAngles;
@@ -68,7 +77,7 @@ public:
     m_numMatsubaraEnergies = inNumMatsubaraEnergies;
   }
 
-  void setTemperature(const T inTemperature) { m_T_Tc = inTemperature; }
+  void setTemperature(const T inTemperature) { m_temperature = inTemperature; }
   void setMagneticFieldStrength(const T inMagneticFieldStrength) {
     m_magneticFieldStrength = inMagneticFieldStrength;
   }
@@ -111,8 +120,8 @@ private:
   // Number of elements for order parameter solution.
   int m_numGridBase;
 
-  // In natural units: h_bar * <vF> / (kB * Tc).
-  T m_gridWidth;
+  // Side length of superconducting grain in units h_bar * <vF> / (kB * Tc).
+  T m_grainWidthCoherenceLengths;
 
   // Width of one grid element.
   T m_gridElementSize;
@@ -128,9 +137,8 @@ private:
   // Energy cutoff.
   T m_energyCutoff;
 
-  // Temperature, T/T_c.
-  // TODO(niclas): Rename this!?
-  T m_T_Tc;
+  // Temperature in units of Tc.
+  T m_temperature;
 
   // Magnetic field.
   T m_magneticFieldStrength;
@@ -164,10 +172,10 @@ private:
 
 template <typename T>
 Parameters<T>::Parameters(Context<T> *const inOutContext)
-    : m_gridWidth(1.0), m_numAngles(0), m_energyCutoff(10), m_T_Tc(0.5),
-      m_magneticFieldStrength(0.0), m_convergenceCriterion(0.0001),
-      m_numEnergies(0), m_energyMin(0.0), m_energyMax(0.0),
-      m_smearingFactor(0.01), m_numMatsubaraEnergies(0),
+    : m_grainWidthCoherenceLengths(1.0), m_numAngles(0), m_energyCutoff(10),
+      m_temperature(0.5), m_magneticFieldStrength(0.0),
+      m_convergenceCriterion(0.0001), m_numEnergies(0), m_energyMin(0.0),
+      m_energyMax(0.0), m_smearingFactor(0.01), m_numMatsubaraEnergies(0),
       m_penetrationDepth(100.0), m_version(2), m_isValid(1) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
@@ -205,10 +213,10 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
     std::cout << "Parameters<T>::operator=(): Warning, differing versions of "
                  "Parameters class\n";
 
-  m_gridWidth = inOther.getGridWidth();
+  m_grainWidthCoherenceLengths = inOther.getGrainWidthCoherenceLengths();
   m_numAngles = inOther.getAngularResolution();
   m_energyCutoff = inOther.getCutOff();
-  m_T_Tc = inOther.getTemperature();
+  m_temperature = inOther.getTemperature();
   m_magneticFieldStrength = inOther.getMagneticFieldStrength();
   m_convergenceCriterion = inOther.getConvergenceCriterion();
   m_numEnergies = inOther.getNumEnergies();
@@ -232,7 +240,7 @@ template <typename T> int Parameters<T>::getNumMatsubaraEnergies() const {
   } else {
     // Compute it from the cutoff and temperature instead.
     // TODO(niclas): Shouldn't it be n = (cutoff / (pi * T) - 1 ) / 2 ?
-    const T ratio = m_energyCutoff / m_T_Tc;
+    const T ratio = m_energyCutoff / m_temperature;
     return (static_cast<int>(ratio) + 2);
   }
 }
@@ -255,8 +263,13 @@ void Parameters<T>::setEnergyRange(const T inEnergyMin, const T inEnergyMax,
   }
 }
 
-template <typename T> void Parameters<T>::setGridWidth(const T inGridWidth) {
-  m_gridWidth = inGridWidth;
+template <typename T>
+void Parameters<T>::setGrainWidthCoherenceLengths(
+    const T inGrainWidthCoherenceLengths) {
+  // Give grain width in coherence lengths: hbar*vF/(2*pi*kB*Tc). The scaling
+  // to internal length units hbar*vF/(kB*Tc) is appropriately done when
+  // calculating the size of the discrete lattice spacing.
+  m_grainWidthCoherenceLengths = inGrainWidthCoherenceLengths;
   setGridElementSize();
 }
 
@@ -269,9 +282,11 @@ void Parameters<T>::setGridResolution(const int inNumGridBase) {
   setGridElementSize();
 }
 
+// Calculate the lattice spacing size in physical units of hbar*vF/(kB*Tc)
 template <typename T> void Parameters<T>::setGridElementSize() {
-  m_gridElementSize =
-      m_gridWidth / (static_cast<T>(m_numGridBase) - static_cast<T>(1.0));
+  m_gridElementSize = m_grainWidthCoherenceLengths /
+                      ((static_cast<T>(m_numGridBase) - static_cast<T>(1.0)) *
+                       (static_cast<T>(2.0 * M_PI) * qcs::GRAIN_SIZE_FRACTION));
 }
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
@@ -348,11 +363,11 @@ int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) {
 }
 
 template <typename T> void Parameters<T>::print() const {
-  std::cout << "Grid Resolution Base: " << m_numGridBase << std::endl;
-  std::cout << "Grid Width: " << m_gridWidth << std::endl;
-  std::cout << "Grid Element Size: " << m_gridElementSize << std::endl;
+  std::cout << "Grain Resolution Base: " << m_numGridBase << std::endl;
+  std::cout << "Grain Width: " << m_grainWidthCoherenceLengths << std::endl;
+  std::cout << "Grain Element Size: " << m_gridElementSize << std::endl;
   std::cout << "Angular Resolution: " << m_numAngles << std::endl;
-  std::cout << "Temperature: " << m_T_Tc << std::endl;
+  std::cout << "Temperature: " << m_temperature << std::endl;
   std::cout << "Magnetic Field Strength: " << m_magneticFieldStrength
             << std::endl;
   std::cout << "Spectral energy range: (" << m_energyMin << ", " << m_energyMax

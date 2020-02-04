@@ -16,14 +16,13 @@ template <typename T> struct Initial {
 public:
   // Computes bulk value of s-wave order parameter. Can be used as initial
   // condition.
-  static double computeDeltaBulk(const double T_Tc,
-                                 const double deltaConvergence = 1E-9);
+  static T computeDeltaBulk(const T T_Tc, const T deltaConvergence = 1E-9);
 
   // The following functions set the deltaComponent field to...
 
   // ...delta bulk
   static void bulk(OrderParameterComponent<T> *deltaComponent,
-                   const T mult_re = 1.0, const T mult_im = 0.0);
+                   const T phase = 0.0);
 
   // ...specified complex valued constant
   static void constant(OrderParameterComponent<T> *deltaComponent,
@@ -80,6 +79,7 @@ phaseWinding_radial_Kernel(T *data_re, T *data_im, const int Nx, const int Ny,
 
     T phase;
 
+    // TODO: (Patric) Replace with atan2. Do not forget to test!
     if (x >= (T)0.0 && y >= (T)0.0) {
       if (x == (T)0.0)
         phase = M_PI * (T)0.5;
@@ -98,11 +98,15 @@ phaseWinding_radial_Kernel(T *data_re, T *data_im, const int Nx, const int Ny,
     T radius = sqrt(x * x + y * y);
 
     if (radius < cutOffRadius)
+    {
       phase = (T)0.0;
+    }
 
     if (center_x == (T)0.0 && center_y == (T)0.0 && i == (Nx - 1) / 2 &&
         j == (Ny - 1) / 2)
+    {
       deltaBulk = (T)0.0;
+    }
 
     data_re[idx] = cos(phase * numWinding) * deltaBulk;
     data_im[idx] = sin(phase * numWinding) * deltaBulk;
@@ -111,16 +115,15 @@ phaseWinding_radial_Kernel(T *data_re, T *data_im, const int Nx, const int Ny,
 } // namespace
 
 template <typename T>
-double Initial<T>::computeDeltaBulk(const double T_Tc,
-                                    const double deltaConvergence) {
-  const double gMix = -0.1;
+T Initial<T>::computeDeltaBulk(const T T_Tc, const T deltaConvergence) {
+  const T gMix = -0.1;
   const int numMatsubara = 1000.0 / T_Tc;
 
   // Delta, initial guess
-  double delta = 1.76 * sqrt(1.0 - T_Tc);
+  T delta = 1.76 * sqrt(1.0 - T_Tc);
 
   int isDeltaConverged = 0;
-  double matsubaraSum, eps, g, deltaDiff;
+  T matsubaraSum, eps, g, deltaDiff;
 
   while (!isDeltaConverged) {
     matsubaraSum = 0.0;
@@ -136,7 +139,9 @@ double Initial<T>::computeDeltaBulk(const double T_Tc,
     delta += deltaDiff;
 
     if (abs(deltaDiff / delta) < deltaConvergence)
+    {
       isDeltaConverged = 1;
+    }
   }
 
   return delta;
@@ -144,16 +149,16 @@ double Initial<T>::computeDeltaBulk(const double T_Tc,
 
 template <typename T>
 void Initial<T>::bulk(OrderParameterComponent<T> *deltaComponent,
-                      const T mult_re, const T mult_im) {
+                      const T phase) {
   Parameters<T> *params = deltaComponent->getParameters();
 
-  const double T_Tc = params->getTemperature();
-  const double deltaBulk = computeDeltaBulk(T_Tc);
+  const T T_Tc = params->getTemperature();
+  const T deltaBulk = computeDeltaBulk(T_Tc);
 
   GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
 
-  deltaGrid->setValue(deltaBulk * mult_re, Type::real);
-  deltaGrid->setValue(deltaBulk * mult_im, Type::imag);
+  deltaGrid->setValue(deltaBulk * cos(phase), Type::real);
+  deltaGrid->setValue(deltaBulk * sin(phase), Type::imag);
 }
 
 template <typename T>
@@ -173,7 +178,9 @@ void Initial<T>::grid(OrderParameterComponent<T> *deltaComponent,
   GridGPU *delta = deltaComponent->getOrderParameterField();
 
   if (tmp.dimX() != delta->dimX())
+  {
     tmp.resample(delta->dimX(), delta->dimY());
+  }
 
   *delta = tmp;
 }
@@ -233,8 +240,7 @@ void Initial<T>::random(OrderParameterComponent<T> *deltaComponent, const T mix,
       for (int i = 0; i < N; ++i) {
         idx = j * N + i;
 
-        rand_phase =
-            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
+        rand_phase = ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
 
         data_re[idx] = deltaBulk * cos(phase + rand_phase);
         data_im[idx] = deltaBulk * sin(phase + rand_phase);
@@ -296,7 +302,9 @@ void Initial<T>::perturbedPhaseWinding(
         T radius = sqrt(x * x + y * y);
 
         if (radius < cutOffRadius)
+        {
           phase = (T)0.0;
+        }
 
         if (center_x == (T)0.0 && center_y == (T)0.0 && i == (N - 1) / 2 &&
             j == (N - 1) / 2)
@@ -304,8 +312,7 @@ void Initial<T>::perturbedPhaseWinding(
         else
           amplitude = deltaBulk;
 
-        rand_phase =
-            ((double)rand() / (double)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
+        rand_phase = ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
 
         data_re[idx] = amplitude * cos(phase * numWinding + rand_phase);
         data_im[idx] = amplitude * sin(phase * numWinding + rand_phase);
