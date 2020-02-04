@@ -2,10 +2,10 @@
 #define GREENS_FUNCTION_STATIC_H_
 
 #include "LocalGreens.h"
-#include <Grid.h>
-#include <ParameterIterator.h>
-#include <Parameters.h>
-#include <cplx.h>
+#include "Grid.h"
+#include "ParameterIterator.h"
+#include "Parameters.h"
+#include "cplx.h"
 
 template <typename> class GeometryGroup;
 

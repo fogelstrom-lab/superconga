@@ -1,9 +1,9 @@
 #ifndef ORDER_PARAMETER_COMPONENT_S_H_
 #define ORDER_PARAMETER_COMPONENT_S_H_
 
-#include <Grid.h>
-#include <OrderParameterComponent.h>
-#include <Parameters.h>
+#include "Grid.h"
+#include "OrderParameterComponent.h"
+#include "Parameters.h"
 
 template <typename T>
 class OrderParameterComponent_S : public OrderParameterComponent<T> {

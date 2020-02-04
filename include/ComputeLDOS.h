@@ -1,8 +1,8 @@
 #ifndef COMPUTE_LDOS_H_
 #define COMPUTE_LDOS_H_
 
-#include <ComputeProperty.h>
-#include <IntegrationIteratorKeldysh.h>
+#include "ComputeProperty.h"
+#include "IntegrationIteratorKeldysh.h"
 
 template <typename T> class ComputeLDOS : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;

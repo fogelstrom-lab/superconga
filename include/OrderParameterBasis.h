@@ -1,7 +1,7 @@
 #ifndef ORDER_PARAMETER_BASIS_H_
 #define ORDER_PARAMETER_BASIS_H_
 
-#include <cplx.h>
+#include "cplx.h"
 #include <cuda.h>
 #include <math.h>
 

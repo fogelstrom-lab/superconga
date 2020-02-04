@@ -5,9 +5,9 @@
 #ifndef GEOMETRY_COMPONENT_H_
 #define GEOMETRY_COMPONENT_H_
 
-#include <Grid.h>
-#include <Parameters.h>
-#include <Type.h>
+#include "Grid.h"
+#include "Parameters.h"
+#include "Type.h"
 #include <cuda.h>
 #include <iostream>
 

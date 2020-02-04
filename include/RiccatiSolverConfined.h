@@ -36,7 +36,7 @@ private:
 };
 
 namespace {
-#include <cplx.h>
+#include "cplx.h"
 
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionTemplate_new_kernel(

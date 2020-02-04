@@ -6,13 +6,13 @@
 #ifndef COMPUTE_PROPERTY_H_
 #define COMPUTE_PROPERTY_H_
 
-#include <ContextModule.h>
-#include <GeometryGroup.h>
-#include <GreensFunctionStatic.h>
-#include <Grid.h>
-#include <IntegrationIterator.h>
-#include <ParameterIterator.h>
-#include <Parameters.h>
+#include "ContextModule.h"
+#include "GeometryGroup.h"
+#include "GreensFunctionStatic.h"
+#include "Grid.h"
+#include "IntegrationIterator.h"
+#include "ParameterIterator.h"
+#include "Parameters.h"
 
 template <typename> class IntegrationIterator;
 

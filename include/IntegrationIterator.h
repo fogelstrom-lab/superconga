@@ -1,11 +1,11 @@
 #ifndef INTEGRATION_ITERATOR_H_
 #define INTEGRATION_ITERATOR_H_
 
-#include <ComputeProperty.h>
-#include <GeometryGroup.h>
-#include <OrderParameter.h>
-#include <ParameterIterator.h>
-#include <RiccatiSolver.h>
+#include "ComputeProperty.h"
+#include "GeometryGroup.h"
+#include "OrderParameter.h"
+#include "ParameterIterator.h"
+#include "RiccatiSolver.h"
 
 template <typename T> class IntegrationIterator : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;

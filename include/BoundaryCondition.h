@@ -1,8 +1,8 @@
 #ifndef BOUNDARY_CONDITION_H_
 #define BOUNDARY_CONDITION_H_
 
-#include <Context.h>
-#include <Grid.h>
+#include "Context.h"
+#include "Grid.h"
 
 template <typename T> class BoundaryCondition {
   typedef typename Grid<T>::GPU GridGPU;

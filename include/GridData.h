@@ -7,8 +7,14 @@
 #define _DEV_
 #endif
 
-#include <Type.h>
+#include "GridFunctions.h"
+#include "GridFunctors.h"
+#include "Type.h"
+#include "cplx.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
 #include <thrust/extrema.h>
@@ -18,15 +24,6 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/transform.h>
-
-#include <fstream>
-#include <iostream>
-#include <sstream>
-
-#include <GridFunctions.h>
-#include <GridFunctors.h>
-#include <cplx.h>
-//#include <Parameters.h>
 
 // Forward declarations. These can be used when we want to refer to another
 // class without including the .h file.

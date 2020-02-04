@@ -2,7 +2,7 @@
 #define CONTEXT_H_
 
 #include "Grid.h"
-#include <ContextModule.h>
+#include "ContextModule.h"
 #include <iostream>
 #include <util/csecond.h>
 

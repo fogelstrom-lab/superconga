@@ -4,11 +4,11 @@
 #ifndef GEOMETRY_GROUP_H_
 #define GEOMETRY_GROUP_H_
 
-#include <GeometryComponent.h>
-#include <Grid.h>
-#include <Parameters.h>
-#include <Type.h>
-#include <cplx.h>
+#include "GeometryComponent.h"
+#include "Grid.h"
+#include "Parameters.h"
+#include "Type.h"
+#include "cplx.h"
 #include <cuda.h>
 
 template <typename T> class GeometryGroup : public ContextModule<T> {

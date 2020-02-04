@@ -7,12 +7,12 @@
 #include <GLUT/glut.h>
 #endif
 
+#include "Colormap.h"
+#include "Grid.h"
 #include "IncludeGL.h"
-#include <Colormap.h>
-#include <Grid.h>
-#include <Parameters.h>
+#include "Parameters.h"
 #ifdef __CUDACC__
-#include <GeometryGroup.h>
+#include "GeometryGroup.h"
 #endif
 
 template <typename T> class Visualization {

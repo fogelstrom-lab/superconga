@@ -4,8 +4,8 @@
 #ifndef DISC_GEOMETRY_H_
 #define DISC_GEOMETRY_H_
 
+#include "Disc.h"
 #include "GeometryComponent.h"
-#include <Disc.h>
 #include <cuda.h>
 
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
