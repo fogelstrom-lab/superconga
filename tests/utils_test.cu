@@ -132,60 +132,131 @@ TEST_CASE("Test utils::wrapToRange<double> - low != 0") {
 
 // ======================= Test utils::rotate ======================= //
 
-TEST_CASE("Test utils:rotate<float>") {
-  // Relative tolerance.
-  const float TOLERANCE = std::numeric_limits<float>::epsilon();
-
-  // Define test values.
-  const int NUM_TESTS = 4;
-  const std::array<float, NUM_TESTS> anglesTest = {0.0F, 0.6543F, -4.67F,
-                                                   7.3456F};
-
-  // The vector we will rotate.
-  const float angleBase = 1.457F;
-  const float xBase = cos(angleBase);
-  const float yBase = sin(angleBase);
+// A helper function for testing utils::rotate.
+// TODO(niclas): Should helper functions be in a separate namespace here?
+template <typename T>
+void rotateTest(const T inMinExponent, const T inMaxExponent,
+                const T inTolerance, const int inNumPoints = 10,
+                const int inNumAnglesPerPoints = 10) {
+  // How much to increment the exponent each step.
+  const T exponentStep = (inMaxExponent - inMinExponent) /
+                         static_cast<T>(inNumAnglesPerPoints - 1);
 
   // Perform tests.
-  for (int i = 0; i < NUM_TESTS; ++i) {
-    const float angle = anglesTest[i];
-    float x;
-    float y;
-    utils::rotate(angle, xBase, yBase, x, y);
+  for (int i = 0; i < inNumPoints; ++i) {
+    // The point we will rotate.
+    const T angleBase = static_cast<T>(2.0 * M_PI) * static_cast<T>(i) /
+                        static_cast<T>(inNumPoints);
 
-    const float xExpected = cos(angle + angleBase);
-    const float yExpected = sin(angle + angleBase);
-    CHECK(x == doctest::Approx(xExpected).epsilon(TOLERANCE));
-    CHECK(y == doctest::Approx(yExpected).epsilon(TOLERANCE));
+    // TODO(niclas): Should we test large/small magnitude as well.
+    const T xBase = cos(angleBase);
+    const T yBase = sin(angleBase);
+
+    for (int j = 0; j < inNumAnglesPerPoints; ++j) {
+      // Interpolate exponent to get the current angle.
+      const T exponent = inMinExponent + exponentStep * static_cast<T>(j);
+      const T currentAngle = pow(static_cast<T>(10.0), exponent);
+
+      // Test both positive and negative angles.
+      const std::array<T, 2> angles = {currentAngle, -currentAngle};
+
+      // A nice, modern, C++ loop!
+      for (const T &angle : angles) {
+        // Rotate base point.
+        T x;
+        T y;
+        utils::rotate(angle, xBase, yBase, x, y);
+
+        // Out expected output.
+        const T xExpected = cos(angle + angleBase);
+        const T yExpected = sin(angle + angleBase);
+
+        // Check values.
+        REQUIRE(x == doctest::Approx(xExpected).epsilon(inTolerance));
+        REQUIRE(y == doctest::Approx(yExpected).epsilon(inTolerance));
+      }
+    }
   }
 }
 
-TEST_CASE("Test utils:rotate<double>") {
-  // Relative tolerance.
+TEST_CASE("Test utils:rotate<float> - small angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const float minExponent = -4.0F;
+  const float maxExponent = -2.0F;
+
   // Note, machine precision is too harsh.
-  const double TOLERANCE = 10.0 * std::numeric_limits<double>::epsilon();
-
-  // Define test values.
-  const int NUM_TESTS = 4;
-  const std::array<double, NUM_TESTS> anglesTest = {0.0, 6.36, -1.67, 76.5};
-
-  // The vector we will rotate.
-  const double angleBase = 5.91;
-  const double xBase = cos(angleBase);
-  const double yBase = sin(angleBase);
+  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
 
   // Perform tests.
-  for (int i = 0; i < NUM_TESTS; ++i) {
-    const double angle = anglesTest[i];
-    double x;
-    double y;
-    utils::rotate(angle, xBase, yBase, x, y);
+  rotateTest(minExponent, maxExponent, tolerance);
+}
 
-    const double xExpected = cos(angle + angleBase);
-    const double yExpected = sin(angle + angleBase);
-    CHECK(x == doctest::Approx(xExpected).epsilon(TOLERANCE));
-    CHECK(y == doctest::Approx(yExpected).epsilon(TOLERANCE));
-  }
+TEST_CASE("Test utils:rotate<float> - medium angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const float minExponent = -2.0F;
+  const float maxExponent = 0.0F;
+
+  // Note, machine precision is too harsh.
+  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
+
+  // Perform tests.
+  rotateTest(minExponent, maxExponent, tolerance);
+}
+
+TEST_CASE("Test utils:rotate<float> - large angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const float minExponent = 0.0F;
+  const float maxExponent = 2.0F;
+
+  // Note that the tolerance must be increased, because we get a worse loss of
+  // precision for very large angles.
+  const float tolerance = 100.0F * std::numeric_limits<float>::epsilon();
+
+  // Perform tests.
+  rotateTest(minExponent, maxExponent, tolerance);
+}
+
+TEST_CASE("Test utils:rotate<double> - small angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const double minExponent = -4.0;
+  const double maxExponent = -2.0;
+
+  // Note, machine precision is too harsh.
+  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
+
+  // Perform tests.
+  rotateTest(minExponent, maxExponent, tolerance);
+}
+
+TEST_CASE("Test utils:rotate<double> - medium angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const double minExponent = -2.0;
+  const double maxExponent = 0.0;
+
+  // Note, machine precision is too harsh.
+  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
+
+  // Perform tests.
+  rotateTest(minExponent, maxExponent, tolerance);
+}
+
+TEST_CASE("Test utils:rotate<double> - large angles") {
+  // Set min and max value of the exponent.
+  // The angles tested will be [10^min, 10^max].
+  const double minExponent = 0.0;
+  const double maxExponent = 2.0;
+
+  // Note that the tolerance must be increased, because we get a worse loss of
+  // precision for very large angles.
+  const double tolerance = 100.0 * std::numeric_limits<double>::epsilon();
+
+  // Perform tests.
+  rotateTest(minExponent, maxExponent, tolerance);
 }
 
 // ======================== Test utils::sign ======================== //

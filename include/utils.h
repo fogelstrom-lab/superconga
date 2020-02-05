@@ -74,8 +74,8 @@ __host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
 /// \param inValue - The value to wrap
 ///
 /// \return - The wrapped value
-template <typename T> __host__ __device__ T wrapToRangeTwoPi(const T value) {
-  return wrapToRange(value, static_cast<T>(0.0), static_cast<T>(2.0 * M_PI));
+template <typename T> __host__ __device__ T wrapToRangeTwoPi(const T inValue) {
+  return wrapToRange(inValue, static_cast<T>(0.0), static_cast<T>(2.0 * M_PI));
 }
 
 /// \brief Rotate a point counter-clockwise.
