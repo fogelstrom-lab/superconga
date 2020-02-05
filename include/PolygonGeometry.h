@@ -235,12 +235,50 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
                              inCenterX, inCenterY);
 }
 
+// Todo(patric): Check that inVertices actually has the same length as
+// inNumVertices
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
                                     const T *const inVerticesX,
                                     const T *const inVerticesY)
     : GeometryComponent<T>() {
-  m_polygon = new Polygon<T>(inNumVertices, inVerticesX, inVerticesY);
+
+  if (inNumVertices < 3) {
+    // Todo(patric): Raise exception
+    std::cout << "ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
+                 "inNumVertices = "
+              << inNumVertices << std::endl;
+  }
+
+  T scaledVerticesX[inNumVertices] = {0.0};
+  T scaledVerticesY[inNumVertices] = {0.0};
+  const T coordinateScaleFactor = static_cast<T>(0.5 / sqrt(2.0));
+
+  // Loop over vertex coordinates
+  for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
+    // Check that vertex coordinates are reasonable
+    if ((abs(inVerticesX[vertexIdx]) > 1.0) ||
+        (abs(inVerticesY[vertexIdx]) > 1.0)) {
+      // Todo(patric): Raise exception
+      std::cout
+          << "ERROR! PolygonGeometry: Vertex coordinates must be within [-1,1]."
+          << std::endl;
+    }
+
+    // Scale vertex coordinates: the corner coordinates of the simulation domain
+    // are (in the internal scaling of the program) at +/- 0.5/sqrt(2),
+    // hence multiplying by this factor. The constant GRAIN_SIZE_FRACTION
+    // applies a margin to the edges of the superconducting grain (to allow
+    // padding of the order parameter component).
+    scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] *
+                                 coordinateScaleFactor *
+                                 qcs::GRAIN_SIZE_FRACTION;
+    scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] *
+                                 coordinateScaleFactor *
+                                 qcs::GRAIN_SIZE_FRACTION;
+  }
+
+  m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);
 }
 
 template <typename T> PolygonGeometry<T>::~PolygonGeometry() {
