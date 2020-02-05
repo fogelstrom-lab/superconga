@@ -1,5 +1,4 @@
-//===-- utils.h - Collection of useful functions.
-//----------------------------------===//
+//===-- utils.h - Collection of useful functions --------------------------===//
 //
 // Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
@@ -15,10 +14,17 @@
 
 #include <cmath>
 #include <cuda.h>
-#include <math.h>
 
 namespace utils {
-// Wrap inValue periodically to lie in the range [inLow, inHigh).
+/// \brief Wrap value to range
+///
+/// Wrap inValue periodically to lie in the range [inLow, inHigh).
+///
+/// \param inValue - The value to wrap
+/// \param inLow - The lower bound of range
+/// \param inHigh - The upper bound of range.
+///
+/// \return - The wrapped value
 template <typename T>
 __host__ __device__ T wrapToRange(const T inValue, const T inLow,
                                   const T inHigh) {
@@ -41,7 +47,16 @@ __host__ __device__ T wrapToRange(const T inValue, const T inLow,
   return wrappedValue;
 }
 
-// Wrap inValue periodically to lie in the range [inLow, inHigh).
+/// \brief Wrap value to range
+///
+/// Wrap inValue periodically to lie in the range [inLow, inHigh). A
+/// specialization for integer inputs.
+///
+/// \param inValue - The value to wrap
+/// \param inLow - The lower bound of range
+/// \param inHigh - The upper bound of range.
+///
+/// \return - The wrapped value
 template <>
 __host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
                                          const int inHigh) {
@@ -52,14 +67,30 @@ __host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
   return wrappedValue;
 }
 
-// Wrap inValue periodically to lie in the range [0, 2 pi).
+/// \brief Wrap value to range [0, 2 pi)
+///
+/// Wrap inValue periodically to lie in the range [0, 2 pi)
+///
+/// \param inValue - The value to wrap
+///
+/// \return - The wrapped value
 template <typename T> __host__ __device__ T wrapToRangeTwoPi(const T value) {
   return wrapToRange(value, static_cast<T>(0.0), static_cast<T>(2.0 * M_PI));
 }
 
-// Rotate a point (inX, inY) an angle (inAngle) counter-clockwise.
+/// \brief Rotate a point counter-clockwise.
+///
+/// Rotate a point (inX, inY) an angle (inAngle) counter-clockwise.
+///
+/// \param inAngle - The rotation angle in radians
+/// \param inX - The x-component of the point to rotate
+/// \param inY - The y-component of the point to rotate
+/// \param outX - The x-component of the rotated point
+/// \param outY - The y-component of the rotated point
+///
+/// \return - void
 template <typename T>
-__host__ __device__ void rotate(const T inAngle, const T &inX, const T &inY,
+__host__ __device__ void rotate(const T inAngle, const T inX, const T inY,
                                 T &outX, T &outY) {
   const T c = cos(inAngle);
   const T s = sin(inAngle);
@@ -67,7 +98,17 @@ __host__ __device__ void rotate(const T inAngle, const T &inX, const T &inY,
   outY = (inX * s + inY * c);
 }
 
-// Rotate a point (inX, inY) an angle (inAngle) counter-clockwise.
+/// \brief Rotate a point counter-clockwise inplace.
+///
+/// Rotate a point (inOutX, inOutY) an angle (inAngle) counter-clockwise.
+///
+/// \param inAngle - The rotation angle in radians
+/// \param inOutX - The x-component of the point to rotate, it will be
+/// overwritten by the x-component of the rotated point
+/// \param inOutY - The y-component of the point to rotate, it will be
+/// overwritten by the y-component of the rotated point
+///
+/// \return - void
 template <typename T>
 __host__ __device__ void rotate(const T inAngle, T &inOutX, T &inOutY) {
   T x;
@@ -77,7 +118,11 @@ __host__ __device__ void rotate(const T inAngle, T &inOutX, T &inOutY) {
   inOutY = y;
 }
 
-// Compute the sign of a value.
+/// \brief Compute the sign of a value
+///
+/// \param inValue - The value to compute the sign of
+///
+/// \return - The sign as an integer {-1,0,1}
 template <typename T> __host__ __device__ int sign(const T inValue) {
   const bool isNegative = (inValue < static_cast<T>(0));
   const bool isPositive = (static_cast<T>(0) < inValue);

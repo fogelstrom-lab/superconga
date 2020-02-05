@@ -4,7 +4,6 @@
 #include <array>
 #include <doctest.h>
 #include <limits>
-#include <math.h>
 
 // ====================== Test utils::wrapToRange ====================== //
 
@@ -205,37 +204,29 @@ TEST_CASE("Test utils:sign<int>") {
 }
 
 TEST_CASE("Test utils:sign<float>") {
-  // Relative tolerance.
-  const float TOLERANCE = std::numeric_limits<float>::epsilon();
-
   // Define test values.
   const int NUM_TESTS = 5;
   const std::array<float, NUM_TESTS> valuesTest = {0.0F, 1e6F, 1.01F, -1e-7F,
                                                    -56.0F};
-  const std::array<float, NUM_TESTS> valuesExpected = {0.0F, 1.0F, 1.0F, -1.0F,
-                                                       -1.0F};
+  const std::array<int, NUM_TESTS> valuesExpected = {0, 1, 1, -1, -1};
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const float value = utils::sign(valuesTest[i]);
-    CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
+    const int value = utils::sign(valuesTest[i]);
+    CHECK(value == valuesExpected[i]);
   }
 }
 
 TEST_CASE("Test utils:sign<double>") {
-  // Relative tolerance.
-  const double TOLERANCE = std::numeric_limits<double>::epsilon();
-
   // Define test values.
   const int NUM_TESTS = 5;
   const std::array<double, NUM_TESTS> valuesTest = {0.0, 1e12, 1e-7, -4.8,
                                                     -76.34};
-  const std::array<double, NUM_TESTS> valuesExpected = {0.0, 1.0, 1.0, -1.0,
-                                                        -1.0};
+  const std::array<int, NUM_TESTS> valuesExpected = {0, 1, 1, -1, -1};
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const double value = utils::sign(valuesTest[i]);
-    CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
+    const int value = utils::sign(valuesTest[i]);
+    CHECK(value == valuesExpected[i]);
   }
 }
