@@ -172,10 +172,10 @@ private:
 
 template <typename T>
 Parameters<T>::Parameters(Context<T> *const inOutContext)
-    : m_grainWidthCoherenceLengths(1.0), m_numAngles(0), m_energyCutoff(10),
+    : m_grainWidthCoherenceLengths(20.0), m_numAngles(64), m_energyCutoff(10),
       m_temperature(0.5), m_magneticFieldStrength(0.0),
-      m_convergenceCriterion(0.0001), m_numEnergies(0), m_energyMin(0.0),
-      m_energyMax(0.0), m_smearingFactor(0.01), m_numMatsubaraEnergies(0),
+      m_convergenceCriterion(1E-6), m_numEnergies(128), m_energyMin(0.0),
+      m_energyMax(3.0), m_smearingFactor(0.05), m_numMatsubaraEnergies(20),
       m_penetrationDepth(100.0), m_version(2), m_isValid(1) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
