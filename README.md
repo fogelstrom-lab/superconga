@@ -40,3 +40,11 @@ If we want to change style, this is done by writing e.g.
 clang-format -style=llvm -dump-config > .clang-format
 ```
 to get LLVM format.
+
+## Doctest
+
+Our goal is to test every function/method using Doctest. On Ubuntu install with
+```
+sudo apt install doctest-dev
+```
+and add the Doctest include folder to the `CPLUS_INCLUDE_PATH` variable in your `.bashrc`.

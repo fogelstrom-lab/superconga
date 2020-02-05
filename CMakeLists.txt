@@ -10,3 +10,4 @@ check_language(CUDA)
 
 # Add subdirectories
 add_subdirectory(examples)
+add_subdirectory(tests)
