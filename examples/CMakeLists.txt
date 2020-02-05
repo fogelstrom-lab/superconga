@@ -24,7 +24,7 @@ set(NVCC_WARN "-Wall,\
                -Wformat=2")
 
 # Define the main set of source files
-set(SRC dwave_octagon.cu)
+set(SRC dwave_octagon.cu swave_solenoid_flux_quantization.cu)
 
 foreach(file ${SRC})
     #string( REPLACE ".cu" "" name ${file})

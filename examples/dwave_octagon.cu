@@ -215,13 +215,13 @@ void plotData() {
   Grid<T>::CPU orderParameter =
       *(context->getComputeOrderParameter()->getResult());
 
-  // Plot stuff
+  // Clear the plotting region
   gui->clearImage();
 
-  // Plot order parameter magnitude and phase
+  // Plot the magnitude of the order parameter
   gui->plotImage(orderParameter.abs(), 0, Type::real, 0, 0);
 
-  // Draw results
+  // Render the plots
   gui->draw();
 }
 

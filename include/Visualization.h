@@ -715,15 +715,11 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
     glRasterPos2f(posX, posY);
     int i;
 
-    int numE = param->getNumEnergies();
-    if (numE == 0)
-      numE = param->getNumMatsubaraEnergies();
-
     char txt[256];
-    sprintf(
-        txt,
-        "Discrete width = %d,   Discrete angles = %d,   Discrete Energies = %d",
-        param->getGridResolutionBase(), param->getAngularResolution(), numE);
+    sprintf(txt,
+            "Discrete width = %d,   Discrete angles = %d,   Ozaki Poles = %d",
+            param->getGridResolutionBase(), param->getAngularResolution(),
+            param->getNumMatsubaraEnergies());
 
     for (i = 0; txt[i]; i++)
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
