@@ -15,11 +15,11 @@ Here goes the list of external libraries and packages required to compile and ru
 In order to compile and run the simple example, use the following commands:
 ```
 mkdir build && cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type ..
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 ninja
 ./examples/dwave_octagon
 ```
-where `build_type` is `Debug` or `Release`.
+where the `DCMAKE_BUILD_TYPE` argument is either `Debug` or `Release`.
 
 ### Build with custom CUDA architecture
 By default, CMake tries to autodetect the appropriate CUDA architecture. One can override this by using the command-line option `-DCUDA_ARCH`, i.e.
