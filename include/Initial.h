@@ -6,8 +6,9 @@
 #define INITIAL_H_
 
 #include "OrderParameterComponent.h"
+#include <cmath>
 #include <cuda.h>
-#include <math.h>
+#include <limits>
 
 template <typename T> struct Initial {
   typedef typename Grid<T>::GPU GridGPU;
@@ -33,10 +34,13 @@ public:
                    const GridGPU &grid);
 
   // ...a given phase winding (one flux vortex has a phase winding of 2pi)
-  static void phaseWinding(OrderParameterComponent<T> *deltaComponent,
-                           const T numWinding, const T cutOffRadius = 0.0,
-                           const T phaseShift = 0.0, const T center_x = 0.0,
-                           const T center_y = 0.0);
+  static void
+  phaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
+               const T inNumWinding,
+               const T inCutoffRadius = static_cast<T>(0.0),
+               const T inPhaseShift = static_cast<T>(0.0),
+               const T inCenterX = static_cast<T>(0.0),
+               const T inCenterY = static_cast<T>(0.0));
 
   // ...delta bulk + a perturbation in the phase (to push solution out of
   // meta-stable initial state)
@@ -45,12 +49,14 @@ public:
 
   // Mixture between random() and phaseWinding():
   //     phaseWinding with an additional random phase factor
-  static void perturbedPhaseWinding(OrderParameterComponent<T> *deltaComponent,
-                                    const T numWinding, const T mix = 0.5,
-                                    const T cutOffRadius = 0.0,
-                                    const T phaseShift = 0.0,
-                                    const T center_x = 0.0,
-                                    const T center_y = 0.0);
+  static void
+  perturbedPhaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
+                        const T numWinding,
+                        const T inRandomPhaseMix = static_cast<T>(0.5),
+                        const T inCutoffRadius = static_cast<T>(0.0),
+                        const T inPhaseShift = static_cast<T>(0.0),
+                        const T inCenterX = static_cast<T>(0.0),
+                        const T inCenterY = static_cast<T>(0.0));
 
   // ...the grid in the input file argument
   static int read(OrderParameterComponent<T> *deltaComponent,
@@ -62,54 +68,36 @@ public:
 namespace {
 template <typename T>
 __global__ void
-phaseWinding_radial_Kernel(T *data_re, T *data_im, const int Nx, const int Ny,
-                           const T h, const T numWinding, const T cutOffRadius,
-                           const T phaseShift, const T center_x,
-                           const T center_y, T deltaBulk) {
+phaseWinding_radial_Kernel(T *const outReal, T *const outImag, const int inNumX,
+                           const int inNumY, const T inNumWinding,
+                           const T inCutoffRadius, const T inPhaseShift,
+                           const T inCenterX, const T inCenterY,
+                           const T inDeltaBulk, const T inEpsilon) {
   // Coordinates to new resampling grid
   const int i = blockIdx.x * blockDim.x + threadIdx.x;
   const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
-  if (i < Nx && j < Ny) {
-    const int idx = j * Nx + i;
+  if (i < inNumX && j < inNumY) {
+    const int idx = j * inNumX + i;
 
     // Normalize coordinates to -0.5 <= x,y <= +0.5, and offset with center
-    T x = ((T)i / (T)(Nx - 1) - (T)0.5) - center_x;
-    T y = ((T)j / (T)(Ny - 1) - (T)0.5) - center_y;
+    const T x = ((T)i / (T)(inNumX - 1) - (T)0.5) - inCenterX;
+    const T y = ((T)j / (T)(inNumY - 1) - (T)0.5) - inCenterY;
+    const T radius = sqrt(x * x + y * y);
 
-    T phase;
+    // Check if point is within cutoff, set to zero in that case. Otherwise,
+    // compute angle and add phase shift.
+    const bool isPointWithinCutoff = (radius < inCutoffRadius);
+    const T phase =
+        isPointWithinCutoff ? static_cast<T>(0.0) : atan2(y, x) + inPhaseShift;
 
-    // TODO: (Patric) Replace with atan2. Do not forget to test!
-    if (x >= (T)0.0 && y >= (T)0.0) {
-      if (x == (T)0.0)
-        phase = M_PI * (T)0.5;
-      else
-        phase = atan(y / x);
-    } else if (x < (T)0.0 && y >= (T)0.0) {
-      phase = M_PI + atan(y / x);
-    } else if (x < (T)0.0 && y < (T)0.0) {
-      phase = M_PI + atan(y / x);
-    } else {
-      phase = (T)2.0 * M_PI + atan(y / x);
-    }
+    // Check if point is at the center. If so, set to zero, otherwise use
+    // the bulk value.
+    const bool isPointAtCenter = (radius < inEpsilon);
+    const T magnitude = isPointAtCenter ? static_cast<T>(0.0) : inDeltaBulk;
 
-    phase += phaseShift;
-
-    T radius = sqrt(x * x + y * y);
-
-    if (radius < cutOffRadius)
-    {
-      phase = (T)0.0;
-    }
-
-    if (center_x == (T)0.0 && center_y == (T)0.0 && i == (Nx - 1) / 2 &&
-        j == (Ny - 1) / 2)
-    {
-      deltaBulk = (T)0.0;
-    }
-
-    data_re[idx] = cos(phase * numWinding) * deltaBulk;
-    data_im[idx] = sin(phase * numWinding) * deltaBulk;
+    outReal[idx] = magnitude * cos(phase * inNumWinding);
+    outImag[idx] = magnitude * sin(phase * inNumWinding);
   }
 }
 } // namespace
@@ -138,8 +126,7 @@ T Initial<T>::computeDeltaBulk(const T T_Tc, const T deltaConvergence) {
     deltaDiff = g * gMix;
     delta += deltaDiff;
 
-    if (abs(deltaDiff / delta) < deltaConvergence)
-    {
+    if (abs(deltaDiff / delta) < deltaConvergence) {
       isDeltaConverged = 1;
     }
   }
@@ -177,8 +164,7 @@ void Initial<T>::grid(OrderParameterComponent<T> *deltaComponent,
 
   GridGPU *delta = deltaComponent->getOrderParameterField();
 
-  if (tmp.dimX() != delta->dimX())
-  {
+  if (tmp.dimX() != delta->dimX()) {
     tmp.resample(delta->dimX(), delta->dimY());
   }
 
@@ -186,32 +172,36 @@ void Initial<T>::grid(OrderParameterComponent<T> *deltaComponent,
 }
 
 template <typename T>
-void Initial<T>::phaseWinding(OrderParameterComponent<T> *deltaComponent,
-                              const T numWinding, const T cutOffRadius,
-                              const T phaseShift, const T center_x,
-                              const T center_y) {
-  GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
+void Initial<T>::phaseWinding(
+    OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
+    const T inCutoffRadius, const T inPhaseShift, const T inCenterX,
+    const T inCenterY) {
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   const int N = deltaGrid->dimX();
-  const T h = deltaComponent->getParameters()->getGridElementSize();
-  const T deltaBulk = deltaComponent->deltaBulk();
+  const T deltaBulk = inOutDeltaComponent->deltaBulk();
 
   // GPU init
   dim3 blocksPerGrid, threadsPerBlock;
   deltaGrid->getKernelDimensions(blocksPerGrid, threadsPerBlock);
 
-  if (numWinding > 0.0) {
+  // For checking if a point is at the center. The limit cannot be fetched from
+  // within the kernel.
+  const T epsilon = std::numeric_limits<T>::epsilon();
+
+  if (inNumWinding > static_cast<T>(0.0)) {
     // Kernel launch
     for (int c = 0; c < deltaGrid->numFields(); ++c) {
       // Calc and set boundary grid
       phaseWinding_radial_Kernel<<<blocksPerGrid, threadsPerBlock>>>(
           deltaGrid->getDataPointer(c, Type::real),
-          deltaGrid->getDataPointer(c, Type::imag), N, N, h, numWinding,
-          cutOffRadius, phaseShift, center_x, center_y, deltaBulk);
+          deltaGrid->getDataPointer(c, Type::imag), N, N, inNumWinding,
+          inCutoffRadius, inPhaseShift, inCenterX, inCenterY, deltaBulk,
+          epsilon);
     }
   } else {
     deltaGrid->setValue(deltaBulk, Type::real);
-    deltaGrid->setValue(0.0, Type::imag);
+    deltaGrid->setValue(static_cast<T>(0.0), Type::imag);
   }
 }
 
@@ -252,70 +242,51 @@ void Initial<T>::random(OrderParameterComponent<T> *deltaComponent, const T mix,
 
 template <typename T>
 void Initial<T>::perturbedPhaseWinding(
-    OrderParameterComponent<T> *deltaComponent, const T numWinding, const T mix,
-    const T cutOffRadius, const T phaseShift, const T center_x,
-    const T center_y) {
-  Parameters<T> *params = deltaComponent->getParameters();
-  GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
+    OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
+    const T inRandomPhaseMix, const T inCutoffRadius, const T inPhaseShift,
+    const T inCenterX, const T inCenterY) {
+  const Parameters<T> *const params = inOutDeltaComponent->getParameters();
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   const int N = deltaGrid->dimX();
   const T h = params->getGridElementSize();
-  T deltaBulk = computeDeltaBulk(params->getTemperature());
-  T amplitude = deltaBulk;
-
-  T *data_re, *data_im, rand_phase;
-  int idx;
+  const T deltaBulk = computeDeltaBulk(params->getTemperature());
 
   // Kernel launch
   GridCPU *delta = 0;
   Grid<T>::CPU::initializeGrid(delta, deltaGrid);
 
   for (int c = 0; c < delta->numFields(); ++c) {
-    data_re = delta->getDataPointer(c, Type::real);
-    data_im = delta->getDataPointer(c, Type::imag);
+    T *const data_re = delta->getDataPointer(c, Type::real);
+    T *const data_im = delta->getDataPointer(c, Type::imag);
 
     for (int j = 0; j < N; ++j) {
       for (int i = 0; i < N; ++i) {
-        idx = j * N + i;
+        const int idx = j * N + i;
 
         // Normalize coordinates to -0.5 <= x,y <= +0.5, and offset with center
-        T x = ((T)i / (T)(N - 1) - (T)0.5) - center_x;
-        T y = ((T)j / (T)(N - 1) - (T)0.5) - center_y;
+        const T x = ((T)i / (T)(N - 1) - (T)0.5) - inCenterX;
+        const T y = ((T)j / (T)(N - 1) - (T)0.5) - inCenterY;
+        const T radius = sqrt(x * x + y * y);
 
-        T phase;
+        // Check if point is within cutoff, set to zero in that case. Otherwise,
+        // compute angle and add phase shift.
+        const bool isPointWithinCutoff = (radius < inCutoffRadius);
+        const T phase = isPointWithinCutoff ? static_cast<T>(0.0)
+                                            : atan2(y, x) + inPhaseShift;
 
-        if (x >= (T)0.0 && y >= (T)0.0) {
-          if (x == (T)0.0)
-            phase = M_PI * (T)0.5;
-          else
-            phase = atan(y / x);
-        } else if (x < (T)0.0 && y >= (T)0.0) {
-          phase = M_PI + atan(y / x);
-        } else if (x < (T)0.0 && y < (T)0.0) {
-          phase = M_PI + atan(y / x);
-        } else {
-          phase = (T)2.0 * M_PI + atan(y / x);
-        }
+        // Check if point is at the center. If so, set to zero, otherwise use
+        // the bulk value.
+        const bool isPointAtCenter =
+            (radius < std::numeric_limits<T>::epsilon());
+        const T magnitude = isPointAtCenter ? static_cast<T>(0.0) : deltaBulk;
 
-        phase += phaseShift;
+        // A random phase.
+        const T rand_phase =
+            ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * inRandomPhaseMix;
 
-        T radius = sqrt(x * x + y * y);
-
-        if (radius < cutOffRadius)
-        {
-          phase = (T)0.0;
-        }
-
-        if (center_x == (T)0.0 && center_y == (T)0.0 && i == (N - 1) / 2 &&
-            j == (N - 1) / 2)
-          amplitude = (T)0.0;
-        else
-          amplitude = deltaBulk;
-
-        rand_phase = ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
-
-        data_re[idx] = amplitude * cos(phase * numWinding + rand_phase);
-        data_im[idx] = amplitude * sin(phase * numWinding + rand_phase);
+        data_re[idx] = magnitude * cos(phase * inNumWinding + rand_phase);
+        data_im[idx] = magnitude * sin(phase * inNumWinding + rand_phase);
       }
     }
   }
