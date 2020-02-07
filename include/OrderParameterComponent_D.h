@@ -6,6 +6,7 @@
 #include "OrderParameterComponent.h"
 #include "Parameters.h"
 #include "cplx.h"
+#include "defines.h"
 #include "utils.h"
 #include <cmath>
 #include <cuda.h>
@@ -33,7 +34,7 @@ public:
 
   virtual void initBasisNormalization(FermiSurface<T> *fermiSurface);
 
-  virtual double deltaBulk() const;
+  virtual T deltaBulk() const;
 
   void setLatticeOrientation(T angle) { _latticeOrientation = angle; }
   T getLatticeOrientation() const { return _latticeOrientation; }
@@ -135,8 +136,12 @@ void OrderParameterComponent_D<T>::initBasisNormalization(
   printf("D-wave Basis Normalization: %f\n", m_basisNormalization);
 }
 
-template <typename T> double OrderParameterComponent_D<T>::deltaBulk() const {
-  return OrderParameterComponent<T>::deltaBulk() * 1.5 / 1.76;
+template <typename T> T OrderParameterComponent_D<T>::deltaBulk() const {
+  const T sWaveBulk = OrderParameterComponent<T>::deltaBulk();
+  // It is faster to just solve for s-wave and rescale it by the known d-wave
+  // value.
+  const T scale = static_cast<T>(qcs::D_WAVE_BULK / qcs::S_WAVE_BULK);
+  return sWaveBulk * scale;
 }
 
 #endif // ORDER_PARAMETER_COMPONENT_D_H_

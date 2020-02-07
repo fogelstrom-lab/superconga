@@ -33,7 +33,7 @@ public:
 
   virtual void initBasisNormalization(FermiSurface<T> *fermiSurface);
 
-  virtual double deltaBulk() const;
+  virtual T deltaBulk() const;
 
   void setLatticeOrientation(T angle) { _latticeOrientation = angle; }
   T getLatticeOrientation() const { return _latticeOrientation; }
@@ -135,8 +135,8 @@ void OrderParameterComponent_P<T>::initBasisNormalization(
   printf("P-wave Basis Normalization: %f\n", m_basisNormalization);
 }
 
-template <typename T> double OrderParameterComponent_P<T>::deltaBulk() const {
-  return OrderParameterComponent<T>::deltaBulk() * 1.5 / 1.76;
+template <typename T> T OrderParameterComponent_P<T>::deltaBulk() const {
+  return OrderParameterComponent<T>::deltaBulk();
 }
 
 #endif // ORDER_PARAMETER_COMPONENT_P_H_

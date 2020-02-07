@@ -20,10 +20,10 @@
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
 #include "FermiSurfaceCircle.h" // Standard circle Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
-#include "Initial.h" // Used for generating initial guess for order parameter
 #include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
 #include "OrderParameterComponent_D.h" // d-wave
+#include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries

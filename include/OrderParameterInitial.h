@@ -2,12 +2,14 @@
 // Collection of functions to set the initial condition of the order parameter.
 // All member functions are static so this struct should not be instantiated.
 //
-#ifndef INITIAL_H_
-#define INITIAL_H_
+#ifndef ORDER_PARAMETER_INITIAL_H_
+#define ORDER_PARAMETER_INITIAL_H_
 
 #include "OrderParameterComponent.h"
+#include "defines.h"
 #include <cmath>
 #include <cuda.h>
+#include <iostream>
 #include <limits>
 
 template <typename T> struct Initial {
@@ -15,22 +17,18 @@ template <typename T> struct Initial {
   typedef typename Grid<T>::CPU GridCPU;
 
 public:
-  // Computes bulk value of s-wave order parameter. Can be used as initial
-  // condition.
-  static T computeDeltaBulk(const T T_Tc, const T deltaConvergence = 1E-9);
-
-  // The following functions set the deltaComponent field to...
+  // The following functions set the inOutDeltaComponent field to...
 
   // ...delta bulk
-  static void bulk(OrderParameterComponent<T> *deltaComponent,
+  static void bulk(OrderParameterComponent<T> *inOutDeltaComponent,
                    const T phase = 0.0);
 
   // ...specified complex valued constant
-  static void constant(OrderParameterComponent<T> *deltaComponent,
+  static void constant(OrderParameterComponent<T> *inOutDeltaComponent,
                        const T re = 1.0, const T im = 0.0);
 
   // ...the input grid argument
-  static void grid(OrderParameterComponent<T> *deltaComponent,
+  static void grid(OrderParameterComponent<T> *inOutDeltaComponent,
                    const GridGPU &grid);
 
   // ...a given phase winding (one flux vortex has a phase winding of 2pi)
@@ -44,7 +42,7 @@ public:
 
   // ...delta bulk + a perturbation in the phase (to push solution out of
   // meta-stable initial state)
-  static void random(OrderParameterComponent<T> *deltaComponent,
+  static void random(OrderParameterComponent<T> *inOutDeltaComponent,
                      const T mix = 0.5, const T phase = 0.0);
 
   // Mixture between random() and phaseWinding():
@@ -59,13 +57,13 @@ public:
                         const T inCenterY = static_cast<T>(0.0));
 
   // ...the grid in the input file argument
-  static int read(OrderParameterComponent<T> *deltaComponent,
+  static int read(OrderParameterComponent<T> *inOutDeltaComponent,
                   const char *filename);
-  static int read(OrderParameterComponent<T> *deltaComponent,
+  static int read(OrderParameterComponent<T> *inOutDeltaComponent,
                   const char *filename, int filenum);
 };
 
-namespace {
+namespace internal {
 template <typename T>
 __global__ void
 phaseWinding_radial_Kernel(T *const outReal, T *const outImag, const int inNumX,
@@ -100,69 +98,33 @@ phaseWinding_radial_Kernel(T *const outReal, T *const outImag, const int inNumX,
     outImag[idx] = magnitude * sin(phase * inNumWinding);
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
-T Initial<T>::computeDeltaBulk(const T T_Tc, const T deltaConvergence) {
-  const T gMix = -0.1;
-  const int numMatsubara = 1000.0 / T_Tc;
-
-  // Delta, initial guess
-  T delta = 1.76 * sqrt(1.0 - T_Tc);
-
-  int isDeltaConverged = 0;
-  T matsubaraSum, eps, g, deltaDiff;
-
-  while (!isDeltaConverged) {
-    matsubaraSum = 0.0;
-
-    for (int i = 0; i <= numMatsubara; ++i) {
-      eps = M_PI * T_Tc * (2.0 * i + 1.0);
-      matsubaraSum += 1.0 / sqrt(eps * eps + delta * delta) - 1.0 / eps;
-    }
-    matsubaraSum *= delta;
-
-    g = delta * log(T_Tc) - 2.0 * M_PI * T_Tc * matsubaraSum;
-    deltaDiff = g * gMix;
-    delta += deltaDiff;
-
-    if (abs(deltaDiff / delta) < deltaConvergence) {
-      isDeltaConverged = 1;
-    }
-  }
-
-  return delta;
-}
-
-template <typename T>
-void Initial<T>::bulk(OrderParameterComponent<T> *deltaComponent,
+void Initial<T>::bulk(OrderParameterComponent<T> *inOutDeltaComponent,
                       const T phase) {
-  Parameters<T> *params = deltaComponent->getParameters();
 
-  const T T_Tc = params->getTemperature();
-  const T deltaBulk = computeDeltaBulk(T_Tc);
-
-  GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
-
+  const T deltaBulk = inOutDeltaComponent->deltaBulk();
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
   deltaGrid->setValue(deltaBulk * cos(phase), Type::real);
   deltaGrid->setValue(deltaBulk * sin(phase), Type::imag);
 }
 
 template <typename T>
-void Initial<T>::constant(OrderParameterComponent<T> *deltaComponent,
+void Initial<T>::constant(OrderParameterComponent<T> *inOutDeltaComponent,
                           const T re, const T im) {
-  GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   deltaGrid->setValue(re, Type::real);
   deltaGrid->setValue(im, Type::imag);
 }
 
 template <typename T>
-void Initial<T>::grid(OrderParameterComponent<T> *deltaComponent,
+void Initial<T>::grid(OrderParameterComponent<T> *inOutDeltaComponent,
                       const GridGPU &grid) {
   GridGPU tmp = grid;
 
-  GridGPU *delta = deltaComponent->getOrderParameterField();
+  GridGPU *delta = inOutDeltaComponent->getOrderParameterField();
 
   if (tmp.dimX() != delta->dimX()) {
     tmp.resample(delta->dimX(), delta->dimY());
@@ -193,7 +155,7 @@ void Initial<T>::phaseWinding(
     // Kernel launch
     for (int c = 0; c < deltaGrid->numFields(); ++c) {
       // Calc and set boundary grid
-      phaseWinding_radial_Kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      internal::phaseWinding_radial_Kernel<<<blocksPerGrid, threadsPerBlock>>>(
           deltaGrid->getDataPointer(c, Type::real),
           deltaGrid->getDataPointer(c, Type::imag), N, N, inNumWinding,
           inCutoffRadius, inPhaseShift, inCenterX, inCenterY, deltaBulk,
@@ -206,14 +168,15 @@ void Initial<T>::phaseWinding(
 }
 
 template <typename T>
-void Initial<T>::random(OrderParameterComponent<T> *deltaComponent, const T mix,
-                        const T phase) {
-  Parameters<T> *params = deltaComponent->getParameters();
-  GridGPU *deltaGrid = deltaComponent->getOrderParameterField();
+void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
+                        const T mix, const T phase) {
+  Parameters<T> *params = inOutDeltaComponent->getParameters();
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   const int N = deltaGrid->dimX();
   const T h = params->getGridElementSize();
-  const T deltaBulk = computeDeltaBulk(params->getTemperature());
+
+  const T deltaBulk = inOutDeltaComponent->deltaBulk();
 
   T *data_re, *data_im, rand_phase;
   int idx;
@@ -250,7 +213,8 @@ void Initial<T>::perturbedPhaseWinding(
 
   const int N = deltaGrid->dimX();
   const T h = params->getGridElementSize();
-  const T deltaBulk = computeDeltaBulk(params->getTemperature());
+
+  const T deltaBulk = inOutDeltaComponent->deltaBulk();
 
   // Kernel launch
   GridCPU *delta = 0;
@@ -294,14 +258,14 @@ void Initial<T>::perturbedPhaseWinding(
 }
 
 template <typename T>
-int Initial<T>::read(OrderParameterComponent<T> *deltaComponent,
+int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
                      const char *filename) {
   GridCPU tmp;
 
   if (tmp.read(filename))
     return 1;
 
-  GridGPU *delta = deltaComponent->getOrderParameterField();
+  GridGPU *delta = inOutDeltaComponent->getOrderParameterField();
 
   if (tmp.dimX() != delta->dimX())
     tmp.resample(delta->dimX(), delta->dimY());
@@ -312,12 +276,12 @@ int Initial<T>::read(OrderParameterComponent<T> *deltaComponent,
 }
 
 template <typename T>
-int Initial<T>::read(OrderParameterComponent<T> *deltaComponent,
+int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
                      const char *filename, int num) {
   char fn[512];
   sprintf(fn, "%s.%d.grd", filename, num);
 
-  return read(deltaComponent, fn);
+  return read(inOutDeltaComponent, fn);
 }
 
-#endif // INITIAL_H_
+#endif // ORDER_PARAMETER_INITIAL_H_

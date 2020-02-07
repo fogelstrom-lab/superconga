@@ -2,9 +2,9 @@
 #define COMPUTE_FREE_ENERGY_H_
 
 #include "ComputeProperty.h"
-#include "Initial.h"
 #include "IntegrationIteratorOzaki.h"
 #include "LocalGreens.h"
+#include "OrderParameterBulk.h"
 #include "cplx.h"
 #include <math.h>
 #include <stdio.h>
@@ -358,7 +358,7 @@ template <typename T> T ComputeFreeEnergy<T>::freeEnergyT0_S() {
   T area = 1.0; // geom->area();
 
   // Delta at T=0
-  T D0 = Initial<T>::computeDeltaBulk(T_Tc); // = 1.76
+  T D0 = internal::computeOrderParameterBulkSWave(T_Tc); // = 1.76
 
   // Free energy
   return area * (-0.5 * D0 * D0 + M_PI * M_PI / 3.0 * T_Tc * T_Tc);

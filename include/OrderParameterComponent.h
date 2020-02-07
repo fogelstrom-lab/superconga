@@ -3,6 +3,7 @@
 
 #include "FermiSurface.h"
 #include "Grid.h"
+#include "OrderParameterBulk.h"
 #include "Parameters.h"
 #include <cmath>
 #include <math.h>
@@ -43,7 +44,7 @@ public:
   void applyCouplingConstant();
   void applyCouplingConstant(GridGPU *target);
 
-  virtual double deltaBulk() const;
+  virtual T deltaBulk() const;
 
   char *getType() const { return _type; }
   void setType(char *type) { _type = type; }
@@ -165,38 +166,10 @@ void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) {
   }
 }
 
-template <typename T> double OrderParameterComponent<T>::deltaBulk() const {
-  T T_Tc = _param->getTemperature();
-
-  const double deltaConvergence = 1E-9;
-
-  const double gMix = -0.1;
-  const int numMatsubara = 1000.0 / T_Tc;
-
-  // Delta, initial guess
-  double delta = 1.76 * sqrt(1.0 - T_Tc);
-
-  int isDeltaConverged = 0;
-  double matsubaraSum, eps, g, deltaDiff;
-
-  while (!isDeltaConverged) {
-    matsubaraSum = 0.0;
-
-    for (int i = 0; i <= numMatsubara; ++i) {
-      eps = M_PI * T_Tc * (2.0 * i + 1.0);
-      matsubaraSum += 1.0 / sqrt(eps * eps + delta * delta) - 1.0 / eps;
-    }
-    matsubaraSum *= delta;
-
-    g = delta * log(T_Tc) - 2.0 * M_PI * T_Tc * matsubaraSum;
-    deltaDiff = g * gMix;
-    delta += deltaDiff;
-
-    if (abs(deltaDiff / delta) < deltaConvergence)
-      isDeltaConverged = 1;
-  }
-
-  return delta;
+template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
+  // TODO(Niclas): Is it really necessary to wrap it here?
+  const T temperature = _param->getTemperature();
+  return internal::computeOrderParameterBulkSWave(temperature);
 }
 
 #endif // ORDER_PARAMETER_COMPONENT_H_

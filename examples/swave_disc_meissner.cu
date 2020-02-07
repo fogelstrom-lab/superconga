@@ -20,10 +20,10 @@
 #include "DiscGeometry.h" // Used to constructed simulated grain from discs
 #include "FermiSurfaceCircle.h" // Standard circle Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
-#include "Initial.h" // Used for generating initial guess for order parameter
 #include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
 #include "OrderParameterComponent_S.h" // s-wave
+#include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
