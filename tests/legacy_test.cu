@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
+#include "OrderParameterBulk.h"
 #include "utils.h"
 #include <cmath>
 #include <doctest.h>
@@ -33,6 +34,41 @@ template <typename T> T atan2(const T y, const T x) {
   }
   return phase;
 }
+
+// This is the s-wave bulk solver that was present in the code previously.
+template <typename T>
+T computeOrderParameterBulkSWave(const T T_Tc, const T deltaConvergence,
+                                 const int inNumIterations = 1000) {
+  const T gMix = -0.1;
+  const int numMatsubara = 1000.0 / T_Tc;
+
+  // Delta, initial guess
+  T delta = 1.76 * sqrt(1.0 - T_Tc);
+
+  T matsubaraSum, eps, g, deltaDiff;
+
+  bool isConverged = false;
+  for (int iterationIdx = 0; iterationIdx < inNumIterations; ++iterationIdx) {
+    matsubaraSum = 0.0;
+
+    for (int i = 0; i <= numMatsubara; ++i) {
+      eps = M_PI * T_Tc * (2.0 * i + 1.0);
+      matsubaraSum += 1.0 / sqrt(eps * eps + delta * delta) - 1.0 / eps;
+    }
+    matsubaraSum *= delta;
+
+    g = delta * log(T_Tc) - 2.0 * M_PI * T_Tc * matsubaraSum;
+    deltaDiff = g * gMix;
+    delta += deltaDiff;
+
+    isConverged = (abs(deltaDiff / delta) < deltaConvergence);
+    if (isConverged) {
+      break;
+    }
+  }
+
+  return delta;
+}
 } // namespace legacy
 
 namespace helper {
@@ -62,7 +98,63 @@ void testLegacyAtan2(const T inTolerance, const int inNumAngles = 32,
     }
   }
 }
+
+// A helper function to test legacy::computeOrderParameterBulkSWave.
+template <typename T>
+void testComputeOrderParameterBulkSWave(const T inTolerance) {
+  // The temperatures to test.
+  const int numTemperatures = 2;
+  const std::array<T, numTemperatures> temperatures = {static_cast<T>(0.1),
+                                                       static_cast<T>(0.9)};
+
+  // The convergence criteria to test.
+  const int numConvergenceCriteria = 2;
+  const std::array<T, numConvergenceCriteria> convergenceCriteria = {
+      static_cast<T>(1e-6), static_cast<T>(1e-8)};
+
+  // Loop over temperatures.
+  for (const T &temperature : temperatures) {
+    // Loop over convergence criteria.
+    for (const T &convergenceCriterion : convergenceCriteria) {
+      // Compute the legacy value.
+      const T oldOrderParameter = legacy::computeOrderParameterBulkSWave(
+          temperature, convergenceCriterion);
+
+      // Compute the new value.
+      const T newOrderParameter = internal::computeOrderParameterBulkSWave(
+          temperature, convergenceCriterion);
+
+      // Compare results.
+      CHECK(oldOrderParameter ==
+            doctest::Approx(newOrderParameter).epsilon(inTolerance));
+    }
+  }
+}
 } // namespace helper
+
+// ================== Test computeOrderParameterBulkSWave ================== //
+
+TEST_CASE("Test legacy::computeOrderParameterBulkSWave<float>") {
+  // Relative tolerance.
+  // Note that the two implementations differ in how they determine when
+  // convergence has been achieved amongs other things. Also, that the legacy
+  // implementation might not even converge. So we only check that they roughly
+  // give the same answer.
+  const float TOLERANCE = 1e-4F;
+  helper::testComputeOrderParameterBulkSWave(TOLERANCE);
+}
+
+TEST_CASE("Test legacy::computeOrderParameterBulkSWave<double>") {
+  // Relative tolerance.
+  // Note that the two implementations differ in how they determine when
+  // convergence has been achieved amongs other things. Also, that the legacy
+  // implementation might not even converge. So we only check that they roughly
+  // give the same answer.
+  const double TOLERANCE = 1e-4;
+  helper::testComputeOrderParameterBulkSWave(TOLERANCE);
+}
+
+// =============================== Test atan2 =============================== //
 
 TEST_CASE("Test legacy::atan2<float>") {
   // Relative tolerance.

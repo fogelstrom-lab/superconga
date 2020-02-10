@@ -31,7 +31,7 @@ public:
   // trivially satisfied.
   virtual void initBasisNormalization(FermiSurface<T> *fermiSurface){};
 
-  virtual double deltaBulk() const;
+  virtual T deltaBulk() const;
 
 private:
   friend void swap(OrderParameterComponent_S<T> &A,
@@ -71,7 +71,7 @@ OrderParameterComponent_S<T> *OrderParameterComponent_S<T>::clone() const {
   return new OrderParameterComponent_S<T>(*this);
 }
 
-template <typename T> double OrderParameterComponent_S<T>::deltaBulk() const {
+template <typename T> T OrderParameterComponent_S<T>::deltaBulk() const {
   return OrderParameterComponent<T>::deltaBulk();
 }
 

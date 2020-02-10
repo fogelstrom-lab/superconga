@@ -14,19 +14,34 @@
 #ifndef DEFINES_H_
 #define DEFINES_H_
 
+#include <cmath>
+
 namespace qcs {
 
 // Margin around superconducting grain in simulation space. A margin
 // of 0.04 means that the grain covers 1.0-0.04 = 96 percent of the total
 // simulation space.
-const double GRAIN_SIZE_MARGIN = static_cast<double>(0.04);
+const double GRAIN_SIZE_MARGIN = 0.04;
 
 // Return grain size fraction of simulation domain. Should never be
 // larger than 96 percent! This is to allow for padding of the order parameter
 // for treatment of boundary conditions. The grain size percent is used when
 // setting up a new simulation grain to calculate the lattice spacing in
 // setGridElementSize(), and in the classes PolygonGeometry and DiscGeometry.
-const double GRAIN_SIZE_FRACTION = static_cast<double>(1.0 - GRAIN_SIZE_MARGIN);
+const double GRAIN_SIZE_FRACTION = 1.0 - GRAIN_SIZE_MARGIN;
+
+// The Euler-Mascheroni constant, gamma. Value taken from Wikipedia:
+// https://en.wikipedia.org/wiki/Euler%E2%80%93Mascheroni_constant
+const double EULER_MASCHERONI = 0.57721566490153286060651209008240243;
+
+// The bulk s-wave order parameter at zero temperature has a nice analytical
+// expression, Delta = pi * exp(-gamma), see page 104 of P. Holmvall PhD Thesis.
+const double S_WAVE_BULK = M_PI * std::exp(-EULER_MASCHERONI);
+
+// The bulk d-wave order parameter at zero temperature has a nice analytical
+// expression, Delta = pi * exp(-gamma), see page 104 of P. Holmvall PhD Thesis.
+const double D_WAVE_BULK =
+    M_PI * std::sqrt(2.0) * std::exp(-EULER_MASCHERONI - 0.5);
 
 } // namespace qcs
 
