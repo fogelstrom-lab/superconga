@@ -30,6 +30,11 @@ __host__ __device__ T wrapToRange(const T inValue, const T inLow,
                                   const T inHigh) {
   // TODO(niclas): Add check that low < high.
 
+  // If the value is within the bounds then do an early exit.
+  if ((inLow <= inValue) && (inValue < inHigh)) {
+    return inValue;
+  }
+
   // Determine the range.
   const T range = inHigh - inLow;
 

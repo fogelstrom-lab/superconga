@@ -73,7 +73,7 @@ template <typename T> int FermiSurfaceCircle<T>::initialize() {
   // Fill the array.
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     const T phi = FermiSurface<T>::getPhi(angleIdx);
-    systemAngle[angleIdx] = phi - static_cast<T>(0.5 * M_PI);
+    systemAngle[angleIdx] = FermiSurface<T>::getSystemAngle(phi);
   }
 
   // Copy to the GPU.

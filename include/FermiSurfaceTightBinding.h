@@ -434,7 +434,8 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     velocityY[angleIdx] = vY;
 
     // Update the system angle array.
-    systemAngle[angleIdx] = std::atan2(vY, vX) - static_cast<T>(0.5 * M_PI);
+    const T fermiVelocityAngle = std::atan2(vY, vX);
+    systemAngle[angleIdx] = FermiSurface<T>::getSystemAngle(fermiVelocityAngle);
 
     // Compute integrand factor.
     const T factor = detail::computeIntegrandFactor(
