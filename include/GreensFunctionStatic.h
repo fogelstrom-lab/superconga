@@ -34,7 +34,7 @@ struct GreensFunctionStatic {
                                   const GridGPU *grid, int numEnergies = 0);
 };
 
-namespace {
+namespace internal {
 template <typename T, template <typename> class GREENS>
 __global__ void computeGreens_kernel(const int N, T *greens_re, T *greens_im,
                                      T *gamma_re, T *gamma_im, T *gammabar_re,
@@ -130,7 +130,7 @@ computeGreensSumEnergy_kernel(const int N, const int Ne, const T *summandFactor,
     greens_im[greens_idx] += greens_sum.y;
   }
 }
-} // namespace
+} // namespace internal
 
 // All these kernels can be optimized by using getKernelDimensionsOptim() !!!!
 
@@ -146,7 +146,7 @@ void GreensFunctionStatic<T, GREENS>::computeGreens(
                                                        numEnergies);
 
   // Compute Greens function from gamma and gammabar
-  computeGreens_kernel<T, GREENS><<<bpg, tpb>>>(
+  internal::computeGreens_kernel<T, GREENS><<<bpg, tpb>>>(
       result->dimX(), result->getDataPointer(0, Type::real),
       result->getDataPointer(0, Type::imag),
       gamma->getDataPointer(0, Type::real),
@@ -167,7 +167,7 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   GridGPU::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
 
   // Compute Greens function from gamma and gammabar
-  computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
+  internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
       result->dimX(), numEnergies, result->getDataPointer(0, Type::real),
       result->getDataPointer(0, Type::imag),
       gamma->getDataPointer(0, Type::real),
@@ -189,7 +189,7 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   GridGPU::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
 
   // Compute Greens function from gamma and gammabar
-  computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
+  internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
       result->dimX(), numEnergies, summandFactor->getDataPointer(0, Type::real),
       result->getDataPointer(0, Type::real),
       result->getDataPointer(0, Type::imag),

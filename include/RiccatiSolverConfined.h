@@ -36,8 +36,7 @@ public:
 private:
 };
 
-namespace {
-
+namespace internal {
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionTemplate_new_kernel(
     const T h, const T fermiSpeed, const int N, const int Ne,
@@ -225,14 +224,7 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     }
   }
 }
-} // namespace
-
-template <typename T, template <typename> class POTENTIAL>
-void loc_computeEnergyShift(T *data, const int current_angle_idx) {
-  dim3 bpg, tpb;
-  computeEnergyShift_external_kernel<T, POTENTIAL>
-      <<<bpg, tpb>>>(data, 1.0, 1.0, 100, 0.1);
-}
+} // namespace internal
 
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
@@ -329,7 +321,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   const T fermiSpeed = C::getFermiSurface()->getFermiSpeed(current_angle_idx);
 
   // 	Solve gamma by propagating riccati trajectories along positive y
-  computeGammaFunctionTemplate_new_kernel<T, typename GAMMA<T>::Gamma, 2, 3, 1>
+  internal::computeGammaFunctionTemplate_new_kernel<T, typename GAMMA<T>::Gamma,
+                                                    2, 3, 1>
       <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
           // Model parameters and energy values
           h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
@@ -356,8 +349,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
           storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
-  computeGammaFunctionTemplate_new_kernel<T, typename GAMMA<T>::Gammabar, 3, 2,
-                                          -1>
+  internal::computeGammaFunctionTemplate_new_kernel<
+      T, typename GAMMA<T>::Gammabar, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
           h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
@@ -450,7 +443,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   GridGPU *eShift = R::getEnergyShift();
 
   // 	Solve gamma by propagating riccati trajectories along positive y
-  computeGammaFunctionInitialBoundaryTemplate_kernel<
+  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
       T, typename GAMMA<T>::Gamma, 2, 3, 1><<<blocksPerGrid, threadsPerBlock>>>(
       // Model parameters and energy values
       h, N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
@@ -477,7 +470,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
       storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
-  computeGammaFunctionInitialBoundaryTemplate_kernel<
+  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
       T, typename GAMMA<T>::Gammabar, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock>>>(
           // Model parameters and energy values

@@ -5,13 +5,7 @@
 #include "Grid.h"
 #include <cuda.h>
 
-template <typename T>
-void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
-                            const GridData<T, thrust::device_vector<T>> *j,
-                            GridData<char, thrust::device_vector<char>> *geom,
-                            const T h, const T c, const int N);
-
-namespace {
+namespace internal {
 // Compute vector potential by integrating greens function kernel
 template <typename T>
 __global__ void
@@ -41,7 +35,7 @@ computeVectorPotential2d_kernel(T *Ax, T *Ay, const T *jx, const T *jy,
     Ay[idx] += mult * jy[idxp];
   }
 }
-} // namespace
+} // namespace internal
 
 template <typename T>
 void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
@@ -61,7 +55,7 @@ void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
   for (int y = 0; y < N; ++y) {
     for (int x = 0; x < N; ++x) {
       if (g[y * N + x]) {
-        computeVectorPotential2d_kernel<<<bpg, tpb>>>(
+        internal::computeVectorPotential2d_kernel<<<bpg, tpb>>>(
             A->getDataPointer(0), A->getDataPointer(1), j->getDataPointer(0),
             j->getDataPointer(1), geom->getDataPointer(0), x, y, h, c, N);
       }

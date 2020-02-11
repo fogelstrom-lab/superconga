@@ -66,7 +66,7 @@ template <typename T> struct GridFunctions<T, thrust::host_vector<T>> {
                      Type::type part);
 };
 
-namespace {
+namespace internal {
 // Iterators
 //
 template <typename T, typename DEV, template <typename> class F>
@@ -244,7 +244,7 @@ template <typename T> struct LogFunc {
   LogFunc(T _a) : a(_a) {}
   T operator()(const T &dst) { return log(dst + a); }
 };
-} // namespace
+} // namespace internal
 
 template <typename T>
 template <typename T2>
@@ -256,20 +256,20 @@ void GridFunctions<T, thrust::host_vector<T>>::typeConvert(
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexMagnitudeSq(
     GridCPU *result) const {
-  iterTwoComplexToReal(*grid, *result, ComplexMagnitudeSqFunc<T>());
+  iterTwoComplexToReal(*grid, *result, internal::ComplexMagnitudeSqFunc<T>());
 }
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexPhase(
     GridCPU *result) const {
-  iterTwoComplexToReal(*grid, *result, ComplexPhaseFunc<T>());
+  iterTwoComplexToReal(*grid, *result, internal::ComplexPhaseFunc<T>());
 }
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::fieldMagnitude(
     GridCPU *result) const {
   result->setZero();
-  iterTwo(*grid, *result, FieldMagnitudeFunc<T>(), Type::real);
+  iterTwo(*grid, *result, internal::FieldMagnitudeFunc<T>(), Type::real);
   result->sqrt();
 }
 
@@ -277,7 +277,7 @@ template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::sumFieldComponents(
     GridCPU *result) const {
   result->setZero();
-  iterTwo(*grid, *result, AddFuncTwo<T>(), grid->representation());
+  iterTwo(*grid, *result, internal::AddFuncTwo<T>(), grid->representation());
 }
 
 template <typename T>
