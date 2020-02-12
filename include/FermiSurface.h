@@ -20,7 +20,7 @@
 template <typename T> class FermiSurface : public ContextModule<T> {
 public:
   // Constructor.
-  FermiSurface();
+  FermiSurface(const int inNumAngles);
   FermiSurface(Context<T> *const inContext);
 
   // Destructor.
@@ -35,6 +35,9 @@ public:
   // Get the angle we should rotate the system for a given angle of the Fermi
   // velocity.
   T getSystemAngle(const T inFermiVelocityAngle);
+
+  // Get the angle offset, i.e. the angle for index 0.
+  T getAngleOffset() { return m_angleOffset; }
 
   // Get the number of angles.
   int getNumAngles() { return m_numAngles; }
@@ -151,7 +154,8 @@ __host__ __device__ T getFractionalAngleIndex(
 } // namespace internal
 
 template <typename T>
-FermiSurface<T>::FermiSurface() : ContextModule<T>(), m_numAngles(0) {}
+FermiSurface<T>::FermiSurface(const int inNumAngles)
+    : ContextModule<T>(), m_numAngles(inNumAngles) {}
 
 template <typename T>
 FermiSurface<T>::FermiSurface(Context<T> *const inContext)

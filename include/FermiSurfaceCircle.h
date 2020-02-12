@@ -13,8 +13,8 @@
 template <typename T> class FermiSurfaceCircle : public FermiSurface<T> {
 public:
   // Constructor.
-  FermiSurfaceCircle();
-  FermiSurfaceCircle(Context<T> *ctx);
+  FermiSurfaceCircle(const int inNumAngles);
+  FermiSurfaceCircle(Context<T> *const inContext);
 
   // Destructor.
   ~FermiSurfaceCircle();
@@ -43,19 +43,19 @@ public:
   void getMomentumOffset(T &outOffsetX, T &outOffsetY);
 
 private:
-  // The system angle, basically angle(vF) - pi/2.
+  // The system angles, basically angle(vF) - pi/2.
   // We need an array of all values because we need to pass it to a CUDA kernel
   // implementing the boundary condition.
-  thrust::device_vector<T> m_systemAngle;
+  thrust::device_vector<T> m_systemAngles;
 };
 
 template <typename T>
-FermiSurfaceCircle<T>::FermiSurfaceCircle()
-    : FermiSurface<T>(), m_systemAngle(0) {}
+FermiSurfaceCircle<T>::FermiSurfaceCircle(const int inNumAngles)
+    : FermiSurface<T>(inNumAngles), m_systemAngles(0) {}
 
 template <typename T>
-FermiSurfaceCircle<T>::FermiSurfaceCircle(Context<T> *ctx)
-    : FermiSurface<T>(ctx), m_systemAngle(0) {}
+FermiSurfaceCircle<T>::FermiSurfaceCircle(Context<T> *const inContext)
+    : FermiSurface<T>(inContext), m_systemAngles(0) {}
 
 template <typename T> FermiSurfaceCircle<T>::~FermiSurfaceCircle() {
   std::cout << "~FermiSurfaceCircle<T>\n";
@@ -68,17 +68,17 @@ template <typename T> int FermiSurfaceCircle<T>::initialize() {
   const int numAngles = FermiSurface<T>::getNumAngles();
 
   // System angle array on the CPU.
-  thrust::host_vector<T> systemAngle(numAngles);
+  thrust::host_vector<T> systemAngles(numAngles);
 
   // Fill the array.
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     const T phi = FermiSurface<T>::getPhi(angleIdx);
-    systemAngle[angleIdx] = FermiSurface<T>::getSystemAngle(phi);
+    systemAngles[angleIdx] = FermiSurface<T>::getSystemAngle(phi);
   }
 
   // Copy to the GPU.
-  m_systemAngle =
-      thrust::device_vector<T>(systemAngle.begin(), systemAngle.end());
+  m_systemAngles =
+      thrust::device_vector<T>(systemAngles.begin(), systemAngles.end());
   return 0;
 }
 
@@ -110,11 +110,11 @@ T FermiSurfaceCircle<T>::getSystemAngle(const int inAngleIdx) {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
 
   // Set the system angle.
-  return m_systemAngle[idx];
+  return m_systemAngles[idx];
 }
 
 template <typename T> T *FermiSurfaceCircle<T>::getSystemAnglePointer() {
-  return thrust::raw_pointer_cast(m_systemAngle.data());
+  return thrust::raw_pointer_cast(m_systemAngles.data());
 }
 
 template <typename T>
