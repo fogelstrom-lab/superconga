@@ -23,15 +23,17 @@ set(NVCC_WARN "-Wall,\
                -Wformat=2")
 
 # Define the main set of source files
-set(SRC fermi_surface_test.cu
-        fermi_surface_circle_test.cu
-        grid_data_sum_magnitude_test.cu
-        grid_data_sum_square_test.cu
-        legacy_test.cu
-        order_parameter_initial_test.cu
-        order_parameter_bulk_test.cu
-        physics/low_temp_free_energy_test.cu
-        utils_test.cu)
+set(SRC
+    fermi_surface_test.cu
+    fermi_surface_circle_test.cu
+    fermi_surface_tight_binding_test.cu
+    grid_data_sum_magnitude_test.cu
+    grid_data_sum_square_test.cu
+    legacy_test.cu
+    order_parameter_initial_test.cu
+    order_parameter_bulk_test.cu
+    physics/low_temp_free_energy_test.cu
+    utils_test.cu)
 
 # Enable testing functionality
 enable_testing()

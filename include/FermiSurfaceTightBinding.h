@@ -20,7 +20,11 @@ template <typename> struct TightBindingParameters;
 template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
   // Constructor.
-  FermiSurfaceTightBinding(Context<T> *const inContext,
+  FermiSurfaceTightBinding(Context<T> *const inOutContext,
+                           const T inHoppingNNN = static_cast<T>(0.0),
+                           const T inHoppingNNNN = static_cast<T>(0.0),
+                           const T inChemicalPotential = static_cast<T>(1.0));
+  FermiSurfaceTightBinding(const int inNumAngles,
                            const T inHoppingNNN = static_cast<T>(0.0),
                            const T inHoppingNNNN = static_cast<T>(0.0),
                            const T inChemicalPotential = static_cast<T>(1.0));
@@ -56,14 +60,14 @@ private:
   // We find the Fermi surface with an iterative method (bisection and Newton),
   // so we need to set the maximum number of iterations, and when we consider
   // ourselves done.
-  const int m_numIterations = 100;
+  const int m_maxIterations = 100;
 
   // The convergence criterion could probably be descreased, but not by much.
   const T m_convergence =
       static_cast<T>(1e2) * std::numeric_limits<T>::epsilon();
 
   // Tight-binding parameters.
-  TightBindingParameters<T> m_parameters;
+  const TightBindingParameters<T> m_parameters;
 
   // For doped materials the Fermi surface can encircle the point (pi, pi)
   // instead of (0, 0), this is simply that offset.
@@ -89,6 +93,12 @@ private:
 
 // A helper struct.
 template <typename T> struct TightBindingParameters {
+  TightBindingParameters(){};
+  TightBindingParameters(const T inHoppingNNN, const T inHoppingNNNN,
+                         const T inChemicalPotential)
+      : hoppingNNN(inHoppingNNN), hoppingNNNN(inHoppingNNNN),
+        chemicalPotential(inChemicalPotential){};
+
   void print() const {
     std::cout << "Tight-Binding Parameters:" << std::endl;
     std::cout << "hoppingNN = " << hoppingNN << ", hoppingNNN = " << hoppingNNN
@@ -110,7 +120,7 @@ template <typename T> struct TightBindingParameters {
   T chemicalPotential;
 };
 
-namespace internal {
+namespace tightbinding_internal {
 /// \brief Compute the value of the dispersion at a given momentum
 ///
 /// Evaluates the dispersion, which is parameterized by inParameters, at the
@@ -246,10 +256,11 @@ std::pair<T, T> makeMomentum(const T inMagnitude, const T inAngle,
 ///
 /// \return - The Fermi momentum as a pair (x, y)
 template <typename T>
-std::pair<T, T>
-computeFermiMomentum(const TightBindingParameters<T> &inParameters,
-                     const T inAngle, const std::pair<T, T> inOriginOffset,
-                     const int inNumIterations, const T inConvergenCriterion) {
+std::pair<T, T> computeFermiMomentum(
+    const TightBindingParameters<T> &inParameters, const T inAngle,
+    const std::pair<T, T> inOriginOffset, const int inNumIterations = 100,
+    const T inConvergenCriterion = static_cast<T>(1e2) *
+                                   std::numeric_limits<T>::epsilon()) {
   // For the bisection method we need to two end-points of the interval.
   // 1st point: The origin (which could be (pi, pi)).
   T kA = static_cast<T>(0.0);
@@ -392,7 +403,7 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
   const T sinPhi = kY / k;
 
   // The derivative of the dispersion with respect to phi is:
-  // dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi
+  // dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi = 0
   // whith
   // dKXdPhi = (dKdPhi * cos(phi) - kY)
   // dKYdPhi = (dKdPhi * sin(phi) + kX)
@@ -412,19 +423,25 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
   const T integrandFactor = dPdPhi / fermiSpeed;
   return integrandFactor;
 }
-} // namespace internal
+} // namespace tightbinding_internal
 
 template <typename T>
 FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
-    Context<T> *const inContext, const T inHoppingNNN, const T inHoppingNNNN,
+    Context<T> *const inOutContext, const T inHoppingNNN, const T inHoppingNNNN,
     const T inChemicalPotential)
-    : FermiSurface<T>(inContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
+    : FermiSurface<T>(inOutContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
-      m_systemAnglesGPU(0), m_integrandFactor(0) {
-  m_parameters.hoppingNNN = inHoppingNNN;
-  m_parameters.hoppingNNNN = inHoppingNNNN;
-  m_parameters.chemicalPotential = inChemicalPotential;
-}
+      m_systemAnglesGPU(0), m_integrandFactor(0),
+      m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
+
+template <typename T>
+FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
+    const int inNumAngles, const T inHoppingNNN, const T inHoppingNNNN,
+    const T inChemicalPotential)
+    : FermiSurface<T>(inNumAngles), m_fermiMomentumX(0), m_fermiMomentumY(0),
+      m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
+      m_systemAnglesGPU(0), m_integrandFactor(0),
+      m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
 
 template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
   std::cout << "~FermiSurfaceTightBinding<T>\n";
@@ -437,7 +454,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
   m_parameters.print();
 
   // Compute momentum offset.
-  m_originOffset = internal::computeMomentumOffset(m_parameters);
+  m_originOffset = tightbinding_internal::computeMomentumOffset(m_parameters);
   std::cout << "Fermi Surface Origin: (x, y) = (" << m_originOffset.first
             << ", " << m_originOffset.second << ")" << std::endl;
 
@@ -458,13 +475,15 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     const T phi = FermiSurface<T>::getPhi(angleIdx);
 
     // Compute the Fermi momentum.
-    const std::pair<T, T> fermiMomentum = internal::computeFermiMomentum(
-        m_parameters, phi, m_originOffset, m_numIterations, m_convergence);
+    const std::pair<T, T> fermiMomentum =
+        tightbinding_internal::computeFermiMomentum(
+            m_parameters, phi, m_originOffset, m_maxIterations, m_convergence);
 
     // The Fermi velocity is the partial derivative of the dispersion at the
     // Fermi surface.
     const std::pair<T, T> fermiVelocity =
-        internal::computeDispersionDerivative(m_parameters, fermiMomentum);
+        tightbinding_internal::computeDispersionDerivative(m_parameters,
+                                                           fermiMomentum);
 
     // Update the Fermi momentum arrays.
     m_fermiMomentumX.push_back(fermiMomentum.first);
@@ -481,7 +500,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     m_systemAngles.push_back(systemAngle);
 
     // Compute integrand factor.
-    const T factor = internal::computeIntegrandFactor(
+    const T factor = tightbinding_internal::computeIntegrandFactor(
         m_parameters, fermiMomentum, fermiVelocity, m_originOffset);
     m_integrandFactor.push_back(factor);
 

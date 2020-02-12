@@ -2,6 +2,8 @@
 #define CONTEXT_MODULE_H_
 
 #include <cuda.h>
+#include <iostream>
+#include <string>
 
 template <typename> class ComputeProperty;
 template <typename> class Context;

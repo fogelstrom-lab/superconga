@@ -1,14 +1,14 @@
 #ifndef INTEGRATION_ITERATOR_OZAKI_H_
 #define INTEGRATION_ITERATOR_OZAKI_H_
 
-#include "FermiSurface.h"
-#include "utils.h"
 #include "ComputeProperty.h"
 #include "Context.h"
+#include "FermiSurface.h"
 #include "GeometryGroup.h"
 #include "OrderParameter.h"
 #include "ParameterIterator.h"
 #include "RiccatiSolver.h"
+#include "utils.h"
 #include <thrust/host_vector.h>
 
 /* Wrapper of dsygv from FORTRAN LAPACK
