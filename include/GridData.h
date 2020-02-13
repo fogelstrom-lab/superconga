@@ -24,6 +24,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/transform.h>
+#include <thrust/transform_reduce.h>
 
 // Forward declarations. These can be used when we want to refer to another
 // class without including the .h file.
@@ -145,6 +146,9 @@ public:
 
   // Compute absolute value for grid (works for complex as well)
   GridData abs() const;
+
+  // Compute the grain-averaged absolute value (works for complex as well)
+  T sumMagnitude(const int inFieldIdx = 0) const;
 
   // Compute the complex magnitude squared
   void complexMagnitudeSq(GridData *result) const;
@@ -298,43 +302,55 @@ public:
   //
 
   // Complex vector dot product
-  struct complexVectorProduct_functor {
-    template <typename Tuple> _DEV_ void operator()(Tuple vecs) {
-      const T temp_re = thrust::get<0>(vecs);
-      const T temp_im = thrust::get<1>(vecs);
-      thrust::get<0>(vecs) =
-          (temp_re * thrust::get<2>(vecs)) - (temp_im * thrust::get<3>(vecs));
-      thrust::get<1>(vecs) =
-          (temp_re * thrust::get<3>(vecs)) + (temp_im * thrust::get<2>(vecs));
+  struct complexVectorProductFunctor {
+    template <typename Tuple> _DEV_ void operator()(Tuple inOutValues) {
+      const T temp_re = thrust::get<0>(inOutValues);
+      const T temp_im = thrust::get<1>(inOutValues);
+      thrust::get<0>(inOutValues) = (temp_re * thrust::get<2>(inOutValues)) -
+                                    (temp_im * thrust::get<3>(inOutValues));
+      thrust::get<1>(inOutValues) = (temp_re * thrust::get<3>(inOutValues)) +
+                                    (temp_im * thrust::get<2>(inOutValues));
     }
   };
 
   // Scale complex vector with complex scalar
-  struct scaleComplexVector_functor {
+  struct scaleComplexVectorFunctor {
     const cplx<T> scalar;
 
-    scaleComplexVector_functor(const cplx<T> _scalar) : scalar(_scalar) {}
+    scaleComplexVectorFunctor(const cplx<T> _scalar) : scalar(_scalar) {}
 
-    template <typename Tuple> _DEV_ void operator()(Tuple vec) {
-      const T temp_re = thrust::get<0>(vec);
-      const T temp_im = thrust::get<1>(vec);
+    template <typename Tuple> _DEV_ void operator()(Tuple inOutValues) {
+      const T temp_re = thrust::get<0>(inOutValues);
+      const T temp_im = thrust::get<1>(inOutValues);
 
-      thrust::get<0>(vec) = (temp_re * scalar.x) - (temp_im * scalar.y);
-      thrust::get<1>(vec) = (temp_re * scalar.y) + (temp_im * scalar.x);
+      thrust::get<0>(inOutValues) = (temp_re * scalar.x) - (temp_im * scalar.y);
+      thrust::get<1>(inOutValues) = (temp_re * scalar.y) + (temp_im * scalar.x);
     }
   };
 
   // Scale complex vector with complex scalar
-  struct addComplexScalar_functor {
+  struct addComplexScalarFunctor {
     const cplx<T> scalar;
 
-    addComplexScalar_functor(const cplx<T> _scalar) : scalar(_scalar) {}
+    addComplexScalarFunctor(const cplx<T> _scalar) : scalar(_scalar) {}
 
-    template <typename Tuple> _DEV_ void operator()(Tuple vec) {
+    template <typename Tuple> _DEV_ void operator()(Tuple inOutValues) {
 
-      thrust::get<0>(vec) += scalar.x;
-      thrust::get<1>(vec) += scalar.y;
+      thrust::get<0>(inOutValues) += scalar.x;
+      thrust::get<1>(inOutValues) += scalar.y;
     }
+  };
+
+  // Calculate square root of inner product: sqrt(x*x + y*y)
+  struct hypotFunctor {
+    template <typename Tuple> _DEV_ T operator()(const Tuple inValues) {
+      return std::hypot(thrust::get<0>(inValues), thrust::get<1>(inValues));
+    }
+  };
+
+  // Calculate absolute value: sqrt(x*x)
+  struct absFunctor {
+    _DEV_ T operator()(const T inValue) const { return std::abs(inValue); }
   };
 
 private:
@@ -467,7 +483,7 @@ void GridData<T, DEV>::operator+=(const cplx<T> right) {
                   getFieldComponentOffset(c, Type::real, Type::end),
               _data->begin() +
                   getFieldComponentOffset(c, Type::imag, Type::end))),
-          addComplexScalar_functor(right));
+          addComplexScalarFunctor(right));
     }
   } else {
     std::cout << "Warning: Attempted to add real valued grid with complex "
@@ -533,7 +549,7 @@ void GridData<T, DEV>::operator*=(const GridData<T, DEV> &right) {
                     right.getFieldComponentOffset(c, Type::real, Type::end),
                 right._data->begin() +
                     right.getFieldComponentOffset(c, Type::imag, Type::end))),
-            complexVectorProduct_functor());
+            complexVectorProductFunctor());
       }
     } else {
       // Real valued multiplication
@@ -559,7 +575,7 @@ void GridData<T, DEV>::operator*=(const cplx<T> right) {
                   getFieldComponentOffset(c, Type::real, Type::end),
               _data->begin() +
                   getFieldComponentOffset(c, Type::imag, Type::end))),
-          scaleComplexVector_functor(right));
+          scaleComplexVectorFunctor(right));
     }
   } else {
     std::cout << "Warning: Attempted to multiply real valued grid with complex "
@@ -792,6 +808,60 @@ GridData<T, DEV> GridData<T, DEV>::abs() const {
   }
 
   return result;
+}
+
+// Calculate the sum of all magnitudes of a GridData object. For a complex field
+// this amounts to first calculating the absolute value, then performing a
+// reduction to sum the absolute value in each coordinate into a scalar. Note
+// that the first two steps are done in a single thrust::transform_reduce call.
+// TODO(patric): If there are multiple fields (numFields > 1), the code might
+// have to be modified (i.e. loop over numFields)
+template <typename T, typename DEV>
+T GridData<T, DEV>::sumMagnitude(const int inFieldIdx) const {
+  // Pointers to iterator start and end for real part
+  const auto realPartIteratorBegin =
+      _data->begin() +
+      getFieldComponentOffset(inFieldIdx, Type::real, Type::begin);
+  const auto realPartIteratorEnd =
+      _data->begin() +
+      getFieldComponentOffset(inFieldIdx, Type::real, Type::end);
+
+  // Initial value for the reduction: sumMagnitude = initValue + sum(...)
+  const T initValue = static_cast<T>(0.0);
+
+  // The binary operator to sum (reduce) all the magnitudes
+  thrust::plus<T> binaryOperatorPlus;
+
+  if (isComplex()) {
+    // Pointers to iterator start and end points for imaginary part
+    const auto imagPartIteratorBegin =
+        _data->begin() +
+        getFieldComponentOffset(inFieldIdx, Type::imag, Type::begin);
+    const auto imagPartIteratorEnd =
+        _data->begin() +
+        getFieldComponentOffset(inFieldIdx, Type::imag, Type::end);
+
+    // Make zip iterators of real/imaginary parts (transform_reduce takes a
+    // single start/end pointer, but we want to send two: zip_iterator solves
+    // this by combining two into one)
+    auto zipIteratorBegin = thrust::make_zip_iterator(
+        thrust::make_tuple(realPartIteratorBegin, imagPartIteratorBegin));
+    auto zipIteratorEnd = thrust::make_zip_iterator(
+        thrust::make_tuple(realPartIteratorEnd, imagPartIteratorEnd));
+
+    // Sum the magnitude in each coordinate of the calling GridData object
+    const T resultSum =
+        thrust::transform_reduce(zipIteratorBegin, zipIteratorEnd,
+                                 hypotFunctor(), initValue, binaryOperatorPlus);
+
+    return resultSum;
+  } else {
+    // Sum the magnitude in each coordinate of the calling GridData object
+    const T resultSum =
+        thrust::transform_reduce(realPartIteratorBegin, realPartIteratorEnd,
+                                 absFunctor(), initValue, binaryOperatorPlus);
+    return resultSum;
+  }
 }
 
 template <typename T, typename DEV>
