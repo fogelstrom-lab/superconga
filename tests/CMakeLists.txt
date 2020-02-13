@@ -29,8 +29,7 @@ set(NVCC_WARN
 find_package(doctest REQUIRED)
 
 # Define the main set of source files
-set(SRC fermisurface_test.cu fermisurfacecircle_test.cu legacy_test.cu
-        utils_test.cu)
+set(SRC fermisurface_test.cu fermisurfacecircle_test.cu legacy_test.cu utils_test.cu griddata_test.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
@@ -61,3 +60,4 @@ foreach(file ${SRC})
   # Set RELEASE compile flags
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
 endforeach()
+
