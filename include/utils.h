@@ -14,6 +14,7 @@
 
 #include <cmath>
 #include <cuda.h>
+#include <vector>
 
 namespace utils {
 /// \brief Wrap value to range
@@ -133,5 +134,28 @@ template <typename T> __host__ __device__ int sign(const T inValue) {
   const bool isPositive = (static_cast<T>(0) < inValue);
   return (static_cast<int>(isPositive) - static_cast<int>(isNegative));
 }
+
+/// \brief Create a vector with equidistant values
+///
+/// Works just like linspace in Python. It creates a vector with inNumValues
+/// values in the range [inMinVal, inMaxVal].
+///
+/// \param inMinVal - The minimum value
+/// \param inMaxVal - The maximum value
+/// \param inNumValues - The number of values
+///
+/// \return - The resulting vector
+template <typename T>
+std::vector<T> linspace(const T inMinVal, const T inMaxVal,
+                        const int inNumValues) {
+  const T step = (inMaxVal - inMinVal) / static_cast<T>(inNumValues - 1);
+  std::vector<T> values;
+  for (int i = 0; i < inNumValues; ++i) {
+    const T value = inMinVal + static_cast<T>(i) * step;
+    values.push_back(value);
+  }
+  return values;
+}
+
 } // namespace utils
 #endif // UTILS_H_

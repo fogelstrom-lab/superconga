@@ -20,7 +20,7 @@ template <typename T>
 T computeOrderParameterBulkSWave(
     const T inTemperature,
     const T inConvergenceCriterion = static_cast<T>(1e-8),
-    const int inNumIterations = 1000,
+    const int inNumIterations = static_cast<int>(1e5),
     const T inEnergyCutoff = static_cast<T>(1e3)) {
   // If the temperature is above Tc then the sample is not superconducting, and
   // the order parameter is zero.

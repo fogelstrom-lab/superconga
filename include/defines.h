@@ -43,6 +43,12 @@ const double S_WAVE_BULK = M_PI * std::exp(-EULER_MASCHERONI);
 const double D_WAVE_BULK =
     M_PI * std::sqrt(2.0) * std::exp(-EULER_MASCHERONI - 0.5);
 
+// The value of the Riemann zeto function evaluated at 3, i.e. Apery's constant
+// = zeta(3). Value taken from Wikipedia:
+// https://en.wikipedia.org/wiki/Ap%C3%A9ry%27s_constant
+// TODO(niclas): When moving to C++17 we can use std::riemann_zeta(3) instead.
+const double APERY = 1.202056903159594285399738161511;
+
 } // namespace qcs
 
 #endif // DEFINES_H_
