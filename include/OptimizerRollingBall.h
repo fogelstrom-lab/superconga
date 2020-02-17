@@ -10,13 +10,13 @@
 
 // TODO: (Patric) Implement warmup/burnin and final relaxation at end of
 // simulation, with getters and setters.
-template <typename T>
-class OptimizerRollingBall : public Optimizer<T> {
+template <typename T> class OptimizerRollingBall : public Optimizer<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
 public:
   // Constructor.
-  OptimizerRollingBall();
+  OptimizerRollingBall(const T inIneartialWeight = static_cast<T>(0.5),
+                       const int inNumWarmupIterations = 10);
 
   // Destructor.
   ~OptimizerRollingBall();
@@ -40,16 +40,19 @@ private:
   // The number of warmup iterations. The first step is always a pure
   // fixed-point step. But after that the weight of the ineratial term  is
   // gradually increased to its maximum value during this number of iterations.
-  const int m_nWarmupIterations = 10;
+  const int m_numWarmupIterations;
 
   // The maximum weight of the ineartial term.
-  const T m_ineratialWeight = static_cast<T>(0.9);
+  const T m_ineratialWeight;
 };
 
 template <typename T>
-OptimizerRollingBall<T>::OptimizerRollingBall()
+OptimizerRollingBall<T>::OptimizerRollingBall(const T inIneartialWeight,
+                                              const int inNumWarmupIterations)
     : Optimizer<T>(), m_deltaKMinusOne(0), m_deltaTmp(0),
-      m_isDeltaInitialized(false), m_iterationIndex(0) {}
+      m_isDeltaInitialized(false), m_iterationIndex(0),
+      m_numWarmupIterations(inNumWarmupIterations),
+      m_ineratialWeight(inIneartialWeight) {}
 
 template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
   if (m_deltaKMinusOne) {
@@ -81,7 +84,7 @@ void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
 
       // Compute ineartial weight.
       const T warmupFraction = static_cast<T>(m_iterationIndex) /
-                               static_cast<T>(m_nWarmupIterations + 1);
+                               static_cast<T>(m_numWarmupIterations + 1);
       const T weight =
           m_ineratialWeight * std::min(static_cast<T>(1.0), warmupFraction);
 
