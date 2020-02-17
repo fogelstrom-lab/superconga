@@ -1,8 +1,6 @@
 # NOTE: FindCUDA is formally deprecated, but no standalone alternative exists as
 # of yet for automatic detection of GPU architecture, so we use it
-set(CUDA_ARCH
-    ""
-    CACHE STRING "User-specified CUDA architecture (autodetected otherwise)")
+set(CUDA_ARCH "" CACHE STRING "User-specified CUDA architecture (autodetected otherwise)")
 if(CUDA_ARCH)
   message(STATUS "Setting user-defined arch: ${CUDA_ARCH}")
   set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
@@ -13,23 +11,22 @@ endif()
 string(REPLACE ";" " " ARCH_FLAGS_DISPLAY "${ARCH_FLAGS}")
 message(STATUS "Add CUDA architecture flags: ${ARCH_FLAGS_DISPLAY}")
 
-set(NVCC_WARN
-    "-Wall,\
-    -Wextra,\
-    -Wnon-virtual-dtor,\
-    -Wunused,\
-    -Wduplicated-cond,\
-    -Wduplicated-branches,\
-    -Wlogical-op,\
-    -Wnull-dereference,\
-    -Wdouble-promotion,\
-    -Wformat=2")
+set(NVCC_WARN "-Wall,\
+               -Wextra,\
+               -Wnon-virtual-dtor,\
+               -Wunused,\
+               -Wduplicated-cond,\
+               -Wduplicated-branches,\
+               -Wlogical-op,\
+               -Wnull-dereference,\
+               -Wdouble-promotion,\
+               -Wformat=2")
 
 # We need doctest for the tests.
 find_package(doctest REQUIRED)
 
 # Define the main set of source files
-set(SRC fermisurface_test.cu fermisurfacecircle_test.cu legacy_test.cu utils_test.cu griddata_test.cu)
+set(SRC fermisurface_test.cu fermisurfacecircle_test.cu legacy_test.cu utils_test.cu griddata_test.cu orderparameterinitial_test.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
@@ -38,24 +35,31 @@ foreach(file ${SRC})
   # Create command-line executable
   add_executable(${name} ${file})
 
-  # ----------------------------------- # Add extra compile options and flags #
-  # ----------------------------------- # Include directories
+  # ----------------------------------- #
+  # Add extra compile options and flags #
+  # ----------------------------------- #
+  # Include directories
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include
                                              doctest::doctest)
+  # External libraries
+  target_link_libraries(${name} PRIVATE glut
+                                        GL
+                                        GLU
+                                        gfortran
+                                        lapack
+                                        blas)
 
   # Use C++14 since it is the lates standard CUDA supports
   message(STATUS "Enable C++ standard: C++14")
-  set_target_properties(${name}
-                        PROPERTIES CUDA_STANDARD 14 CUDA_STANDARD_REQUIRED ON)
-  set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
-                                                           ON)
+  set_target_properties(${name} PROPERTIES CUDA_STANDARD 14
+                                      CUDA_STANDARD_REQUIRED ON)
+  set_target_properties(${name} PROPERTIES CXX_STANDARD 14
+                                      CXX_STANDARD_REQUIRED ON)
 
   # Set DEBUG compile flags
-  target_compile_options(
-    ${name}
-    PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
-    PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
-    PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
+  target_compile_options(${name} PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
+                                  PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
+                                  PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
 
   # Set RELEASE compile flags
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
