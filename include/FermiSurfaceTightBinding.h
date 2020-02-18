@@ -6,38 +6,39 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
-#include <math.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <utility>
 
 // Forward declaration, it is defined below.
 template <typename> struct TightBindingParameters;
 
 // Fermi surface from a tight-binding dispersion.
 // Note, there are tacit assumptions:
-// 1. A single species of atom
-// 2. A Square lattice
+// 1. A single species of atom.
+// 2. A square lattice.
 template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
   // Constructor.
-  FermiSurfaceTightBinding();
-  FermiSurfaceTightBinding(Context<T> *ctx);
+  FermiSurfaceTightBinding(Context<T> *const inContext,
+                           const T inHoppingNN = static_cast<T>(1.0),
+                           const T inHoppingNNN = static_cast<T>(0.0),
+                           const T inHoppingNNNN = static_cast<T>(0.0),
+                           const T inChemicalPotential = static_cast<T>(1.0));
 
   // Destructor.
   ~FermiSurfaceTightBinding();
-
-  // Set the tight-binding parameters.
-  void setTightBindingParameters(const T inHoppingNN, const T inHoppingNNN,
-                                 const T inHoppingNNNN,
-                                 const T inChemicalPotential);
 
   // Initialize the Fermi surface.
   int initialize();
 
   // Get the Fermi momentum.
-  void getFermiMomentum(const int inAngleIdx, T &outMomentumX, T &outMomentumY);
+  void getFermiMomentum(const int inAngleIdx, T &outFermiMomentumX,
+                        T &outFermiMomentumY);
 
   // Get the Fermi velocity.
-  void getFermiVelocity(const int inAngleIdx, T &outVelocityX, T &outVelocityY);
+  void getFermiVelocity(const int inAngleIdx, T &outFermiVelocityX,
+                        T &outFermiVelocityY);
 
   // Get the Fermi speed.
   T getFermiSpeed(const int inAngleIdx);
@@ -62,40 +63,38 @@ private:
   const T m_convergence =
       static_cast<T>(1e2) * std::numeric_limits<T>::epsilon();
 
-  // For integrand factor, phi derivative.
-  // Note, this is radians.
-  const T m_angleDelta = std::sqrt(std::numeric_limits<T>::epsilon());
-
   // Tight-binding parameters.
   TightBindingParameters<T> m_parameters;
 
   // For doped materials the Fermi surface can encircle the point (pi, pi)
   // instead of (0, 0), this is simply that offset.
-  T m_offsetX;
-  T m_offsetY;
+  std::pair<T, T> m_originOffset;
 
   // The Fermi momentum.
-  thrust::device_vector<T> m_momentumX;
-  thrust::device_vector<T> m_momentumY;
+  thrust::host_vector<T> m_fermiMomentumX;
+  thrust::host_vector<T> m_fermiMomentumY;
 
   // The Fermi velocity.
-  thrust::device_vector<T> m_velocityX;
-  thrust::device_vector<T> m_velocityY;
+  thrust::host_vector<T> m_fermiVelocityX;
+  thrust::host_vector<T> m_fermiVelocityY;
 
-  // The system angle, basically angle(vF) - pi/2.
-  thrust::device_vector<T> m_systemAngle;
+  // The system angles, basically angle(vF) - pi/2.
+  thrust::host_vector<T> m_systemAngles;
+  // The system angles need to be on the GPU as well because the entire array is
+  // passed to a CUDA kernel.
+  thrust::device_vector<T> m_systemAnglesGPU;
 
   // The momentum dependent factor in the integral.
-  thrust::device_vector<T> m_integrandFactor;
+  thrust::host_vector<T> m_integrandFactor;
 };
 
 // A helper struct.
 template <typename T> struct TightBindingParameters {
   void print() const {
-    std::cout << "Tight-Binding Parameters:\n";
+    std::cout << "Tight-Binding Parameters:" << std::endl;
     std::cout << "hoppingNN = " << hoppingNN << ", hoppingNNN = " << hoppingNNN
               << ", hoppingNNNN = " << hoppingNNNN
-              << ", chemicalPotential = " << chemicalPotential << "\n";
+              << ", chemicalPotential = " << chemicalPotential << std::endl;
   }
 
   // Nearest neighbour.
@@ -112,104 +111,162 @@ template <typename T> struct TightBindingParameters {
 };
 
 namespace internal {
+/// \brief Compute the value of the dispersion at a given momentum
+///
+/// Evaluates the dispersion, which is parameterized by inParameters, at the
+/// momentum inMomentum.
+///
+/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inMomentum - The momentum as a pair(x, y)
+///
+/// \return - The value of the dispersion at inMomentum
 template <typename T>
 T computeDispersion(const TightBindingParameters<T> &inParameters,
-                    const T inMomentumX, const T inMomentumY) {
+                    const std::pair<T, T> &inMomentum) {
+  const T momentumX = inMomentum.first;
+  const T momentumY = inMomentum.second;
 
   // Nearest neighbour.
   const T factorNN = -static_cast<T>(2.0) * inParameters.hoppingNN;
-  const T termNN = factorNN * (std::cos(inMomentumX) + std::cos(inMomentumY));
+  const T termNN = factorNN * (std::cos(momentumX) + std::cos(momentumY));
 
   // Next-nearest neighbour.
   const T factorNNN = -static_cast<T>(4.0) * inParameters.hoppingNNN;
-  const T termNNN = factorNNN * std::cos(inMomentumX) * std::cos(inMomentumY);
+  const T termNNN = factorNNN * std::cos(momentumX) * std::cos(momentumY);
 
   // Next-next-nearest neighbour.
   const T factorNNNN = -static_cast<T>(2.0) * inParameters.hoppingNNNN;
-  const T termNNNN = factorNNNN * (std::cos(static_cast<T>(2.0) * inMomentumX) +
-                                   std::cos(static_cast<T>(2.0) * inMomentumY));
+  const T termNNNN = factorNNNN * (std::cos(static_cast<T>(2.0) * momentumX) +
+                                   std::cos(static_cast<T>(2.0) * momentumY));
 
   return (termNN + termNNN + termNNNN - inParameters.chemicalPotential);
 }
 
+/// \brief Compute the partial derivatives of the dispersion at a given momentum
+///
+/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inMomentum - The momentum as a pair (x, y)
+///
+/// \return - The partial derivatives (dx, dy) of the dispersion at
+/// inMomentum
 template <typename T>
-void computeDispersionDerivative(const TightBindingParameters<T> &inParameters,
-                                 const T inMomentumX, const T inMomentumY,
-                                 T &outDerivativeX, T &outDerivativeY) {
+std::pair<T, T>
+computeDispersionDerivative(const TightBindingParameters<T> &inParameters,
+                            const std::pair<T, T> &inMomentum) {
+  const T momentumX = inMomentum.first;
+  const T momentumY = inMomentum.second;
 
   // Nearest neighbour.
   const T factorNN = static_cast<T>(2.0) * inParameters.hoppingNN;
-  const T termNNdX = factorNN * std::sin(inMomentumX);
-  const T termNNdY = factorNN * std::sin(inMomentumY);
+  const T termNNdX = factorNN * std::sin(momentumX);
+  const T termNNdY = factorNN * std::sin(momentumY);
 
   // Next-nearest neighbour.
   const T factorNNN = static_cast<T>(4.0) * inParameters.hoppingNNN;
-  const T termNNNdX = factorNNN * std::sin(inMomentumX) * std::cos(inMomentumY);
-  const T termNNNdY = factorNNN * std::cos(inMomentumX) * std::sin(inMomentumY);
+  const T termNNNdX = factorNNN * std::sin(momentumX) * std::cos(momentumY);
+  const T termNNNdY = factorNNN * std::cos(momentumX) * std::sin(momentumY);
 
   // Next-next-nearest neighbour.
   const T factorNNNN = static_cast<T>(4.0) * inParameters.hoppingNNNN;
-  const T termNNNNdX = factorNNNN * std::sin(static_cast<T>(2.0) * inMomentumX);
-  const T termNNNNdY = factorNNNN * std::sin(static_cast<T>(2.0) * inMomentumY);
+  const T termNNNNdX = factorNNNN * std::sin(static_cast<T>(2.0) * momentumX);
+  const T termNNNNdY = factorNNNN * std::sin(static_cast<T>(2.0) * momentumY);
 
-  outDerivativeX = (termNNdX + termNNNdX + termNNNNdX);
-  outDerivativeY = (termNNdY + termNNNdY + termNNNNdY);
+  const T dX = (termNNdX + termNNNdX + termNNNNdX);
+  const T dY = (termNNdY + termNNNdY + termNNNNdY);
+  return {dX, dY};
 }
 
+/// \brief Compute the momentum offset for this dispersion
+///
+/// The Fermi surface (given reasonable parameters) is either centered around
+/// (0,0) or (pi,pi), this function computes that offset.
+///
+/// \param inParameters - The tight-binding parameters for a square lattice
+///
+/// \return - The offset, either (0,0) or (pi, pi)
 template <typename T>
-void computeMomentumOffset(const TightBindingParameters<T> &inParameters,
-                           T &outOffsetX, T &outOffsetY) {
+std::pair<T, T>
+computeMomentumOffset(const TightBindingParameters<T> &inParameters) {
   // Compute the dispersion at k=(0,pi).
-  const T kAX = static_cast<T>(0.0);
-  const T kAY = static_cast<T>(M_PI);
-  const T eA = computeDispersion(inParameters, kAX, kAY);
+  const std::pair<T, T> kA =
+      std::make_pair(static_cast<T>(0.0), static_cast<T>(M_PI));
+  const T eA = computeDispersion(inParameters, kA);
 
   // Compute the dispersion at k=(pi,pi).
-  const T kBX = static_cast<T>(M_PI);
-  const T kBY = static_cast<T>(M_PI);
-  const T eB = computeDispersion(inParameters, kBX, kBY);
+  const std::pair<T, T> kB =
+      std::make_pair(static_cast<T>(M_PI), static_cast<T>(M_PI));
+  const T eB = computeDispersion(inParameters, kB);
 
   // Check if they have the same sign.
   const bool sameSign = utils::sign(eA) == utils::sign(eB);
 
   if (sameSign) {
     // If they have the same sign then the Fermi surface encircles k=(0,0).
-    outOffsetX = static_cast<T>(0.0);
-    outOffsetY = static_cast<T>(0.0);
+    return {static_cast<T>(0.0), static_cast<T>(0.0)};
   } else {
     // If they don't have the same sign then the Fermi surface encircles
     // k=(pi,pi).
-    outOffsetX = static_cast<T>(M_PI);
-    outOffsetY = static_cast<T>(M_PI);
+    return {static_cast<T>(M_PI), static_cast<T>(M_PI)};
   }
 }
 
+/// \brief Make momentum pair (x,y) from magnitude, angle, and offset
+///
+/// The momentum is parameterized by:
+/// kx = magnitude * cos(angle) + offsetX
+/// ky = magnitude * sin(angle) + offsetY
+///
+/// \param inMagnitude - The magnitude
+/// \param inAngle - The angle in radians
+/// \param inOffset - The offset (x, y)
+///
+/// \return - The momentum as a pair (x, y)
 template <typename T>
-bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
-                          const T inAngle, const T inOffsetX, const T inOffsetY,
-                          const int inNumIterations, const T inConvergence,
-                          T &outMomentumX, T &outMomentumY) {
-  // For convenience. Sets the direction of the momentum.
-  const T cosPhi = std::cos(inAngle);
-  const T sinPhi = std::sin(inAngle);
+std::pair<T, T> makeMomentum(const T inMagnitude, const T inAngle,
+                             const std::pair<T, T> &inOffset) {
+  const T x = inMagnitude * std::cos(inAngle) + inOffset.first;
+  const T y = inMagnitude * std::sin(inAngle) + inOffset.second;
+  return {x, y};
+}
 
+/// \brief Compute the Fermi momentum for a given dispersion and direction
+///
+/// Essentially it computes k in
+/// kx = k * cos(angle) + offsetX
+/// ky = k * sin(angle) + offsetY
+/// where k is given as the root of the dispersion going from the offset along a
+/// ray with the given angle.
+///
+/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inAngle - The angle in radians
+/// \param inOffset - The offset (x, y)
+/// \param inNumIterations - The maximum number of iterations
+/// \param inConvergenCriterion - The convergence criterion. We stop when the
+///                               error is smaller than this
+///
+/// \return - The Fermi momentum as a pair (x, y)
+template <typename T>
+std::pair<T, T>
+computeFermiMomentum(const TightBindingParameters<T> &inParameters,
+                     const T inAngle, const std::pair<T, T> inOriginOffset,
+                     const int inNumIterations, const T inConvergenCriterion) {
   // For the bisection method we need to two end-points of the interval.
   // 1st point: The origin (which could be (pi, pi)).
   T kA = static_cast<T>(0.0);
-  const T kAX = kA * cosPhi + inOffsetX;
-  const T kAY = kA * sinPhi + inOffsetY;
-  T eA = computeDispersion(inParameters, kAX, kAY);
+  const std::pair<T, T> momentumA = makeMomentum(kA, inAngle, inOriginOffset);
+  T eA = computeDispersion(inParameters, momentumA);
 
   // 2nd point: The BZ "edge".
-  T kB = static_cast<T>(M_PI) / std::max(std::abs(cosPhi), std::abs(sinPhi));
-  const T kBX = kB * cosPhi + inOffsetX;
-  const T kBY = kB * sinPhi + inOffsetY;
-  T eB = computeDispersion(inParameters, kBX, kBY);
+  const T maxAbsComponent =
+      std::max(std::abs(std::cos(inAngle)), std::abs(std::sin(inAngle)));
+  T kB = static_cast<T>(M_PI) / maxAbsComponent;
+  const std::pair<T, T> momentumB = makeMomentum(kB, inAngle, inOriginOffset);
+  T eB = computeDispersion(inParameters, momentumB);
 
   // TODO(niclas): Make sure that the signs of eA and eB differ. Exit gracefully
   // otherwise.
   if (utils::sign(eA) == utils::sign(eB)) {
-    printf("BISECTION ERROR! Signs equal.\n");
+    std::cout << "ERROR! Failure of the bisection method." << std::endl;
   }
 
   // Initial guess.
@@ -221,21 +278,19 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
   // Should we do a bisection or Newton step?
   bool doBisectionStep = true;
 
-  T error = std::numeric_limits<T>::max();
   for (int i = 0; i < inNumIterations; ++i) {
     // Form the momentum.
-    const T kX = k * cosPhi + inOffsetX;
-    const T kY = k * sinPhi + inOffsetY;
+    const std::pair<T, T> momentum = makeMomentum(k, inAngle, inOriginOffset);
 
     // Compute the dispersion.
-    const T dispersion = computeDispersion(inParameters, kX, kY);
+    const T dispersion = computeDispersion(inParameters, momentum);
 
     // The error is simply the magnitude of the dispersion.
     // We are looking for zeros.
-    error = std::abs(dispersion);
+    const T error = std::abs(dispersion);
 
     // Decide what to do depending on the error.
-    if ((error > std::sqrt(inConvergence)) && doBisectionStep) {
+    if ((error > std::sqrt(inConvergenCriterion)) && doBisectionStep) {
       // Do a bisection step.
 
       // Update the interval.
@@ -249,18 +304,18 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
 
       // Update the momentum.
       k = static_cast<T>(0.5) * (kA + kB);
-    } else if (error > inConvergence) {
+    } else if (error > inConvergenCriterion) {
       // Do a newton step.
 
       // Continue with Newton steps.
       doBisectionStep = false;
 
       // Compute the gradient along the radial direction.
-      T dEdX;
-      T dEdY;
-      computeDispersionDerivative(inParameters, kX, kY, dEdX, dEdY);
+      const std::pair<T, T> dE =
+          computeDispersionDerivative(inParameters, momentum);
       // dXdK = cos(phi), dYdK = sin(phi)
-      const T dEdK = dEdX * cosPhi + dEdY * sinPhi;
+      const T dEdK =
+          dE.first * std::cos(inAngle) + dE.second * std::sin(inAngle);
 
       // Update the momentum.
       if (std::abs(dEdK) > static_cast<T>(0.0)) {
@@ -282,124 +337,120 @@ bool computeFermiMomentum(const TightBindingParameters<T> &inParameters,
 
   // The momentum has to be within the Brillouin zone (BZ). Otherwise we are
   // implicitly computing the momentum for another angle.
-  const bool isWithinBZ =
-      k * std::max(std::abs(cosPhi), std::abs(sinPhi)) <= static_cast<T>(M_PI);
+  const bool isWithinBZ = k * maxAbsComponent <= static_cast<T>(M_PI);
 
-  // Print info if failure.
+  // TODO(niclas): Raise exception instead!
   if (!isConverged) {
-    printf("The Fermi momentum did not converge! Error = %e - Error / Limit = "
-           "%f\n",
-           error, error / inConvergence);
+    std::cout << "ERROR! The Fermi momentum did not converge!" << std::endl;
   }
   if (!isSane) {
-    printf("The Fermi momentum magnitude is negative!\n");
+    std::cout << "ERROR! The Fermi momentum magnitude is negative!"
+              << std::endl;
   }
   if (!isWithinBZ) {
-    printf("The Fermi momentum is outside of BZ!\n");
+    std::cout << "ERROR! The Fermi momentum is outside of Brillouin zone!"
+              << std::endl;
   }
 
   // Form the momentum.
-  outMomentumX = k * cosPhi + inOffsetX;
-  outMomentumY = k * sinPhi + inOffsetY;
-
-  // Return whether it succeeded or not.
-  const bool success = (isConverged && isSane && isWithinBZ);
-  return success;
+  return makeMomentum(k, inAngle, inOriginOffset);
 }
 
+/// \brief Compute the integrand factor for a Fermi momentum
+///
+/// The factor is given by the norm of the partial derivative of the Fermi
+/// momentum with the respect to the angle phi, divided by the norm of the Fermi
+/// velocity.
+///
+/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inFermiMomentum - The Fermi momentum (x, y)
+/// \param inFermiVelocity - The Fermi velocity (x, y)
+/// \param inOffset - The momentum offset (x, y)
+///
+/// \return - The integrand factor
 template <typename T>
 T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
-                         const T inMomentumX, const T inMomentumY,
-                         const T inVelocityX, const T inVelocityY,
-                         const T inOffsetX, const T inOffsetY,
-                         const int inNumIterations, const T inConvergence,
-                         const T inDelta) {
-  // Get the angle parameterizing the momentum.
-  const T phi = std::atan2(inMomentumY - inOffsetY, inMomentumX - inOffsetX);
+                         const std::pair<T, T> &inFermiMomentum,
+                         const std::pair<T, T> &inFermiVelocity,
+                         const std::pair<T, T> &inOffset) {
+  // Compute the partial derivatives of the dispersion.
+  const std::pair<T, T> partialDerivatives =
+      computeDispersionDerivative(inParameters, inFermiMomentum);
+  const T dEdKX = partialDerivatives.first;
+  const T dEdKY = partialDerivatives.second;
 
-  // For the derivative we need to apply two small perturbations (in a three
-  // stencil).
-  const T phiPlusDelta = phi + inDelta;
-  const T phiMinusDelta = phi - inDelta;
+  // The momentum is parameterized as
+  // pX = kX + offsetX
+  // pY = kY + offsetY
+  // with
+  // kX = k * cos(phi)
+  // kY = k * sin(phi)
+  const T kX = inFermiMomentum.first - inOffset.first;
+  const T kY = inFermiMomentum.second - inOffset.second;
+  const T k = std::hypot(kX, kY);
+  const T cosPhi = kX / k;
+  const T sinPhi = kY / k;
 
-  // Compute pF(\phi + \delta).
-  T pXPlusDelta;
-  T pYPlusDelta;
-  const bool successPlus = computeFermiMomentum(
-      inParameters, phiPlusDelta, inOffsetX, inOffsetY, inNumIterations,
-      inConvergence, pXPlusDelta, pYPlusDelta);
+  // The derivative of the dispersion with respect to phi is:
+  // dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi
+  // whith
+  // dKXdPhi = (dKdPhi * cos(phi) - kY)
+  // dKYdPhi = (dKdPhi * sin(phi) + kX)
+  // which gives
+  const T dKdPhi =
+      (dEdKX * kY - dEdKY * kX) / (dEdKX * cosPhi + dEdKY * sinPhi);
 
-  // Compute pF(\phi - \delta).
-  T pXMinusDelta;
-  T pYMinusDelta;
-  const bool successMinus = computeFermiMomentum(
-      inParameters, phiMinusDelta, inOffsetX, inOffsetY, inNumIterations,
-      inConvergence, pXMinusDelta, pYMinusDelta);
+  // Thus, the norm of the partial derivative of the Fermi momentum with respect
+  // to phi is given by:
+  // sqrt(dPXdPhi^2 + dPYdPhi^2) = sqrt(dKXdPhi^2 + dKYdPhi^2)
+  const T dKXdPhi = dKdPhi * cosPhi - kY;
+  const T dKYdPhi = dKdPhi * sinPhi + kX;
+  const T dPdPhi = std::hypot(dKXdPhi, dKYdPhi);
 
-  const T pXDiff = pXPlusDelta - pXMinusDelta;
-  const T pYDiff = pYPlusDelta - pYMinusDelta;
-
-  // |\frac{\partial p_F}{\partial \phi}|
-  const T dPdPhi =
-      std::sqrt(pXDiff * pXDiff + pYDiff * pYDiff) / (2.0 * std::abs(inDelta));
-
-  // Fermi speed.
-  const T speed =
-      std::sqrt(inVelocityX * inVelocityX + inVelocityY * inVelocityY);
-  return dPdPhi / speed;
+  const T fermiSpeed =
+      std::hypot(inFermiVelocity.first, inFermiVelocity.second);
+  const T integrandFactor = dPdPhi / fermiSpeed;
+  return integrandFactor;
 }
 } // namespace internal
 
 template <typename T>
-FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding()
-    : FermiSurface<T>(), m_momentumX(0), m_momentumY(0), m_velocityX(0),
-      m_velocityY(0), m_systemAngle(0), m_integrandFactor(0) {}
-
-template <typename T>
-FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(Context<T> *ctx)
-    : FermiSurface<T>(ctx), m_momentumX(0), m_momentumY(0), m_velocityX(0),
-      m_velocityY(0), m_systemAngle(0), m_integrandFactor(0) {}
-
-template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
-  std::cout << "~FermiSurfaceTightBinding<T>\n";
-}
-
-template <typename T>
-void FermiSurfaceTightBinding<T>::setTightBindingParameters(
-    const T inHoppingNN, const T inHoppingNNN, const T inHoppingNNNN,
-    const T inChemicalPotential) {
+FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
+    Context<T> *const inContext, const T inHoppingNN, const T inHoppingNNN,
+    const T inHoppingNNNN, const T inChemicalPotential)
+    : FermiSurface<T>(inContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
+      m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
+      m_systemAnglesGPU(0), m_integrandFactor(0) {
   m_parameters.hoppingNN = inHoppingNN;
   m_parameters.hoppingNNN = inHoppingNNN;
   m_parameters.hoppingNNNN = inHoppingNNNN;
   m_parameters.chemicalPotential = inChemicalPotential;
 }
 
+template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
+  std::cout << "~FermiSurfaceTightBinding<T>\n";
+}
+
 template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
-  std::cout << "FermiSurfaceTightBinding<T>::initialize()\n";
+  std::cout << "FermiSurfaceTightBinding<T>::initialize()" << std::endl;
 
   // Print the tight-binding parameters.
   m_parameters.print();
 
   // Compute momentum offset.
-  internal::computeMomentumOffset(m_parameters, m_offsetX, m_offsetY);
-  printf("FS Offset: (x, y) = (%f, %f)\n", m_offsetX, m_offsetY);
+  m_originOffset = internal::computeMomentumOffset(m_parameters);
+  std::cout << "Fermi Surface Origin: (x, y) = (" << m_originOffset.first
+            << ", " << m_originOffset.second << ")" << std::endl;
 
-  // Get the number of angles.
+  // Clear all arrays on the CPU.
+  m_fermiMomentumX.clear();
+  m_fermiMomentumY.clear();
+  m_fermiVelocityX.clear();
+  m_fermiVelocityY.clear();
+  m_systemAngles.clear();
+  m_integrandFactor.clear();
+
   const int numAngles = FermiSurface<T>::getNumAngles();
-
-  // Fermi momentum array on the CPU.
-  thrust::host_vector<T> momentumX(numAngles);
-  thrust::host_vector<T> momentumY(numAngles);
-
-  // Fermi velocity array on the CPU.
-  thrust::host_vector<T> velocityX(numAngles);
-  thrust::host_vector<T> velocityY(numAngles);
-
-  // System angle array on the CPU.
-  thrust::host_vector<T> systemAngle(numAngles);
-
-  // Integrand factor array on the CPU.
-  thrust::host_vector<T> integrandFactor(numAngles);
 
   T integrandFactorSum = static_cast<T>(0.0);
   T fermiSpeedSum = static_cast<T>(0.0);
@@ -408,46 +459,39 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     const T phi = FermiSurface<T>::getPhi(angleIdx);
 
     // Compute the Fermi momentum.
-    T pX;
-    T pY;
-    const bool success =
-        internal::computeFermiMomentum(m_parameters, phi, m_offsetX, m_offsetY,
-                                       m_numIterations, m_convergence, pX, pY);
-
-    // Print stuff in case of failure.
-    if (!success) {
-      printf("ERROR! Fermi momentum failed at angleIdx = %d\n", angleIdx);
-    }
+    const std::pair<T, T> fermiMomentum = internal::computeFermiMomentum(
+        m_parameters, phi, m_originOffset, m_numIterations, m_convergence);
 
     // The Fermi velocity is the partial derivative of the dispersion at the
     // Fermi surface.
-    T vX;
-    T vY;
-    internal::computeDispersionDerivative(m_parameters, pX, pY, vX, vY);
+    const std::pair<T, T> fermiVelocity =
+        internal::computeDispersionDerivative(m_parameters, fermiMomentum);
 
     // Update the Fermi momentum arrays.
-    momentumX[angleIdx] = pX;
-    momentumY[angleIdx] = pY;
+    m_fermiMomentumX.push_back(fermiMomentum.first);
+    m_fermiMomentumY.push_back(fermiMomentum.second);
 
     // Update the Fermi velocity arrays.
-    velocityX[angleIdx] = vX;
-    velocityY[angleIdx] = vY;
+    m_fermiVelocityX.push_back(fermiVelocity.first);
+    m_fermiVelocityY.push_back(fermiVelocity.second);
 
     // Update the system angle array.
-    const T fermiVelocityAngle = std::atan2(vY, vX);
-    systemAngle[angleIdx] = FermiSurface<T>::getSystemAngle(fermiVelocityAngle);
+    const T fermiVelocityAngle =
+        std::atan2(fermiVelocity.second, fermiVelocity.first);
+    const T systemAngle = FermiSurface<T>::getSystemAngle(fermiVelocityAngle);
+    m_systemAngles.push_back(systemAngle);
 
     // Compute integrand factor.
     const T factor = internal::computeIntegrandFactor(
-        m_parameters, pX, pY, vX, vY, m_offsetX, m_offsetY, m_numIterations,
-        m_convergence, m_angleDelta);
-    integrandFactor[angleIdx] = factor;
+        m_parameters, fermiMomentum, fermiVelocity, m_originOffset);
+    m_integrandFactor.push_back(factor);
 
     // For normalizing the integrand factor.
     integrandFactorSum += factor;
 
     // For computing the mean Fermi speed.
-    fermiSpeedSum += std::sqrt(vX * vX + vY * vY) * factor;
+    fermiSpeedSum +=
+        std::hypot(fermiVelocity.first, fermiVelocity.second) * factor;
   }
 
   // The average Fermi speed.
@@ -455,81 +499,66 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
 
   // Normalize the Fermi velocity and integrand factor.
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
-    velocityX[angleIdx] /= avgFermiSpeed;
-    velocityY[angleIdx] /= avgFermiSpeed;
-    integrandFactor[angleIdx] /= integrandFactorSum;
+    m_fermiVelocityX[angleIdx] /= avgFermiSpeed;
+    m_fermiVelocityY[angleIdx] /= avgFermiSpeed;
+    m_integrandFactor[angleIdx] /= integrandFactorSum;
   }
 
-  // Create device vectors.
-  m_momentumX = thrust::device_vector<T>(momentumX.begin(), momentumX.end());
-  m_momentumY = thrust::device_vector<T>(momentumY.begin(), momentumY.end());
-  m_velocityX = thrust::device_vector<T>(velocityX.begin(), velocityX.end());
-  m_velocityY = thrust::device_vector<T>(velocityY.begin(), velocityY.end());
-  m_systemAngle =
-      thrust::device_vector<T>(systemAngle.begin(), systemAngle.end());
-  m_integrandFactor =
-      thrust::device_vector<T>(integrandFactor.begin(), integrandFactor.end());
+  // Copy system angles to the GPU.
+  m_systemAnglesGPU =
+      thrust::device_vector<T>(m_systemAngles.begin(), m_systemAngles.end());
+
+  // TODO(niclas): Why return anything? Raise expection if we fail instead.
   return 0;
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiMomentum(const int inAngleIdx,
-                                                   T &outMomentumX,
-                                                   T &outMomentumY) {
-  // Get the wrapped angle index.
+                                                   T &outFermiMomentumX,
+                                                   T &outFermiMomentumY) {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-
-  outMomentumX = m_momentumX[idx];
-  outMomentumY = m_momentumY[idx];
+  outFermiMomentumX = m_fermiMomentumX[idx];
+  outFermiMomentumY = m_fermiMomentumY[idx];
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiVelocity(const int inAngleIdx,
-                                                   T &outVelocityX,
-                                                   T &outVelocityY) {
-  // Get the wrapped angle index.
+                                                   T &outFermiVelocityX,
+                                                   T &outFermiVelocityY) {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-
-  // Get the velocity.
-  outVelocityX = m_velocityX[idx];
-  outVelocityY = m_velocityY[idx];
+  outFermiVelocityX = m_fermiVelocityX[idx];
+  outFermiVelocityY = m_fermiVelocityY[idx];
 }
 
 template <typename T>
 T FermiSurfaceTightBinding<T>::getFermiSpeed(const int inAngleIdx) {
-  T vX;
-  T vY;
-  getFermiVelocity(inAngleIdx, vX, vY);
-  return std::sqrt(vX * vX + vY * vY);
+  T fermiVelocityX;
+  T fermiVelocityY;
+  getFermiVelocity(inAngleIdx, fermiVelocityX, fermiVelocityY);
+  return std::hypot(fermiVelocityX, fermiVelocityY);
 }
 
 template <typename T>
 T FermiSurfaceTightBinding<T>::getSystemAngle(const int inAngleIdx) {
-  // Get the wrapped angle index.
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-
-  // Get the system angle.
-  return m_systemAngle[idx];
+  return m_systemAngles[idx];
 }
 
 template <typename T> T *FermiSurfaceTightBinding<T>::getSystemAnglePointer() {
-  return thrust::raw_pointer_cast(m_systemAngle.data());
+  return thrust::raw_pointer_cast(m_systemAnglesGPU.data());
 }
 
 template <typename T>
 T FermiSurfaceTightBinding<T>::getIntegrandFactor(const int inAngleIdx) {
-  // Get the wrapped angle index.
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-
-  // Get the integrand factor.
   return m_integrandFactor[idx];
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
                                                     T &outOffsetY) {
-  outOffsetX = m_offsetX;
-  outOffsetY = m_offsetY;
+  outOffsetX = m_originOffset.first;
+  outOffsetY = m_originOffset.second;
 }
 
 #endif // FERMI_SURFACE_TIGHT_BINDING_H_
