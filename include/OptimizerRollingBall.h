@@ -22,17 +22,15 @@ public:
   ~OptimizerRollingBall();
 
   // Take a step with the optimizer.
-  void step(const OrderParameter<T> &rhsK, OrderParameter<T> &deltaK);
+  void step(OrderParameter<T> *const inOutOrderParameter);
 
 private:
-  // The previous order parameter.
-  OrderParameter<T> *m_deltaKMinusOne;
+  // The previous order parameters.
+  OrderParameter<T> *m_orderParameterKMinusOne;
+  OrderParameter<T> *m_orderParameterKMinusTwo;
 
-  // Temporary order parameter needed for updating.
-  OrderParameter<T> *m_deltaTmp;
-
-  // Whether the previous order parameter is initialized or not.
-  bool m_isDeltaInitialized;
+  // Whether the previous order parameters are initialized.
+  bool m_isInitialized;
 
   // Iteration index.
   int m_iterationIndex;
@@ -49,80 +47,63 @@ private:
 template <typename T>
 OptimizerRollingBall<T>::OptimizerRollingBall(const T inIneartialWeight,
                                               const int inNumWarmupIterations)
-    : Optimizer<T>(), m_deltaKMinusOne(0), m_deltaTmp(0),
-      m_isDeltaInitialized(false), m_iterationIndex(0),
+    : Optimizer<T>(), m_orderParameterKMinusOne(0),
+      m_orderParameterKMinusTwo(0), m_isInitialized(false), m_iterationIndex(0),
       m_numWarmupIterations(inNumWarmupIterations),
       m_ineratialWeight(inIneartialWeight) {}
 
 template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
-  if (m_deltaKMinusOne) {
-    delete m_deltaKMinusOne;
+  if (m_orderParameterKMinusOne) {
+    delete m_orderParameterKMinusOne;
   }
-  if (m_deltaTmp) {
-    delete m_deltaTmp;
+  if (m_orderParameterKMinusTwo) {
+    delete m_orderParameterKMinusTwo;
   }
 }
 
 template <typename T>
-void OptimizerRollingBall<T>::step(const OrderParameter<T> &rhsK,
-                                   OrderParameter<T> &deltaK) {
-  // Compute the residual.
-  Optimizer<T>::computeResidual(rhsK, deltaK);
+void OptimizerRollingBall<T>::step(
+    OrderParameter<T> *const inOutOrderParameter) {
+  if (m_isInitialized) {
+    // Compute ineartial weight.
+    const T warmupFraction = static_cast<T>(m_iterationIndex) /
+                             static_cast<T>(m_numWarmupIterations + 1);
+    const T weight =
+        m_ineratialWeight * std::min(static_cast<T>(1.0), warmupFraction);
 
-  if (m_iterationIndex > 0) {
-    const int nComponents = deltaK.getNumOrderParameterComponents();
-    for (int i = 0; i < nComponents; ++i) {
-      // Extract fields.
-      const GridGPU &f =
-          *(rhsK.getOrderParameterComponent(i)->getOrderParameterField());
-      GridGPU &d =
-          *(deltaK.getOrderParameterComponent(i)->getOrderParameterField());
-      GridGPU &dp = *(m_deltaKMinusOne->getOrderParameterComponent(i)
-                          ->getOrderParameterField());
-      GridGPU &dt = *(
-          m_deltaTmp->getOrderParameterComponent(i)->getOrderParameterField());
-
-      // Compute ineartial weight.
-      const T warmupFraction = static_cast<T>(m_iterationIndex) /
-                               static_cast<T>(m_numWarmupIterations + 1);
-      const T weight =
-          m_ineratialWeight * std::min(static_cast<T>(1.0), warmupFraction);
+    const int numComponents =
+        inOutOrderParameter->getNumOrderParameterComponents();
+    for (int i = 0; i < numComponents; ++i) {
+      // The current order parameter,
+      GridGPU *d0 = inOutOrderParameter->getOrderParameterComponent(i)
+                        ->getOrderParameterField();
+      // The order parameter from one iteration ago.
+      GridGPU *d1 = m_orderParameterKMinusOne->getOrderParameterComponent(i)
+                        ->getOrderParameterField();
+      // The order parameter from two iterations ago.
+      GridGPU *d2 = m_orderParameterKMinusTwo->getOrderParameterComponent(i)
+                        ->getOrderParameterField();
 
       // Update the order parameter with a rolling ball step.
-      // Set tmp to new order parameter.
-      dt = f + (d - dp) * weight;
+      *d0 += (*d1 - *d2) * weight;
 
-      // Update previous order parameter.
-      dp = d;
-
-      // Set the order parameter to tmp.
-      d = dt;
+      // Update the previous order parameters.
+      *d2 = *d1;
+      *d1 = *d0;
     }
   } else {
-    if (m_isDeltaInitialized) {
-      // Update previous order parameter.
-      *m_deltaKMinusOne = deltaK;
-    } else {
-      // Delete previous order parameter.
-      if (m_deltaKMinusOne) {
-        delete m_deltaKMinusOne;
-      }
-
-      // Delete tmp order parameter.
-      if (m_deltaTmp) {
-        delete m_deltaTmp;
-      }
-
-      // Initialize the internal order parameters.
-      m_deltaKMinusOne = new OrderParameter<T>(deltaK);
-      m_deltaTmp = new OrderParameter<T>(deltaK);
-
-      // Set flag to true.
-      m_isDeltaInitialized = true;
+    if (m_orderParameterKMinusOne) {
+      delete m_orderParameterKMinusOne;
+    }
+    if (m_orderParameterKMinusTwo) {
+      delete m_orderParameterKMinusTwo;
     }
 
-    // Update the order parameter with a fixed point step.
-    deltaK = rhsK;
+    // Initialize the internal order parameters.
+    m_orderParameterKMinusOne = new OrderParameter<T>(*inOutOrderParameter);
+    m_orderParameterKMinusTwo = new OrderParameter<T>(*inOutOrderParameter);
+
+    m_isInitialized = true;
   }
 
   // Increase iteration index.

@@ -2,6 +2,7 @@
 #define COMPUTE_CURRENT_H_
 
 #include "ComputeProperty.h"
+#include "ComputeResidual.h"
 #include "IntegrationIteratorOzaki.h"
 #include "utils.h"
 
@@ -166,18 +167,19 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
   typedef ComputeProperty<T> C;
 
   if (C::doCompute()) {
-    int numAngles = C::getParameters()->getAngularResolution();
-    T T_Tc = C::getParameters()->getTemperature();
+    const T T_Tc = C::getParameters()->getTemperature();
 
     GridGPU current_old = *_current_real;
 
     _current_real->insertGrid(_current);
     *_current_real *= T_Tc;
 
-    T residual = GridGPU::differenceMagnitude(current_old, *_current_real);
+    const T residual = computeResidual(current_old, *_current_real);
+    C::setResidual(residual);
 
-    if (residual < C::getParameters()->getConvergenceCriterion())
+    if (residual < C::getParameters()->getConvergenceCriterion()) {
       C::setConverged();
+    }
   }
 }
 

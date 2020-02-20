@@ -251,6 +251,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
       E_ptr[i] = energies_ptr[i];
     }
 
+    // TODO(niclas): Use computeResidual instead!
     sumdiff = sqrt(sumdiff) / sqrt(sumold + 0.000001);
     ComputeProperty<T>::setResidual(sumdiff);
 
