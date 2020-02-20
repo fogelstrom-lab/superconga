@@ -248,7 +248,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     const T convergenceCriterion = param->getConvergenceCriterion();
 
     if (residual >= convergenceCriterion) {
-      _opt->step(_delta);
+      _opt->step(residual, _delta);
       // A little counter-intuitive perhaps, but we need to update the order
       // parameter in the context module.
       *deltaOld = *_delta;

@@ -11,8 +11,9 @@ public:
   // Destructor.
   virtual ~Optimizer(){};
 
-  // Take a step with the optimizer.
-  virtual void step(OrderParameter<T> *const inOutOrderParameter){};
+  // Take naive fixed-point step, i.e. do nothing here.
+  virtual void step(const T inResidual,
+                    OrderParameter<T> *const inOutOrderParameter){};
 };
 
 #endif // OPTIMIZER_H_
