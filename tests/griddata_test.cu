@@ -34,8 +34,8 @@ T computeTolerance(const int inNumX, const int inNumY,
 // to inMaxValue.
 template <typename T, typename DEVICE>
 void testSumMagnitudeComplex(const int inNumValues = 20,
-                             const T inMinValue = 1e-3,
-                             const T inMaxValue = 1e3,
+                             const T inMinValue = static_cast<T>(1e-3),
+                             const T inMaxValue = static_cast<T>(1e3),
                              const int inNumFields = 1) {
 
   for (const int &gridSize : GRID_SIZES) {
@@ -45,7 +45,7 @@ void testSumMagnitudeComplex(const int inNumValues = 20,
     const int numY = gridSize;
 
     // Calculate relative tolerance.
-    const T TOLERANCE = computeTolerance<T>(numX, numY);
+    const T tolerance = computeTolerance<T>(numX, numY);
 
     // Construct a GridData object of (numX*numY) complex numbers, with
     // inNumFields number of components
@@ -78,7 +78,7 @@ void testSumMagnitudeComplex(const int inNumValues = 20,
                                  std::hypot(realPartValue, imaginaryPartValue);
 
         // =================== ASSERT ==================== //
-        CHECK(testResult == doctest::Approx(expectedResult).epsilon(TOLERANCE));
+        CHECK(testResult == doctest::Approx(expectedResult).epsilon(tolerance));
       }
     }
   }
@@ -99,7 +99,7 @@ void testSumMagnitudeReal(const int inNumValues = 20, const T inMinValue = 1e-3,
     const int numY = gridSize;
 
     // Calculate relative tolerance.
-    const T TOLERANCE = computeTolerance<T>(numX, numY);
+    const T tolerance = computeTolerance<T>(numX, numY);
 
     // Construct a GridData object of (numX*numY) real numbers, with
     // inNumFields number of components
@@ -123,7 +123,7 @@ void testSumMagnitudeReal(const int inNumValues = 20, const T inMinValue = 1e-3,
           static_cast<T>(numX * numY) * std::abs(testValue);
 
       // =================== ASSERT ==================== //
-      CHECK(testResult == doctest::Approx(expectedResult).epsilon(TOLERANCE));
+      CHECK(testResult == doctest::Approx(expectedResult).epsilon(tolerance));
     }
   }
 }

@@ -19,8 +19,7 @@ public:
   // Initialize a disc. inDiameter gives the diameter of the
   // disc relative to the available simulation space (to be padded by the grain
   // margin). The center coordinate is (inCenterX, inCenterY)
-  DiscGeometry(const T inDiameter = static_cast<T>(1.0),
-               const T inCenterX = static_cast<T>(0.0),
+  DiscGeometry(const T inDiameter, const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
 
   DiscGeometry &operator=(DiscGeometry other);

@@ -284,7 +284,7 @@ bool runWrapper() {
         context->getNumIterations() > NUM_ITERATIONS_MAX) &&
        (context->getNumIterations() > NUM_ITERATIONS_MIN)) ||
       (gUserQuit)) {
-    std::cout << "Simulation finnished." << std::endl;
+    std::cout << "Simulation finished." << std::endl;
 
     return true;
   }

@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
   // TODO: (Patric) Different polygon objects need different scaling in order to
   // not fall outside simulation domain. This should however be done
   // automatically (if possible) and hidden from the user.
-  const T DISC_GRAIN_SCALE = 1.0;
-  geometry->add(new DiscGeometry<T>(DISC_GRAIN_SCALE), Type::add);
+  const T discGrainScale = 1.0;
+  geometry->add(new DiscGeometry<T>(discGrainScale), Type::add);
 
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS
@@ -281,7 +281,7 @@ bool runWrapper() {
         context->getNumIterations() > NUM_ITERATIONS_MAX) &&
        (context->getNumIterations() > NUM_ITERATIONS_MIN)) ||
       (gUserQuit)) {
-    std::cout << "Simulation finnished." << std::endl;
+    std::cout << "Simulation finished." << std::endl;
 
     return true;
   }
