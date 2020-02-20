@@ -6,6 +6,7 @@
 #include "LocalGreens.h"
 #include "OrderParameterBulk.h"
 #include "cplx.h"
+#include <limits>
 #include <math.h>
 #include <stdio.h>
 
@@ -18,24 +19,19 @@ public:
   ComputeFreeEnergy();
   virtual ~ComputeFreeEnergy();
 
-  ComputeFreeEnergy(Context<T> *ctx);
+  ComputeFreeEnergy(Context<T> *const inOutContext);
 
-  virtual GridGPU *getResult() { return _freeEnergyGrid; }
-  T getFreeEnergy() const { return _freeEnergy; }
-  T getFreeEnergy_unitArea() const { return _freeEnergy_unitArea; }
-
-  // Experimental!!
-  T getFreeEnergyIm() const { return _freeEnergy_im; }
-  T getFreeEnergy_noB() const { return _freeEnergy_noB; }
-  T getBterm() const { return _Bterm; }
+  virtual GridGPU *getResult() { return m_freeEnergyGrid; }
+  T getFreeEnergy() const { return m_freeEnergy; }
+  T getFreeEnergyPerUnitArea() const { return m_freeEnergyPerUnitArea; }
 
   virtual int initialize();
   virtual IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1);
+  createIntegrationIterator(const int inNumEnergiesPerBlock = -1);
 
   // This should be called once for every iteration, before any integration
   // takes place.
-  virtual void initializeIteration(int numFields = 1);
+  virtual void initializeIteration(const int inNumFields = 1);
 
   // This should be called once for every angle, before any integration takes
   // place.
@@ -44,107 +40,117 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar, GeometryGroup<T> *geom);
+  virtual void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
+                                  GridGPU *inGamma, GridGPU *inGammabar,
+                                  GeometryGroup<T> *inGeometryGroup);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
+  virtual void integrateGreensAngle(GeometryGroup<T> *inGeometryGroup,
+                                    const int inAngleIdx);
 
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  static T freeEnergy_S(Parameters<T> *param, GeometryGroup<T> *geom,
-                        OrderParameter<T> *s_wave);
-
-  static T freeEnergyT0_S();
-
 private:
   // Total free energy
-  T _freeEnergy;
-  T _freeEnergy_unitArea;
-  T _freeEnergy_im;
-  T _freeEnergy_noB;
-  T _Bterm;
+  T m_freeEnergy;
+  T m_freeEnergyPerUnitArea;
 
-  GridGPU *_freeEnergyGrid;
-
-  // Expression for free energy is divided into two terms for computational
-  // simplicity. Only one term needs to be computed in angle integration
-  // procedure.
-  T _freeEnergy_angle;
+  GridGPU *m_freeEnergyGrid;
 };
 
+/// \brief Compute the free-energy kernel I
+///
+/// GPU function to compute the kernel I which enters the Eilenberger free
+/// energy. This is the only object in the free energy which actually depends on
+/// angle. See page 25 of P. Holmvall PhD Thesis.
+///
+/// \param inOrderParameter - Order parameter value
+/// \param inGamma - Riccati coherence function
+/// \param inGammabar - Tilde Riccati coherence function
+/// \param outFreeEnergy - The free energy
 template <typename T>
-__device__ void
-computeFreeEnergyLocal(const cplx<T> &D, const T &e_im, const cplx<T> &gamma,
-                       const cplx<T> &gammabar, cplx<T> &free_e) {
-  cplx<T> i((T)0.0, (T)1.0);
+__device__ void computeFreeEnergyKernelI(const cplx<T> &inOrderParameter,
+                                         const cplx<T> &inGamma,
+                                         const cplx<T> &inGammabar,
+                                         cplx<T> &outFreeEnergy) {
 
-  cplx<T> f, fb, g;
-
-  Greens<T>::computeGreens_local(gamma, gammabar, g);
-  GreensAnomalous<T>::computeGreens_local(gamma, gammabar, f);
-  GreensAnomalousTilde<T>::computeGreens_local(gamma, gammabar, fb);
-
-  free_e = M_PI * (D.conj() * f + D * fb) / (T(1.0) + i * g);
+  outFreeEnergy =
+      (inOrderParameter.conj() * inGamma - inOrderParameter * inGammabar);
 }
 
+// Parallelize calculation of free-energy kernel I over spatial coordinates
 template <typename T>
-__global__ void computeFreeEnergy_Kernel(const int N, const int Ne, T *free_re,
-                                         T *free_im, T *gamma_re, T *gamma_im,
-                                         T *gammabar_re, T *gammabar_im,
-                                         char *domainLabels, T *D_re, T *D_im,
-                                         T *e_im, T *residues) {
+__global__ void computeFreeEnergy_Kernel(
+    const int inNumLatticePoints, const int inNumEnergies, T *outFreeEnergy_re,
+    T *outFreeEnergy_im, const T *const inGamma_re, const T *const inGamma_im,
+    const T *const inGammabar_re, const T *const inGammabar_im,
+    const char *const inDomainLabels, const T *const inOrderParameter_re,
+    const T *const inOrderParameter_im, const T *const inOzakiResidues) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
-  int gamma_idx, free_idx;
-  int e_idx;
+  // Check that thread has work to do
+  if ((x < inNumLatticePoints) && (y < inNumLatticePoints)) {
+    // Calculate unique index for the grain coordinate
+    const int grainCoordinateIdx = y * inNumLatticePoints + x;
 
-  if (x < N) {
-    free_idx = y * N + x;
+    // Initialize the sum (over Ozaki poles) to zero
+    cplx<T> freeEnergyKernelSum(T(0.0), T(0.0));
 
-    cplx<T> free_sum(T(0.0), T(0.0)), freeTmp, gamma, gammabar;
+    // Order parameter at this coordinate
+    const cplx<T> orderParameter(inOrderParameter_re[grainCoordinateIdx],
+                                 inOrderParameter_im[grainCoordinateIdx]);
 
-    const cplx<T> D(D_re[free_idx], D_im[free_idx]);
+    // Check that coordinate is part of the grain
+    if (inDomainLabels[grainCoordinateIdx] > 0) {
+      // Loop over Ozaki poles: the energy sum in the free-energy kernel I
+      for (int energyIdx = 0; energyIdx < inNumEnergies; ++energyIdx) {
+        // TODO(patric): This is dangerous! We should not manually calculate
+        // index like this! Imagine that you want to calculate more coherence
+        // functions (like gamma plus/minus instead), then you have to change
+        // all these places manually?
+        const int coherenceFunctionIdx =
+            energyIdx * 2 * inNumLatticePoints * inNumLatticePoints +
+            grainCoordinateIdx;
 
-    if (domainLabels[free_idx] > 0) {
-      for (e_idx = 0; e_idx < Ne; ++e_idx) {
-        gamma_idx = e_idx * 2 * N * N + free_idx;
+        // Coherence functions in the current coordinate, angle and energy
+        const cplx<T> gamma(inGamma_re[coherenceFunctionIdx],
+                            inGamma_im[coherenceFunctionIdx]);
+        const cplx<T> gammabar(inGammabar_re[coherenceFunctionIdx],
+                               inGammabar_im[coherenceFunctionIdx]);
+        cplx<T> freeEnergyKernelI;
 
-        gamma.x = gamma_re[gamma_idx];
-        gamma.y = gamma_im[gamma_idx];
+        // Calculate I(x, y, energy, angle)
+        computeFreeEnergyKernelI<T>(orderParameter, gamma, gammabar,
+                                    freeEnergyKernelI);
 
-        gammabar.x = gammabar_re[gamma_idx];
-        gammabar.y = gammabar_im[gamma_idx];
-
-        computeFreeEnergyLocal<T>(D, e_im[e_idx], gamma, gammabar, freeTmp);
-
-        free_sum += residues[e_idx] * freeTmp;
+        // Multiply by Ozaki residue and sum the contribution
+        freeEnergyKernelSum +=
+            inOzakiResidues[energyIdx] * cplx<T>::i() * freeEnergyKernelI;
       }
     }
 
-    free_re[free_idx] += free_sum.x;
-    free_im[free_idx] += free_sum.y;
+    // Add contribution to the free energy in this coordinate
+    outFreeEnergy_re[grainCoordinateIdx] += freeEnergyKernelSum.x;
+    outFreeEnergy_im[grainCoordinateIdx] += freeEnergyKernelSum.y;
   }
 }
 
 template <typename T>
 ComputeFreeEnergy<T>::ComputeFreeEnergy()
-    : ComputeProperty<T>(), _freeEnergyGrid(0) //, _tmp(0)
-{}
+    : ComputeProperty<T>(), m_freeEnergyGrid(0) {}
 
 template <typename T>
-ComputeFreeEnergy<T>::ComputeFreeEnergy(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), _freeEnergyGrid(0) //, _tmp(0)
-{
-  ctx->add(this);
+ComputeFreeEnergy<T>::ComputeFreeEnergy(Context<T> *const inOutContext)
+    : ComputeProperty<T>(inOutContext), m_freeEnergyGrid(0) {
+  inOutContext->add(this);
 }
 
 template <typename T> ComputeFreeEnergy<T>::~ComputeFreeEnergy() {
-  if (_freeEnergyGrid)
-    delete _freeEnergyGrid;
+  if (m_freeEnergyGrid)
+    delete m_freeEnergyGrid;
 }
 
 template <typename T> int ComputeFreeEnergy<T>::initialize() {
@@ -156,7 +162,7 @@ template <typename T> int ComputeFreeEnergy<T>::initialize() {
   const int N0 = C::getParameters()->getGridResolutionBase();
   const int N1 = C::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(_freeEnergyGrid, N0, N0);
+  GridGPU::initializeGrid(m_freeEnergyGrid, N0, N0);
 
   C::initGreensAngle(N1);
 
@@ -164,21 +170,18 @@ template <typename T> int ComputeFreeEnergy<T>::initialize() {
 }
 
 template <typename T>
-IntegrationIterator<T> *
-ComputeFreeEnergy<T>::createIntegrationIterator(int numEnergiesPerBlock) {
+IntegrationIterator<T> *ComputeFreeEnergy<T>::createIntegrationIterator(
+    const int inNumEnergiesPerBlock) {
   return new IntegrationIteratorOzaki<T>(ContextModule<T>::getContext(),
-                                         numEnergiesPerBlock);
+                                         inNumEnergiesPerBlock);
 }
 
 template <typename T>
-void ComputeFreeEnergy<T>::initializeIteration(int numFields) {
+void ComputeFreeEnergy<T>::initializeIteration(const int inNumFields) {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
-    _freeEnergy_angle = 0.0;
-    _freeEnergy_im = 0.0;
-
-    _freeEnergyGrid->setZero();
+    m_freeEnergyGrid->setZero();
   }
 }
 
@@ -187,64 +190,65 @@ template <typename T> void ComputeFreeEnergy<T>::initializeGreensAngle() {
     ComputeProperty<T>::initializeGreensAngle(); // Sets to zero
 }
 
+// Computes the free-energy kernel 'I' for current angle, for every spatial grid
+// point (summed over energies).
 template <typename T>
-void ComputeFreeEnergy<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                              GridGPU *gamma, GridGPU *gammabar,
-                                              GeometryGroup<T> *geom) {
-  // Computes 'I' for current angle, for every spatial grid point (summed over
-  // energies).
+void ComputeFreeEnergy<T>::computeGreensAngle(
+    ParameterIterator<int> *inParameterIterator, GridGPU *inGamma,
+    GridGPU *inGammabar, GeometryGroup<T> *inGeometryGroup) {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
-    IntegrationIterator<T> *ii = C::getIntegrationIterator();
+    IntegrationIterator<T> *integrationIter = C::getIntegrationIterator();
 
-    GridGPU *result = ComputeProperty<T>::getGreensCurrentAngle();
+    GridGPU *freeEnergyKernelIntegrand =
+        ComputeProperty<T>::getGreensCurrentAngle();
 
-    GridGPU *deltaRot = ii->getOrderParameterFieldCurrentAngle();
-    GridGPU *energies = ii->getEnergies();
-    GridGPU *residues = ii->getResidues();
+    GridGPU *deltaRot = integrationIter->getOrderParameterFieldCurrentAngle();
+    GridGPU *ozakiResidues = integrationIter->getResidues();
 
-    int numEnergies = iter->getNumInterval();
-    int energyIdx_start = iter->getCurrentValue();
+    const int numEnergies = inParameterIterator->getNumInterval();
+    const int energyIdxStart = inParameterIterator->getCurrentValue();
 
-    dim3 bpg, tpb;
-    result->getKernelDimensions(bpg, tpb);
+    dim3 blocksPerGrid, threadsPerBlock;
+    freeEnergyKernelIntegrand->getKernelDimensions(blocksPerGrid,
+                                                   threadsPerBlock);
 
-    computeFreeEnergy_Kernel<T><<<bpg, tpb>>>(
-        result->dimX(), numEnergies, result->getDataPointer(0, Type::real),
-        result->getDataPointer(0, Type::imag),
-        gamma->getDataPointer(0, Type::real),
-        gamma->getDataPointer(0, Type::imag),
-        gammabar->getDataPointer(0, Type::real),
-        gammabar->getDataPointer(0, Type::imag),
-        geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+    computeFreeEnergy_Kernel<T><<<blocksPerGrid, threadsPerBlock>>>(
+        freeEnergyKernelIntegrand->dimX(), numEnergies,
+        freeEnergyKernelIntegrand->getDataPointer(0, Type::real),
+        freeEnergyKernelIntegrand->getDataPointer(0, Type::imag),
+        inGamma->getDataPointer(0, Type::real),
+        inGamma->getDataPointer(0, Type::imag),
+        inGammabar->getDataPointer(0, Type::real),
+        inGammabar->getDataPointer(0, Type::imag),
+        inGeometryGroup->getDomainLabelsGrid()->getDataPointer(0, Type::real),
         deltaRot->getDataPointer(0, Type::real),
         deltaRot->getDataPointer(0, Type::imag),
-        energies->getDataPointer(0, Type::imag) + energyIdx_start,
-        residues->getDataPointer(0, Type::real) + energyIdx_start);
+        ozakiResidues->getDataPointer(0, Type::real) + energyIdxStart);
   }
 }
 
+// Sums the free-energy kernel 'I' over spatial grid points, and adds result to
+// total angle integration.
 template <typename T>
-void ComputeFreeEnergy<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                const int angleIdx) {
-  // Sums 'I' over spatial grid points, and adds result to total angle
-  // integration. (Variable _freeEnergy_angle is 'I')
+void ComputeFreeEnergy<T>::integrateGreensAngle(
+    GeometryGroup<T> *inGeometryGroup, const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
+    GridGPU *freeEnergyKernelIntegrand =
+        ComputeProperty<T>::getGreensCurrentAngle();
 
-    geom->extendValuesAtBoundary(greens, 2);
+    inGeometryGroup->extendValuesAtBoundary(freeEnergyKernelIntegrand, 2);
 
-    const int numAngles =
-        ContextModule<T>::getParameters()->getAngularResolution();
     const T systemAngle =
         ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
 
     const T integrandFactor =
         ComputeProperty<T>::getFermiSurface()->getIntegrandFactor(angleIdx);
-    *greens *= integrandFactor;
+    *freeEnergyKernelIntegrand *= integrandFactor;
 
-    _freeEnergyGrid->insertRotatedGridAdditive(greens, systemAngle);
+    m_freeEnergyGrid->insertRotatedGridAdditive(freeEnergyKernelIntegrand,
+                                                systemAngle);
   }
 }
 
@@ -253,115 +257,68 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
 
   if (ComputeProperty<T>::doCompute()) {
     // Get properties
-    int numAngles = C::getParameters()->getAngularResolution();
-    T h = C::getParameters()->getGridElementSize();
-    T T_Tc = C::getParameters()->getTemperature(); // T/Tc
-    T B = C::getParameters()->getMagneticFieldStrength();
-    T area = C::getGeometry()->area();
-    T areaD = C::getGeometry()->area(1);
+    const T latticeElementSize = C::getParameters()->getGridElementSize();
+    const T temperature = C::getParameters()->getTemperature();
+    const T numLatticePoints = C::getGeometry()->area(1);
 
     // Compute second term of free energy not involving angle integration
-    GridCPU energies = *(C::getIntegrationIterator()->getEnergies());
-    GridCPU residues = *(C::getIntegrationIterator()->getResidues());
-    // int numEnergies = energies.getNumGridElements();
-    int numEnergies = energies.dimX();
+    GridCPU ozakiEnergies = *(C::getIntegrationIterator()->getEnergies());
+    GridCPU ozakiResidues = *(C::getIntegrationIterator()->getResidues());
 
-    T *e_im = energies.getDataPointer(0, Type::imag);
-    T *r_re = residues.getDataPointer(0, Type::real);
-    T e_inv_sum = 0.0;
+    const T *ozakiEnergies_im = ozakiEnergies.getDataPointer(0, Type::imag);
+    const T *ozakiResidues_re = ozakiResidues.getDataPointer(0, Type::real);
 
-    for (int i = 0; i < numEnergies; ++i)
-      e_inv_sum += r_re[i] / e_im[i];
+    int numEnergies = ozakiEnergies.dimX();
+    T sumInverseEnergy = 0.0;
 
-    // Compute free energy new way
-    T freeNew_re = 0.0, freeNew_im = 0.0;
-    C::getGeometry()->zeroValuesOutsideDomain(_freeEnergyGrid);
-    _freeEnergyGrid->sumField(freeNew_re, freeNew_im);
-
-    // Compute total free energy
-    double freeEnergy_unitArea_old = _freeEnergy_unitArea;
-
-    if (abs(freeEnergy_unitArea_old) < 0.000000001)
-      freeEnergy_unitArea_old = 0.000000001;
-
-    OrderParameter<T> *delta = C::getOrderParameter();
-    const GridGPU &delta_field = *(delta->getOrderParameterField());
-
-    _freeEnergy_unitArea = -2.0 * T_Tc * freeNew_re;
-
-    for (int i = 0; i < delta_field.numFields(); ++i) {
-      double mult =
-          log(T_Tc / delta->getOrderParameterComponent(i)->getRelativeTc()) +
-          2.0 * M_PI * T_Tc * e_inv_sum;
-      _freeEnergy_unitArea +=
-          delta_field[i].complexMagnitudeSq().sumField() * mult;
+    for (int ozakiIdx = 0; ozakiIdx < numEnergies; ++ozakiIdx) {
+      sumInverseEnergy +=
+          ozakiResidues_re[ozakiIdx] / ozakiEnergies_im[ozakiIdx];
     }
 
-    _freeEnergy = _freeEnergy_unitArea * h * h;
-    _freeEnergy_unitArea *= 1.0 / areaD;
+    // Compute free energy new way
+    T energySummedKernelI_re = 0.0, energySummedKernelI_im = 0.0;
+    C::getGeometry()->zeroValuesOutsideDomain(m_freeEnergyGrid);
+    m_freeEnergyGrid->sumField(energySummedKernelI_re, energySummedKernelI_im);
+
+    // Compute total free energy
+    const T freeEnergyPerunitArea_old = m_freeEnergyPerUnitArea;
+
+    OrderParameter<T> *orderParameter = C::getOrderParameter();
+    GridGPU deltaField(*(orderParameter->getOrderParameterField()));
+    C::getGeometry()->zeroValuesOutsideDomain(&deltaField);
+
+    m_freeEnergyPerUnitArea =
+        static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
+    sumInverseEnergy *= static_cast<T>(2.0 * M_PI) * temperature;
+
+    for (int fieldIdx = 0; fieldIdx < deltaField.numFields(); ++fieldIdx) {
+      const T relativeTc =
+          orderParameter->getOrderParameterComponent(fieldIdx)->getRelativeTc();
+      const T integrandFactor =
+          std::log(temperature / relativeTc) + sumInverseEnergy;
+      m_freeEnergyPerUnitArea +=
+          deltaField[fieldIdx].complexMagnitudeSq().sumField() *
+          integrandFactor;
+    }
+
+    m_freeEnergy =
+        m_freeEnergyPerUnitArea * latticeElementSize * latticeElementSize;
+    m_freeEnergyPerUnitArea *= static_cast<T>(1.0) / numLatticePoints;
 
     // Set residual and convergence
-    double residual = (_freeEnergy_unitArea - freeEnergy_unitArea_old) /
-                      freeEnergy_unitArea_old;
+    // Todo(patric): better residual - divsion by epsilon means that the
+    // residual will blow up
+    const T residual = (m_freeEnergyPerUnitArea - freeEnergyPerunitArea_old) /
+                       std::max(std::abs(freeEnergyPerunitArea_old),
+                                std::numeric_limits<T>::epsilon());
     ComputeProperty<T>::setResidual(residual);
 
     if (residual < C::getParameters()->getConvergenceCriterion())
       ComputeProperty<T>::setConverged();
-
-    std::cout << "Area = " << C::getGeometry()->area() << std::endl;
-    std::cout << "_freeEnergy_unitArea = " << _freeEnergy_unitArea << std::endl;
   } else {
-    _freeEnergy = 0.0;
+    m_freeEnergy = 0.0;
   }
-}
-
-template <typename T>
-T ComputeFreeEnergy<T>::freeEnergy_S(Parameters<T> *param,
-                                     GeometryGroup<T> *geom,
-                                     OrderParameter<T> *s_wave) {
-  GridGPU *delta = s_wave->getOrderParameterField();
-
-  // Temperature
-  T T_Tc = param->getTemperature();
-
-  // Area
-  T area = geom->area();
-
-  // |Delta|^2
-  GridGPU deltaValue = delta->complexMagnitudeSq();
-  cplx<T> D2 = geom->fieldAverage(&deltaValue);
-
-  // Sum
-  GridCPU *energies = param->getEnergies();
-  int numEnergies = energies->dimX();
-
-  T *e_ptr = energies->getDataPointer(0, Type::imag);
-  T e_inv_sum = 0.0, tmp, e_n;
-
-  for (int i = 0; i < numEnergies; ++i) {
-    e_n = e_ptr[i];
-    tmp = e_n + sqrt(D2.x + e_n * e_n);
-    e_inv_sum += 1.0 / (e_n * tmp * tmp);
-  }
-
-  // Free energy
-  T freeEnergy =
-      area * D2.x * (log(T_Tc) + 2.0 * M_PI * T_Tc * D2.x * e_inv_sum);
-  return freeEnergy;
-}
-
-template <typename T> T ComputeFreeEnergy<T>::freeEnergyT0_S() {
-  // Temperature
-  T T_Tc = 0.01;
-
-  // Area
-  T area = 1.0; // geom->area();
-
-  // Delta at T=0
-  T D0 = internal::computeOrderParameterBulkSWave(T_Tc); // = 1.76
-
-  // Free energy
-  return area * (-0.5 * D0 * D0 + M_PI * M_PI / 3.0 * T_Tc * T_Tc);
 }
 
 #endif // COMPUTE_FREE_ENERGY_H_
