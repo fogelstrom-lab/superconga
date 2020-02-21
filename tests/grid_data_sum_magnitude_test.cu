@@ -85,14 +85,20 @@ void testSumMagnitudeComplex(const int inNumValues = 20,
           // =================== ACT ==================== //
           // Calculate the grid-summed magnitude with the GridData method
           const T testResult = testComplexGrid.sumMagnitude();
+          const T testResultL1Norm = testComplexGrid.L1Norm();
           // Calculate the expected value by hand
           const T expectedResult =
               static_cast<T>(numX * numY * numFields) *
               std::hypot(realPartValue, imaginaryPartValue);
+          const T expectedResultL1Norm =
+              static_cast<T>(numX * numY * numFields) *
+              (std::abs(realPartValue) + std::abs(imaginaryPartValue));
 
           // =================== ASSERT ==================== //
           CHECK(testResult ==
                 doctest::Approx(expectedResult).epsilon(tolerance));
+          CHECK(testResultL1Norm ==
+                doctest::Approx(expectedResultL1Norm).epsilon(tolerance));
         }
       }
     }
@@ -139,14 +145,19 @@ void testSumMagnitudeReal(const int inNumValues = 20, const T inMinValue = 1e-3,
         // =================== ACT ==================== //
         // Calculate the grid-summed magnitude with the GridData method
         const T testResult = testRealGrid.sumMagnitude();
+        const T testResultL1Norm = testRealGrid.L1Norm();
 
         // Calculate the expected value by hand
         const T expectedResult =
             static_cast<T>(numX * numY) *
             std::sqrt(static_cast<T>(numFields) * testValue * testValue);
+        const T expectedResultL1Norm =
+            static_cast<T>(numX * numY * numFields) * std::abs(testValue);
 
         // =================== ASSERT ==================== //
         CHECK(testResult == doctest::Approx(expectedResult).epsilon(tolerance));
+        CHECK(testResultL1Norm ==
+              doctest::Approx(expectedResultL1Norm).epsilon(tolerance));
       }
     }
   }

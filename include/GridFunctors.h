@@ -11,14 +11,14 @@
 
 namespace GridFunctors {
 
-template <typename T> struct square_root {
+template <typename T> struct squareRoot {
   __HD__
-  void operator()(T &val) { val = sqrt(val); }
+  void operator()(T &val) { val = std::sqrt(val); }
 };
 
 template <typename T> struct absVal {
   __HD__
-  void operator()(T &val) { val = abs(val); }
+  void operator()(T &val) { val = std::abs(val); }
 };
 } // namespace GridFunctors
 

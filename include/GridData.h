@@ -147,8 +147,17 @@ public:
   // Compute absolute value for grid (works for complex as well)
   GridData abs() const;
 
-  // Compute the grain-averaged absolute value (works for complex as well)
+  // Compute the grain-summed absolute value
   T sumMagnitude() const;
+
+  // Compute the grain-summed absolute square
+  T sumSquare() const;
+
+  // Compute the L1 norm
+  T L1Norm() const;
+
+  // Compute the L2 norm
+  T L2Norm() const;
 
   // Compute the complex magnitude squared
   void complexMagnitudeSq(GridData *result) const;
@@ -791,7 +800,7 @@ GridData<T, DEV> &GridData<T, DEV>::transpose(const int field) {
 
 template <typename T, typename DEV> GridData<T, DEV> &GridData<T, DEV>::sqrt() {
   thrust::for_each_n(_data->begin(), numElements(),
-                     GridFunctors::square_root<T>());
+                     GridFunctors::squareRoot<T>());
   return *this;
 }
 
@@ -909,6 +918,59 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
       return static_cast<T>(0.0);
     }
   }
+}
+
+// Calculate the sum of all squares of a GridData object. This amounts to
+// first calculating the element-wise absolute square, then performing a
+// reduction to sum the square in each coordinate into a scalar. Note that the
+// first two steps are done in a single thrust::transform_reduce call.
+template <typename T, typename DEV> T GridData<T, DEV>::sumSquare() const {
+  // Initial value for the reduction: sumSquare = initValue + sum(...)
+  const T initValue = static_cast<T>(0.0);
+
+  // The unary operator to square each element
+  thrust::square<T> unaryOperatorSquare;
+
+  // The binary operator to sum (reduce) all the squares
+  thrust::plus<T> binaryOperatorPlus;
+
+  // Start iterator: pointer to the first element of the first field
+  const auto startIterator = _data->begin();
+
+  // Start iterator: pointer to the last element of the last field
+  const auto endIterator = _data->end();
+
+  const T resultSum =
+      thrust::transform_reduce(startIterator, endIterator, unaryOperatorSquare,
+                               initValue, binaryOperatorPlus);
+
+  return resultSum;
+}
+
+// Calculate the L1 Norm of a GridData object.
+template <typename T, typename DEV> T GridData<T, DEV>::L1Norm() const {
+  // Initial value for the reduction
+  const T initValue = static_cast<T>(0.0);
+
+  // The binary operator to sum (reduce) all the squares
+  thrust::plus<T> binaryOperatorPlus;
+
+  // Start iterator: pointer to the first element of the first field
+  const auto startIterator = _data->begin();
+
+  // Start iterator: pointer to the last element of the last field
+  const auto endIterator = _data->end();
+
+  const T resultNorm = thrust::transform_reduce(
+      startIterator, endIterator, absFunctor(), initValue, binaryOperatorPlus);
+  return resultNorm;
+}
+
+// Calculate the L2 Norm of a GridData object.
+template <typename T, typename DEV> T GridData<T, DEV>::L2Norm() const {
+  // Calculate the L2 Norm using the elementwise sum of squares
+  const T resultNorm = std::sqrt(this->sumSquare());
+  return resultNorm;
 }
 
 template <typename T, typename DEV>
