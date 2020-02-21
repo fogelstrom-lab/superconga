@@ -21,7 +21,6 @@ template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
   // Constructor.
   FermiSurfaceTightBinding(Context<T> *const inContext,
-                           const T inHoppingNN = static_cast<T>(1.0),
                            const T inHoppingNNN = static_cast<T>(0.0),
                            const T inHoppingNNNN = static_cast<T>(0.0),
                            const T inChemicalPotential = static_cast<T>(1.0));
@@ -97,8 +96,9 @@ template <typename T> struct TightBindingParameters {
               << ", chemicalPotential = " << chemicalPotential << std::endl;
   }
 
-  // Nearest neighbour.
-  T hoppingNN;
+  // Nearest neighbour hopping. It is always 1, all other hopping terms, and the
+  // chemical potential, is expressed in terms of it. It is out energy scale.
+  const T hoppingNN = static_cast<T>(1.0);
 
   // Next-nearest neighbour.
   T hoppingNNN;
@@ -416,12 +416,11 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
 
 template <typename T>
 FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
-    Context<T> *const inContext, const T inHoppingNN, const T inHoppingNNN,
-    const T inHoppingNNNN, const T inChemicalPotential)
+    Context<T> *const inContext, const T inHoppingNNN, const T inHoppingNNNN,
+    const T inChemicalPotential)
     : FermiSurface<T>(inContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
       m_systemAnglesGPU(0), m_integrandFactor(0) {
-  m_parameters.hoppingNN = inHoppingNN;
   m_parameters.hoppingNNN = inHoppingNNN;
   m_parameters.hoppingNNNN = inHoppingNNNN;
   m_parameters.chemicalPotential = inChemicalPotential;
