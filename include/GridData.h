@@ -148,7 +148,7 @@ public:
   GridData abs() const;
 
   // Compute the grain-averaged absolute value (works for complex as well)
-  T sumMagnitude(const int inFieldIdx = 0) const;
+  T sumMagnitude() const;
 
   // Compute the complex magnitude squared
   void complexMagnitudeSq(GridData *result) const;
@@ -810,57 +810,104 @@ GridData<T, DEV> GridData<T, DEV>::abs() const {
   return result;
 }
 
-// Calculate the sum of all magnitudes of a GridData object. For a complex field
-// this amounts to first calculating the absolute value, then performing a
-// reduction to sum the absolute value in each coordinate into a scalar. Note
-// that the first two steps are done in a single thrust::transform_reduce call.
-// TODO(patric): If there are multiple fields (numFields > 1), the code might
-// have to be modified (i.e. loop over numFields)
-template <typename T, typename DEV>
-T GridData<T, DEV>::sumMagnitude(const int inFieldIdx) const {
-  // Pointers to iterator start and end for real part
-  const auto realPartIteratorBegin =
-      _data->begin() +
-      getFieldComponentOffset(inFieldIdx, Type::real, Type::begin);
-  const auto realPartIteratorEnd =
-      _data->begin() +
-      getFieldComponentOffset(inFieldIdx, Type::real, Type::end);
-
+// Calculate the sum of all magnitudes of a GridData object. This amounts to
+// first calculating the element-wise absolute value (hypotenuse), then
+// performing a reduction to sum the absolute value in each coordinate into a
+// scalar. Note that the first two steps are done in a single
+// thrust::transform_reduce call.
+template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
   // Initial value for the reduction: sumMagnitude = initValue + sum(...)
   const T initValue = static_cast<T>(0.0);
 
   // The binary operator to sum (reduce) all the magnitudes
   thrust::plus<T> binaryOperatorPlus;
 
+  // Check the kind of field: complex or real
   if (isComplex()) {
-    // Pointers to iterator start and end points for imaginary part
-    const auto imagPartIteratorBegin =
-        _data->begin() +
-        getFieldComponentOffset(inFieldIdx, Type::imag, Type::begin);
-    const auto imagPartIteratorEnd =
-        _data->begin() +
-        getFieldComponentOffset(inFieldIdx, Type::imag, Type::end);
+    T resultSum = static_cast<T>(0.0);
 
-    // Make zip iterators of real/imaginary parts (transform_reduce takes a
-    // single start/end pointer, but we want to send two: zip_iterator solves
-    // this by combining two into one)
-    auto zipIteratorBegin = thrust::make_zip_iterator(
-        thrust::make_tuple(realPartIteratorBegin, imagPartIteratorBegin));
-    auto zipIteratorEnd = thrust::make_zip_iterator(
-        thrust::make_tuple(realPartIteratorEnd, imagPartIteratorEnd));
+    for (int fieldIdx = 0; fieldIdx < _numFields; ++fieldIdx) {
+      // Pointers to iterator start and end for real part
+      const auto realPartIteratorBegin =
+          _data->begin() +
+          getFieldComponentOffset(fieldIdx, Type::real, Type::begin);
+      const auto realPartIteratorEnd =
+          _data->begin() +
+          getFieldComponentOffset(fieldIdx, Type::real, Type::end);
 
-    // Sum the magnitude in each coordinate of the calling GridData object
-    const T resultSum =
-        thrust::transform_reduce(zipIteratorBegin, zipIteratorEnd,
-                                 hypotFunctor(), initValue, binaryOperatorPlus);
+      // Pointers to iterator start and end points for imaginary part
+      const auto imagPartIteratorBegin =
+          _data->begin() +
+          getFieldComponentOffset(fieldIdx, Type::imag, Type::begin);
+      const auto imagPartIteratorEnd =
+          _data->begin() +
+          getFieldComponentOffset(fieldIdx, Type::imag, Type::end);
+
+      // Make zip iterators of real/imaginary parts (transform_reduce takes a
+      // single start/end pointer, but we want to send two: zip_iterator solves
+      // this by combining two into one)
+      const auto zipIteratorBegin = thrust::make_zip_iterator(
+          thrust::make_tuple(realPartIteratorBegin, imagPartIteratorBegin));
+      const auto zipIteratorEnd = thrust::make_zip_iterator(
+          thrust::make_tuple(realPartIteratorEnd, imagPartIteratorEnd));
+
+      // Sum the magnitude in each coordinate of the calling GridData object
+      resultSum += thrust::transform_reduce(zipIteratorBegin, zipIteratorEnd,
+                                            hypotFunctor(), initValue,
+                                            binaryOperatorPlus);
+    }
 
     return resultSum;
   } else {
-    // Sum the magnitude in each coordinate of the calling GridData object
-    const T resultSum =
-        thrust::transform_reduce(realPartIteratorBegin, realPartIteratorEnd,
-                                 absFunctor(), initValue, binaryOperatorPlus);
-    return resultSum;
+    // Pointers to iterator start and end for the first component
+    const int xComponentOffsetIdx = 0;
+    const auto xComponentIteratorBegin =
+        _data->begin() +
+        getFieldComponentOffset(xComponentOffsetIdx, Type::real, Type::begin);
+    const auto xComponentIteratorEnd =
+        _data->begin() +
+        getFieldComponentOffset(xComponentOffsetIdx, Type::real, Type::end);
+
+    // Check the kind of field: scalar, vector, unknown
+    if (_numFields == 1) {
+      // Scalar field: Sum the absolute value in each coordinate
+      const T resultSum = thrust::transform_reduce(
+          xComponentIteratorBegin, xComponentIteratorEnd, absFunctor(),
+          initValue, binaryOperatorPlus);
+      return resultSum;
+    } else if (_numFields == 2) {
+      // Pointer to start and end points for y-component
+      const int yComponentOffsetIdx = 1;
+      const auto yComponentIteratorBegin =
+          _data->begin() +
+          getFieldComponentOffset(yComponentOffsetIdx, Type::real, Type::begin);
+      const auto yComponentIteratorEnd =
+          _data->begin() +
+          getFieldComponentOffset(yComponentOffsetIdx, Type::real, Type::end);
+
+      // Make zip iterators of (x,y)-components (transform_reduce takes a
+      // single start/end pointer, but we want to send two: zip_iterator solves
+      // this by combining two into one)
+      const auto zipIteratorBegin = thrust::make_zip_iterator(
+          thrust::make_tuple(xComponentIteratorBegin, yComponentIteratorBegin));
+      const auto zipIteratorEnd = thrust::make_zip_iterator(
+          thrust::make_tuple(xComponentIteratorEnd, yComponentIteratorEnd));
+
+      // Vector field: Sum the hypotenuse in each coordinate
+      const T resultSum = thrust::transform_reduce(
+          zipIteratorBegin, zipIteratorEnd, hypotFunctor(), initValue,
+          binaryOperatorPlus);
+
+      return resultSum;
+    } else {
+      // Unknown field: Print warning and return 0.
+      // TODO(patric): Raise exception
+      std::cout << "WARNING! No defined behavior for sumMagnitude for real "
+                   "field with "
+                << _numFields << " number of fields. Function call ignored."
+                << std::endl;
+      return static_cast<T>(0.0);
+    }
   }
 }
 
