@@ -2,7 +2,7 @@
 #define POLYGON_H_
 
 #include "Grid.h"
-#include <math.h>
+#include <cmath>
 
 // This class provides a basic shape implementation for a polygon.
 // Polygons must be defined in a counterclockwise fashion.

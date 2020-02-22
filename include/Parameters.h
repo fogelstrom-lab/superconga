@@ -3,9 +3,9 @@
 
 #include "ContextModule.h"
 #include "defines.h"
+#include <cmath>
 #include <fstream>
 #include <iostream>
-#include <math.h>
 #include <string>
 
 template <typename, typename> class GridData;

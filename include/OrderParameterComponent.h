@@ -6,7 +6,6 @@
 #include "OrderParameterBulk.h"
 #include "Parameters.h"
 #include <cmath>
-#include <math.h>
 #include <stdexcept>
 
 template <typename T> class OrderParameterComponent {

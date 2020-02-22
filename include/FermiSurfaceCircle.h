@@ -5,7 +5,6 @@
 #include "utils.h"
 #include <cmath>
 #include <iostream>
-#include <math.h>
 #include <thrust/device_vector.h>
 
 // TODO: (Patric) Choose a circular fermisurface by default if the user does not

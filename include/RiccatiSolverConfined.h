@@ -3,7 +3,7 @@
 
 #include "RiccatiSolver.h"
 #include "cplx.h"
-#include <math.h>
+#include <cmath>
 
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
