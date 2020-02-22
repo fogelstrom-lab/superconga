@@ -26,7 +26,15 @@ set(NVCC_WARN "-Wall,\
 find_package(doctest REQUIRED)
 
 # Define the main set of source files
-set(SRC fermisurface_test.cu fermisurfacecircle_test.cu legacy_test.cu utils_test.cu griddata_test.cu orderparameterinitial_test.cu order_parameter_bulk_test.cu physics/lowtemp_free_energy_test.cu)
+set(SRC fermi_surface_test.cu
+        fermi_surface_circle_test.cu
+        grid_data_sum_magnitude_test.cu
+        grid_data_sum_square_test.cu
+        legacy_test.cu
+        order_parameter_initial_test.cu
+        order_parameter_bulk_test.cu
+        physics/low_temp_free_energy_test.cu
+        utils_test.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
