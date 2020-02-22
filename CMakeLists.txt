@@ -4,6 +4,9 @@ project(
   VERSION 0.0.1
   LANGUAGES CUDA CXX)
 
+# Enable CTest
+include(CTest)
+
 # Check the CUDA compiler
 include(CheckLanguage)
 check_language(CUDA)
