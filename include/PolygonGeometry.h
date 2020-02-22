@@ -4,6 +4,7 @@
 #include "GeometryComponent.h"
 #include "Polygon.h"
 #include "defines.h"
+#include <cmath>
 #include <cuda.h>
 
 template <typename T> class PolygonGeometry : public GeometryComponent<T> {
@@ -252,13 +253,13 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
 
   T scaledVerticesX[inNumVertices] = {0.0};
   T scaledVerticesY[inNumVertices] = {0.0};
-  const T coordinateScaleFactor = static_cast<T>(0.5 / sqrt(2.0));
+  const T coordinateScaleFactor = static_cast<T>(0.5 / std::sqrt(2.0));
 
   // Loop over vertex coordinates
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
     // Check that vertex coordinates are reasonable
-    if ((abs(inVerticesX[vertexIdx]) > 1.0) ||
-        (abs(inVerticesY[vertexIdx]) > 1.0)) {
+    if ((std::abs(inVerticesX[vertexIdx]) > 1.0) ||
+        (std::abs(inVerticesY[vertexIdx]) > 1.0)) {
       // Todo(patric): Raise exception
       std::cout
           << "ERROR! PolygonGeometry: Vertex coordinates must be within [-1,1]."

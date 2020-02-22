@@ -3,6 +3,7 @@
 
 #include "ComputeProperty.h"
 #include "IntegrationIteratorKeldysh.h"
+#include <cmath>
 
 template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -240,7 +241,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
       sum_y = _lcurrent_y->sumField(i);
 
       old = j_ptr[i];
-      j_ptr[i] = sqrt(sum_x * sum_x + sum_y * sum_y) * h * h;
+      j_ptr[i] = std::sqrt(sum_x * sum_x + sum_y * sum_y) * h * h;
 
       tmp = j_ptr[i] - old;
       sumdiff += tmp * tmp;

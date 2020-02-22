@@ -138,8 +138,8 @@ void Polygon<T>::setVerticesRadial(const int inNumVertices, const T inRadius,
     for (int i = 0; i < inNumVertices; ++i) {
       const T angle = angleStep * static_cast<T>(i) + angleOffset;
 
-      verticesX[i] = inRadius * cos(angle) + inCenterX;
-      verticesY[i] = inRadius * sin(angle) + inCenterY;
+      verticesX[i] = inRadius * std::cos(angle) + inCenterX;
+      verticesY[i] = inRadius * std::sin(angle) + inCenterY;
     }
 
     setVertices(verticesX, verticesY);

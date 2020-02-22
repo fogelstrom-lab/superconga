@@ -106,8 +106,8 @@ void Initial<T>::bulk(OrderParameterComponent<T> *inOutDeltaComponent,
 
   const T deltaBulk = inOutDeltaComponent->deltaBulk();
   GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
-  deltaGrid->setValue(deltaBulk * cos(phase), Type::real);
-  deltaGrid->setValue(deltaBulk * sin(phase), Type::imag);
+  deltaGrid->setValue(deltaBulk * std::cos(phase), Type::real);
+  deltaGrid->setValue(deltaBulk * std::sin(phase), Type::imag);
 }
 
 template <typename T>
@@ -195,8 +195,8 @@ void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
 
         rand_phase = ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * mix;
 
-        data_re[idx] = deltaBulk * cos(phase + rand_phase);
-        data_im[idx] = deltaBulk * sin(phase + rand_phase);
+        data_re[idx] = deltaBulk * std::cos(phase + rand_phase);
+        data_im[idx] = deltaBulk * std::sin(phase + rand_phase);
       }
     }
   }
@@ -231,7 +231,7 @@ void Initial<T>::perturbedPhaseWinding(
         // Normalize coordinates to -0.5 <= x,y <= +0.5, and offset with center
         const T x = ((T)i / (T)(N - 1) - (T)0.5) - inCenterX;
         const T y = ((T)j / (T)(N - 1) - (T)0.5) - inCenterY;
-        const T radius = sqrt(x * x + y * y);
+        const T radius = std::sqrt(x * x + y * y);
 
         // Check if point is within cutoff, set to zero in that case. Otherwise,
         // compute angle and add phase shift.
@@ -249,8 +249,8 @@ void Initial<T>::perturbedPhaseWinding(
         const T rand_phase =
             ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * inRandomPhaseMix;
 
-        data_re[idx] = magnitude * cos(phase * inNumWinding + rand_phase);
-        data_im[idx] = magnitude * sin(phase * inNumWinding + rand_phase);
+        data_re[idx] = magnitude * std::cos(phase * inNumWinding + rand_phase);
+        data_im[idx] = magnitude * std::sin(phase * inNumWinding + rand_phase);
       }
     }
   }
