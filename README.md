@@ -47,4 +47,21 @@ Our goal is to test every function/method using Doctest. On Ubuntu install with
 ```
 sudo apt install doctest-dev
 ```
-and add the Doctest include folder to the `CPLUS_INCLUDE_PATH` variable in your `.bashrc`.
+If `doctest` is to be installed manually (not with a package manager), it should be in the `/usr/` prefix directory, 
+i.e. its main header file `doctest.h` should be inside `/usr/include/doctest`.
+
+## CTest
+CMake allows to aggregate all tests into a test suite. In order to run all tests use
+```
+ctest [-jN]
+```
+inside the build folder to run all the tests (`-jN` option allows to run tests in parallel CPU threads).
+
+In order to see the list of tests which can be run use
+```
+ctest -N
+```
+while to run a specific test ignoring all other use
+```
+ctest -R test_name
+```

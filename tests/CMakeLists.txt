@@ -22,9 +22,6 @@ set(NVCC_WARN "-Wall,\
                -Wdouble-promotion,\
                -Wformat=2")
 
-# We need doctest for the tests.
-find_package(doctest REQUIRED)
-
 # Define the main set of source files
 set(SRC fermi_surface_test.cu
         fermi_surface_circle_test.cu
@@ -36,19 +33,25 @@ set(SRC fermi_surface_test.cu
         physics/low_temp_free_energy_test.cu
         utils_test.cu)
 
+# Enable testing functionality
+enable_testing()
+
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
   get_filename_component(name ${file} NAME_WE)
 
   # Create command-line executable
   add_executable(${name} ${file})
+  
+  # Add the test to the test suite
+  add_test(NAME ${name} COMMAND ${name})
 
   # ----------------------------------- #
   # Add extra compile options and flags #
   # ----------------------------------- #
   # Include directories
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include
-                                             doctest::doctest)
+                                     PRIVATE /usr/include/doctest)
   # External libraries
   target_link_libraries(${name} PRIVATE glut
                                         GL
