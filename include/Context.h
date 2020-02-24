@@ -1,8 +1,8 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
-#include "Grid.h"
 #include "ContextModule.h"
+#include "Grid.h"
 #include <iostream>
 #include <util/csecond.h>
 
