@@ -7,6 +7,7 @@
 #include "Disc.h"
 #include "GeometryComponent.h"
 #include "defines.h"
+#include <cmath>
 #include <cuda.h>
 
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
@@ -159,9 +160,9 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   const T centerY = m_disc->getPosY();
 
   const T rotatedCenterX =
-      (cos(inAngle) * centerX - sin(inAngle) * centerY) * (N - 1);
+      (std::cos(inAngle) * centerX - std::sin(inAngle) * centerY) * (N - 1);
   const T rotatedCenterY =
-      (sin(inAngle) * centerX + cos(inAngle) * centerY) * (N - 1);
+      (std::sin(inAngle) * centerX + std::cos(inAngle) * centerY) * (N - 1);
 
   const T radius = m_disc->getRadius() * T(N - 1);
 

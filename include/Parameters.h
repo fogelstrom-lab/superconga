@@ -349,8 +349,8 @@ int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) {
 
   // Compute the minimum size when rotated 45 degrees.
   // Note, use ceil because casting to int will floor.
-  const int minNumGridRotated = static_cast<int>(
-      ceil(sqrt(static_cast<T>(2.0)) * static_cast<T>(inNumGridBase)));
+  const int minNumGridRotated = static_cast<int>(std::ceil(
+      std::sqrt(static_cast<T>(2.0)) * static_cast<T>(inNumGridBase)));
 
   // Check if odd.
   const int rotatedIsOdd = minNumGridRotated % 2;

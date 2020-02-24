@@ -11,6 +11,8 @@
 #include "Grid.h"
 #include "IncludeGL.h"
 #include "Parameters.h"
+#include <cmath>
+
 #ifdef __CUDACC__
 #include "GeometryGroup.h"
 #endif
@@ -373,8 +375,9 @@ void Visualization<T>::drawField(const GRID *grid, const int field,
 
   diff = maxVal - minVal;
 
-  if (abs(diff) < 0.0000001f)
+  if (std::abs(diff) < 0.0000001f) {
     diff = 1.0f;
+  }
 
   norm = _displayMult / diff;
 

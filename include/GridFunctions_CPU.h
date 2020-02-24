@@ -236,13 +236,13 @@ template <typename T> struct FieldMagnitudeFunc {
 
 template <typename T> struct SqrtFunc {
   SqrtFunc() {}
-  T operator()(const T &dst) { return sqrt(dst); }
+  T operator()(const T &dst) { return std::sqrt(dst); }
 };
 
 template <typename T> struct LogFunc {
   const T a;
   LogFunc(T _a) : a(_a) {}
-  T operator()(const T &dst) { return log(dst + a); }
+  T operator()(const T &dst) { return std::log(dst + a); }
 };
 } // namespace internal
 
@@ -467,8 +467,10 @@ void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGrid(
           Y = y + y_transform - grid_origin_shift_y;
 
           // Rotate centered coordinates, and put grid corner at origin
-          Xr = (T)X * cos(-phi) - (T)Y * sin(-phi) + grid_origin_shift_x;
-          Yr = (T)X * sin(-phi) + (T)Y * cos(-phi) + grid_origin_shift_y;
+          Xr = (T)X * std::cos(-phi) - (T)Y * std::sin(-phi) +
+               grid_origin_shift_x;
+          Yr = (T)X * std::sin(-phi) + (T)Y * std::cos(-phi) +
+               grid_origin_shift_y;
 
           // Bilinear interpolation
           X_int = Xr;
@@ -557,8 +559,10 @@ void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGridAdditive(
           Y = y + y_transform - grid_origin_shift_y;
 
           // Rotate centered coordinates, and put grid corner at origin
-          Xr = (T)X * cos(-phi) - (T)Y * sin(-phi) + grid_origin_shift_x;
-          Yr = (T)X * sin(-phi) + (T)Y * cos(-phi) + grid_origin_shift_y;
+          Xr = (T)X * std::cos(-phi) - (T)Y * std::sin(-phi) +
+               grid_origin_shift_x;
+          Yr = (T)X * std::sin(-phi) + (T)Y * std::cos(-phi) +
+               grid_origin_shift_y;
 
           // Bilinear interpolation
           X_int = Xr;
