@@ -22,7 +22,7 @@ public:
   ~OptimizerRollingBall();
 
   // Take a step with the optimizer.
-  void step(OrderParameter<T> *const inOutOrderParameter);
+  void step(const T inResidual, OrderParameter<T> *const inOutOrderParameter);
 
 private:
   // The previous order parameters.
@@ -63,7 +63,7 @@ template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
 
 template <typename T>
 void OptimizerRollingBall<T>::step(
-    OrderParameter<T> *const inOutOrderParameter) {
+    const T inResidual, OrderParameter<T> *const inOutOrderParameter) {
   if (m_isInitialized) {
     // Compute ineartial weight.
     const T warmupFraction = static_cast<T>(m_iterationIndex) /
