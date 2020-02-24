@@ -2,6 +2,7 @@
 #define COMPUTE_ORDER_PARAMETER_H_
 
 #include "ComputeProperty.h"
+#include "ComputeResidual.h"
 #include "IntegrationIteratorOzaki.h"
 #include "Optimizer.h"
 
@@ -48,7 +49,12 @@ public:
   virtual void computePropertyFromGreens();
 
   // Set optimizer, e.g. OptimizerFixedPoint.
-  void setOptimizer(Optimizer<T> *opt) { _opt = opt; }
+  void setOptimizer(Optimizer<T> *opt) {
+    if (_opt) {
+      delete _opt;
+    }
+    _opt = opt;
+  }
 
 private:
   // Computed order parameter will be stored here at end of
@@ -67,25 +73,30 @@ private:
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter()
-    : ComputeProperty<T>(), _delta(0), _delta_fields(0), _deltaTmp(0), _opt() {}
+    : ComputeProperty<T>(), _delta(0), _delta_fields(0), _deltaTmp(0),
+      _opt(new Optimizer<T>()) {}
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter(Context<T> *ctx)
     : ComputeProperty<T>(ctx), _delta(0), _delta_fields(0), _deltaTmp(0),
-      _opt() {
+      _opt(new Optimizer<T>()) {
   ctx->add(this);
 }
 
 template <typename T> ComputeOrderParameter<T>::~ComputeOrderParameter() {
   std::cout << "~ComputeOrderParameter<T>\n";
-  if (_delta)
+  if (_delta) {
     delete _delta;
-  if (_deltaTmp)
+  }
+  if (_deltaTmp) {
     delete _deltaTmp;
-  if (_delta_fields)
+  }
+  if (_delta_fields) {
     delete _delta_fields;
-  if (_opt)
+  }
+  if (_opt) {
     delete _opt;
+  }
 }
 
 template <typename T> int ComputeOrderParameter<T>::initialize() {
@@ -228,22 +239,28 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
       component->applyCouplingConstant();
     }
 
-    // Compute residual
     OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
-    _opt->step(*_delta, *deltaOld);
-    const T residual = _opt->getResidual();
+
+    const T residual = computeResidual(*(deltaOld->getOrderParameterField()),
+                                       *(_delta->getOrderParameterField()));
     C::setResidual(residual);
 
-    // TODO(niclas): Not sure if this is needed.
-    *_delta = *deltaOld;
+    const T convergenceCriterion = param->getConvergenceCriterion();
 
-    if (residual < param->getConvergenceCriterion())
+    if (residual >= convergenceCriterion) {
+      _opt->step(_delta);
+      // A little counter-intuitive perhaps, but we need to update the order
+      // parameter in the context module.
+      *deltaOld = *_delta;
+    } else {
       C::setConverged();
+    }
 
-    // Copy results to grid with one field per order parameter component
-    for (int i = 0; i < Nc; ++i)
+    // Copy results to grid with one field per order parameter component.
+    for (int i = 0; i < Nc; ++i) {
       _delta->getOrderParameterComponentField(i)->copyFieldTo(_delta_fields, 0,
                                                               i);
+    }
   }
 }
 

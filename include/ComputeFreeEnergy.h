@@ -2,6 +2,7 @@
 #define COMPUTE_FREE_ENERGY_H_
 
 #include "ComputeProperty.h"
+#include "ComputeResidual.h"
 #include "IntegrationIteratorOzaki.h"
 #include "LocalGreens.h"
 #include "OrderParameterBulk.h"
@@ -307,11 +308,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     m_freeEnergyPerUnitArea *= static_cast<T>(1.0) / numLatticePoints;
 
     // Set residual and convergence
-    // Todo(patric): better residual - divsion by epsilon means that the
-    // residual will blow up
-    const T residual = (m_freeEnergyPerUnitArea - freeEnergyPerunitArea_old) /
-                       std::max(std::abs(freeEnergyPerunitArea_old),
-                                std::numeric_limits<T>::epsilon());
+    const T residual =
+        computeResidual(freeEnergyPerunitArea_old, m_freeEnergyPerUnitArea);
     ComputeProperty<T>::setResidual(residual);
 
     if (residual < C::getParameters()->getConvergenceCriterion())
