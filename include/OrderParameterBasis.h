@@ -2,8 +2,8 @@
 #define ORDER_PARAMETER_BASIS_H_
 
 #include "cplx.h"
+#include <cmath>
 #include <cuda.h>
-#include <math.h>
 
 template <typename T> struct Basis_S {
   __host__ __device__ static cplx<T> compute(const T pX, const T pY) {

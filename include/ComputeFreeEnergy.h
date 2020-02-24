@@ -6,9 +6,9 @@
 #include "LocalGreens.h"
 #include "OrderParameterBulk.h"
 #include "cplx.h"
+#include <cmath>
+#include <cstdio>
 #include <limits>
-#include <math.h>
-#include <stdio.h>
 
 template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;

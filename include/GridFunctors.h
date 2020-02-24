@@ -1,7 +1,7 @@
 #ifndef GRID_FUNCTORS_H_
 #define GRID_FUNCTORS_H_
 
-#include <math.h>
+#include <cmath>
 
 #ifdef __CUDACC__
 #define __HD__ __host__ __device__
