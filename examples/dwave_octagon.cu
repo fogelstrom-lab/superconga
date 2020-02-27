@@ -64,7 +64,7 @@ namespace simParams {
 // Run in OpenGL mode or terminal mode
 const bool RUN_VISUAL = true;
 // Temperature in units of T_c
-const T TEMPERATURE = 0.1;
+const T TEMPERATURE = 0.5;
 // Size of superconducting grain in coherence lengths hbar*v_F/(2*pi*k_BT_c)
 const T GRAIN_SIDE_LENGTH = 60.0;
 // Crystal ab-axis rotation relative to simulation grain. Zero means that the
