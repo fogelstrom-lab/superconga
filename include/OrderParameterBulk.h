@@ -1,13 +1,37 @@
 #ifndef ORDER_PARAMETER_BULK_H_
 #define ORDER_PARAMETER_BULK_H_
 
+#include "ComputeResidual.h"
 #include "defines.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <vector>
 
-namespace internal {
+namespace bulk_internal {
+/// \brief A helper function for updating the order parameter with a fixed-point
+/// step
+///
+/// \param inOrderParameter - The current order parameter
+/// \param inMatsubaraEnergies - An array of Matsubara energies
+/// \param inNormalization - The normalization factor
+///
+/// \return - The new order parameter
+template <typename T>
+T updateOrderParameter(const T inOrderParameter,
+                       const std::vector<T> &inMatsubaraEnergies,
+                       const T inNormalization) {
+  // Compute sum(1 / sqrt(en^2 + delta^2)).
+  T integrand = static_cast<T>(0.0);
+  for (const T &matsubaraEnergy : inMatsubaraEnergies) {
+    // Note that hypot(x, y) = sqrt(x^2 + y^2) but numerically more stable.
+    integrand +=
+        static_cast<T>(1.0) / std::hypot(inOrderParameter, matsubaraEnergy);
+  }
+  return inOrderParameter * integrand * inNormalization;
+}
+} // namespace bulk_internal
+
 /// \brief Compute the bulk value of an s-wave order parameter
 ///
 /// \param inTemperature - The relative temperature T / Tc
@@ -30,6 +54,10 @@ T computeOrderParameterBulkSWave(
     return static_cast<T>(0.0);
   }
 
+  // For some reason the Aitken method is not very good close to the critical
+  // temperature.
+  const bool useAitken = inTemperature < static_cast<T>(0.995);
+
   // For convenience.
   const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
 
@@ -47,6 +75,7 @@ T computeOrderParameterBulkSWave(
   // This way we are adding larger values as the partial sum increases,
   // which should be numerically preferable. Doing it the other way we would
   // be adding smaller values as the partial sum increases.
+  // TODO(niclas): Use Ozaki energies.
   for (int n = numEnergies; n >= 0; --n) {
     const T matsubaraEnergy =
         twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
@@ -58,37 +87,58 @@ T computeOrderParameterBulkSWave(
     energySum += static_cast<T>(1.0) / matsubaraEnergy;
   }
   const T normalization =
-      twoPiTemp / (std::log(inTemperature) + twoPiTemp * energySum);
+      static_cast<T>(1.0) / (std::log(inTemperature) / twoPiTemp + energySum);
 
   // Initial guess of the order parameter.
+  // It converges faster starting with sqrt(1 - T^3).
   T orderParameter = static_cast<T>(qcs::S_WAVE_BULK) *
-                     std::sqrt(static_cast<T>(1.0) - inTemperature);
+                     std::sqrt(static_cast<T>(1.0) -
+                               inTemperature * inTemperature * inTemperature);
 
   bool isConverged = false;
   for (int iterationIdx = 0; iterationIdx < inMaxIterations; ++iterationIdx) {
-    // Compute sum(1 / sqrt(en^2 + delta^2)).
-    T integrand = static_cast<T>(0.0);
-    for (const T &matsubaraEnergy : energies) {
-      // Note that hypot(x, y) = sqrt(x^2 + y^2) but numerically more stable.
-      integrand +=
-          static_cast<T>(1.0) / std::hypot(orderParameter, matsubaraEnergy);
+    // First step.
+    const T orderParameterKPlusOne = bulk_internal::updateOrderParameter(
+        orderParameter, energies, normalization);
+    const T residualKPlusOne =
+        computeResidual(orderParameter, orderParameterKPlusOne);
+    isConverged = residualKPlusOne < inConvergenceCriterion;
+    if (isConverged) {
+      orderParameter = orderParameterKPlusOne;
+      break;
     }
 
-    // TODO(niclas): If we for some reason find this function too slow, we
-    // should take Newton steps (except for the first one), and/or use Ozaki
-    // energies.
-
-    // The factor to update the order parameter with.
-    const T updateFactor = integrand * normalization;
-
-    // Update the order parameter.
-    orderParameter *= updateFactor;
-
-    // Are we done?
-    isConverged =
-        std::abs(updateFactor - static_cast<T>(1.0)) < inConvergenceCriterion;
+    // Second step.
+    const T orderParameterKPlusTwo = bulk_internal::updateOrderParameter(
+        orderParameterKPlusOne, energies, normalization);
+    const T residualKPlusTwo =
+        computeResidual(orderParameterKPlusOne, orderParameterKPlusTwo);
+    isConverged = residualKPlusTwo < inConvergenceCriterion;
     if (isConverged) {
+      orderParameter = orderParameterKPlusTwo;
       break;
+    }
+
+    // Update order parameter.
+    if (useAitken) {
+      const T diff10 = orderParameterKPlusOne - orderParameter;
+      const T diff21 = orderParameterKPlusTwo - orderParameterKPlusOne;
+      const T denom = diff21 - diff10;
+      if (std::abs(denom) > std::numeric_limits<T>::epsilon()) {
+        // Take an Aitken step.
+        // https://en.wikipedia.org/wiki/Aitken%27s_delta-squared_process
+        orderParameter = orderParameterKPlusTwo - diff21 * diff21 / denom;
+      } else {
+        // Take a normal fixed-point step.
+        orderParameter = orderParameterKPlusTwo;
+      }
+    } else {
+      // Take a rolling ball step.
+      // Note, this is only used very close to the critical temperature. Hence,
+      // the large weight = temperature.
+      orderParameter =
+          orderParameterKPlusTwo +
+          inTemperature * (orderParameterKPlusOne - orderParameter);
     }
   }
 
@@ -124,7 +174,5 @@ T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
                        (std::log(inTemperature) + twoPiTemp * energySum);
   return freeEnergy;
 }
-
-} // namespace internal
 
 #endif // ORDER_PARAMETER_BULK_H_

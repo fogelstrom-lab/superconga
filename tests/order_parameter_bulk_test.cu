@@ -18,8 +18,8 @@ void testComputeOrderParameterBulkSWaveZeroTemperature(
   const T temperature = static_cast<T>(0.001);
 
   // =================== ACT ==================== //
-  const T orderParameter = internal::computeOrderParameterBulkSWave(
-      temperature, inConvergenceCriteria);
+  const T orderParameter =
+      computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
   // =================== ASSERT ==================== //
   const T orderParameterExpected = static_cast<T>(qcs::S_WAVE_BULK);
@@ -36,8 +36,8 @@ void testComputeOrderParameterBulkSWaveCriticalTemperature(
   const T temperature = static_cast<T>(1.0);
 
   // =================== ACT ==================== //
-  const T orderParameter = internal::computeOrderParameterBulkSWave(
-      temperature, inConvergenceCriteria);
+  const T orderParameter =
+      computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
   // =================== ASSERT ==================== //
   const T orderParameterExpected = static_cast<T>(0.0);
@@ -63,8 +63,8 @@ void testComputeOrderParameterBulkSWaveIntermediateTemperature(
 
   for (const T &temperature : temperatures) {
     // =================== ACT ==================== //
-    const T orderParameter = internal::computeOrderParameterBulkSWave(
-        temperature, inConvergenceCriteria);
+    const T orderParameter =
+        computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
     // =================== ASSERT ==================== //
     // See page 180 of P. Holmvall lic thesis.
@@ -83,12 +83,11 @@ template <typename T>
 void testComputeFreeEnergyBulkSWave(const T inTolerance, const T inTemperature,
                                     const T inFreeEnergyExpected) {
   // =================== ARRANGE ==================== //
-  const T orderParameter =
-      internal::computeOrderParameterBulkSWave(inTemperature);
+  const T orderParameter = computeOrderParameterBulkSWave(inTemperature);
 
   // =================== ACT ==================== //
   const T freeEnergy =
-      internal::computeFreeEnergyBulkSWave(inTemperature, orderParameter);
+      computeFreeEnergyBulkSWave(inTemperature, orderParameter);
 
   // =================== ASSERT ==================== //
   CHECK(freeEnergy ==
@@ -112,18 +111,17 @@ void testComputeFreeEnergyBulkSWaveMinima(
   const T epsilon = static_cast<T>(1e-3);
 
   for (const T temperature : temperatures) {
-    const T orderParameter =
-        internal::computeOrderParameterBulkSWave(temperature);
+    const T orderParameter = computeOrderParameterBulkSWave(temperature);
 
     // =================== ACT ==================== //
     const T freeEnergy =
-        internal::computeFreeEnergyBulkSWave(temperature, orderParameter);
+        computeFreeEnergyBulkSWave(temperature, orderParameter);
 
     // =================== ASSERT ==================== //
-    const T freeEnergyPlus = internal::computeFreeEnergyBulkSWave(
-        temperature, orderParameter + epsilon);
-    const T freeEnergyMinus = internal::computeFreeEnergyBulkSWave(
-        temperature, orderParameter - epsilon);
+    const T freeEnergyPlus =
+        computeFreeEnergyBulkSWave(temperature, orderParameter + epsilon);
+    const T freeEnergyMinus =
+        computeFreeEnergyBulkSWave(temperature, orderParameter - epsilon);
     CHECK(freeEnergy < freeEnergyPlus);
     CHECK(freeEnergy < freeEnergyMinus);
   }

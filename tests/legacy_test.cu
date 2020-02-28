@@ -121,8 +121,8 @@ void testComputeOrderParameterBulkSWave(const T inTolerance) {
           temperature, convergenceCriterion);
 
       // Compute the new value.
-      const T newOrderParameter = internal::computeOrderParameterBulkSWave(
-          temperature, convergenceCriterion);
+      const T newOrderParameter =
+          computeOrderParameterBulkSWave(temperature, convergenceCriterion);
 
       // Compare results.
       CHECK(oldOrderParameter ==

@@ -164,7 +164,7 @@ void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) {
 template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
   // TODO(Niclas): Is it really necessary to wrap it here?
   const T temperature = _param->getTemperature();
-  return internal::computeOrderParameterBulkSWave(temperature);
+  return computeOrderParameterBulkSWave(temperature);
 }
 
 #endif // ORDER_PARAMETER_COMPONENT_H_
