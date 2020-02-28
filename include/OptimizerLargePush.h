@@ -1,5 +1,5 @@
-#ifndef OPTIMIZER_ROLLING_BALL_H_
-#define OPTIMIZER_ROLLING_BALL_H_
+#ifndef OPTIMIZER_LARGE_PUSH_H_
+#define OPTIMIZER_LARGE_PUSH_H_
 
 #include "Optimizer.h"
 #include "OrderParameter.h"
@@ -162,4 +162,4 @@ void OptimizerLargePush<T>::step(const T inResidual,
   m_iterationIndex++;
 }
 
-#endif // OPTIMIZER_ROLLING_BALL_H_
+#endif // OPTIMIZER_LARGE_PUSH_H_
