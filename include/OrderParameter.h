@@ -7,6 +7,7 @@
 #include "OrderParameterComponent.h"
 #include "Parameters.h"
 #include "utils.h"
+#include <string>
 
 template <typename T> class OrderParameter : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -38,7 +39,7 @@ public:
     return _orderParameterCompoundRotated;
   } // Return pointer to current rotational frame
 
-  char *type() const;
+  std::string getTypes() const;
 
 private:
   template <typename S>
@@ -200,19 +201,16 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   return _orderParameterCompoundRotated;
 }
 
-template <typename T> char *OrderParameter<T>::type() const {
-  char buf[32];
-  char *tmp;
+template <typename T> std::string OrderParameter<T>::getTypes() const {
+  std::string types;
 
-  strcpy(buf, getOrderParameterComponent(0)->getType());
-
-  for (int i = 1; i < getNumOrderParameterComponents(); ++i) {
-    tmp = getOrderParameterComponent(i)->getType();
-    strcat(buf, tmp);
+  const int numOrderParameterComponents = getNumOrderParameterComponents();
+  for (int i = 0; i < numOrderParameterComponents; ++i) {
+    const std::string componentType = getOrderParameterComponent(i)->getType();
+    types.append(componentType);
   }
 
-  char *ret = (char *)buf;
-  return ret;
+  return types;
 }
 
 #endif // ORDER_PARAMETER_H_

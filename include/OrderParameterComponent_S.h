@@ -4,6 +4,7 @@
 #include "Grid.h"
 #include "OrderParameterComponent.h"
 #include "Parameters.h"
+#include <string>
 
 template <typename T>
 class OrderParameterComponent_S : public OrderParameterComponent<T> {
@@ -33,19 +34,21 @@ public:
 
   virtual T deltaBulk() const;
 
+  std::string getType() const { return m_type; }
+
 private:
   friend void swap(OrderParameterComponent_S<T> &A,
                    OrderParameterComponent_S<T> B) {
     swap(static_cast<OrderParameterComponent<T> &>(A),
          static_cast<OrderParameterComponent<T> &>(B));
   }
+
+  const std::string m_type = std::string("s");
 };
 
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S()
-    : OrderParameterComponent<T>() {
-  OrderParameterComponent<T>::setType((char *)"s");
-}
+    : OrderParameterComponent<T>() {}
 
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S(
@@ -55,9 +58,7 @@ OrderParameterComponent_S<T>::OrderParameterComponent_S(
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S(Parameters<T> *param,
                                                         T Tcthis_Tc)
-    : OrderParameterComponent<T>(param, Tcthis_Tc) {
-  OrderParameterComponent<T>::setType((char *)"s");
-}
+    : OrderParameterComponent<T>(param, Tcthis_Tc) {}
 
 template <typename T>
 OrderParameterComponent_S<T> &
