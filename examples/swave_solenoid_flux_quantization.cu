@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::Solenoid calculates the vector potential with a solenoid
   // gague
-  RiccatiSolver<T> *riccatiSolver =
+  RiccatiSolverConfined<T, Gamma::General,
+                        VectorPotential::Solenoid> *riccatiSolver =
       new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Solenoid>(
           context);
   // Add specular BC

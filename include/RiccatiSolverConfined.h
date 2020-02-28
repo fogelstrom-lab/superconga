@@ -4,6 +4,7 @@
 #include "RiccatiSolver.h"
 #include "cplx.h"
 #include <cmath>
+#include <string>
 
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
@@ -33,7 +34,8 @@ public:
 
   void gammaSymmetryTransform();
 
-private:
+  // Get a string describing the vector potential type, e.g. solenoid.
+  std::string getVectorPotentialType() const { return POTENTIAL<T>::type(); }
 };
 
 namespace internal {

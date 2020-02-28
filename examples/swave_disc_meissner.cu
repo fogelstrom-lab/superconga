@@ -121,9 +121,10 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::Radial calculates the vector potential with a radial
   // gague
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Radial>(
-          context);
+  RiccatiSolverConfined<T, Gamma::General, VectorPotential::Radial>
+      *riccatiSolver =
+          new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Radial>(
+              context);
   // Add specular BC
   riccatiSolver->add(new BoundaryConditionSpecular<T>);
 

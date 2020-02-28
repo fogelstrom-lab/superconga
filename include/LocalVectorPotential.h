@@ -5,6 +5,8 @@
 #ifndef LOCAL_VECTOR_POTENTIAL_H_
 #define LOCAL_VECTOR_POTENTIAL_H_
 
+#include <string>
+
 #ifndef _HD_
 #define _HD_ __host__ __device__
 #endif
@@ -14,30 +16,35 @@ template <typename T> struct None {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
                                              const T B, const T systemAngle,
                                              const int N, const T h);
+  static std::string type() { return std::string("none"); }
 };
 
 template <typename T> struct Linear {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
                                              const T B, const T systemAngle,
                                              const int N, const T h);
+  static std::string type() { return std::string("linear"); }
 };
 
 template <typename T> struct LinearCentered {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
                                              const T B, const T systemAngle,
                                              const int N, const T h);
+  static std::string type() { return std::string("linear_centered"); }
 };
 
 template <typename T> struct Radial {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
                                              const T B, const T systemAngle,
                                              const int N, const T h);
+  static std::string type() { return std::string("radial"); }
 };
 
 template <typename T> struct Solenoid {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
                                              const T B, const T systemAngle,
                                              const int N, const T h);
+  static std::string type() { return std::string("solenoid"); }
 };
 } // namespace VectorPotential
 

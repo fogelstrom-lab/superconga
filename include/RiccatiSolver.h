@@ -101,6 +101,8 @@ public:
   void getKernelDimensionsOptim(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
                                 const int numEnergies, const int angleIdx);
 
+  virtual std::string getVectorPotentialType() const = 0;
+
 private:
   // START ELIMINATING GAMMA AS CLASS MEMBERS!!! USE CoherenceFunctions CLASS
   // INSTEAD!

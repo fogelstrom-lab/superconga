@@ -126,9 +126,10 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::None for never calculating the vector potential (no
   // external or induced fields)
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-          context);
+  RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>
+      *riccatiSolver =
+          new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
+              context);
   // Add specular BC
   riccatiSolver->add(new BoundaryConditionSpecular<T>);
 
