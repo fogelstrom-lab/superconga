@@ -10,6 +10,7 @@
 #include "utils.h"
 #include <cmath>
 #include <cuda.h>
+#include <string>
 
 template <typename T>
 class OrderParameterComponent_D : public OrderParameterComponent<T> {
@@ -39,6 +40,8 @@ public:
   void setLatticeOrientation(T angle) { _latticeOrientation = angle; }
   T getLatticeOrientation() const { return _latticeOrientation; }
 
+  std::string getType() const { return m_type; }
+
 private:
   friend void swap(OrderParameterComponent_D<T> &A,
                    OrderParameterComponent_D<T> B) {
@@ -55,14 +58,14 @@ private:
   // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
   T _latticeOrientation;
   GridGPU *_latticeOrientationGrid;
+
+  const std::string m_type = std::string("d");
 };
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D()
     : OrderParameterComponent<T>(), m_basisNormalization(0.0),
-      _latticeOrientation(0.0), _latticeOrientationGrid(0) {
-  OrderParameterComponent<T>::setType((char *)"d");
-}
+      _latticeOrientation(0.0), _latticeOrientationGrid(0) {}
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(
@@ -80,9 +83,7 @@ template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(Parameters<T> *param,
                                                         T Tcthis_Tc)
     : OrderParameterComponent<T>(param, Tcthis_Tc), m_basisNormalization(0.0),
-      _latticeOrientation(0.0), _latticeOrientationGrid(0) {
-  OrderParameterComponent<T>::setType((char *)"d");
-}
+      _latticeOrientation(0.0), _latticeOrientationGrid(0) {}
 
 template <typename T>
 OrderParameterComponent_D<T>::~OrderParameterComponent_D() {

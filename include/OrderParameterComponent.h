@@ -7,6 +7,7 @@
 #include "Parameters.h"
 #include <cmath>
 #include <stdexcept>
+#include <string>
 
 template <typename T> class OrderParameterComponent {
   typedef typename Grid<T>::GPU GridGPU;
@@ -45,8 +46,7 @@ public:
 
   virtual T deltaBulk() const;
 
-  char *getType() const { return _type; }
-  void setType(char *type) { _type = type; }
+  virtual std::string getType() const = 0;
 
 private:
   template <typename S>
@@ -68,8 +68,6 @@ private:
 
   // Order parameter component
   GridGPU *_deltaComp;
-
-  char *_type;
 };
 
 template <typename T>
@@ -83,7 +81,6 @@ OrderParameterComponent<T>::OrderParameterComponent(
     : _param(other._param), _Tcthis_Tc(other._Tcthis_Tc),
       m_couplingConstant(other.m_couplingConstant),
       m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized) {
-  _type = other._type;
   if (other._deltaComp)
     _deltaComp = new GridGPU(*other._deltaComp);
 }
@@ -107,7 +104,6 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A._param, B._param);
   std::swap(A._Tcthis_Tc, B._Tcthis_Tc);
   std::swap(A._deltaComp, B._deltaComp);
-  std::swap(A._type, B._type);
   std::swap(A.m_couplingConstant, B.m_couplingConstant);
   std::swap(A.m_isCouplingConstantInitialized,
             B.m_isCouplingConstantInitialized);
