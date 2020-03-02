@@ -213,7 +213,7 @@ void printIterationStatus() {
 // Plot data in OpenGL GUI
 void plotData() {
   // Extract computed data
-  Grid<T>::CPU orderParameter =
+  const Grid<T>::CPU orderParameter =
       *(context->getComputeOrderParameter()->getResult());
 
   // Clear the plotting region
@@ -280,8 +280,9 @@ void display() {
   // Run one iteration
   bool allConverged = runWrapper();
 
-  if (allConverged)
+  if (allConverged) {
     exit(0);
+  }
 }
 
 // Terminal mode wrapper

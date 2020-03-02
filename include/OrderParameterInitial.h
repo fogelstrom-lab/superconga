@@ -7,6 +7,7 @@
 
 #include "OrderParameterComponent.h"
 #include "defines.h"
+#include "utils.h"
 #include <cmath>
 #include <cuda.h>
 #include <iostream>
@@ -39,6 +40,12 @@ public:
                const T inPhaseShift = static_cast<T>(0.0),
                const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
+
+  // ...an edge phase crystal.
+  static void
+  edgePhaseCrystal(OrderParameterComponent<T> *const inOutDeltaComponent,
+                   const T inPeriod, const T inDecayLength, const T inCenterX,
+                   const T inCenterY, const T inRotAngle);
 
   // ...delta bulk + a perturbation in the phase (to push solution out of
   // meta-stable initial state)
@@ -98,6 +105,52 @@ phaseWinding_radial_Kernel(T *const outReal, T *const outImag, const int inNumX,
     outImag[idx] = magnitude * sin(phase * inNumWinding);
   }
 }
+
+template <typename T>
+__global__ void edgePhaseCrystal_kernel(
+    T *const outReal, T *const outImag, const int inNumX, const int inNumY,
+    const T inWaveNumber, const T inInvDecayLength, const T inCenterX,
+    const T inCenterY, const T inRotAngle, const T inMagnitude,
+    const T inPhaseMagnitude = static_cast<T>(M_PI / 8.0)) {
+  // Coordinates to new resampling grid
+  const int i = blockIdx.x * blockDim.x + threadIdx.x;
+  const int j = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (i < inNumX && j < inNumY) {
+    const int idx = j * inNumX + i;
+
+    // Normalize coordinates to -1.0 <= x,y <= +1.0, and offset with center
+    const T xOrigin = (static_cast<T>(2 * i) / static_cast<T>(inNumX - 1)) -
+                      static_cast<T>(1.0);
+    const T yOrigin = (static_cast<T>(2 * j) / static_cast<T>(inNumY - 1)) -
+                      static_cast<T>(1.0);
+    // Scale with margin so that physical grain is within [-1,1]
+    const T xOriginMargin =
+        xOrigin / (static_cast<T>(1.0) - qcs::GRAIN_SIZE_MARGIN);
+    const T yOriginMargin =
+        yOrigin / (static_cast<T>(1.0) - qcs::GRAIN_SIZE_MARGIN);
+
+    T xRotated;
+    T yRotated;
+
+    // Rotate coordinate system with angle given by argument
+    utils::rotate(inRotAngle, xOriginMargin, yOriginMargin, xRotated, yRotated);
+
+    // Translate coordinate system to origin given by arguments
+    const T xTranslated = xRotated - inCenterX;
+    const T yTranslated = yRotated - inCenterY;
+
+    // Calculate the edge phase crystal, see Eq. (12) of Phys. Rev. Research 2,
+    // 013104 (2020)
+    const T phase = cos(inWaveNumber * xTranslated) *
+                    (static_cast<T>(1.0) + yTranslated * inInvDecayLength) *
+                    exp(-yTranslated * inInvDecayLength) * inPhaseMagnitude;
+
+    // Set the edge phase crystal
+    outReal[idx] = inMagnitude * cos(phase);
+    outImag[idx] = inMagnitude * sin(phase);
+  }
+}
 } // namespace internal
 
 template <typename T>
@@ -140,7 +193,7 @@ void Initial<T>::phaseWinding(
     const T inCenterY) {
   GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
-  const int N = deltaGrid->dimX();
+  const int numLatticePoints = deltaGrid->dimX();
   const T deltaBulk = inOutDeltaComponent->deltaBulk();
 
   // GPU init
@@ -157,13 +210,46 @@ void Initial<T>::phaseWinding(
       // Calc and set boundary grid
       internal::phaseWinding_radial_Kernel<<<blocksPerGrid, threadsPerBlock>>>(
           deltaGrid->getDataPointer(c, Type::real),
-          deltaGrid->getDataPointer(c, Type::imag), N, N, inNumWinding,
-          inCutoffRadius, inPhaseShift, inCenterX, inCenterY, deltaBulk,
-          epsilon);
+          deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
+          numLatticePoints, inNumWinding, inCutoffRadius, inPhaseShift,
+          inCenterX, inCenterY, deltaBulk, epsilon);
     }
   } else {
     deltaGrid->setValue(deltaBulk, Type::real);
     deltaGrid->setValue(static_cast<T>(0.0), Type::imag);
+  }
+}
+
+// Set the order parameter to a 'phase crystal', at the coordinates specified by
+// the input parameters. See Eq. (12) of Phys. Rev. Research 2, 013104 (2020)
+// for a definition of an edge phase crystal.
+template <typename T>
+void Initial<T>::edgePhaseCrystal(
+    OrderParameterComponent<T> *const inOutDeltaComponent, const T inPeriod,
+    const T inDecayLength, const T inCenterX, const T inCenterY,
+    const T inRotAngle) {
+  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
+
+  const int numLatticePoints = deltaGrid->dimX();
+
+  // Calculate bulk value
+  const T deltaBulk = inOutDeltaComponent->deltaBulk();
+
+  // Calculate phase crystal parameters
+  const T inverseDecayLength = static_cast<T>(1.0) / inDecayLength;
+  const T waveNumber = static_cast<T>(2.0 * M_PI) / inPeriod;
+
+  // Thread dimensions
+  dim3 blocksPerGrid, threadsPerBlock;
+  deltaGrid->getKernelDimensions(blocksPerGrid, threadsPerBlock);
+
+  for (int c = 0; c < deltaGrid->numFields(); ++c) {
+    // Calculate and set order parameter component
+    internal::edgePhaseCrystal_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+        deltaGrid->getDataPointer(c, Type::real),
+        deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
+        numLatticePoints, waveNumber, inverseDecayLength, inCenterX, inCenterY,
+        inRotAngle, deltaBulk);
   }
 }
 
