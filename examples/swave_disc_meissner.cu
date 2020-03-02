@@ -217,10 +217,10 @@ void printIterationStatus() {
 // Plot data in OpenGL GUI
 void plotData() {
   // Extract computed order parameter
-  Grid<T>::CPU orderParameter =
+  const Grid<T>::CPU orderParameter =
       *(context->getComputeOrderParameter()->getResult());
   // Extract computed current
-  Grid<T>::CPU current = *(context->getComputeCurrent()->getResult());
+  const Grid<T>::CPU current = *(context->getComputeCurrent()->getResult());
 
   // Clear the plotting region
   gui->clearImage();
@@ -295,8 +295,9 @@ void display() {
   // Run one iteration
   bool allConverged = runWrapper();
 
-  if (allConverged)
+  if (allConverged) {
     exit(0);
+  }
 }
 
 // Terminal mode wrapper

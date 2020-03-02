@@ -26,7 +26,7 @@ set(NVCC_WARN
     -Wformat=2")
 
 # Define the main set of source files
-set(SRC)
+set(SRC bdg_comparison/bdg_comparison_main.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
@@ -39,7 +39,7 @@ foreach(file ${SRC})
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
   # External libraries
-  target_link_libraries(${name} PRIVATE glut GL GLU gfortran lapack blas)
+  target_link_libraries(${name} PRIVATE glut GL GLU gfortran lapack blas boost_system boost_filesystem)
 
   # Use C++14 since it is the lates standard CUDA supports
   message(STATUS "Enable C++ standard: C++14")
