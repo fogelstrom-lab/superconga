@@ -20,6 +20,7 @@
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
+#include "defines.h"
 
 #include <boost/filesystem.hpp>
 #include <cuda.h>
@@ -157,7 +158,7 @@ void saveParamsMetaData(
       << "# sideLength cornerSize pairBreakingEdge temperature pairingSymmetry "
          "areaCompute internalLatticePoints latticeRotation gauge "
          "externalFluxQuanta externalFluxDensity numLatticePoints numAngles "
-         "numOzakiPoles energyCutoff";
+         "numOzakiPoles energyCutoff grainMargin";
   appendLineToTextFile(metaDataFile, ss_header, std::ios_base::trunc);
 
   // Append line with energy and other information
@@ -166,20 +167,23 @@ void saveParamsMetaData(
   ss << inGrainCornerSize << " ";
   ss << inGrainDiagonal << " ";
   ss << parameters->getTemperature() << " ";
-  // TODO(patric): Fetch OP symmetry from a getter (i.e. in OrderParameter)
-  ss << "d ";
+  ss << inContext->getOrderParameter()->getTypes() << " ";
   ss << inContext->getGeometry()->area() << " ";
   ss << inContext->getGeometry()->area(1) << " ";
+  // TODO(patric): Figure how to make a getter for lattice orientation.
+  // Remember, this is only defined for anisotropic order parameters (e.g. for
+  // d-wave but not s-wave). Maybe add fixed value 0 for all isotropic ones?
   ss << "0 ";
-  // TODO(patric): Fetch Gauge from getter (i.e. in RiccatiSolver)
-  ss << "none ";
+  ss << inContext->getRiccatiSolver()->getVectorPotentialType() << " ";
   ss << parameters->getMagneticFieldStrength() *
-            inContext->getGeometry()->area();
-  ss << parameters->getMagneticFieldStrength();
+            inContext->getGeometry()->area()
+     << " ";
+  ss << parameters->getMagneticFieldStrength() << " ";
   ss << parameters->getGridResolutionBase() << " ";
   ss << parameters->getAngularResolution() << " ";
   ss << parameters->getNumMatsubaraEnergies() << " ";
-  ss << parameters->getCutOff();
+  ss << parameters->getCutOff() << " ";
+  ss << qcs::GRAIN_SIZE_MARGIN;
   appendLineToTextFile(metaDataFile, ss);
 }
 
