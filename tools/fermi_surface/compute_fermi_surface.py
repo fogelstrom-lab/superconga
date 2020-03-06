@@ -1,19 +1,7 @@
 import argparse
-from dataclasses import dataclass
-import matplotlib.pyplot as plt
+import json
 import numpy as np
-
-NUM_ITERATIONS = 100
-CONVERGENCE_CRITERION = 1e-6
-
-
-# Helper data class to contain the tight-binding parameters.
-@dataclass
-class Parameters:
-    t0: float
-    t1: float
-    t2: float
-    mu: float
+import os
 
 
 # Checks whether the Fermi surface is centered around the origin,
@@ -28,33 +16,33 @@ def isFermiSurfaceCentered(parameters):
 # Computes the dispersion given som momenta and tight-binding parameters.
 def computeDispersion(kX, kY, parameters):
     # Nearest neighbour.
-    ct = -2.0 * parameters.t0 * (np.cos(kX) + np.cos(kY))
+    c0 = -2.0 * parameters['t0'] * (np.cos(kX) + np.cos(kY))
 
     # Next-nearest neighbour.
-    cp = -4.0 * parameters.t1 * np.cos(kX) * np.cos(kY)
+    c1 = -4.0 * parameters['t1'] * np.cos(kX) * np.cos(kY)
 
     # Next-next-nearest neighbour.
-    cq = -2.0 * parameters.t2 * (np.cos(2.0 * kX) + np.cos(2.0 * kY))
+    c2 = -2.0 * parameters['t2'] * (np.cos(2.0 * kX) + np.cos(2.0 * kY))
 
     # The total dispersion.
-    dispersion = (ct + cp + cq - parameters.mu)
+    dispersion = (c0 + c1 + c2 - parameters['mu'])
     return dispersion
 
 
 # Compute the partial derivatives of the dispersion.
 def computeDispersionDerivative(kX, kY, parameters):
     # Nearest neighbour.
-    factorNN = 2.0 * parameters.t0
+    factorNN = 2.0 * parameters['t0']
     termNNdX = factorNN * np.sin(kX)
     termNNdY = factorNN * np.sin(kY)
 
     # Next-nearest neighbour.
-    factorNNN = 4.0 * parameters.t1
+    factorNNN = 4.0 * parameters['t1']
     termNNNdX = factorNNN * np.sin(kX) * np.cos(kY)
     termNNNdY = factorNNN * np.cos(kX) * np.sin(kY)
 
     # Next-next-nearest neighbour.
-    factorNNNN = 4.0 * parameters.t2
+    factorNNNN = 4.0 * parameters['t2']
     termNNNNdX = factorNNNN * np.sin(2.0 * kX)
     termNNNNdY = factorNNNN * np.sin(2.0 * kY)
 
@@ -68,9 +56,10 @@ def computeDispersionDerivative(kX, kY, parameters):
 def computeFermiMomentum(parameters,
                          angles,
                          offset,
-                         numIterations=NUM_ITERATIONS,
-                         convergenceCriteration=CONVERGENCE_CRITERION,
+                         numIterations,
+                         convergenceCriterion,
                          wrapResult=True):
+    print('Computing the Fermi momentum...')
     # For convenience.
     cosPhi = np.cos(angles)
     sinPhi = np.sin(angles)
@@ -108,7 +97,7 @@ def computeFermiMomentum(parameters,
         error = np.abs(dispersion)
 
         # Check convergence.
-        isConverged = (np.amax(error) < convergenceCriteration)
+        isConverged = (np.amax(error) < convergenceCriterion)
         if isConverged:
             break
 
@@ -136,7 +125,7 @@ def computeFermiMomentum(parameters,
         kNewton = k - dispersion / dEdK
 
         # Switch to doing Newton steps when the error is sufficently small.
-        doBisection = np.logical_and(error > np.sqrt(convergenceCriteration),
+        doBisection = np.logical_and(error > np.sqrt(convergenceCriterion),
                                      doBisection)
 
         # Update the momentum.
@@ -158,53 +147,46 @@ def computeFermiMomentum(parameters,
     return kX, kY
 
 
-def computeIntegrandFactor(kX,
-                           kY,
-                           vx,
-                           vy,
-                           parameters,
-                           offset,
-                           numIterations=NUM_ITERATIONS,
-                           convergenceCriteration=CONVERGENCE_CRITERION,
-                           delta=1e-4):
-    kXUnwrapped = wrapToRange(kX, offset[0])
-    kYUnwrapped = wrapToRange(kY, offset[1])
+def computeIntegrandFactor(inFermiMomentumX, inFermiMomentumY,
+                           inFermiVelocityX, inFermiVelocityY, parameters,
+                           offset):
+    # Compute the partial derivatives of the dispersion.
+    dEdKX, dEdKY = computeDispersionDerivative(inFermiMomentumX,
+                                               inFermiMomentumY, parameters)
 
-    # Get parameterizing phi.
-    phi = np.arctan2(kYUnwrapped - offset[1], kXUnwrapped - offset[0])
-    phiPlusDelta = phi + delta
-    phiMinusDelta = phi - delta
+    # The momentum is parameterized as
+    # pX = kX + offsetX
+    # pY = kY + offsetY
+    # with
+    # kX = k * cos(phi)
+    # kY = k * sin(phi)
+    kXUnwrapped = wrapToRange(inFermiMomentumX, offset[0])
+    kYUnwrapped = wrapToRange(inFermiMomentumY, offset[1])
+    kX = kXUnwrapped - offset[0]
+    kY = kYUnwrapped - offset[1]
+    k = np.hypot(kX, kY)
+    cosPhi = kX / k
+    sinPhi = kY / k
 
-    # Compute pF(\phi + \delta).
-    kXPlus, kYPlus = computeFermiMomentum(parameters,
-                                          phiPlusDelta,
-                                          offset,
-                                          numIterations,
-                                          convergenceCriteration,
-                                          wrapResult=False)
+    # The derivative of the dispersion with respect to phi is:
+    # dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi = 0
+    # whith
+    # dKXdPhi = (dKdPhi * cos(phi) - kY)
+    # dKYdPhi = (dKdPhi * sin(phi) + kX)
+    # which gives
+    dKdPhi = (dEdKX * kY - dEdKY * kX) / (dEdKX * cosPhi + dEdKY * sinPhi)
 
-    # Compute pF(\phi - \delta).
-    kXMinus, kYMinus = computeFermiMomentum(parameters,
-                                            phiMinusDelta,
-                                            offset,
-                                            numIterations,
-                                            convergenceCriteration,
-                                            wrapResult=False)
+    # Thus, the norm of the partial derivative of the Fermi momentum with respect
+    # to phi is given by:
+    # sqrt(dPXdPhi^2 + dPYdPhi^2) = sqrt(dKXdPhi^2 + dKYdPhi^2)
+    dKXdPhi = dKdPhi * cosPhi - kY
+    dKYdPhi = dKdPhi * sinPhi + kX
+    dPdPhi = np.hypot(dKXdPhi, dKYdPhi)
 
-    # Differences.
-    diffX = kXPlus - kXMinus
-    diffY = kYPlus - kYMinus
+    fermiSpeed = np.hypot(inFermiVelocityX, inFermiVelocityX)
+    integrandFactor = dPdPhi / fermiSpeed
 
-    # |\frac{\partial p_F}{\partial \phi}|
-    dKdPhi = np.sqrt(diffX**2 + diffY**2) / (2.0 * delta)
-
-    # Fermi speed.
-    fermiSpeed = np.sqrt(vx**2 + vy**2)
-
-    # Integrand factor.
-    factor = dKdPhi / fermiSpeed
-
-    return factor
+    return integrandFactor
 
 
 def computeFermiSurfaceAverage(x, factors):
@@ -222,8 +204,8 @@ def printPaperStuff(kX, kY, offset, parameters):
                                               offset)
 
     # Some stuff to compute averages of.
-    fermiSpeed = np.sqrt(vx**2 + vy**2)
-    fermiMomentum = np.sqrt(kX**2 + kY**2)
+    fermiSpeed = np.hypot(vx, vy)
+    fermiMomentum = np.hypot(kX, kY)
     invFermiMomentum = 1.0 / fermiMomentum
 
     # Compute Fermi surface averages.
@@ -254,7 +236,31 @@ def wrapToRange(x, offset=0.0):
     return y
 
 
-def computeFermiSurface(parameters, numGrid, numMomenta, numVelocities):
+def computeDensityOfStates(inEnergies,
+                           inMomentumX,
+                           inMomentumY,
+                           inDispersion,
+                           inGamma=0.01):
+    print('Computing the DOS...')
+    E = np.reshape(inEnergies, [-1, 1, 1])
+    kx = np.expand_dims(inMomentumX, axis=0)
+    ky = np.expand_dims(inMomentumY, axis=0)
+    ek = np.expand_dims(inDispersion, axis=0)
+
+    halfGamma = 0.5 * inGamma
+
+    dos = np.zeros_like(inEnergies)
+    for n, E in enumerate(inEnergies):
+        x = E - ek
+        lorentzian = halfGamma / (np.pi * (x**2 + halfGamma**2))
+        dos[n] = np.mean(lorentzian, axis=(1, 2))
+    return dos
+
+
+def computeFermiSurface(parameters, numGrid, numEnergies, numAngles,
+                        numIterations, convergenceCriterion):
+    print('Computing Fermi surface...')
+
     # Just print the tight-binding parameters.
     print(parameters)
 
@@ -270,54 +276,50 @@ def computeFermiSurface(parameters, numGrid, numMomenta, numVelocities):
 
     # ==================== DISPERSION ==================== #
     # Create meshgrid.
-    v = np.linspace(-np.pi, np.pi, numGrid)
+    v = np.linspace(-np.pi, np.pi * (1 - 1 / numGrid), numGrid)
     kxMesh, kyMesh = np.meshgrid(v, v)
 
     # Compute the dispersion.
-    ek = computeDispersion(kxMesh, kyMesh, parameters)
+    dispersion = computeDispersion(kxMesh, kyMesh, parameters)
 
-    # Plot the Fermi surface (where the sign changes).
-    plt.imshow(np.sign(ek),
-               cmap='hot',
-               interpolation='none',
-               extent=[-np.pi, np.pi, -np.pi, np.pi])
+    dispersionDict = {
+        'kx': kxMesh.tolist(),
+        'ky': kyMesh.tolist(),
+        'dispersion': dispersion.tolist()
+    }
 
-    # ==================== FERMI MOMENTA ==================== #
+    # ==================== DOS ==================== #
+    lim = 7.5
+    energies = np.linspace(-lim, lim, numEnergies)
+    dos = computeDensityOfStates(energies, kxMesh, kyMesh, dispersion)
 
-    # Note that K is wrapped to [-pi, pi].
-    minAngle = 0.0
-    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numMomenta)
-    angles = np.linspace(minAngle, maxAngle, numMomenta)
-
-    # Compute Fermi momenta.
-    kX, kY = computeFermiMomentum(parameters, angles, offset)
-
-    # Just to compare with Micke.
-    printPaperStuff(kX, kY, offset, parameters)
-
-    # Plot the Fermi momenta.
-    plt.scatter(kX, kY, c='r', linewidths=0.1, marker='.')
+    dosDict = {
+        'energies': energies.tolist(),
+        'dos': dos.tolist(),
+    }
 
     # ==================== FERMI VELOCITIES ==================== #
     # Note that K is wrapped to [-pi, pi].
     minAngle = 0.0
-    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numVelocities)
-    angles = np.linspace(minAngle, maxAngle, numVelocities)
-    kX, kY = computeFermiMomentum(parameters, angles, offset)
+    maxAngle = 2.0 * np.pi * (1.0 - 1.0 / numAngles)
+    angles = np.linspace(minAngle, maxAngle, numAngles)
+    kX, kY = computeFermiMomentum(parameters, angles, offset, numIterations,
+                                  convergenceCriterion)
+
+    # Just to compare with Micke.
+    printPaperStuff(kX, kY, offset, parameters)
 
     # Compute the Fermi velocities.
     vx, vy = computeDispersionDerivative(kX, kY, parameters)
 
-    # Plot the Fermi velocities.
-    plt.quiver(kX, kY, vx, vy, color='b')
+    fermiVelocityDict = {
+        'kx': kX.tolist(),
+        'ky': kY.tolist(),
+        'vx': vx.tolist(),
+        'vy': vy.tolist()
+    }
 
-    # ================ MISC ================ #
-    # Set axis labels.
-    plt.gca().set_xlabel('k_x')
-    plt.gca().set_ylabel('k_y')
-
-    # Show plot.
-    plt.show()
+    return dispersionDict, fermiVelocityDict, dosDict
 
 
 def main():
@@ -326,30 +328,28 @@ def main():
         description=
         'Compute the Fermi surface for a tight-binding model on a square lattice.'
     )
-    parser.add_argument(
-        '-t0',
-        '--hopping-nn',
-        type=float,
-        default=1.0,
-        help='Hopping nearest neighbours. (default: %(default)s)')
-    parser.add_argument(
-        '-t1',
-        '--hopping-nnn',
-        type=float,
-        default=0.0,
-        help='Hopping next-nearest neighbours. (default: %(default)s)')
-    parser.add_argument(
-        '-t2',
-        '--hopping-nnnn',
-        type=float,
-        default=0.0,
-        help='Hopping next-next-nearest neighbours. (default: %(default)s)')
+    parser.add_argument('name', type=str, help='Name of file to save.')
     parser.add_argument(
         '-mu',
         '--chemical-potential',
         type=float,
         default=1.0,
-        help='Hopping nearest neighbours. (default: %(default)s)')
+        help='The chemical potential, '
+        'in terms of the nearest-neighbour hopping. (default: %(default)s)')
+    parser.add_argument(
+        '-t1',
+        '--hopping-nnn',
+        type=float,
+        default=0.0,
+        help='The next-nearest neighbour hopping, '
+        'in terms of the nearest-neighbour hopping.  (default: %(default)s)')
+    parser.add_argument(
+        '-t2',
+        '--hopping-nnnn',
+        type=float,
+        default=0.0,
+        help='The next-next-nearest neighbour hopping, '
+        'in terms of the nearest-neighbour hopping.  (default: %(default)s)')
     parser.add_argument(
         '-grid',
         '--num-grid',
@@ -357,30 +357,61 @@ def main():
         default=1000,
         help='Number of grid points per side. (default: %(default)s)')
     parser.add_argument(
-        '-nk',
-        '--num-momenta',
+        '-ne',
+        '--num-energies',
         type=int,
         default=1000,
-        help='Number of momentum angles. (default: %(default)s)')
+        help=
+        'Number of energies in the density of states. (default: %(default)s)')
     parser.add_argument(
-        '-nv',
-        '--num-velocities',
+        '-na',
+        '--num-angles',
         type=int,
         default=100,
-        help='Number of velocity angles. (default: %(default)s)')
+        help='Number of Fermi velocity angles. (default: %(default)s)')
+    parser.add_argument(
+        '-ni',
+        '--num-iterations',
+        type=int,
+        default=100,
+        help='Maximum number of iterations. (default: %(default)s)')
+    parser.add_argument('-cc',
+                        '--convergence-criterion',
+                        type=float,
+                        default=1e-6,
+                        help='Convergence criterion. (default: %(default)s)')
     args = parser.parse_args()
 
     # Set tight-binding parameters.
-    parameters = Parameters(t0=args.hopping_nn,
-                            t1=args.hopping_nnn,
-                            t2=args.hopping_nnnn,
-                            mu=args.chemical_potential)
+    parameters = {
+        't0': 1.0,
+        't1': args.hopping_nnn,
+        't2': args.hopping_nnnn,
+        'mu': args.chemical_potential
+    }
 
-    # Compute (and plot) the Fermi surface.
-    computeFermiSurface(parameters,
-                        numGrid=args.num_grid,
-                        numMomenta=args.num_momenta,
-                        numVelocities=args.num_velocities)
+    # Compute the Fermi surface.
+    dispersion, fermiVelocity, dos = computeFermiSurface(
+        parameters,
+        numGrid=args.num_grid,
+        numEnergies=args.num_energies,
+        numAngles=args.num_angles,
+        numIterations=args.num_iterations,
+        convergenceCriterion=args.convergence_criterion)
+
+    # Save file.
+    filename = args.name
+    suffix = '.json'
+    if not filename.endswith(suffix):
+        filename += '.json'
+    file = open(filename, 'w')
+    data = {
+        'dispersion': dispersion,
+        'fermiVelocity': fermiVelocity,
+        'dos': dos
+    }
+
+    json.dump(data, file)
 
 
 if __name__ == '__main__':
