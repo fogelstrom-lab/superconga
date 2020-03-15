@@ -222,7 +222,7 @@ void saveFreeEnergy(const Context<T> *const inContext,
   ss.precision(dataFloatDecimals);
   ss << inComputeFreeEnergy->getFreeEnergyPerUnitArea() << " ";
   ss.precision(defaultPrecision);
-  ss << parameters->getMagneticFieldStrength();
+  ss << parameters->getMagneticFieldStrength() << " ";
   ss << inGrainSideLength << " ";
   ss << inGrainCornerSize << " ";
   ss << inGrainDiagonal << " ";
@@ -275,7 +275,8 @@ void readCommandLineArguments(const int inNumArguments,
                               char *const *const inArguments,
                               int &outFermiSurfaceLabel,
                               T &outGrainDiagonalLength,
-                              T &outGrainCornerLength) {
+                              T &outGrainCornerLength, T &outTemperature,
+                              bool &outRunMetastable) {
   // Check that there are arguments to parse (need at least a flag and a value)
   if (inNumArguments > 1) {
     // Loop over command line arguments
@@ -292,6 +293,10 @@ void readCommandLineArguments(const int inNumArguments,
           outGrainDiagonalLength = static_cast<T>(std::stod(nextArg));
         } else if (thisArg == "--r") {
           outGrainCornerLength = static_cast<T>(std::stod(nextArg));
+        } else if (thisArg == "--T") {
+          outTemperature = static_cast<T>(std::stod(nextArg));
+        } else if (thisArg == "--ms") {
+          outRunMetastable = std::stoi(nextArg);
         }
       }
     }
