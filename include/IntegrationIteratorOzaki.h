@@ -300,7 +300,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
   riccati->computeBoundaryConditions();
 
   // Include magnetic field induced by currents
-  riccati->computeInducedMagneticField();
+  riccati->computeInducedVectorPotential();
 
   // Do angle loop (=momentum integral, and sum over energies)
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {

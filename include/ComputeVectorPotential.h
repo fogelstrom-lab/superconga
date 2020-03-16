@@ -52,6 +52,8 @@ void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
   GridData<char, thrust::host_vector<char>> geom_host = *geom;
   char *g = geom_host.getDataPointer(0);
 
+  // Note, the vector potential is computed for all lattice sites, not just the
+  // ones within the grain.
   for (int y = 0; y < N; ++y) {
     for (int x = 0; x < N; ++x) {
       if (g[y * N + x]) {

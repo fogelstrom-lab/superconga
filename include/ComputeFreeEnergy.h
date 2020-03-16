@@ -303,6 +303,36 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
           integrandFactor;
     }
 
+    const bool hasComputedInducedVectorPotential =
+        C::getRiccatiSolver()->hasComputedInducedVectorPotential();
+
+    // Add contribution from the induced magnetic field.
+    if (hasComputedInducedVectorPotential) {
+      // Compute the magnetic field.
+      GridGPU magneticField =
+          (*(C::getContext()->getRiccatiSolver()->getInducedVectorPotential()))
+              .curl(latticeElementSize);
+
+      // Note, by setting values outside of the grain to zero, we are only
+      // including the contribution of the induced magnetic field within the
+      // grain to the free energy.
+      // TODO(niclas): Should we include the field outside of the grain? Also,
+      // should we include the field in 3D?
+      C::getGeometry()->zeroValuesOutsideDomain(&magneticField);
+
+      // The Ginzburg-Landau parameter.
+      const T kappa = C::getParameters()->getPenetrationDepth();
+
+      // Note that the prefactor depend on our choice of unit definitions, e.g.
+      // (2pi) in the denominator of the coherence length. Here it is assumed
+      // that it is defined without the (2pi).
+      const T magneticFactor =
+          static_cast<T>(0.5 * M_PI * M_PI) * kappa * kappa;
+
+      const T magneticFreeEnergy = magneticFactor * magneticField.sumSquare();
+      m_freeEnergyPerUnitArea += magneticFreeEnergy;
+    }
+
     m_freeEnergy =
         m_freeEnergyPerUnitArea * latticeElementSize * latticeElementSize;
     m_freeEnergyPerUnitArea *= static_cast<T>(1.0) / numLatticePoints;
