@@ -1,0 +1,5 @@
+# Ignore Fermi surface data
+*.json
+*.png
+*.pdf
+*.jpg
