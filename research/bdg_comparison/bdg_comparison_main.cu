@@ -69,18 +69,20 @@ char dataPath[512];
 // TODO(patric): Make into a struct
 namespace simParams {
 // Run in OpenGL mode or terminal mode
-const bool RUN_VISUAL = true;
+const bool RUN_VISUAL = false;
+// Run metastable state without vortices (real order parameter)
+bool RUN_METASTABLE = false;
 // Temperature in units of T_c
-const T TEMPERATURE = static_cast<T>(0.1);
+T TEMPERATURE = static_cast<T>(0.1);
 // Size of pairbreaking edge in coherence lengths hbar*v_F/(2*pi*k_BT_c)
-T GRAIN_DIAGONAL = static_cast<T>(40.0);
+T GRAIN_DIAGONAL = static_cast<T>(60.0);
 // Size (in coherence lengths) that defines the grain geometry: 0 gives a
 // triangle, >0 gives an irregular pentagon
 T GRAIN_CORNER_SIZE = static_cast<T>(4.0);
 const T GRAIN_SIDE_LENGTH =
     GRAIN_CORNER_SIZE + GRAIN_DIAGONAL / static_cast<T>(std::sqrt(2.0));
 // Number of lattice points per grain side length
-const int GRID_RESOLUTION = 401;
+const int GRID_RESOLUTION = 801;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 128;
 // Number of discrete energies (poles)
@@ -92,7 +94,7 @@ const int NUM_ITERATIONS_MAX = 5000;
 // Minimum number of iterations
 const int NUM_ITERATIONS_MIN = 300;
 // Path to data, relative to build directory!
-const char *DATA_BASE_PATH = (char *)"../research/bdg_comparison/data/qc/";
+const char *DATA_BASE_PATH = (char *)"data/qc/";
 // Number of iterations between regular saving of data
 const int SAVE_DATA_INTERVAL = 200;
 // Label which fermi surface it is:
@@ -113,7 +115,8 @@ int main(int argc, char *argv[]) {
   // TODO(patric): replace with proper argument parser and put in utils_io.h
   bdg_comp_utils::readCommandLineArguments<T>(
       argc, argv, simParams::fermiSurfaceLabel, simParams::GRAIN_DIAGONAL,
-      simParams::GRAIN_CORNER_SIZE);
+      simParams::GRAIN_CORNER_SIZE, simParams::TEMPERATURE,
+      simParams::RUN_METASTABLE);
 
   // Check that fermiSurfaceLabel has a proper value
   if (simParams::fermiSurfaceLabel < 1 || simParams::fermiSurfaceLabel > 3) {
@@ -150,9 +153,16 @@ int main(int argc, char *argv[]) {
   // Set temperature
   parameters->setTemperature(simParams::TEMPERATURE);
   // Set filename
-  sprintf(dataPath, "%sfs%d_R%2.3f_r%2.3f_T%2.4f/", simParams::DATA_BASE_PATH,
-          simParams::fermiSurfaceLabel, simParams::GRAIN_DIAGONAL,
-          simParams::GRAIN_CORNER_SIZE, simParams::TEMPERATURE);
+  if (simParams::RUN_METASTABLE) {
+    sprintf(dataPath, "%sfs%d_R%2.3f_r%2.3f_T%2.4f_ms/",
+            simParams::DATA_BASE_PATH, simParams::fermiSurfaceLabel,
+            simParams::GRAIN_DIAGONAL, simParams::GRAIN_CORNER_SIZE,
+            simParams::TEMPERATURE);
+  } else {
+    sprintf(dataPath, "%sfs%d_R%2.3f_r%2.3f_T%2.4f/", simParams::DATA_BASE_PATH,
+            simParams::fermiSurfaceLabel, simParams::GRAIN_DIAGONAL,
+            simParams::GRAIN_CORNER_SIZE, simParams::TEMPERATURE);
+  }
   // Create data path if it does not exist
   bdg_comp_utils::createProjectDirectory(dataPath);
 
@@ -220,9 +230,14 @@ int main(int argc, char *argv[]) {
   // Decay length of phase crystal, converted to coordinate units.
   const T startPhaseDecay = static_cast<T>(1.0) / simParams::GRAIN_SIDE_LENGTH;
 
-  Initial<T>::edgePhaseCrystal(orderParameterComponent, startPhasePeriod,
-                               startPhaseDecay, pbMidPointX, pbMidPointY,
-                               pbEdgeRotation);
+  // Run with or without vortices: Useful when comparing free energy to find T^*
+  if (simParams::RUN_METASTABLE) {
+    Initial<T>::bulk(orderParameterComponent);
+  } else {
+    Initial<T>::edgePhaseCrystal(orderParameterComponent, startPhasePeriod,
+                                 startPhaseDecay, pbMidPointX, pbMidPointY,
+                                 pbEdgeRotation);
+  }
   // Add the initialized d-wave component to the total order parameter
   orderParameter->add(orderParameterComponent);
 
