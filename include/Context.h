@@ -3,8 +3,8 @@
 
 #include "ContextModule.h"
 #include "Grid.h"
+#include <chrono>
 #include <iostream>
-#include <util/csecond.h>
 
 template <typename> class CoherenceFunctions;
 template <typename> class ComputeCurrent;
@@ -235,9 +235,18 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 }
 
 template <typename T> void Context<T>::compute() {
-  _compute_time = csecond();
+  const auto startTime = std::chrono::high_resolution_clock::now();
   _iter->compute();
-  _compute_time = csecond() - _compute_time;
+  const auto stopTime = std::chrono::high_resolution_clock::now();
+
+  // Count the number of milliseconds.
+  const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                            stopTime - startTime)
+                            .count();
+
+  // Convert to seconds.
+  _compute_time = static_cast<T>(duration) / static_cast<T>(1e6);
+
   _numIterations++;
 }
 
