@@ -56,6 +56,10 @@ public:
   // Get momentum offset.
   void getMomentumOffset(T &outOffsetX, T &outOffsetY);
 
+  // Only used for tests.
+  T getAvgFermiMomentum() const { return m_avgFermiMomentum; }
+  T getAvgFermiSpeed() const { return m_avgFermiSpeed; }
+
 private:
   // We find the Fermi surface with an iterative method (bisection and Newton),
   // so we need to set the maximum number of iterations, and when we consider
@@ -89,6 +93,10 @@ private:
 
   // The momentum dependent factor in the integral.
   thrust::host_vector<T> m_integrandFactor;
+
+  // Only used for tests.
+  T m_avgFermiMomentum;
+  T m_avgFermiSpeed;
 };
 
 // A helper struct.
@@ -233,9 +241,14 @@ computeMomentumOffset(const TightBindingParameters<T> &inParameters) {
 /// \return - The momentum as a pair (x, y)
 template <typename T>
 std::pair<T, T> makeMomentum(const T inMagnitude, const T inAngle,
-                             const std::pair<T, T> &inOffset) {
-  const T x = inMagnitude * std::cos(inAngle) + inOffset.first;
-  const T y = inMagnitude * std::sin(inAngle) + inOffset.second;
+                             const std::pair<T, T> &inOffset,
+                             const bool inWrapToBrillouinZone = false) {
+  T x = inMagnitude * std::cos(inAngle) + inOffset.first;
+  T y = inMagnitude * std::sin(inAngle) + inOffset.second;
+  if (inWrapToBrillouinZone) {
+    x = utils::wrapToRange(x, -static_cast<T>(M_PI), static_cast<T>(M_PI));
+    y = utils::wrapToRange(y, -static_cast<T>(M_PI), static_cast<T>(M_PI));
+  }
   return {x, y};
 }
 
@@ -260,7 +273,8 @@ std::pair<T, T> computeFermiMomentum(
     const TightBindingParameters<T> &inParameters, const T inAngle,
     const std::pair<T, T> inOriginOffset, const int inNumIterations = 100,
     const T inConvergenCriterion = static_cast<T>(1e2) *
-                                   std::numeric_limits<T>::epsilon()) {
+                                   std::numeric_limits<T>::epsilon(),
+    const bool inWrapToBrillouinZone = true) {
   // For the bisection method we need to two end-points of the interval.
   // 1st point: The origin (which could be (pi, pi)).
   T kA = static_cast<T>(0.0);
@@ -364,7 +378,7 @@ std::pair<T, T> computeFermiMomentum(
   }
 
   // Form the momentum.
-  return makeMomentum(k, inAngle, inOriginOffset);
+  return makeMomentum(k, inAngle, inOriginOffset, inWrapToBrillouinZone);
 }
 
 /// \brief Compute the integrand factor for a Fermi momentum
@@ -396,8 +410,14 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
   // with
   // kX = k * cos(phi)
   // kY = k * sin(phi)
-  const T kX = inFermiMomentum.first - inOffset.first;
-  const T kY = inFermiMomentum.second - inOffset.second;
+  const T pXUnwrapped = utils::wrapToRange(
+      inFermiMomentum.first, inOffset.first - static_cast<T>(M_PI),
+      inOffset.first + static_cast<T>(M_PI));
+  const T pYUnwrapped = utils::wrapToRange(
+      inFermiMomentum.second, inOffset.second - static_cast<T>(M_PI),
+      inOffset.first + static_cast<T>(M_PI));
+  const T kX = pXUnwrapped - inOffset.first;
+  const T kY = pYUnwrapped - inOffset.second;
   const T k = std::hypot(kX, kY);
   const T cosPhi = kX / k;
   const T sinPhi = kY / k;
@@ -431,7 +451,8 @@ FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
     const T inChemicalPotential)
     : FermiSurface<T>(inOutContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
-      m_systemAnglesGPU(0), m_integrandFactor(0),
+      m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
+      m_avgFermiSpeed(0.0),
       m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
 
 template <typename T>
@@ -440,7 +461,8 @@ FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
     const T inChemicalPotential)
     : FermiSurface<T>(inNumAngles), m_fermiMomentumX(0), m_fermiMomentumY(0),
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
-      m_systemAnglesGPU(0), m_integrandFactor(0),
+      m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
+      m_avgFermiSpeed(0.0),
       m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
 
 template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
@@ -469,6 +491,7 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
   const int numAngles = FermiSurface<T>::getNumAngles();
 
   T integrandFactorSum = static_cast<T>(0.0);
+  T fermiMomentumSum = static_cast<T>(0.0);
   T fermiSpeedSum = static_cast<T>(0.0);
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // The momentum angle.
@@ -507,18 +530,21 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
     // For normalizing the integrand factor.
     integrandFactorSum += factor;
 
-    // For computing the mean Fermi speed.
+    // For computing averages.
+    fermiMomentumSum +=
+        std::hypot(fermiMomentum.first, fermiMomentum.second) * factor;
     fermiSpeedSum +=
         std::hypot(fermiVelocity.first, fermiVelocity.second) * factor;
   }
 
-  // The average Fermi speed.
-  const T avgFermiSpeed = fermiSpeedSum / integrandFactorSum;
+  // The average Fermi momentum and speed.
+  m_avgFermiMomentum = fermiMomentumSum / integrandFactorSum;
+  m_avgFermiSpeed = fermiSpeedSum / integrandFactorSum;
 
   // Normalize the Fermi velocity and integrand factor.
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
-    m_fermiVelocityX[angleIdx] /= avgFermiSpeed;
-    m_fermiVelocityY[angleIdx] /= avgFermiSpeed;
+    m_fermiVelocityX[angleIdx] /= m_avgFermiSpeed;
+    m_fermiVelocityY[angleIdx] /= m_avgFermiSpeed;
     m_integrandFactor[angleIdx] /= integrandFactorSum;
   }
 
