@@ -18,16 +18,11 @@
 #include "VectorPotential_Kernel.h"
 #include "cplx.h"
 #include "utils.h"
+#include <limits>
 
 /////////////////////////////////////////////////////////
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE
 /////////////////////////////////////////////////////////
-
-// This function could not be put into RiccatiSolver class, because of template
-// parameter issues
-template <typename T, template <typename> class VP>
-void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *eShift,
-                        const int angleIdx);
 
 template <typename T> class RiccatiSolver : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -64,15 +59,31 @@ public:
   }
 
   // Vector potential
-  GridGPU *getInducedVectorPotential() const { return _ps; }
+  GridGPU *getInducedVectorPotential() const { return m_vectorPotential; }
   GridGPU *getEnergyShift() const { return _eShift; }
 
   // Magnetic field
-  int doComputeInducedMagneticField() const { return _computeInduced; }
-  void setComputeInducedMagneticField(int induced) {
-    _computeInduced = induced;
+  bool doCoupleInducedVectorPotential() const {
+    // Only couple back the vector potential if it is computed.
+    return m_coupleInducedVectorPotential &&
+           m_hasComputedInducedVectorPotential;
   }
-  void computeInducedMagneticField();
+
+  bool hasComputedInducedVectorPotential() const {
+    return m_hasComputedInducedVectorPotential;
+  }
+
+  void setComputeInducedVectorPotential(
+      const bool inComputeInducedVectorPotential,
+      const bool inCoupleInducedVectorPotential = false) {
+    m_computeInducedVectorPotential = inComputeInducedVectorPotential;
+    // There is no point in coupling the induced vector potential if we don't
+    // compute it.
+    m_coupleInducedVectorPotential =
+        inCoupleInducedVectorPotential && inComputeInducedVectorPotential;
+  }
+
+  void computeInducedVectorPotential();
 
   // Functions
   void initializeCoherenceFunctions();
@@ -122,10 +133,12 @@ private:
   // POTENTIAL<T>	_vpFunctor;
 
   // Switch to compute and include internally induced magnetic field
-  int _computeInduced;
+  bool m_computeInducedVectorPotential;
+  bool m_coupleInducedVectorPotential;
+  bool m_hasComputedInducedVectorPotential;
 
   // Vector potential field
-  GridGPU *_ps;
+  GridGPU *m_vectorPotential;
 
   // Precomputed field for energy shift
   GridGPU *_eShift;
@@ -139,52 +152,58 @@ private:
 // This function could not be put into RiccatiSolver class, because of template
 // parameter issues
 template <typename T, template <typename> class VP>
-void computeEnergyShift(ContextModule<T> *mod, typename Grid<T>::GPU *ps,
-                        typename Grid<T>::GPU *eShift, const int computeInduced,
+void computeEnergyShift(ContextModule<T> *inContextModule,
+                        typename Grid<T>::GPU *inVectorPotential,
+                        typename Grid<T>::GPU *inEnergyShift,
+                        const bool inCoupleInducedVectorPotential,
                         const int angleIdx) {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
 
-  Parameters<T> *param = mod->getParameters();
+  Parameters<T> *parameters = inContextModule->getParameters();
 
   // Add contribution from external magnetic field
-  const int N0 = param->getGridResolutionBase();
-  const int N1 = param->getGridResolutionCoherence();
-  const T B = param->getMagneticFieldStrength();
-  const T h = param->getGridElementSize();
-  const int Na = param->getAngularResolution();
+  const int N0 = parameters->getGridResolutionBase();
+  const int N1 = parameters->getGridResolutionCoherence();
+  const T B = parameters->getMagneticFieldStrength();
+  const T h = parameters->getGridElementSize();
+  const int Na = parameters->getAngularResolution();
 
-  const T systemAngle = mod->getFermiSurface()->getSystemAngle(angleIdx);
+  const T systemAngle =
+      inContextModule->getFermiSurface()->getSystemAngle(angleIdx);
 
   dim3 bpg, tpb;
-  eShift->getKernelDimensions(bpg, tpb);
+  inEnergyShift->getKernelDimensions(bpg, tpb);
 
   computeEnergyShift_external_kernel<T, VP>
-      <<<bpg, tpb>>>(eShift->getDataPointer(), systemAngle, B, N1, h);
+      <<<bpg, tpb>>>(inEnergyShift->getDataPointer(), systemAngle, B, N1, h);
 
-  // Add contribution from internal magnetic field induced by currents
-  ComputeCurrent<T> *j_compute = mod->getContext()->getComputeCurrent();
+  if (inCoupleInducedVectorPotential) {
+    // Add contribution from internal magnetic field induced by currents.
+    GridGPU vectorPotentialRotated(N1, N1, 2, Type::real);
+    vectorPotentialRotated.setZero();
+    vectorPotentialRotated.insertRotatedGrid(inVectorPotential, -systemAngle);
 
-  if (j_compute && computeInduced) {
-    GridGPU ps_rot(N1, N1, 2, Type::real);
-    ps_rot.setZero();
-    ps_rot.insertRotatedGrid(ps, -systemAngle);
-
-    computeEnergyShift_internal_kernel<T>
-        <<<bpg, tpb>>>(eShift->getDataPointer(), ps_rot.getDataPointer(0),
-                       ps_rot.getDataPointer(1), systemAngle, N1);
+    computeEnergyShift_internal_kernel<T><<<bpg, tpb>>>(
+        inEnergyShift->getDataPointer(),
+        vectorPotentialRotated.getDataPointer(0),
+        vectorPotentialRotated.getDataPointer(1), systemAngle, N1);
   }
 }
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver()
-    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _ps(0),
-      _eShift(0), _computeInduced(0), _orderParameterMult(1.0) {}
+    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0),
+      m_vectorPotential(0), _eShift(0), m_computeInducedVectorPotential(false),
+      m_coupleInducedVectorPotential(false),
+      m_hasComputedInducedVectorPotential(false), _orderParameterMult(1.0) {}
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver(Context<T> *ctx)
-    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _ps(0),
-      _eShift(0), _computeInduced(0), _orderParameterMult(1.0) {}
+    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0),
+      m_vectorPotential(0), _eShift(0), m_computeInducedVectorPotential(false),
+      m_coupleInducedVectorPotential(false),
+      m_hasComputedInducedVectorPotential(false), _orderParameterMult(1.0) {}
 
 template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
   std::cout << "~RiccatiSolver()\n";
@@ -194,8 +213,8 @@ template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
     delete _gammabar;
   if (_storage)
     delete _storage;
-  if (_ps)
-    delete _ps;
+  if (m_vectorPotential)
+    delete m_vectorPotential;
   if (_eShift)
     delete _eShift;
 
@@ -211,10 +230,10 @@ template <typename T> int RiccatiSolver<T>::initialize() {
   const int N1 =
       ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(_ps, N0, N0, 2, Type::real);
+  GridGPU::initializeGrid(m_vectorPotential, N0, N0, 2, Type::real);
   GridGPU::initializeGrid(_eShift, N1, N1, 1, Type::real);
 
-  _ps->setZero();
+  m_vectorPotential->setZero();
 
   return 0;
 }
@@ -268,41 +287,51 @@ template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
   }
 }
 
-template <typename T> void RiccatiSolver<T>::computeInducedMagneticField() {
-  typedef ContextModule<T> C;
+template <typename T> void RiccatiSolver<T>::computeInducedVectorPotential() {
+  m_hasComputedInducedVectorPotential = false;
+  if (m_computeInducedVectorPotential) {
+    ComputeCurrent<T> *j_compute =
+        ContextModule<T>::getContext()->getComputeCurrent();
 
-  Parameters<T> *param = C::getParameters();
+    if (j_compute) {
+      Parameters<T> *parameters = ContextModule<T>::getParameters();
 
-  const int N0 = param->getGridResolutionBase();
-  const T h = param->getGridElementSize();
+      std::cout << "Solving for vector potential...\n";
 
-  ComputeCurrent<T> *j_compute = C::getContext()->getComputeCurrent();
+      if (parameters->getPenetrationDepth() <
+          std::numeric_limits<T>::epsilon()) {
+        // TODO(niclas): Raise exception instead?
+        std::cout << "Error! Penetration depth is zero or negative!\n";
+      }
 
-  if (j_compute && doComputeInducedMagneticField()) {
-    std::cout << "Solving for vector potential...\n";
+      const int N0 = parameters->getGridResolutionBase();
+      const T h = parameters->getGridElementSize();
 
-    if (param->getPenetrationDepth() < 0.0000000001) {
-      std::cout << "Error, penetration depth is zero or negative!\n";
-      std::cout << "Error, penetration depth is zero or negative!\n";
-      std::cout << "Error, penetration depth is zero or negative!\n";
+      const T lambda = parameters->getPenetrationDepth();
+
+      std::cout << "Lambda = " << lambda << "\n";
+
+      const T twopi = static_cast<T>(2.0 * M_PI);
+      const T mult = -twopi * twopi * twopi / (lambda * lambda);
+
+      // Note, we are not setting the current to zero outside of the grain. This
+      // is handled in `computeVectorPotential` by checking the domain labels.
+      GridGPU *j = j_compute->getResult();
+
+      Grid<char>::GPU *dom =
+          ContextModule<T>::getContext()->getGeometry()->getDomainGrid();
+
+      Grid<char>::GPU dom_crop(N0, N0, 1, Type::real);
+      dom_crop.insertGrid(dom);
+
+      // Solve Maxwell's equation relating the vector potential to the current.
+      computeVectorPotential(m_vectorPotential, j, &dom_crop, h, mult);
+
+      m_hasComputedInducedVectorPotential = true;
+    } else {
+      // TODO(niclas): Raise exception instead?
+      std::cout << "WARNING! There is no current computed." << std::endl;
     }
-
-    const T lambda = param->getPenetrationDepth();
-
-    std::cout << "Lambda = " << lambda << "\n";
-
-    const T twopi = 2.0 * M_PI;
-    const T mult = -twopi * twopi * twopi / (lambda * lambda);
-
-    GridGPU *j = j_compute->getResult();
-
-    Grid<char>::GPU *dom = C::getContext()->getGeometry()->getDomainGrid();
-
-    Grid<char>::GPU dom_crop(N0, N0, 1, Type::real);
-    dom_crop.insertGrid(dom);
-
-    // Solve ps
-    computeVectorPotential(_ps, j, &dom_crop, h, mult);
   }
 }
 
