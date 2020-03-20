@@ -12,8 +12,14 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include <cmath>
+#ifdef __CUDACC__
 #include <cuda.h>
+#define HOST_DEVICE __host__ __device__
+#else
+#define HOST_DEVICE
+#endif
+
+#include <cmath>
 #include <vector>
 
 namespace utils {
@@ -27,8 +33,7 @@ namespace utils {
 ///
 /// \return - The wrapped value
 template <typename T>
-__host__ __device__ T wrapToRange(const T inValue, const T inLow,
-                                  const T inHigh) {
+HOST_DEVICE T wrapToRange(const T inValue, const T inLow, const T inHigh) {
   // TODO(niclas): Add check that low < high.
 
   // If the value is within the bounds then do an early exit.
@@ -64,8 +69,8 @@ __host__ __device__ T wrapToRange(const T inValue, const T inLow,
 ///
 /// \return - The wrapped value
 template <>
-__host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
-                                         const int inHigh) {
+HOST_DEVICE int wrapToRange<int>(const int inValue, const int inLow,
+                                 const int inHigh) {
   const float value =
       wrapToRange<float>(static_cast<float>(inValue), static_cast<float>(inLow),
                          static_cast<float>(inHigh));
@@ -80,7 +85,7 @@ __host__ __device__ int wrapToRange<int>(const int inValue, const int inLow,
 /// \param inValue - The value to wrap
 ///
 /// \return - The wrapped value
-template <typename T> __host__ __device__ T wrapToRangeTwoPi(const T inValue) {
+template <typename T> HOST_DEVICE T wrapToRangeTwoPi(const T inValue) {
   return wrapToRange(inValue, static_cast<T>(0.0), static_cast<T>(2.0 * M_PI));
 }
 
@@ -96,8 +101,8 @@ template <typename T> __host__ __device__ T wrapToRangeTwoPi(const T inValue) {
 ///
 /// \return - void
 template <typename T>
-__host__ __device__ void rotate(const T inAngle, const T inX, const T inY,
-                                T &outX, T &outY) {
+HOST_DEVICE void rotate(const T inAngle, const T inX, const T inY, T &outX,
+                        T &outY) {
   const T c = cos(inAngle);
   const T s = sin(inAngle);
   outX = (inX * c - inY * s);
@@ -116,7 +121,7 @@ __host__ __device__ void rotate(const T inAngle, const T inX, const T inY,
 ///
 /// \return - void
 template <typename T>
-__host__ __device__ void rotate(const T inAngle, T &inOutX, T &inOutY) {
+HOST_DEVICE void rotate(const T inAngle, T &inOutX, T &inOutY) {
   T x;
   T y;
   rotate(inAngle, inOutX, inOutY, x, y);
@@ -129,7 +134,7 @@ __host__ __device__ void rotate(const T inAngle, T &inOutX, T &inOutY) {
 /// \param inValue - The value to compute the sign of
 ///
 /// \return - The sign as an integer {-1,0,1}
-template <typename T> __host__ __device__ int sign(const T inValue) {
+template <typename T> HOST_DEVICE int sign(const T inValue) {
   const bool isNegative = (inValue < static_cast<T>(0));
   const bool isPositive = (static_cast<T>(0) < inValue);
   return (static_cast<int>(isPositive) - static_cast<int>(isNegative));
