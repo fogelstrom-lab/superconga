@@ -10,6 +10,20 @@
 #include <vector>
 
 namespace helper {
+// The relevant tight-binding parameters for the BdG paper.
+// Almost ciruclar.
+const double HOPPING_NNN_FS1 = -0.25;
+const double HOPPING_NNNN_FS1 = 0.0;
+const double CHEMICAL_POTENTIAL_FS1 = 0.0;
+const double AVG_FERMI_SPEED_EXPECTED_FS1 = 2.53562285;
+const double AVG_FERMI_MOMENTUM_EXPECTED_FS1 = 2.61870038;
+// Less circular.
+const double HOPPING_NNN_FS2 = -0.477;
+const double HOPPING_NNNN_FS2 = 0.156;
+const double CHEMICAL_POTENTIAL_FS2 = -1.267;
+const double AVG_FERMI_SPEED_EXPECTED_FS2 = 2.38288777;
+const double AVG_FERMI_MOMENTUM_EXPECTED_FS2 = 2.09334829;
+
 // Enum for the the different symmetries to test in testSquareSymmetry.
 enum class Symmetry { mirrorX, mirrorY, rotate180, mirrorDiag };
 
@@ -222,50 +236,74 @@ void testComputeIntegrandFactor(
   const std::vector<T> angles = utils::linspace(
       static_cast<T>(0.0), static_cast<T>(2.0 * M_PI), inNumAngles);
 
-  const T hoppingNNN = static_cast<T>(-0.25);
-  const T hoppingNNNN = static_cast<T>(0.1);
-  const T chemicalPotential = static_cast<T>(0.3);
-  const TightBindingParameters<T> parameters(hoppingNNN, hoppingNNNN,
-                                             chemicalPotential);
-
-  const std::pair<T, T> originOffset =
-      tightbinding_internal::computeMomentumOffset(parameters);
-
   // For convenience.
   const T invDenom = static_cast<T>(1.0) / (static_cast<T>(2.0) * inPhiEpsilon);
 
-  for (const T phi : angles) {
-    const std::pair<T, T> fermiMomentum =
-        tightbinding_internal::computeFermiMomentum(parameters, phi,
-                                                    originOffset);
-    const std::pair<T, T> fermiVelocity =
-        tightbinding_internal::computeDispersionDerivative(parameters,
-                                                           fermiMomentum);
+  // Fermi surface 1 in the BDG paper.
+  const TightBindingParameters<T> parameters1(
+      static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
+      static_cast<T>(CHEMICAL_POTENTIAL_FS1));
 
-    // =================== ACT ==================== //
-    // Compute the integrand factor using analytical derivatives.
-    const T integrandFactor = tightbinding_internal::computeIntegrandFactor(
-        parameters, fermiMomentum, fermiVelocity, originOffset);
+  // Fermi surface 2 in the BDG paper.
+  const TightBindingParameters<T> parameters2(
+      static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
+      static_cast<T>(CHEMICAL_POTENTIAL_FS2));
 
-    // =================== ASSERT ==================== //
-    // Compute the integrand factor using numerical derivatives.
-    const std::pair<T, T> fermiMomentumPlus =
-        tightbinding_internal::computeFermiMomentum(
-            parameters, phi + inPhiEpsilon, originOffset);
-    const std::pair<T, T> fermiMomentumMinus =
-        tightbinding_internal::computeFermiMomentum(
-            parameters, phi - inPhiEpsilon, originOffset);
-    const T dKXdPhi =
-        (fermiMomentumPlus.first - fermiMomentumMinus.first) * invDenom;
-    const T dKYdPhi =
-        (fermiMomentumPlus.second - fermiMomentumMinus.second) * invDenom;
+  // A vector of the tight-binding parameters.
+  const std::vector<TightBindingParameters<T>> v_parameters = {parameters1,
+                                                               parameters2};
 
-    const T integrandFactorExpected =
-        std::hypot(dKXdPhi, dKYdPhi) /
-        std::hypot(fermiVelocity.first, fermiVelocity.second);
+  for (const auto &parameters : v_parameters) {
+    const std::pair<T, T> originOffset =
+        tightbinding_internal::computeMomentumOffset(parameters);
 
-    REQUIRE(integrandFactor ==
-            doctest::Approx(integrandFactorExpected).epsilon(inTolerance));
+    for (const T phi : angles) {
+      const std::pair<T, T> fermiMomentum =
+          tightbinding_internal::computeFermiMomentum(parameters, phi,
+                                                      originOffset);
+      const std::pair<T, T> fermiVelocity =
+          tightbinding_internal::computeDispersionDerivative(parameters,
+                                                             fermiMomentum);
+
+      // =================== ACT ==================== //
+      // Compute the integrand factor using analytical derivatives.
+      const T integrandFactor = tightbinding_internal::computeIntegrandFactor(
+          parameters, fermiMomentum, fermiVelocity, originOffset);
+
+      // =================== ASSERT ==================== //
+      // Compute the integrand factor using numerical derivatives.
+      const std::pair<T, T> fermiMomentumPlus =
+          tightbinding_internal::computeFermiMomentum(
+              parameters, phi + inPhiEpsilon, originOffset);
+      const std::pair<T, T> fermiMomentumMinus =
+          tightbinding_internal::computeFermiMomentum(
+              parameters, phi - inPhiEpsilon, originOffset);
+
+      // Unwrap everything.
+      // TODO(niclas): Perhaps write a function that does this for pairs!?
+      const T fermiMomentumPlusX = utils::wrapToRange(
+          fermiMomentumPlus.first, originOffset.first - static_cast<T>(M_PI),
+          originOffset.first + static_cast<T>(M_PI));
+      const T fermiMomentumPlusY = utils::wrapToRange(
+          fermiMomentumPlus.second, originOffset.second - static_cast<T>(M_PI),
+          originOffset.second + static_cast<T>(M_PI));
+      const T fermiMomentumMinusX = utils::wrapToRange(
+          fermiMomentumMinus.first, originOffset.first - static_cast<T>(M_PI),
+          originOffset.first + static_cast<T>(M_PI));
+      const T fermiMomentumMinusY = utils::wrapToRange(
+          fermiMomentumMinus.second, originOffset.second - static_cast<T>(M_PI),
+          originOffset.second + static_cast<T>(M_PI));
+
+      const T dKXdPhi = (fermiMomentumPlusX - fermiMomentumMinusX) * invDenom;
+      const T dKYdPhi = (fermiMomentumPlusY - fermiMomentumMinusY) * invDenom;
+
+      const T integrandFactorExpected =
+          std::hypot(dKXdPhi, dKYdPhi) /
+          std::hypot(fermiVelocity.first, fermiVelocity.second);
+
+      REQUIRE(integrandFactor ==
+              doctest::Approx(integrandFactorExpected).epsilon(inTolerance));
+    }
   }
 }
 
@@ -402,6 +440,29 @@ void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
   const T integrandFactorSumExpected = static_cast<T>(1.0);
   CHECK(integrandFactorSum ==
         doctest::Approx(integrandFactorSumExpected).epsilon(inTolerance));
+}
+
+// Test that the Fermi surface averages of the Fermi speed and momentum are like
+// the ones computed in Python.
+template <typename T>
+void testCompareWithPython(const T inTolerance, const T inHoppingNNN,
+                           const T inHoppingNNNN, const T inChemicalPotential,
+                           const T inAvgFermiMomentumExpected,
+                           const T inAvgFermiSpeedExpected,
+                           const int inNumAngles = 100) {
+  // =================== ARRANGE ==================== //
+  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles, inHoppingNNN,
+                                           inHoppingNNNN, inChemicalPotential);
+  fermiSurface.initialize();
+
+  const T avgFermiMomentum = fermiSurface.getAvgFermiMomentum();
+  const T avgFermiSpeed = fermiSurface.getAvgFermiSpeed();
+
+  // =================== ASSERT ==================== //
+  CHECK(avgFermiSpeed ==
+        doctest::Approx(inAvgFermiSpeedExpected).epsilon(inTolerance));
+  CHECK(avgFermiMomentum ==
+        doctest::Approx(inAvgFermiMomentumExpected).epsilon(inTolerance));
 }
 } // namespace helper
 
@@ -547,4 +608,44 @@ TEST_CASE("Test FermiSurfaceTightBinding<double>::getIntegrandFactor") {
   // Relative tolerance.
   const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
   helper::testGetIntegrandFactor(tolerance);
+}
+
+// ========== Test Compare Python FS1 ========== //
+
+TEST_CASE("Test Compare Python FS1 <float>") {
+  const float tolerance = 1e-6f;
+  helper::testCompareWithPython(
+      tolerance, static_cast<float>(helper::HOPPING_NNN_FS1),
+      static_cast<float>(helper::HOPPING_NNNN_FS1),
+      static_cast<float>(helper::CHEMICAL_POTENTIAL_FS1),
+      static_cast<float>(helper::AVG_FERMI_MOMENTUM_EXPECTED_FS1),
+      static_cast<float>(helper::AVG_FERMI_SPEED_EXPECTED_FS1));
+}
+
+TEST_CASE("Test Compare Python FS1 <double>") {
+  const double tolerance = 1e-8;
+  helper::testCompareWithPython(
+      tolerance, helper::HOPPING_NNN_FS1, helper::HOPPING_NNNN_FS1,
+      helper::CHEMICAL_POTENTIAL_FS1, helper::AVG_FERMI_MOMENTUM_EXPECTED_FS1,
+      helper::AVG_FERMI_SPEED_EXPECTED_FS1);
+}
+
+// ========== Test Compare Python FS2 ========== //
+
+TEST_CASE("Test Compare Python FS2 <float>") {
+  const float tolerance = 1e-6f;
+  helper::testCompareWithPython(
+      tolerance, static_cast<float>(helper::HOPPING_NNN_FS2),
+      static_cast<float>(helper::HOPPING_NNNN_FS2),
+      static_cast<float>(helper::CHEMICAL_POTENTIAL_FS2),
+      static_cast<float>(helper::AVG_FERMI_MOMENTUM_EXPECTED_FS2),
+      static_cast<float>(helper::AVG_FERMI_SPEED_EXPECTED_FS2));
+}
+
+TEST_CASE("Test Compare Python FS2 <double>") {
+  const double tolerance = 1e-8;
+  helper::testCompareWithPython(
+      tolerance, helper::HOPPING_NNN_FS2, helper::HOPPING_NNNN_FS2,
+      helper::CHEMICAL_POTENTIAL_FS2, helper::AVG_FERMI_MOMENTUM_EXPECTED_FS2,
+      helper::AVG_FERMI_SPEED_EXPECTED_FS2);
 }

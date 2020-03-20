@@ -122,7 +122,9 @@ def computeFermiMomentum(parameters,
         dEdK = dEdX * cosPhi + dEdY * sinPhi
 
         # Newton update.
-        kNewton = k - dispersion / dEdK
+        cond = np.abs(dEdK) > 0.0
+        update = np.where(cond, -dispersion / dEdK, 0.0)
+        kNewton = k + update
 
         # Switch to doing Newton steps when the error is sufficently small.
         doBisection = np.logical_and(error > np.sqrt(convergenceCriterion),
@@ -160,8 +162,10 @@ def computeIntegrandFactor(inFermiMomentumX, inFermiMomentumY,
     # with
     # kX = k * cos(phi)
     # kY = k * sin(phi)
-    kXUnwrapped = wrapToRange(inFermiMomentumX, offset[0])
-    kYUnwrapped = wrapToRange(inFermiMomentumY, offset[1])
+    kXUnwrapped = wrapToRange(inFermiMomentumX, offset[0] - np.pi,
+                              offset[0] + np.pi)
+    kYUnwrapped = wrapToRange(inFermiMomentumY, offset[1] - np.pi,
+                              offset[1] + np.pi)
     kX = kXUnwrapped - offset[0]
     kY = kYUnwrapped - offset[1]
     k = np.hypot(kX, kY)
@@ -183,30 +187,29 @@ def computeIntegrandFactor(inFermiMomentumX, inFermiMomentumY,
     dKYdPhi = dKdPhi * sinPhi + kX
     dPdPhi = np.hypot(dKXdPhi, dKYdPhi)
 
-    fermiSpeed = np.hypot(inFermiVelocityX, inFermiVelocityX)
+    fermiSpeed = np.hypot(inFermiVelocityX, inFermiVelocityY)
     integrandFactor = dPdPhi / fermiSpeed
-
+    integrandFactor /= np.sum(integrandFactor)
     return integrandFactor
 
 
 def computeFermiSurfaceAverage(x, factors):
-    numer = np.sum(x * factors)
-    denom = np.sum(factors)
-    return numer / denom
+    return np.sum(x * factors)
 
 
-def printPaperStuff(kX, kY, offset, parameters):
-    # Compute the Fermi velocities.
-    vx, vy = computeDispersionDerivative(kX, kY, parameters)
+def printPaperStuff(inFermiMomentumX, inFermiMomentumY, inFermiVelocityX,
+                    inFermiVelocityY, offset, parameters):
+    # Some stuff to compute averages of.
+    fermiSpeed = np.hypot(inFermiVelocityX, inFermiVelocityY)
+    fermiMomentum = np.hypot(inFermiMomentumX, inFermiMomentumY)
+    invFermiMomentum = 1.0 / fermiMomentum
 
     # Compute integrand factors.
-    integrandFactors = computeIntegrandFactor(kX, kY, vx, vy, parameters,
+    integrandFactors = computeIntegrandFactor(inFermiMomentumX,
+                                              inFermiMomentumY,
+                                              inFermiVelocityX,
+                                              inFermiVelocityY, parameters,
                                               offset)
-
-    # Some stuff to compute averages of.
-    fermiSpeed = np.hypot(vx, vy)
-    fermiMomentum = np.hypot(kX, kY)
-    invFermiMomentum = 1.0 / fermiMomentum
 
     # Compute Fermi surface averages.
     avgFermiSpeed = computeFermiSurfaceAverage(fermiSpeed, integrandFactors)
@@ -216,24 +219,32 @@ def printPaperStuff(kX, kY, offset, parameters):
                                                      integrandFactors)
 
     # Print results (and the means).
-    print('Fermi Speed: FS Avg = %f - Mean = %f' %
+    print('<vf> = %.8f - Mean(vf) = %.8f' %
           (avgFermiSpeed, np.mean(fermiSpeed)))
-    print('Fermi Momentum: FS Avg = %f - Mean = %f' %
+    print('<kf> = %.8f - Mean(kf) = %.8f' %
           (avgFermiMomentum, np.mean(fermiMomentum)))
-    print('Inv Fermi Momentum: FS Avg = %f - Mean = %f' %
+    print('1/<kf> = %.8f - 1/Mean(kf) = %.8f' %
+          (1.0 / avgFermiMomentum, 1.0 / np.mean(fermiMomentum)))
+    print('<1/kf> = %.8f - Mean(1/kf) = %.8f' %
           (avgInvFermiMomentum, np.mean(invFermiMomentum)))
 
 
-def wrapToRange(x, offset=0.0):
-    # For convenience.
-    twoPi = 2.0 * np.pi
+def wrapToRange(inValue, inLow=-np.pi, inHigh=np.pi):
+    # Determine the range.
+    r = inHigh - inLow
 
-    # Wrap kX to [-pi, pi].
-    low = offset - np.pi
-    high = offset + np.pi
-    y = np.where(x < low, x + twoPi, x)
-    y = np.where(x > high, x - twoPi, x)
-    return y
+    # Standardize the value so that [0, 1.0) means that the value is in the
+    # desired range.
+    standardizedValue = (inValue - inLow) / r
+
+    # Wrap the value. Example:
+    # r = 4.0
+    # inLow = 2.0
+    # standardizedValue = 1.5
+    # ==> wrappedValue = (1.5 - 1.0) * 4.0 + 2.0 = 4.0
+    wrappedValue = (standardizedValue -
+                    np.floor(standardizedValue)) * r + inLow
+    return wrappedValue
 
 
 def computeDensityOfStates(inEnergies,
@@ -306,17 +317,17 @@ def computeFermiSurface(parameters, numGrid, numEnergies, numAngles,
     kX, kY = computeFermiMomentum(parameters, angles, offset, numIterations,
                                   convergenceCriterion)
 
-    # Just to compare with Micke.
-    printPaperStuff(kX, kY, offset, parameters)
-
     # Compute the Fermi velocities.
-    vx, vy = computeDispersionDerivative(kX, kY, parameters)
+    vX, vY = computeDispersionDerivative(kX, kY, parameters)
+
+    # Just to compare with Micke.
+    printPaperStuff(kX, kY, vX, vY, offset, parameters)
 
     fermiVelocityDict = {
         'kx': kX.tolist(),
         'ky': kY.tolist(),
-        'vx': vx.tolist(),
-        'vy': vy.tolist()
+        'vx': vX.tolist(),
+        'vy': vY.tolist()
     }
 
     return dispersionDict, fermiVelocityDict, dosDict
@@ -328,7 +339,13 @@ def main():
         description=
         'Compute the Fermi surface for a tight-binding model on a square lattice.'
     )
-    parser.add_argument('name', type=str, help='Name of file to save.')
+    parser.add_argument(
+        '-name',
+        '--name',
+        type=str,
+        default=None,
+        help='Name of file to save. '
+        'If not passed the file will not be saved. (default: %(default)s)')
     parser.add_argument(
         '-mu',
         '--chemical-potential',
@@ -400,18 +417,19 @@ def main():
         convergenceCriterion=args.convergence_criterion)
 
     # Save file.
-    filename = args.name
-    suffix = '.json'
-    if not filename.endswith(suffix):
-        filename += '.json'
-    file = open(filename, 'w')
-    data = {
-        'dispersion': dispersion,
-        'fermiVelocity': fermiVelocity,
-        'dos': dos
-    }
+    if args.name is not None:
+        filename = args.name
+        suffix = '.json'
+        if not filename.endswith(suffix):
+            filename += '.json'
+        file = open(filename, 'w')
+        data = {
+            'dispersion': dispersion,
+            'fermiVelocity': fermiVelocity,
+            'dos': dos
+        }
 
-    json.dump(data, file)
+        json.dump(data, file)
 
 
 if __name__ == '__main__':
