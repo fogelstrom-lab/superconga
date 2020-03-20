@@ -1,0 +1,10 @@
+# Ignore Fermi surface data.
+*.json
+
+# Ignore plots.
+*.png
+*.pdf
+
+# Ignore virtual environment and cache.
+venv/
+__pycache__/
