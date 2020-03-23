@@ -371,7 +371,7 @@ def main():
         '-grid',
         '--num-grid',
         type=int,
-        default=1000,
+        default=2001,
         help='Number of grid points per side. (default: %(default)s)')
     parser.add_argument(
         '-ne',
@@ -418,18 +418,20 @@ def main():
 
     # Save file.
     if args.name is not None:
-        filename = args.name
-        suffix = '.json'
-        if not filename.endswith(suffix):
-            filename += '.json'
-        file = open(filename, 'w')
         data = {
             'dispersion': dispersion,
             'fermiVelocity': fermiVelocity,
             'dos': dos
         }
 
+        filename = args.name
+        suffix = '.json'
+        if not filename.endswith(suffix):
+            filename += '.json'
+
+        file = open(filename, 'w')
         json.dump(data, file)
+        print('Saved', filename)
 
 
 if __name__ == '__main__':
