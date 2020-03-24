@@ -1,8 +1,45 @@
 import argparse
 import json
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import scipy as sp
+
+# Set Matplotlib parameters.
+plt.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.sans-serif': ['Liberation Sans'],
+})
+plt.rcParams['text.latex.preamble'] = [
+    r"\usepackage{amssymb}", r"\usepackage{amsmath}"
+]
+plt.rc('text', usetex=True)
+
+# For the width of the plot.
+# TODO(niclas): Move to Python a defines.py file?
+WIDTH_IN_POINTS = 512.0
+INCHES_PER_POINT = 1.0 / 72.27
+
+
+# Code taken from:
+# https://stackoverflow.com/questions/7404116/defining-the-midpoint-of-a-colormap-in-matplotlib
+class MidpointNormalize(mpl.colors.Normalize):
+    def __init__(self, vmin, vmax, midpoint=0, clip=False):
+        self.midpoint = midpoint
+        mpl.colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        normalized_min = max(
+            0, 1 / 2 * (1 - abs(
+                (self.midpoint - self.vmin) / (self.midpoint - self.vmax))))
+        normalized_max = min(
+            1, 1 / 2 * (1 + abs(
+                (self.vmax - self.midpoint) / (self.midpoint - self.vmin))))
+        normalized_mid = 0.5
+        x, y = [self.vmin, self.midpoint,
+                self.vmax], [normalized_min, normalized_mid, normalized_max]
+        return sp.ma.masked_array(np.interp(value, x, y))
 
 
 def plotFermiSurface(dispersion,
@@ -12,16 +49,16 @@ def plotFermiSurface(dispersion,
                      labelPosition=0.05,
                      minDos=1e-3,
                      colormap='RdBu_r',
-                     fontsize=12,
-                     colorBarRatio=0.05,
+                     fontsize=14,
+                     colorBarRatio=0.1,
                      plotRatio=4,
-                     hspace=0.25,
+                     hspace=0.333,
                      numTicks=5,
                      dpi=100):
     # Setup figure and subplots.
-    sizeX = 10
-    sizeY = sizeX * (1 + plotRatio + colorBarRatio)
-    fig = plt.figure(figsize=(sizeX, sizeY), dpi=dpi)
+    width = WIDTH_IN_POINTS * INCHES_PER_POINT
+    height = width * (1 + plotRatio + colorBarRatio)
+    fig = plt.figure(figsize=(width, height), dpi=dpi)
     ax_cbar, ax_disp, ax_dos = fig.subplots(nrows=3,
                                             ncols=1,
                                             gridspec_kw={
@@ -36,13 +73,18 @@ def plotFermiSurface(dispersion,
     ky = np.array(dispersion['ky']) / np.pi
     ek = np.array(dispersion['dispersion'])
 
+    vmin = np.amin(ek)
+    vmax = np.amax(ek)
+    norm = MidpointNormalize(vmin=vmin, vmax=vmax, midpoint=0.0)
+
     # Plot the dispersion in colour.
-    c = ax_disp.pcolor(kx, ky, ek, cmap=colormap)
+    c = ax_disp.pcolor(kx, ky, ek, cmap=colormap, norm=norm)
 
     # Colorbar.
     cbar = fig.colorbar(c, cax=ax_cbar, orientation='horizontal')
     cbar.set_label(r'$E / t$', fontsize=fontsize)
     ax_cbar.set_aspect(colorBarRatio / plotRatio, adjustable='box')
+    ax_cbar.tick_params(labelsize=fontsize)
 
     # The contour plot of the Fermi surface, hence levels=0.
     ax_disp.contour(kx, ky, ek, colors='k', levels=[0.0])
@@ -70,6 +112,7 @@ def plotFermiSurface(dispersion,
 
     # Set ticks.
     ticks = np.linspace(xMin, xMax, numTicks)
+    ax_disp.tick_params(labelsize=fontsize)
     ax_disp.set_xticks(ticks)
     ax_disp.set_yticks(ticks)
 
@@ -93,15 +136,19 @@ def plotFermiSurface(dispersion,
     dos = dos[cond]
 
     # Plot the density of states.
-    ax_dos.plot(energies, dos, c='k', label=r'$DOS$')
+    ax_dos.plot(energies, dos, c='k', label=r'$\mathrm{DOS}$')
 
     # Plot the Fermi level.
-    ax_dos.axvline(x=0.0, c='r', dashes=[2, 2], label=r'$\epsilon_F$')
+    ax_dos.axvline(x=0.0,
+                   c='r',
+                   dashes=[2, 2],
+                   label=r'$\epsilon_{\mathrm{F}}$')
 
     # Set axis title and labels.
     ax_dos.set_xlabel(r'$E / t$', fontsize=fontsize)
-    ax_dos.set_ylabel(r'$DOS$', fontsize=fontsize)
-    ax_dos.legend()
+    ax_dos.set_ylabel(r'$\mathrm{DOS}$', fontsize=fontsize)
+    ax_dos.tick_params(labelsize=fontsize)
+    ax_dos.legend(fontsize=fontsize)
 
     # Set axis limits.
     xMin = energies[0]

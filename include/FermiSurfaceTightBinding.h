@@ -540,6 +540,9 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
   // The average Fermi momentum and speed.
   m_avgFermiMomentum = fermiMomentumSum / integrandFactorSum;
   m_avgFermiSpeed = fermiSpeedSum / integrandFactorSum;
+  std::cout << "<|vF|>/(ta) = " << m_avgFermiSpeed
+            << ", 1/(a<|kF|>) = " << static_cast<T>(1.0) / m_avgFermiMomentum
+            << std::endl;
 
   // Normalize the Fermi velocity and integrand factor.
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
