@@ -2,7 +2,7 @@
 A collection of scripts
 
 ## External packages required
-Python3 should already be installed on your system, but we also need virtualenv. On Ubuntu install with
+Python2 and Python3 should already be installed on your system, but we also need virtualenv. On Ubuntu install with
 ```
 sudo apt install virtualenv
 ```
@@ -33,3 +33,10 @@ To deactivate the virtual environment write:
 ```
 deactivate
 ```
+
+## Python Libraries
+The Python Libraries in `pythonLibraries` contain convenient classes for data post-processing. Please note that the library is only tested with Python2.
+In particular, it contains a data IO class for reading grid data and meta data files, a data
+structure class for creating conveneint data strucures of the simulation data, and finally,
+a plotting class with convenient tools for displaying data and producing publication-quality
+plots with matplotlib. For more in-detail information, see the [corresponding README in pythonLibraries/](tools/pythonLibraries/).

@@ -3,3 +3,6 @@
 
 # CMake build directory
 build/
+
+# Python compiled code
+*.pyc
