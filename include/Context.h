@@ -184,7 +184,8 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   if (_fermiSurface) {
     std::cout << "Context::initialize() --> Initializing FermiSurface\n";
-    _fermiSurface->initialize();
+    const int numAngles = _param->getAngularResolution();
+    _fermiSurface->initialize(numAngles);
     ContextModule<T>::checkCudaError("Context<T>::initialize(): FermiSurface");
   }
 

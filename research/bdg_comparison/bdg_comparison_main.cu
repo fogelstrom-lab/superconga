@@ -15,6 +15,7 @@
 #include "ComputeFreeEnergy.h"     // Compute the (Eilenberger) free energy
 #include "ComputeOrderParameter.h" // Compute order parameter
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
+#include "FermiSurface.h"
 #include "FermiSurfaceCircle.h"       // Standard circular Fermi surface
 #include "FermiSurfaceTightBinding.h" // Tight binding Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
@@ -262,25 +263,26 @@ int main(int argc, char *argv[]) {
   // CHOOSE FERMI SURFACE
   //***************************************************
 
+  FermiSurface<T> *fermiSurface;
   switch (simParams::fermiSurfaceLabel) {
   case 1: {
-    new FermiSurfaceCircle<T>(context);
+    fermiSurface = new FermiSurfaceCircle<T>();
     break;
   }
   case 2: {
     const T hoppingNNN = static_cast<T>(-0.25);
     const T hoppingNNNN = static_cast<T>(0.0);
     const T chemicalPotential = static_cast<T>(0.0);
-    new FermiSurfaceTightBinding<T>(context, hoppingNNN, hoppingNNNN,
-                                    chemicalPotential);
+    fermiSurface = new FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
+                                                   chemicalPotential);
     break;
   }
   case 3: {
     const T hoppingNNN = static_cast<T>(-0.477);
     const T hoppingNNNN = static_cast<T>(0.156);
     const T chemicalPotential = static_cast<T>(-1.267);
-    new FermiSurfaceTightBinding<T>(context, hoppingNNN, hoppingNNNN,
-                                    chemicalPotential);
+    fermiSurface = new FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
+                                                   chemicalPotential);
     break;
   }
   default:
@@ -289,6 +291,7 @@ int main(int argc, char *argv[]) {
     cleanup();
     return 0;
   }
+  context->set(fermiSurface);
 
   //***************************************************
   // INITIALIZE SIMULATION

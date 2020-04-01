@@ -12,59 +12,57 @@
 #ifndef FERMI_SURFACE_H_
 #define FERMI_SURFACE_H_
 
-#include "Context.h"
-#include "ContextModule.h"
 #include "utils.h"
 #include <cmath>
+#include <iostream>
 
-template <typename T> class FermiSurface : public ContextModule<T> {
+template <typename T> class FermiSurface {
 public:
   // Constructor.
-  FermiSurface(const int inNumAngles);
-  FermiSurface(Context<T> *const inContext);
+  FermiSurface();
 
   // Destructor.
   virtual ~FermiSurface(){};
 
   // Initialize Fermi surface.
-  virtual int initialize() = 0;
+  virtual void initialize(const int inNumAngles);
 
   // Get the polar angle.
-  T getPhi(const int inAngleIdx);
+  T getPolarAngle(const int inAngleIdx) const;
 
   // Get the angle we should rotate the system for a given angle of the Fermi
   // velocity.
-  T getSystemAngle(const T inFermiVelocityAngle);
+  T getSystemAngle(const T inFermiVelocityAngle) const;
 
   // Get the angle offset, i.e. the angle for index 0.
-  T getAngleOffset() { return m_angleOffset; }
+  T getAngleOffset() const { return m_angleOffset; }
 
   // Get the number of angles.
-  int getNumAngles() { return m_numAngles; }
+  int getNumAngles() const;
 
   // The wrapped angle index, i.e. in [0, numAngles).
-  int getWrappedAngleIndex(const int inAngleIdx);
+  int getWrappedAngleIndex(const int inAngleIdx) const;
 
   // Get the Fermi momentum.
   virtual void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
-                                T &outMomentumY) = 0;
+                                T &outMomentumY) const = 0;
 
   // Get the Fermi velocity.
   virtual void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
-                                T &outVelocityY) = 0;
+                                T &outVelocityY) const = 0;
 
   // Get the Fermi speed.
-  virtual T getFermiSpeed(const int inAngledx) = 0;
+  virtual T getFermiSpeed(const int inAngledx) const = 0;
 
   // Get the integrand factor.
-  virtual T getIntegrandFactor(const int inAngleIdx) = 0;
+  virtual T getIntegrandFactor(const int inAngleIdx) const = 0;
 
   // Get system angle.
-  virtual T getSystemAngle(const int inAngleIdx) = 0;
-  virtual T *getSystemAnglePointer() = 0;
+  virtual T getSystemAngle(const int inAngleIdx) const = 0;
+  virtual const T *getSystemAnglePointer() const = 0;
 
   // Get momentum offset.
-  virtual void getMomentumOffset(T &outOffsetX, T &outOffsetY) = 0;
+  virtual void getMomentumOffset(T &outOffsetX, T &outOffsetY) const = 0;
 
   // This function is called from within a CUDA kernel. Thus it has to be a
   // static method. Note, it completely relies on the Fermi surface being
@@ -86,6 +84,7 @@ private:
 
   // The number of angles.
   int m_numAngles;
+  bool m_isNumAnglesInitialized;
 };
 
 namespace internal {
@@ -97,7 +96,8 @@ namespace internal {
 ///
 /// \return - The angle phi corresponding to inAngleIdx
 template <typename T>
-T getPhi(const int inAngleIdx, const int inNumAngles, const T inAngleOffset) {
+T getPolarAngle(const int inAngleIdx, const int inNumAngles,
+                const T inAngleOffset) {
   const T phiUnwrapped = static_cast<T>(M_PI) * static_cast<T>(2 * inAngleIdx) /
                              static_cast<T>(inNumAngles) +
                          inAngleOffset;
@@ -154,27 +154,39 @@ __host__ __device__ T getFractionalAngleIndex(
 } // namespace internal
 
 template <typename T>
-FermiSurface<T>::FermiSurface(const int inNumAngles)
-    : ContextModule<T>(), m_numAngles(inNumAngles) {}
+FermiSurface<T>::FermiSurface()
+    : m_numAngles(0), m_isNumAnglesInitialized(false) {}
 
-template <typename T>
-FermiSurface<T>::FermiSurface(Context<T> *const inContext)
-    : ContextModule<T>(inContext) {
-  inContext->set(this);
-  m_numAngles = ContextModule<T>::getParameters()->getAngularResolution();
+template <typename T> void FermiSurface<T>::initialize(const int inNumAngles) {
+  if (inNumAngles < 1) {
+    // TODO(niclas): Raise exception instead!?
+    std::cout << "WARNING! The number angles must be larger than one."
+              << std::endl;
+  }
+  m_numAngles = inNumAngles;
+  m_isNumAnglesInitialized = true;
 }
 
-template <typename T> T FermiSurface<T>::getPhi(const int inAngleIdx) {
-  return internal::getPhi(inAngleIdx, m_numAngles, m_angleOffset);
+template <typename T> int FermiSurface<T>::getNumAngles() const {
+  if (!m_isNumAnglesInitialized) {
+    // TODO(niclas): Raise exception instead!?
+    std::cout << "WARNING! The number angles is not set." << std::endl;
+  }
+  return m_numAngles;
 }
 
 template <typename T>
-T FermiSurface<T>::getSystemAngle(const T inFermiVelocityAngle) {
+T FermiSurface<T>::getPolarAngle(const int inAngleIdx) const {
+  return internal::getPolarAngle(inAngleIdx, m_numAngles, m_angleOffset);
+}
+
+template <typename T>
+T FermiSurface<T>::getSystemAngle(const T inFermiVelocityAngle) const {
   return internal::getSystemAngle(inFermiVelocityAngle);
 }
 
 template <typename T>
-int FermiSurface<T>::getWrappedAngleIndex(const int inAngleIdx) {
+int FermiSurface<T>::getWrappedAngleIndex(const int inAngleIdx) const {
   return utils::wrapToRange(inAngleIdx, 0, m_numAngles);
 }
 

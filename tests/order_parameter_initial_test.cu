@@ -127,7 +127,8 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 4) {
               context);
 
       // Choose FermiSurface
-      new FermiSurfaceCircle<T>(context);
+      FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+      context->set(fermiSurface);
 
       // Set up order parameter
       OrderParameter<T> *orderParameter = new OrderParameter<T>(context);

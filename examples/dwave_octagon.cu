@@ -166,7 +166,8 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // CHOOSE FERMI SURFACE
   //***************************************************
-  new FermiSurfaceCircle<T>(context);
+  FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+  context->set(fermiSurface);
 
   //***************************************************
   // INITIALIZE SIMULATION

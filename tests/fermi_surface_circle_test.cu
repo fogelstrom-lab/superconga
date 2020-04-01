@@ -11,7 +11,8 @@ namespace helper {
 // value.
 template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
+  FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
   const int numAngles = fermiSurface.getNumAngles();
@@ -26,7 +27,7 @@ template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
 template <typename T>
 void testGetMomentumOffset(const T inTolerance, const int inNumAngles = 1) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
+  FermiSurfaceCircle<T> fermiSurface;
 
   // =================== ACT ==================== //
   T offsetX;
@@ -48,7 +49,7 @@ void testGetMomentumOffset(const T inTolerance, const int inNumAngles = 1) {
 template <typename T>
 void testGetAngleOffset(const T inTolerance, const int inNumAngles = 1) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
+  FermiSurfaceCircle<T> fermiSurface;
 
   // =================== ACT ==================== //
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -69,8 +70,8 @@ void testGetAngleOffset(const T inTolerance, const int inNumAngles = 1) {
 template <typename T>
 void testGetSystemAngle(const T inTolerance, const int inNumAngles = 11) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
-  fermiSurface.initialize();
+  FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
@@ -98,8 +99,8 @@ void testGetSystemAngle(const T inTolerance, const int inNumAngles = 11) {
 template <typename T>
 void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
-  fermiSurface.initialize();
+  FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
@@ -133,8 +134,8 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
 template <typename T>
 void testGetFermiVelocity(const T inTolerance, const int inNumAngles = 7) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
-  fermiSurface.initialize();
+  FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
@@ -169,8 +170,8 @@ void testGetFermiVelocity(const T inTolerance, const int inNumAngles = 7) {
 template <typename T>
 void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface(inNumAngles);
-  fermiSurface.initialize();
+  FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   // After looping over angles and summing this should be one.
   T integrandFactorSum = static_cast<T>(0.0);

@@ -36,7 +36,8 @@ void testGetFractionalAngleIndex(const T inTolerance,
         // Loop over angles.
         for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
           // Construct the Fermi momentum.
-          const T phi = internal::getPhi(angleIdx, inNumAngles, angleOffset);
+          const T phi =
+              internal::getPolarAngle(angleIdx, inNumAngles, angleOffset);
           const T fermiMomentumX = cos(phi) + originOffsetX;
           const T fermiMomentumY = sin(phi) + originOffsetY;
 
@@ -79,7 +80,7 @@ void testGetSystemAngle(const T inTolerance, const int inNumAngles = 100) {
     for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
       // Get phi simply fetches an angle, the value doesn't matter.
       const T fermiVelocityAngle =
-          internal::getPhi(angleIdx, inNumAngles, angleOffset);
+          internal::getPolarAngle(angleIdx, inNumAngles, angleOffset);
       const T systemAngle = internal::getSystemAngle(fermiVelocityAngle);
 
       // Because the trajectories go along the y-axis, the Fermi velocity angle
