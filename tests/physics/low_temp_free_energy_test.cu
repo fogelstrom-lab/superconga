@@ -145,11 +145,11 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     const T testSumOrderParameter =
         orderParameterComponent->getOrderParameterField()->sumMagnitude();
     // Fetch the number of elements in the grain
-    const T numElementsOrderParameter = geometry->area(1);
+    const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
 
     // =================== ASSERT ==================== //
     const T expectedSumOrderParameter =
-        numElementsOrderParameter *
+        static_cast<T>(numGrainLatticeSites) *
         std::hypot(inStartRealPart, inStartImaginaryPart);
 
     REQUIRE(testSumOrderParameter ==
@@ -236,12 +236,13 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // Fetch the grain-summed current-density magnitude
   const T sumAbsCurrent = computeCurrent->getResult()->sumMagnitude();
   // Fetch the number of elements in the grain
-  const T numElementsOrderParameter = geometry->area(1);
+  const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
   // Calculate the grain-averaged order-parameter magnitude
   const T testAverageOrderParameter =
-      sumAbsOrderParameter / numElementsOrderParameter;
+      sumAbsOrderParameter / static_cast<T>(numGrainLatticeSites);
   // Calculate the grain-averaged order-parameter magnitude
-  const T testAverageCurrentDensity = sumAbsCurrent / numElementsOrderParameter;
+  const T testAverageCurrentDensity =
+      sumAbsCurrent / static_cast<T>(numGrainLatticeSites);
 
   // =================== ASSERT ==================== //
   // Expected average bulk gap

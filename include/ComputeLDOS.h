@@ -202,13 +202,16 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
 
     T sum_re, old, tmp, sumdiff = 0.0, sumold = 0.0;
 
-    const T inv_area = 1.0 / C::getGeometry()->area();
+    const int numGrainLatticeSites =
+        C::getGeometry()->getNumGrainLatticeSites();
+    const T invNumGrainLatticeSites =
+        static_cast<T>(1.0) / numGrainLatticeSites;
 
     for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
       // Sum for energy level
       sum_re = _ldos->sumField(i);
       old = DOS_ptr[i];
-      DOS_ptr[i] = sum_re * h * h * inv_area;
+      DOS_ptr[i] = sum_re * invNumGrainLatticeSites;
 
       tmp = DOS_ptr[i] - old;
       sumdiff += tmp * tmp;

@@ -260,7 +260,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     // Get properties
     const T latticeElementSize = C::getParameters()->getGridElementSize();
     const T temperature = C::getParameters()->getTemperature();
-    const T numLatticePoints = C::getGeometry()->area(1);
+    const int numGrainLatticeSites =
+        C::getGeometry()->getNumGrainLatticeSites();
 
     // Compute second term of free energy not involving angle integration
     GridCPU ozakiEnergies = *(C::getIntegrationIterator()->getEnergies());
@@ -335,7 +336,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
 
     m_freeEnergy =
         m_freeEnergyPerUnitArea * latticeElementSize * latticeElementSize;
-    m_freeEnergyPerUnitArea *= static_cast<T>(1.0) / numLatticePoints;
+    m_freeEnergyPerUnitArea *=
+        static_cast<T>(1.0) / static_cast<T>(numGrainLatticeSites);
 
     // Set residual and convergence
     const T residual =
@@ -345,7 +347,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     if (residual < C::getParameters()->getConvergenceCriterion())
       ComputeProperty<T>::setConverged();
   } else {
-    m_freeEnergy = 0.0;
+    m_freeEnergy = static_cast<T>(0.0);
   }
 }
 
