@@ -311,7 +311,8 @@ void testComputeIntegrandFactor(
 // angles and see that it returns the same value.
 template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles);
+  FermiSurfaceTightBinding<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
   const int numAngles = fermiSurface.getNumAngles();
@@ -332,9 +333,9 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
   const T chemicalPotential =
       inCenteredOrigin ? static_cast<T>(-1.0) : static_cast<T>(1.0);
 
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles, hoppingNNN, hoppingNNNN,
+  FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
                                            chemicalPotential);
-  fermiSurface.initialize();
+  fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
   T offsetX;
@@ -355,7 +356,7 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
 template <typename T>
 void testGetAngleOffset(const T inTolerance, const int inNumAngles = 1) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles);
+  FermiSurfaceTightBinding<T> fermiSurface;
 
   // =================== ACT ==================== //
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -382,9 +383,9 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
   const T hoppingNNNN = static_cast<T>(0.0);
   const T chemicalPotential = static_cast<T>(0.0);
 
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles, hoppingNNN, hoppingNNNN,
+  FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
                                            chemicalPotential);
-  fermiSurface.initialize();
+  fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
@@ -425,8 +426,8 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
 template <typename T>
 void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles);
-  fermiSurface.initialize();
+  FermiSurfaceTightBinding<T> fermiSurface;
+  fermiSurface.initialize(inNumAngles);
 
   // After looping over angles and summing this should be one.
   T integrandFactorSum = static_cast<T>(0.0);
@@ -451,9 +452,9 @@ void testCompareWithPython(const T inTolerance, const T inHoppingNNN,
                            const T inAvgFermiSpeedExpected,
                            const int inNumAngles = 100) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface(inNumAngles, inHoppingNNN,
-                                           inHoppingNNNN, inChemicalPotential);
-  fermiSurface.initialize();
+  FermiSurfaceTightBinding<T> fermiSurface(inHoppingNNN, inHoppingNNNN,
+                                           inChemicalPotential);
+  fermiSurface.initialize(inNumAngles);
 
   const T avgFermiMomentum = fermiSurface.getAvgFermiMomentum();
   const T avgFermiSpeed = fermiSurface.getAvgFermiSpeed();

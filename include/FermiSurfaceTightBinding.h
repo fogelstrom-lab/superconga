@@ -20,12 +20,7 @@ template <typename> struct TightBindingParameters;
 template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
   // Constructor.
-  FermiSurfaceTightBinding(Context<T> *const inOutContext,
-                           const T inHoppingNNN = static_cast<T>(0.0),
-                           const T inHoppingNNNN = static_cast<T>(0.0),
-                           const T inChemicalPotential = static_cast<T>(1.0));
-  FermiSurfaceTightBinding(const int inNumAngles,
-                           const T inHoppingNNN = static_cast<T>(0.0),
+  FermiSurfaceTightBinding(const T inHoppingNNN = static_cast<T>(0.0),
                            const T inHoppingNNNN = static_cast<T>(0.0),
                            const T inChemicalPotential = static_cast<T>(1.0));
 
@@ -33,28 +28,28 @@ public:
   ~FermiSurfaceTightBinding();
 
   // Initialize the Fermi surface.
-  int initialize();
+  void initialize(const int inNumAngles);
 
   // Get the Fermi momentum.
   void getFermiMomentum(const int inAngleIdx, T &outFermiMomentumX,
-                        T &outFermiMomentumY);
+                        T &outFermiMomentumY) const;
 
   // Get the Fermi velocity.
   void getFermiVelocity(const int inAngleIdx, T &outFermiVelocityX,
-                        T &outFermiVelocityY);
+                        T &outFermiVelocityY) const;
 
   // Get the Fermi speed.
-  T getFermiSpeed(const int inAngleIdx);
+  T getFermiSpeed(const int inAngleIdx) const;
 
   // Get the integrand factor.
-  T getIntegrandFactor(const int inAngleIdx);
+  T getIntegrandFactor(const int inAngleIdx) const;
 
   // Get system angle.
-  T getSystemAngle(const int inAngleIdx);
-  T *getSystemAnglePointer();
+  T getSystemAngle(const int inAngleIdx) const;
+  const T *getSystemAnglePointer() const;
 
   // Get momentum offset.
-  void getMomentumOffset(T &outOffsetX, T &outOffsetY);
+  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
 
   // Only used for tests.
   T getAvgFermiMomentum() const { return m_avgFermiMomentum; }
@@ -447,19 +442,8 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
 
 template <typename T>
 FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
-    Context<T> *const inOutContext, const T inHoppingNNN, const T inHoppingNNNN,
-    const T inChemicalPotential)
-    : FermiSurface<T>(inOutContext), m_fermiMomentumX(0), m_fermiMomentumY(0),
-      m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
-      m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
-      m_avgFermiSpeed(0.0),
-      m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
-
-template <typename T>
-FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
-    const int inNumAngles, const T inHoppingNNN, const T inHoppingNNNN,
-    const T inChemicalPotential)
-    : FermiSurface<T>(inNumAngles), m_fermiMomentumX(0), m_fermiMomentumY(0),
+    const T inHoppingNNN, const T inHoppingNNNN, const T inChemicalPotential)
+    : FermiSurface<T>(), m_fermiMomentumX(0), m_fermiMomentumY(0),
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
       m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
       m_avgFermiSpeed(0.0),
@@ -469,8 +453,12 @@ template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
   std::cout << "~FermiSurfaceTightBinding<T>\n";
 }
 
-template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
+template <typename T>
+void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
   std::cout << "FermiSurfaceTightBinding<T>::initialize()" << std::endl;
+
+  // The base class needs to know the number of angles.
+  FermiSurface<T>::initialize(inNumAngles);
 
   // Print the tight-binding parameters.
   m_parameters.print();
@@ -488,14 +476,12 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
   m_systemAngles.clear();
   m_integrandFactor.clear();
 
-  const int numAngles = FermiSurface<T>::getNumAngles();
-
   T integrandFactorSum = static_cast<T>(0.0);
   T fermiMomentumSum = static_cast<T>(0.0);
   T fermiSpeedSum = static_cast<T>(0.0);
-  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+  for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
     // The momentum angle.
-    const T phi = FermiSurface<T>::getPhi(angleIdx);
+    const T phi = FermiSurface<T>::getPolarAngle(angleIdx);
 
     // Compute the Fermi momentum.
     const std::pair<T, T> fermiMomentum =
@@ -545,24 +531,20 @@ template <typename T> int FermiSurfaceTightBinding<T>::initialize() {
             << std::endl;
 
   // Normalize the Fermi velocity and integrand factor.
-  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+  for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
     m_fermiVelocityX[angleIdx] /= m_avgFermiSpeed;
     m_fermiVelocityY[angleIdx] /= m_avgFermiSpeed;
     m_integrandFactor[angleIdx] /= integrandFactorSum;
   }
 
   // Copy system angles to the GPU.
-  m_systemAnglesGPU =
-      thrust::device_vector<T>(m_systemAngles.begin(), m_systemAngles.end());
-
-  // TODO(niclas): Why return anything? Raise expection if we fail instead.
-  return 0;
+  m_systemAnglesGPU = m_systemAngles;
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiMomentum(const int inAngleIdx,
                                                    T &outFermiMomentumX,
-                                                   T &outFermiMomentumY) {
+                                                   T &outFermiMomentumY) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
   outFermiMomentumX = m_fermiMomentumX[idx];
   outFermiMomentumY = m_fermiMomentumY[idx];
@@ -571,14 +553,14 @@ void FermiSurfaceTightBinding<T>::getFermiMomentum(const int inAngleIdx,
 template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiVelocity(const int inAngleIdx,
                                                    T &outFermiVelocityX,
-                                                   T &outFermiVelocityY) {
+                                                   T &outFermiVelocityY) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
   outFermiVelocityX = m_fermiVelocityX[idx];
   outFermiVelocityY = m_fermiVelocityY[idx];
 }
 
 template <typename T>
-T FermiSurfaceTightBinding<T>::getFermiSpeed(const int inAngleIdx) {
+T FermiSurfaceTightBinding<T>::getFermiSpeed(const int inAngleIdx) const {
   T fermiVelocityX;
   T fermiVelocityY;
   getFermiVelocity(inAngleIdx, fermiVelocityX, fermiVelocityY);
@@ -586,24 +568,25 @@ T FermiSurfaceTightBinding<T>::getFermiSpeed(const int inAngleIdx) {
 }
 
 template <typename T>
-T FermiSurfaceTightBinding<T>::getSystemAngle(const int inAngleIdx) {
+T FermiSurfaceTightBinding<T>::getSystemAngle(const int inAngleIdx) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
   return m_systemAngles[idx];
 }
 
-template <typename T> T *FermiSurfaceTightBinding<T>::getSystemAnglePointer() {
+template <typename T>
+const T *FermiSurfaceTightBinding<T>::getSystemAnglePointer() const {
   return thrust::raw_pointer_cast(m_systemAnglesGPU.data());
 }
 
 template <typename T>
-T FermiSurfaceTightBinding<T>::getIntegrandFactor(const int inAngleIdx) {
+T FermiSurfaceTightBinding<T>::getIntegrandFactor(const int inAngleIdx) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
   return m_integrandFactor[idx];
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
-                                                    T &outOffsetY) {
+                                                    T &outOffsetY) const {
   outOffsetX = m_originOffset.first;
   outOffsetY = m_originOffset.second;
 }

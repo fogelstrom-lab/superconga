@@ -150,7 +150,8 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
             context);
 
     // Choose FermiSurface
-    new FermiSurfaceCircle<T>(context);
+    FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+    context->set(fermiSurface);
 
     // Set up order parameter
     OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
@@ -250,7 +251,8 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   computeOrderParameter->setOptimizer(optimizer);
 
   // Choose FermiSurface
-  new FermiSurfaceCircle<T>(context);
+  FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+  context->set(fermiSurface);
 
   // =================== ACT ==================== //
   // Initialize simulation

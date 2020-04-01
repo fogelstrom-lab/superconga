@@ -12,80 +12,79 @@
 template <typename T> class FermiSurfaceCircle : public FermiSurface<T> {
 public:
   // Constructor.
-  FermiSurfaceCircle(const int inNumAngles);
-  FermiSurfaceCircle(Context<T> *const inContext);
+  FermiSurfaceCircle();
 
   // Destructor.
   ~FermiSurfaceCircle();
 
   // Initialize the Fermi surface.
-  int initialize();
+  void initialize(const int inNumAngles);
 
   // Get the Fermi momentum.
-  void getFermiMomentum(const int inAngleIdx, T &outMomentumX, T &outMomentumY);
+  void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
+                        T &outMomentumY) const;
 
   // Get the Fermi velocity.
-  void getFermiVelocity(const int inAngleIdx, T &outVelocityX, T &outVelocityY);
+  void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
+                        T &outVelocityY) const;
 
   // Get the Fermi speed.
   // This is a circle so it is a constant.
-  T getFermiSpeed(const int inAngleIdx) { return static_cast<T>(1.0); };
+  T getFermiSpeed(const int inAngleIdx) const { return static_cast<T>(1.0); }
 
   // Get the integrand factor.
-  T getIntegrandFactor(const int inAngleIdx);
+  T getIntegrandFactor(const int inAngleIdx) const;
 
   // Get system angle.
-  T getSystemAngle(const int inAngleIdx);
-  T *getSystemAnglePointer();
+  T getSystemAngle(const int inAngleIdx) const;
+  const T *getSystemAnglePointer() const;
 
   // Get momentum offset.
-  void getMomentumOffset(T &outOffsetX, T &outOffsetY);
+  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
 
 private:
   // The system angles, basically angle(vF) - pi/2.
-  // We need an array of all values because we need to pass it to a CUDA kernel
-  // implementing the boundary condition.
-  thrust::device_vector<T> m_systemAngles;
+  thrust::host_vector<T> m_systemAngles;
+  // The system angles need to be on the GPU as well because the entire array is
+  // passed to a CUDA kernel.
+  thrust::device_vector<T> m_systemAnglesGPU;
 };
 
 template <typename T>
-FermiSurfaceCircle<T>::FermiSurfaceCircle(const int inNumAngles)
-    : FermiSurface<T>(inNumAngles), m_systemAngles(0) {}
-
-template <typename T>
-FermiSurfaceCircle<T>::FermiSurfaceCircle(Context<T> *const inContext)
-    : FermiSurface<T>(inContext), m_systemAngles(0) {}
+FermiSurfaceCircle<T>::FermiSurfaceCircle()
+    : FermiSurface<T>(), m_systemAngles(0), m_systemAnglesGPU(0) {}
 
 template <typename T> FermiSurfaceCircle<T>::~FermiSurfaceCircle() {
   std::cout << "~FermiSurfaceCircle<T>\n";
 }
 
-template <typename T> int FermiSurfaceCircle<T>::initialize() {
+template <typename T>
+void FermiSurfaceCircle<T>::initialize(const int inNumAngles) {
   std::cout << "FermiSurfaceCircle<T>::initialize()\n";
 
-  // Get the number of angles.
-  const int numAngles = FermiSurface<T>::getNumAngles();
+  // The base class needs to know the number of angles.
+  FermiSurface<T>::initialize(inNumAngles);
 
   // System angle array on the CPU.
-  thrust::host_vector<T> systemAngles(numAngles);
+  m_systemAngles.clear();
 
   // Fill the array.
-  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
-    const T phi = FermiSurface<T>::getPhi(angleIdx);
-    systemAngles[angleIdx] = FermiSurface<T>::getSystemAngle(phi);
+  for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
+    const T phi = FermiSurface<T>::getPolarAngle(angleIdx);
+    const T systemAngle = FermiSurface<T>::getSystemAngle(phi);
+    m_systemAngles.push_back(systemAngle);
   }
 
-  // Copy to the GPU.
-  m_systemAngles =
-      thrust::device_vector<T>(systemAngles.begin(), systemAngles.end());
-  return 0;
+  // Copy system angles to the GPU.
+  m_systemAnglesGPU = m_systemAngles;
 }
 
 template <typename T>
 void FermiSurfaceCircle<T>::getFermiMomentum(const int inAngleIdx,
-                                             T &outMomentumX, T &outMomentumY) {
+                                             T &outMomentumX,
+                                             T &outMomentumY) const {
   // Get phi.
-  const T phi = FermiSurface<T>::getPhi(inAngleIdx);
+  const T phi = FermiSurface<T>::getPolarAngle(inAngleIdx);
 
   // Remember, this is a circle.
   outMomentumX = std::cos(phi);
@@ -94,9 +93,10 @@ void FermiSurfaceCircle<T>::getFermiMomentum(const int inAngleIdx,
 
 template <typename T>
 void FermiSurfaceCircle<T>::getFermiVelocity(const int inAngleIdx,
-                                             T &outVelocityX, T &outVelocityY) {
+                                             T &outVelocityX,
+                                             T &outVelocityY) const {
   // Get phi.
-  const T phi = FermiSurface<T>::getPhi(inAngleIdx);
+  const T phi = FermiSurface<T>::getPolarAngle(inAngleIdx);
 
   // Once again, a boring circle.
   outVelocityX = std::cos(phi);
@@ -104,20 +104,18 @@ void FermiSurfaceCircle<T>::getFermiVelocity(const int inAngleIdx,
 }
 
 template <typename T>
-T FermiSurfaceCircle<T>::getSystemAngle(const int inAngleIdx) {
-  // Get phi.
+T FermiSurfaceCircle<T>::getSystemAngle(const int inAngleIdx) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-
-  // Set the system angle.
   return m_systemAngles[idx];
 }
 
-template <typename T> T *FermiSurfaceCircle<T>::getSystemAnglePointer() {
-  return thrust::raw_pointer_cast(m_systemAngles.data());
+template <typename T>
+const T *FermiSurfaceCircle<T>::getSystemAnglePointer() const {
+  return thrust::raw_pointer_cast(m_systemAnglesGPU.data());
 }
 
 template <typename T>
-T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) {
+T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) const {
   // Because this is a circle, and we are taking equidistant angular steps, the
   // only thing left to do is dividing by the number of angles.
   const int numAngles = FermiSurface<T>::getNumAngles();
@@ -125,7 +123,8 @@ T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) {
 }
 
 template <typename T>
-void FermiSurfaceCircle<T>::getMomentumOffset(T &outOffsetX, T &outOffsetY) {
+void FermiSurfaceCircle<T>::getMomentumOffset(T &outOffsetX,
+                                              T &outOffsetY) const {
   // This is a circle centered around the origin.
   outOffsetX = static_cast<T>(0.0);
   outOffsetY = static_cast<T>(0.0);
