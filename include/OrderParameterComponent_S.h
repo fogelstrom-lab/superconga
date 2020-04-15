@@ -36,6 +36,8 @@ public:
 
   std::string getType() const { return m_type; }
 
+  T getBasisNormalization() const { return m_basisNormalization; }
+
 private:
   friend void swap(OrderParameterComponent_S<T> &A,
                    OrderParameterComponent_S<T> B) {
@@ -43,22 +45,25 @@ private:
          static_cast<OrderParameterComponent<T> &>(B));
   }
 
+  // Factor to make <|eta|^2> = 1. Trivial in s-wave, included for generality.
+  const T m_basisNormalization;
+
   const std::string m_type = std::string("s");
 };
 
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S()
-    : OrderParameterComponent<T>() {}
+    : OrderParameterComponent<T>(), m_basisNormalization(1.0) {}
 
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S(
     const OrderParameterComponent_S<T> &other)
-    : OrderParameterComponent<T>(other) {}
+    : OrderParameterComponent<T>(other), m_basisNormalization(1.0) {}
 
 template <typename T>
 OrderParameterComponent_S<T>::OrderParameterComponent_S(Parameters<T> *param,
                                                         T Tcthis_Tc)
-    : OrderParameterComponent<T>(param, Tcthis_Tc) {}
+    : OrderParameterComponent<T>(param, Tcthis_Tc), m_basisNormalization(1.0) {}
 
 template <typename T>
 OrderParameterComponent_S<T> &

@@ -41,6 +41,8 @@ public:
 
   std::string getType() const { return m_type; }
 
+  T getBasisNormalization() const { return m_basisNormalization; }
+
 private:
   friend void swap(OrderParameterComponent_P<T> &A,
                    OrderParameterComponent_P<T> B) {
