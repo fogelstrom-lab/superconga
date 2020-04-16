@@ -27,6 +27,7 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
+#include "run_utils.h" // Commonly used functions in run files
 
 #include "bdg_comparison_utils.h" // Common utils for this project
 
@@ -36,8 +37,8 @@
 //*******************************************************
 // FORWARD DECLARATIONS
 //*******************************************************
-void runInTerminal();
-void myKeyboardFunc(const unsigned char key, const int x, const int y);
+void display();
+void saveDataWrapper();
 
 //*******************************************************
 // TYPEDEFS
@@ -57,9 +58,6 @@ Context<T> *context = new Context<T>();
 Visualization<T> *gui;
 // Free energy object
 ComputeFreeEnergy<T> *computeFreeEnergy;
-// Keep track of user key press in OpenGL mode
-bool gUserQuit = false;
-bool gUserSaveData = false;
 // Used to construct data file path
 char dataPath[512];
 } // namespace
@@ -71,6 +69,8 @@ char dataPath[512];
 namespace simParams {
 // Run in OpenGL mode or terminal mode
 const bool RUN_VISUAL = false;
+// Print iteration status to terminal
+const bool PRINT_ITERATION_STATUS = true;
 // Run metastable state without vortices (real order parameter)
 bool RUN_METASTABLE = false;
 // Temperature in units of T_c
@@ -90,10 +90,10 @@ const int NUM_ANGLES = 128;
 const int NUM_ENERGIES = 20;
 // Convergence criterion for order-parameter residual
 const T CONVERGENCE_CRITERION = static_cast<T>(1E-6);
-// Maximum number of iterations
-const int NUM_ITERATIONS_MAX = 5000;
 // Minimum number of iterations
 const int NUM_ITERATIONS_MIN = 300;
+// Maximum number of iterations
+const int NUM_ITERATIONS_MAX = 5000;
 // Path to data, relative to build directory!
 const char *DATA_BASE_PATH = (char *)"data/qc/";
 // Number of iterations between regular saving of data
@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
   default:
     std::cout << "ERROR! Illegal value for simParams::fermiSurfaceLabel:"
               << simParams::fermiSurfaceLabel << std::endl;
-    cleanup();
+    run_utils::cleanup(context, gui);
     return 0;
   }
   context->set(fermiSurface);
@@ -305,61 +305,64 @@ int main(int argc, char *argv[]) {
       context, dataPath, simParams::GRAIN_SIDE_LENGTH,
       simParams::GRAIN_CORNER_SIZE, simParams::GRAIN_DIAGONAL);
 
+  //***********************************************
+  // SET UP OPENGL VISUALIZATION
+  //***********************************************
+  if (simParams::RUN_VISUAL) {
+    const bool plotOrderParameter = true;
+    const bool plotCurentDensity = true;
+    gui = run_utils::createVisualization(context, plotOrderParameter,
+                                         plotCurentDensity);
+    initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
+    glutKeyboardFunc(run_utils::myKeyboardFunc);
+    glutDisplayFunc(display);
+  }
+
   //***************************************************
   // RUN SIMULATION UNTIL END CRITERIA
   //***************************************************
-  if (simParams::RUN_VISUAL) {
-    //***********************************************
-    // SET UP OPENGL VISUALIZATION
-    //***********************************************
-    // Number of plots in visualization = NUM_PLOTS_Y * NUM_PLOTS_X
-    const int NUM_PLOTS_Y = 1;
-    const int NUM_PLOTS_X = 3;
+  run_utils::Status status = run_utils::Status::kContinue;
+  while (status != run_utils::Status::kQuit) {
+    // Run one iteration,
+    status = run_utils::runIteration(context, simParams::PRINT_ITERATION_STATUS,
+                                     simParams::NUM_ITERATIONS_MIN,
+                                     simParams::NUM_ITERATIONS_MAX,
+                                     simParams::SAVE_DATA_INTERVAL);
 
-    // Create visualization object
-    gui =
-        new Visualization<T>(orderParameterComponent->getOrderParameterField(),
-                             NUM_PLOTS_X, NUM_PLOTS_Y);
-    gui->setGeometry(geometry);
-    gui->setPrintParameters(parameters);
+    if (status == run_utils::Status::kSave) {
+      saveDataWrapper();
+    }
 
-    initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
-    glutKeyboardFunc(myKeyboardFunc);
-    glutMainLoop();
-  } else {
-    // Run in terminal mode
-    runInTerminal();
+    if (simParams::RUN_VISUAL) {
+      // Check if the Glut window is open.
+      const int windowID = glutGetWindow();
+      const bool openWindow = windowID > 0;
+
+      // Plot data in OpenGL.
+      if (openWindow) {
+        glutMainLoopEvent();
+      } else {
+        // The user closed the window so lets abort.
+        break;
+      }
+    }
   }
 
-  std::cout << "Successful termination!\n";
+  // Save at the very end.
+  saveDataWrapper();
+
+  run_utils::cleanup(context, gui);
   return 0;
 }
 
-// Run a single kernel iteration.
-void runIteration() {
-  // Run kernel, solving equations for all compute objects
-  context->compute();
+// Plot data in OpenGL GUI.
+void display() {
+  const bool plotOrderParameter = true;
+  const bool plotCurentDensity = true;
+  run_utils::display(context, gui, plotOrderParameter, plotCurentDensity);
 
-  // Output iteration status to terminal
-  bdg_comp_utils::printIterationStatus<T>(context);
-
-  // Plot data in OpenGL
-  if (simParams::RUN_VISUAL) {
-    bdg_comp_utils::plotData<T>(context, gui);
-  }
-}
-
-// Cleanup of context and visualization objects.
-// Automatically called by OpenGL upon its completion.
-void cleanup() {
-  std::cout << "Cleaning up...\n";
-
-  delete gui;
-  std::cout << "Cleaned visualization object.\n";
-  delete context;
-  std::cout << "Cleaned context object.\n";
-
-  std::cout << "Done cleaning up...\n";
+  // Tell Glut to update window.
+  glutPostRedisplay();
 }
 
 void saveDataWrapper() {
@@ -375,76 +378,4 @@ void saveDataWrapper() {
   bdg_comp_utils::saveFreeEnergy<T>(
       context, dataPath, computeFreeEnergy, simParams::GRAIN_SIDE_LENGTH,
       simParams::GRAIN_CORNER_SIZE, simParams::GRAIN_DIAGONAL);
-}
-
-// Wrapper for running program.
-// Return true if program is done (converged or reach maximum number of
-// iterations).
-bool runWrapper() {
-  // Run single kernel iteration
-  runIteration();
-
-  // Check for convergence or maximum number of iterations (can add user
-  // termination through OpenGL hook - check myKeyboardFunc)
-  if (((context->isConverged() ||
-        context->getNumIterations() > simParams::NUM_ITERATIONS_MAX) &&
-       (context->getNumIterations() > simParams::NUM_ITERATIONS_MIN))) {
-    std::cout << "Simulation finished." << std::endl;
-
-    // Save data to file
-    saveDataWrapper();
-
-    return true;
-  } else if (gUserQuit) {
-    return true;
-  } else {
-    // Check if user has queued save data, or it is time for regular data save
-    if (gUserSaveData ||
-        ((!(context->getNumIterations() % simParams::SAVE_DATA_INTERVAL)) &&
-         (context->getNumIterations() > 0))) {
-
-      // Save data to file
-      saveDataWrapper();
-
-      // Reset save data key stroke
-      gUserSaveData = false;
-    }
-  }
-
-  return false;
-}
-
-// OpenGL display loop
-void display() {
-  // Run one iteration
-  bool allConverged = runWrapper();
-
-  if (allConverged) {
-    exit(0);
-  }
-}
-
-// Terminal mode wrapper
-void runInTerminal() {
-  bool allConverged = false;
-
-  while (!allConverged) {
-    // Run one iteration
-    allConverged = runWrapper();
-  }
-
-  // Clean up context and visualization
-  cleanup();
-}
-
-// Detect keypresses in OpenGL instance - useful for changing parameters live,
-// saving data or quitting the program
-void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
-  std::cout << "key pressed: " << inKey << ", at (" << inX << ", " << inY
-            << ")\n";
-  if (inKey == 'q' || inKey == 'Q') {
-    gUserQuit = true;
-  } else if (inKey == 's' || inKey == 'S') {
-    gUserSaveData = true;
-  }
 }

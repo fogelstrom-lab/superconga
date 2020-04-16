@@ -7,13 +7,6 @@
 #include <GLUT/glut.h>
 #endif
 
-#define REFRESH_DELAY 0 // ms
-
-void display();
-void cleanup();
-void timerEvent(int);
-void handleResize(int, int);
-
 // Key logging functions
 namespace Key {
 unsigned char g_key_pressed;
@@ -40,27 +33,6 @@ unsigned char getKeyPressedCoords(int &x, int &y) {
 }
 } // namespace Key
 
-// void initGL( int argc, char *argv[] ) {
-int initGL(int argc, char *argv[], int nx, int ny) {
-  glutInit(&argc, argv);
-
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-  glutInitWindowSize(nx, ny);
-  int winId = glutCreateWindow("Solution");
-
-  glutDisplayFunc(display);
-  glutReshapeFunc(handleResize);
-  glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
-  glutKeyboardFunc(Key::keyboardFunc);
-
-  // default initialization
-  glClearColor(0.0, 0.0, 0.0, 1.0);
-  glDisable(GL_DEPTH_TEST);
-
-  atexit(cleanup);
-  return winId;
-}
-
 void handleResize(int w, int h) {
   // viewport
   glViewport(0, 0, w, h);
@@ -71,9 +43,23 @@ void handleResize(int w, int h) {
   gluPerspective(45.0, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
 }
 
-void timerEvent(int value) {
-  glutPostRedisplay();
-  glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
+int initGL(int argc, char *argv[], const int nx, const int ny) {
+  glutInit(&argc, argv);
+
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(nx, ny);
+  const int windowID = glutCreateWindow("Solution");
+
+  glutReshapeFunc(handleResize);
+  glutKeyboardFunc(Key::keyboardFunc);
+
+  // default initialization
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glDisable(GL_DEPTH_TEST);
+
+  glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
+
+  return windowID;
 }
 
 #endif // INCLUDE_GL_H_
