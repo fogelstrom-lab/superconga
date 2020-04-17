@@ -134,7 +134,7 @@ void saveParamsMetaData(
   ss << parameters->getTemperature() << " ";
   ss << inContext->getOrderParameter()->getTypes() << " ";
   ss << inContext->getGeometry()->area() << " ";
-  ss << inContext->getGeometry()->area(1) << " ";
+  ss << inContext->getGeometry()->getNumGrainLatticeSites() << " ";
   // TODO(patric): Figure how to make a getter for lattice orientation.
   // Remember, this is only defined for anisotropic order parameters (e.g. for
   // d-wave but not s-wave). Maybe add fixed value 0 for all isotropic ones?
@@ -192,7 +192,7 @@ void saveFreeEnergy(const Context<T> *const inContext,
   ss << inGrainCornerSize << " ";
   ss << inGrainDiagonal << " ";
   ss << inContext->getGeometry()->area() << " ";
-  ss << inContext->getGeometry()->area(1);
+  ss << inContext->getGeometry()->getNumGrainLatticeSites();
   appendLineToTextFile(freeEnergyFile, ss);
 }
 

@@ -187,11 +187,12 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 4) {
                 orderParameterComponent->getOrderParameterField()
                     ->sumMagnitude();
             // Fetch the number of elements in the grain
-            const T numElementsOrderParameter = geometry->area(1);
+            const int numGrainLatticeSites =
+                geometry->getNumGrainLatticeSites();
 
             // =================== ASSERT ==================== //
             const T expectedSumOrderParameter =
-                numElementsOrderParameter *
+                static_cast<T>(numGrainLatticeSites) *
                 std::hypot(realPartValue, imaginaryPartValue);
 
             CHECK(testSumOrderParameter ==
