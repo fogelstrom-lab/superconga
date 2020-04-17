@@ -17,6 +17,7 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "defines.h"
+#include "run_utils.h"
 
 #include <doctest.h>
 #include <iostream>
@@ -39,6 +40,8 @@ const int NUM_ANGLES = 64;
 const int NUM_ENERGIES = 64;
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
+// Print iteration status to terminal
+const bool PRINT_ITERATION_STATUS = true;
 // Maximum number of iterations
 const int NUM_ITERATIONS_MAX = 100;
 // Minimum number of iterations
@@ -78,48 +81,6 @@ template <typename T> Parameters<T> *applySimParams(Context<T> *context) {
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
   return parameters;
-}
-
-// Output status to terminal
-template <typename T> void printIterationStatus(Context<T> *context) {
-  std::cout << "Iteration = " << context->getNumIterations() << ", ";
-  std::cout << "Residual = " << context->getResidual(0) << ", ";
-  std::cout << "Iteration time = " << context->getComputeTime() << std::endl;
-}
-
-// Cleanup of context and visualization objects.
-// Automatically called by OpenGL upon its completion.
-// TODO(patric): Remove naked pointers and the need for manual cleanup.
-template <typename T> void cleanup(Context<T> *context) {
-  std::cout << "Cleaning up...\n";
-
-  delete context;
-  std::cout << "Cleaned context object.\n";
-
-  std::cout << "Done cleaning up...\n";
-}
-
-// Wrapper for running simulations (in terminal mode) until convergence
-template <typename T> void runInTerminal(Context<T> *context) {
-  bool allConverged = false;
-
-  while (!allConverged) {
-    // Run single kernel iteration, solving equations for all compute objects
-    context->compute();
-
-    // Output iteration status to terminal
-    printIterationStatus(context);
-
-    // Check for convergence or maximum number of iterations (can add user
-    // termination through OpenGL hook - check myKeyboardFunc)
-    if (((context->isConverged() ||
-          context->getNumIterations() > simParams::NUM_ITERATIONS_MAX) &&
-         (context->getNumIterations() > simParams::NUM_ITERATIONS_MIN))) {
-      std::cout << "Simulation finished." << std::endl;
-
-      allConverged = true;
-    }
-  }
 }
 
 // ======================== Wrappers for test cases ======================== //
@@ -195,7 +156,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
             doctest::Approx(expectedSumOrderParameter).epsilon(inTolerance));
 
     // Clean up context
-    cleanup(context);
+    run_utils::cleanup(context);
   }
 } // namespace helper
 
@@ -258,8 +219,10 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // Initialize simulation
   context->initialize();
 
-  // Run simulation in terminal mode
-  runInTerminal(context);
+  const bool visualize = false;
+  run_utils::runSimulation(
+      context, visualize, simParams::PRINT_ITERATION_STATUS,
+      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
 
   // Remove all spurious values outside actual grain
   context->getGeometry()->zeroValuesOutsideDomain(
@@ -303,7 +266,7 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   CHECK(context->isConverged());
 
   // Clean up context
-  cleanup(context);
+  run_utils::cleanup(context);
 }
 
 } // namespace helper

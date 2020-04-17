@@ -33,8 +33,6 @@ public:
   Visualization(const int Nx, const int Ny, const int numImageX = 1,
                 const int numImageY = 1);
 
-  void constructor();
-
   void setZoom(int zoom);
   void setDisplayMult(const float displayMult) { _displayMult = displayMult; }
   void setPrintParameters(Parameters<T> *param) { _param = param; }
@@ -119,6 +117,8 @@ public:
 #endif
 
 private:
+  void constructor();
+
   // Size of inpute grid
   int _Nx_grid;
   int _Ny_grid;

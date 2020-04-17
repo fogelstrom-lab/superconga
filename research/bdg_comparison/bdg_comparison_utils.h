@@ -89,41 +89,6 @@ void createProjectDirectory(const char *const inDirectory) {
   boost::filesystem::create_directories(rootPath);
 }
 
-// Output status to terminal
-// TODO(patric): Create utils_io.h and move there. Set flags what to print.
-template <typename T>
-void printIterationStatus(const Context<T> *const inContext) {
-  std::cout << "Iteration = " << inContext->getNumIterations() << ", ";
-  std::cout << "Residual = " << inContext->getResidual(0) << ", ";
-  std::cout << "Iteration time = " << inContext->getComputeTime() << std::endl;
-}
-
-// Plot data in OpenGL GUI
-// TODO(patric): Merge into Visualization class, with flags for what to plot.
-template <typename T>
-void plotData(const Context<T> *const inContext,
-              Visualization<T> *const inGUI) {
-  // Extract computed data
-  const typename Grid<T>::CPU orderParameter =
-      *(inContext->getComputeOrderParameter()->getResult());
-  // Extract computed current
-  const typename Grid<T>::CPU current =
-      *(inContext->getComputeCurrent()->getResult());
-
-  // Clear the plotting region
-  inGUI->clearImage();
-
-  // Plot the magnitude of the order parameter
-  inGUI->plotImage(orderParameter.abs(), 0, Type::real, 0, 0);
-  // Plot the phase of the order parameter
-  inGUI->plotImage(orderParameter.complexPhase(), 0, Type::real, 1, 0);
-  // Plot the magnitude of the current density
-  inGUI->plotImage(current.fieldMagnitude(), 0, Type::real, 2, 0);
-
-  // Render the plots
-  inGUI->draw();
-}
-
 // Append data to text file
 // TODO(patric): Create utils_io.h and move there.
 void appendLineToTextFile(

@@ -28,6 +28,7 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
+#include "run_utils.h" // Commonly used functions in run files
 
 #include <iostream>
 #include <stdlib.h>
@@ -35,8 +36,7 @@
 //*******************************************************
 // FORWARD DECLARATIONS
 //*******************************************************
-void runInTerminal();
-void myKeyboardFunc(unsigned char key, int x, int y);
+void display();
 
 //*******************************************************
 // TYPEDEFS
@@ -52,32 +52,38 @@ typedef double T;
 namespace {
 Context<T> *context = new Context<T>();
 Visualization<T> *gui;
-bool gUserQuit = false; // Keep track of user key press in OpenGL mode
-const int NUM_ITERATIONS_MAX = 1000; // Maximum number of iterations
-const int NUM_ITERATIONS_MIN = 20;   // Minimum number of iterations
 } // namespace
 
 //*******************************************************
 // SIMULATION PARAMETERS
 //*******************************************************
 namespace simParams {
-// Run in OpenGL mode or terminal mode
-const bool RUN_VISUAL = true;
 // Temperature in units of T_c
 const T TEMPERATURE = 0.5;
 // Size of superconducting grain in coherence lengths hbar*v_F/(2*pi*k_BT_c)
-const T GRAIN_SIDE_LENGTH = 60.0;
+const T GRAIN_SIDE_LENGTH = 30.0;
 // Crystal ab-axis rotation relative to simulation grain. Zero means that the
 // ab-axes are aligned with the edges of the screen.
 const T CRYSTAL_AXES_ROTATION = 0.25 * M_PI;
 // Number of lattice points per grain side length
-const int GRID_RESOLUTION = 401;
+const int GRID_RESOLUTION = 201;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 64;
 // Number of discrete energies (poles)
 const int NUM_ENERGIES = 20;
 // Convergence criterion for order-parameter residual
-const T CONVERGENCE_CRITERION = 1E-8;
+const T CONVERGENCE_CRITERION = 1E-6;
+// Maximum number of iterations
+const int NUM_ITERATIONS_MAX = 1000;
+// Minimum number of iterations
+const int NUM_ITERATIONS_MIN = 20;
+// Print iteration status to terminal
+const bool PRINT_ITERATION_STATUS = true;
+// Plot the order parameter magnitude (and phase if also plotting the current
+// density).
+const bool PLOT_ORDER_PARAMETER = true;
+// Plot current density (x,y)-components and magnitude
+const bool PLOT_CURRENT_DENSITY = false;
 } // namespace simParams
 
 //*******************************************************
@@ -126,10 +132,9 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::None for never calculating the vector potential (no
   // external or induced fields)
-  RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>
-      *riccatiSolver =
-          new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-              context);
+  RiccatiSolver<T> *riccatiSolver =
+      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
+          context);
   // Add specular BC
   riccatiSolver->add(new BoundaryConditionSpecular<T>);
 
@@ -144,9 +149,7 @@ int main(int argc, char *argv[]) {
   // Rotate d-wave lobes (ab-axes) relative to grain
   orderParameterComponent->setLatticeOrientation(
       simParams::CRYSTAL_AXES_ROTATION);
-  // Initialize order-parameter component to the (real) bulk value
-  const T ORDER_PARAMETER_PHASE = 0.0;
-  Initial<T>::bulk(orderParameterComponent, ORDER_PARAMETER_PHASE);
+  Initial<T>::bulk(orderParameterComponent);
   // Add the initialized d-wave component to the total order parameter
   orderParameter->add(orderParameterComponent);
 
@@ -174,136 +177,35 @@ int main(int argc, char *argv[]) {
   //***************************************************
   context->initialize();
 
-  //***************************************************
-  // RUN SIMULATION UNTIL END CRITERIA
-  //***************************************************
-  if (simParams::RUN_VISUAL) {
-    //***********************************************
-    // SET UP OPENGL VISUALIZATION
-    //***********************************************
-    // Number of plots in visualization = NUM_PLOTS_Y * NUM_PLOTS_X
-    const int NUM_PLOTS_Y = 1;
-    const int NUM_PLOTS_X = 1;
-
-    // Create visualization object
+  //***********************************************
+  // SET UP OPENGL VISUALIZATION
+  //***********************************************
+  const bool visualize =
+      simParams::PLOT_ORDER_PARAMETER || simParams::PLOT_CURRENT_DENSITY;
+  if (visualize) {
     gui =
-        new Visualization<T>(orderParameterComponent->getOrderParameterField(),
-                             NUM_PLOTS_X, NUM_PLOTS_Y);
-    gui->setGeometry(geometry);
-    gui->setPrintParameters(parameters);
-
+        run_utils::createVisualization(context, simParams::PLOT_ORDER_PARAMETER,
+                                       simParams::PLOT_CURRENT_DENSITY);
     initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
-    glutKeyboardFunc(myKeyboardFunc);
-    glutMainLoop();
-  } else {
-    // Run in terminal mode
-    runInTerminal();
+    glutKeyboardFunc(run_utils::myKeyboardFunc);
+    glutDisplayFunc(display);
   }
 
-  std::cout << "Successful termination!\n";
+  //***********************************************
+  // RUN SIMULATION UNTIL END CRITERIA
+  //***********************************************
+  run_utils::runSimulation(
+      context, visualize, simParams::PRINT_ITERATION_STATUS,
+      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
+  run_utils::cleanup(context, gui);
   return 0;
 }
 
-// Output status to terminal
-void printIterationStatus() {
-  std::cout << "Iteration = " << context->getNumIterations() << ", ";
-  std::cout << "Residual = " << context->getResidual(0) << ", ";
-  std::cout << "Iteration time = " << context->getComputeTime() << std::endl;
-}
-
-// Plot data in OpenGL GUI
-void plotData() {
-  // Extract computed data
-  const Grid<T>::CPU orderParameter =
-      *(context->getComputeOrderParameter()->getResult());
-
-  // Clear the plotting region
-  gui->clearImage();
-
-  // Plot the magnitude of the order parameter
-  gui->plotImage(orderParameter.abs(), 0, Type::real, 0, 0);
-
-  // Render the plots
-  gui->draw();
-}
-
-// Run a single kernel iteration.
-void runIteration() {
-  // Run kernel, solving equations for all compute objects
-  context->compute();
-
-  // Output iteration status to terminal
-  printIterationStatus();
-
-  // Plot data in OpenGL
-  if (simParams::RUN_VISUAL) {
-    plotData();
-  }
-}
-
-// Cleanup of context and visualization objects.
-// Automatically called by OpenGL upon its completion.
-// TODO: (Patric) Remove naked pointers and the need for manual cleanup.
-void cleanup() {
-  std::cout << "Cleaning up...\n";
-
-  delete gui;
-  std::cout << "Cleaned visualization object.\n";
-  delete context;
-  std::cout << "Cleaned context object.\n";
-
-  std::cout << "Done cleaning up...\n";
-}
-
-// Wrapper for running program.
-// Return true if program is done (converged or reach maximum number of
-// iterations).
-bool runWrapper() {
-  // Run single kernel iteration
-  runIteration();
-
-  // Check for convergence or maximum number of iterations (can add user
-  // termination through OpenGL hook - check myKeyboardFunc)
-  if (((context->isConverged() ||
-        context->getNumIterations() > NUM_ITERATIONS_MAX) &&
-       (context->getNumIterations() > NUM_ITERATIONS_MIN)) ||
-      (gUserQuit)) {
-    std::cout << "Simulation finished." << std::endl;
-
-    return true;
-  }
-
-  return false;
-}
-
-// OpenGL display loop
+// Plot data in OpenGL GUI.
 void display() {
-  // Run one iteration
-  bool allConverged = runWrapper();
+  run_utils::display(context, gui, simParams::PLOT_ORDER_PARAMETER,
+                     simParams::PLOT_CURRENT_DENSITY);
 
-  if (allConverged) {
-    exit(0);
-  }
-}
-
-// Terminal mode wrapper
-void runInTerminal() {
-  bool allConverged = false;
-
-  while (!allConverged) {
-    // Run one iteration
-    allConverged = runWrapper();
-  }
-
-  // Clean up context and visualization
-  cleanup();
-}
-
-// Detect keypresses in OpenGL instance - useful for changing parameters live,
-// saving data or quitting the program
-void myKeyboardFunc(unsigned char key, int x, int y) {
-  std::cout << "key pressed: " << key << ", at (" << x << ", " << y << ")\n";
-  if (key == 'q') {
-    gUserQuit = true;
-  }
+  // Tell Glut to update window.
+  glutPostRedisplay();
 }
