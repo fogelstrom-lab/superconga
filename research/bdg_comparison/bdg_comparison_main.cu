@@ -101,7 +101,7 @@ const int SAVE_DATA_INTERVAL = 200;
 // Label which fermi surface it is:
 // 1 - Circular
 // 2 - Tight Binding: NNN= -0.25, NNNN=0, mu=0
-// 3 - Tight Binding: NNN= -0.477, NNNN=0.156, mu=-1.267
+// 3 - Tight Binding: NNN= -0.495, NNNN=0.156, mu=-1.267
 int fermiSurfaceLabel = 1;
 } // namespace simParams
 
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
     break;
   }
   case 3: {
-    const T hoppingNNN = static_cast<T>(-0.477);
+    const T hoppingNNN = static_cast<T>(-0.495);
     const T hoppingNNNN = static_cast<T>(0.156);
     const T chemicalPotential = static_cast<T>(-1.267);
     fermiSurface = new FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,

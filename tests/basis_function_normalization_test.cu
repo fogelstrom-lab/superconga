@@ -33,7 +33,7 @@ const double HOPPING_NNN_FS1 = -0.25;
 const double HOPPING_NNNN_FS1 = 0.0;
 const double CHEMICAL_POTENTIAL_FS1 = 0.0;
 // Less circular.
-const double HOPPING_NNN_FS2 = -0.477;
+const double HOPPING_NNN_FS2 = -0.495;
 const double HOPPING_NNNN_FS2 = 0.156;
 const double CHEMICAL_POTENTIAL_FS2 = -1.267;
 

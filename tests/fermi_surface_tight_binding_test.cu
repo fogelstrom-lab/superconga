@@ -18,11 +18,11 @@ const double CHEMICAL_POTENTIAL_FS1 = 0.0;
 const double AVG_FERMI_SPEED_EXPECTED_FS1 = 2.53562285;
 const double AVG_FERMI_MOMENTUM_EXPECTED_FS1 = 2.61870038;
 // Less circular.
-const double HOPPING_NNN_FS2 = -0.477;
+const double HOPPING_NNN_FS2 = -0.495;
 const double HOPPING_NNNN_FS2 = 0.156;
 const double CHEMICAL_POTENTIAL_FS2 = -1.267;
-const double AVG_FERMI_SPEED_EXPECTED_FS2 = 2.38288777;
-const double AVG_FERMI_MOMENTUM_EXPECTED_FS2 = 2.09334829;
+const double AVG_FERMI_SPEED_EXPECTED_FS2 = 2.39512296;
+const double AVG_FERMI_MOMENTUM_EXPECTED_FS2 = 2.08128010;
 
 // Enum for the the different symmetries to test in testSquareSymmetry.
 enum class Symmetry { mirrorX, mirrorY, rotate180, mirrorDiag };
@@ -230,7 +230,7 @@ void testDispersionDerivative(
 template <typename T>
 void testComputeIntegrandFactor(
     const T inTolerance, const int inNumAngles = 10,
-    const T inPhiEpsilon = static_cast<T>(1e3) *
+    const T inPhiEpsilon = static_cast<T>(1e4) *
                            std::numeric_limits<T>::epsilon()) {
   // =================== ARRANGE ==================== //
   const std::vector<T> angles = utils::linspace(
