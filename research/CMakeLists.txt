@@ -26,7 +26,8 @@ set(NVCC_WARN
     -Wformat=2")
 
 # Define the main set of source files
-set(SRC bdg_comparison/bdg_comparison_main.cu)
+set(SRC bdg_comparison/bdg_comparison_main.cu
+        bdg_comparison/analytic_zero_temp_expressions.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})

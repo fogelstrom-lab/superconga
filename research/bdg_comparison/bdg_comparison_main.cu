@@ -1,4 +1,4 @@
-//===---- circular_FS.cu - Stabilize phase crystal with a circular FS. ----===//
+//=== bdg_comparison_main.cu - Stabilize phase crystal with a circular FS. ===//
 //
 // Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
