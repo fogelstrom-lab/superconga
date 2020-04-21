@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
   const double HOPPING_NNN_FS2 = -0.495;
   const double HOPPING_NNNN_FS2 = 0.156;
   const double CHEMICAL_POTENTIAL_FS2 = -1.267;
+  // TODO(niclas): Should T* still be 0.25?
   const double TSTAR_FS2 = 0.25;
 
   const double TSTAR_CIRC = 0.18;
