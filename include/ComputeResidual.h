@@ -5,15 +5,23 @@
 #include <cmath>
 #include <limits>
 
-template <typename T>
-T computeResidual(const T inOld, const T inNew,
-                  const T inEpsilon = std::numeric_limits<T>::epsilon()) {
-  return std::abs(inNew - inOld) / std::max(std::abs(inOld), inEpsilon);
+namespace compute_residual_internal {
+template <typename T> T getGoodEpsilon(const int inNumElements) {
+  const T epsilon = std::sqrt(std::numeric_limits<T>::epsilon()) *
+                    static_cast<T>(inNumElements);
+  return epsilon;
+}
+} // namespace compute_residual_internal
+
+template <typename T> T computeResidual(const T inOld, const T inNew) {
+  const int numElements = 1;
+  const T epsilon = compute_residual_internal::getGoodEpsilon<T>(numElements);
+  return std::abs(inNew - inOld) / std::max(std::abs(inOld), epsilon);
 }
 
 template <typename T, typename DEV>
-T computeResidual(const GridData<T, DEV> &inOld, const GridData<T, DEV> &inNew,
-                  const T inEpsilon = std::numeric_limits<T>::epsilon()) {
+T computeResidual(const GridData<T, DEV> &inOld,
+                  const GridData<T, DEV> &inNew) {
   if (inOld != inNew) {
     std::cout << "GridData::differenceMagnitude(): Error: Grids have different "
                  "dimensions.\n";
@@ -24,8 +32,11 @@ T computeResidual(const GridData<T, DEV> &inOld, const GridData<T, DEV> &inNew,
   const T diff = (inOld - inNew).L2Norm();
   const T old = inOld.L2Norm();
 
+  const int numElements = inOld.numElements();
+  const T epsilon = compute_residual_internal::getGoodEpsilon<T>(numElements);
+
   // We are interested in the relative error, hence the division.
-  return diff / std::max(old, inEpsilon);
+  return diff / std::max(old, epsilon);
 }
 
 #endif // COMPUTE_RESIDUAL_H_
