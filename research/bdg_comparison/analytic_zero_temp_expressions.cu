@@ -126,12 +126,12 @@ int main(int argc, char *argv[]) {
     OrderParameterComponent_D<T> orderParameterComponent;
 
     // Normalize basis function
-    orderParameterComponent.initBasisNormalization(fermiSurface.get());
-    const T basisNormalization =
-        orderParameterComponent.getBasisNormalization();
+    orderParameterComponent.initBasisFunctionNormalization(fermiSurface.get());
+    const T basisFunctionNormalization =
+        orderParameterComponent.getBasisFunctionNormalization();
 
     // Storage for integrand sums
-    T integrandBasisSquared = static_cast<T>(0.0);
+    T integrandBasisFunctionSquared = static_cast<T>(0.0);
     T integrandOrderParameter = static_cast<T>(0.0);
     T integrandFreeEnergyMGS = static_cast<T>(0.0);
     T integrandFreeEnergyDoppler = static_cast<T>(0.0);
@@ -148,14 +148,15 @@ int main(int argc, char *argv[]) {
 
       // Basis function: eta
       const cplx<T> basisFunction =
-          basisNormalization * Basis_D<T>::compute(momentumX, momentumY);
+          basisFunctionNormalization *
+          BasisFunction_D<T>::compute(momentumX, momentumY);
       // |eta|
       const T basisFunctionAbs = basisFunction.cabs();
       // |eta|^2
       const T basisFunctionAbs2 = basisFunctionAbs * basisFunctionAbs;
 
       // Compute the integrand of <|eta|^2 >
-      integrandBasisSquared += integrandFactor * basisFunctionAbs2;
+      integrandBasisFunctionSquared += integrandFactor * basisFunctionAbs2;
 
       // Avoid potential issues with 0*log(0)
       if (basisFunctionAbs > epsilon) {
@@ -195,7 +196,7 @@ int main(int argc, char *argv[]) {
     // see Eq. (D.26) on p. 106 in P. Holmvall PhD Thesis (2019)
     const T freeEnergyBCS = -static_cast<T>(0.5) *
                             (bulkOrderParameter * bulkOrderParameter) *
-                            integrandBasisSquared;
+                            integrandBasisFunctionSquared;
     // MGS energy: Omega = (pi^2/2)*<|Delta|*|dot(vf, n)|> with surface normal
     // n=(0,1), see Eq. (E.104) on p. 131 in P. Holmvall PhD Thesis (2019)
     const T freeEnergyMGS = static_cast<T>(M_PI * M_PI * 0.5) *
@@ -223,7 +224,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "====================== RESULTS =============================";
     std::cout << std::endl;
-    std::cout << "Norm: " << integrandBasisSquared << " (should be 1)."
+    std::cout << "Norm: " << integrandBasisFunctionSquared << " (should be 1)."
               << std::endl;
     std::cout << "Delta/(kB*Tc) = " << bulkOrderParameter
               << " \t(circular should be " << expecteOrderParameter << ")."
