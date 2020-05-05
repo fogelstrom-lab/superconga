@@ -240,7 +240,9 @@ def computeDispersion(parameters, numMomenta):
 
 
 # Compute the BdG density of states.
-def computeDensityOfStates(parameters, numMomenta, numEnergies, margin, gamma):
+def computeDensityOfStates(
+    parameters, numMomenta, numEnergies, margin, gamma, tolerance=0.01
+):
     print("Computing the density of states...")
     start = time.time()
 
@@ -269,6 +271,13 @@ def computeDensityOfStates(parameters, numMomenta, numEnergies, margin, gamma):
         diff = E - eK
         lorentzian = halfGamma / (np.pi * (diff ** 2 + halfGamma ** 2))
         dos[n] = np.mean(lorentzian)
+
+    totalDOS = np.mean(dos) * (energies[-1] - energies[0])
+    expectedTotalDOS = 1.0
+    assert abs(totalDOS - expectedTotalDOS) < tolerance
+
+    # Add spin degree of freedom.
+    dos *= 2.0
 
     dosDict = {"energies": energies.tolist(), "values": dos.tolist()}
 

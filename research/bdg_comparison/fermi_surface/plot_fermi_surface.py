@@ -38,13 +38,16 @@ ASPECT_DOS = 0.5 * HEIGHT_DOS / WIDTH_ALL
 ASPECT_TC = 0.5 * HEIGHT_TC / WIDTH_ALL
 
 FONTSIZE = 18
-COLORMAP = "RdBu_r"
+COLORMAP = mpl.cm.get_cmap("RdBu_r")
 TICKS = [-1, -0.5, 0, 0.5, 1]
 TICKS_LABELS = [r"$-1$", "", r"$0$", "", r"$1$"]
 DPI = 100
 HSPACE = 0.5
 
 NAMES = [r"$\mathrm{\#1}$", r"$\mathrm{\#2}$"]
+COLORS = [COLORMAP(0.2), COLORMAP(0.95)]
+EF_COLOR = "black"
+LINEWIDTH = 2
 
 
 # Code taken from:
@@ -173,23 +176,33 @@ def plotDispersion(
     )
 
 
-def plotDensityOfStates(dos, axDOS, label):
+def plotDensityOfStates(dos, axDOS, label, color, linewidth=LINEWIDTH):
     energies = np.array(dos["energies"])
     dosValues = np.array(dos["values"])
-    axDOS.plot(energies, dosValues, label=label)
+    axDOS.plot(energies, dosValues, label=label, color=color, linewidth=linewidth)
 
 
-def plotCriticalTemperature(criticalTemperature, chemicalPotential, ax):
+def plotCriticalTemperature(
+    criticalTemperature, chemicalPotential, ax, color, linewidth=LINEWIDTH
+):
     mu = np.array(criticalTemperature["chemicalPotential"])
     dWaveTc = np.array(criticalTemperature["dWaveTc"])
     sWaveTc = np.array(criticalTemperature["sWaveTc"])
 
-    (line,) = ax.plot(mu, sWaveTc, linestyle="--", label=r"$s_+$")
-    ax.plot(mu, dWaveTc, c=line.get_color(), label=r"$d$")
+    ax.plot(
+        mu, sWaveTc, label=r"$s_+$", linestyle="--", color=color, linewidth=linewidth,
+    )
+    ax.plot(
+        mu, dWaveTc, label=r"$d$", color=color, linewidth=linewidth,
+    )
 
     # Plot the Fermi level.
     ax.axvline(
-        x=chemicalPotential, c=line.get_color(), linestyle=":", label=r"$\mu$",
+        x=chemicalPotential,
+        linestyle=":",
+        label=r"$\mu$",
+        color=color,
+        linewidth=linewidth,
     )
 
 
@@ -349,12 +362,15 @@ def main():
 
         # ====================== DOS ====================== #
         label = NAMES[i]
-        plotDensityOfStates(dos, axDOS, label=label)
+        color = COLORS[i]
+        plotDensityOfStates(dos, axDOS, label=label, color=color)
 
         # ====================== TC ====================== #
-        plotCriticalTemperature(criticalTemperature, parameters["mu"], ax_tc)
+        plotCriticalTemperature(
+            criticalTemperature, parameters["mu"], ax_tc, color=color
+        )
 
-    axDOS.axvline(x=0.0, c="k", dashes=[2, 2], label=r"$\epsilon_{\mathrm{F}}$")
+    axDOS.axvline(x=0.0, c=EF_COLOR, linestyle=":", label=r"$\epsilon_{\mathrm{F}}$")
     adjustPlot(
         axDOS,
         plotLabel=r"$\mathrm{(c)}$",
@@ -363,7 +379,7 @@ def main():
         xMin=-2.0,
         xMax=2.0,
         yMin=0.0,
-        yMax=0.75,
+        yMax=1.5,
         aspect=ASPECT_DOS,
         legendLoc="upper right",
     )
@@ -378,7 +394,7 @@ def main():
         yMin=0.0,
         yMax=0.35,
         aspect=ASPECT_TC,
-        legendLoc=(0.8, 0.23),
+        legendLoc=(0.8, 0.15),
         legendNumCols=2,
         legendTitle=r"$\mathrm{\#1} \;\; \mathrm{\#2}$",
     )
