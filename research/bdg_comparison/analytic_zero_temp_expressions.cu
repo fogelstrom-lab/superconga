@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
   const double HOPPING_NNN_FS2 = -0.495;
   const double HOPPING_NNNN_FS2 = 0.156;
   const double CHEMICAL_POTENTIAL_FS2 = -1.267;
-  // TODO(niclas): Should T* still be 0.25?
   const double TSTAR_FS2 = 0.25;
 
   const double TSTAR_CIRC = 0.18;
@@ -173,19 +172,17 @@ int main(int argc, char *argv[]) {
       // Calculate the projection of vF on the surface normal and parallel
       const T velocityFactorY =
           std::abs(velocityX * surfaceNormal[0] + velocityY * surfaceNormal[1]);
-      const T velocityFactorX =
-          velocityX * surfaceParallel[0] + velocityY * surfaceParallel[1];
+      const T velocityFactorX = std::abs(velocityX * surfaceParallel[0] +
+                                         velocityY * surfaceParallel[1]);
 
       // MGS energy: compute the integrand of <|dot(vf, n)|*|eta|> =
       // <|vFy|*|eta|> where n=(0,1) is the surface normal.
       integrandFreeEnergyMGS +=
           integrandFactor * velocityFactorY * basisFunctionAbs;
 
-      // Doppler energy: integrand of <|dot(vf,n)|*dot(vF,ps)>_{dot(vF,ps)>0}
-      if (velocityFactorX > static_cast<T>(0.0)) {
-        integrandFreeEnergyDoppler +=
-            integrandFactor * velocityFactorY * velocityFactorX;
-      }
+      // Doppler energy: integrand of <|dot(vf,n)|*|dot(vF,ps)|>
+      integrandFreeEnergyDoppler +=
+          integrandFactor * velocityFactorY * velocityFactorX;
     }
 
     // Bulk OP: Delta = pi*exp(-EulerGamma)*exp(-<|eta|^2 * ln(|eta|)>),
@@ -203,11 +200,12 @@ int main(int argc, char *argv[]) {
     // n=(0,1), see Eq. (E.104) on p. 131 in P. Holmvall PhD Thesis (2019)
     const T freeEnergyMGS = static_cast<T>(M_PI * M_PI * 0.5) *
                             bulkOrderParameter * integrandFreeEnergyMGS;
-    // Doppler energy: Omega = -(pi^2/2)<|dot(vf,n)|*dot(vF,ps)>_{dot(vF,ps)>0},
+    // Doppler energy: Omega = -(pi^2)<|dot(vf,n)|*dot(vF,ps)>,
     // with surface normal n=(0,1), see second term in Eq. (E.117) on p. 132 in
     // P. Holmvall PhD Thesis (2019)
+    // NOTE !!! In the thesis, the integral is over half the FS: dot(vF,ps)>0
     const T freeEnergyDoppler =
-        -static_cast<T>(M_PI) * integrandFreeEnergyDoppler;
+        -static_cast<T>(M_PI * M_PI) * integrandFreeEnergyDoppler;
 
     // Expected bulk OP at T=0, circular FS
     const T expecteOrderParameter = qcs::D_WAVE_BULK;
@@ -221,7 +219,7 @@ int main(int argc, char *argv[]) {
         static_cast<T>(std::sqrt(8.0) * M_PI / 3.0) * qcs::D_WAVE_BULK;
     // Doppler gain: slightly rewritten Eq. (E.121) on p. 132 in P. Holmvall PhD
     // Thesis (2019)
-    const T expectedFreeEnergyDoppler = -static_cast<T>(0.5);
+    const T expectedFreeEnergyDoppler = -static_cast<T>(M_PI);
 
     std::cout << "====================== RESULTS =============================";
     std::cout << std::endl;

@@ -46,11 +46,11 @@ class runData:
                 else:
                     print('WARNING! Neither grainMargin nor outerRadius were specified! Assuming a margin of 0.04.')
                     self.params['grainMargin'] = 0.04
-                    self.params['outerRadius'] = 1.0 - self.params['grainMargin']
+                    self.params['outerRadius'] = 0.5*(1.0 - self.params['grainMargin'])
             # Make sure that outerRadius is set, for backwards compability
             if not self.params.has_key('outerRadius'):
                 # Due to the above if-statements, it is safe to assume grain margin is set
-                self.params['outerRadius'] = 1.0 - self.params['grainMargin']
+                self.params['outerRadius'] = 0.5*(1.0 - self.params['grainMargin'])
 
             # Make sure number of lattice points is set
             if not self.params.has_key('numLatticePoints'):
@@ -126,6 +126,7 @@ class runData:
     def getFieldMin(self, observable_in, field_in):
         return np.nanmin(self.getObservableProperty(observable_in, field_in))
 
+    # Todo(patric): replace all dependence outerRadius in favor of margin. This removes backwards-compability though, which is currently useful
     def getLatticePoint( self, coordinate, sideLength, Nx, outerRadius ):
         return int(float(coordinate)/float(sideLength) * float(Nx-1)*2.0*outerRadius +\
                    0.5*float(Nx-Nx*2.0*outerRadius) )
@@ -394,8 +395,3 @@ def check_field_string(fields_in):
         message_out = str('Incompatible type of fields_in: %s.' % (type(fields_in)))
 
     return fieldDict_out, fieldList_out, message_out
-
-
-def getLatticePoint( inCoordinate, inSideLength, inNumLatticePoints, inMargin ):
-    return int(float(inCoordinate)/float(inSideLength) * float(inNumLatticePoints-1) * (1.0*inMargin) +\
-               0.5*float(inNumLatticePoints-inNumLatticePoints*(1.0*inMargin)) )

@@ -10,7 +10,8 @@ def latexPlot(width_in=512.0, fsize_in=16, axlab_ratio=1.5, text_ratio=2.0,
               usetex=True, dpi_in=600):
         fig_width_pt = width_in
         fsize = fsize_in
-        # Calculate figure size using golden ratio method
+        # Calculate figure size using golden ratio method, see:
+        # https://www.overleaf.com/learn/latex/Lengths_in_LaTeX
         inches_per_pt = 1.0/72.27                    # Convert pt to inch
         golden_mean = (np.sqrt(5.0)-1.0)/2.0           # Aesthetic ratio
         fig_width = fig_width_pt*inches_per_pt       # width in inches
