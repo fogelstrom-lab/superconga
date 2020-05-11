@@ -1,0 +1,21 @@
+{
+    "convergence_criterion": 1e-6,
+    "crystal_axes_rotation": 0.25,
+    "d_wave": true,
+    "data_base_path": "../examples/data/",
+    "disc": false,
+    "external_magnetic_flux_quanta": 0.0,
+    "grain_side_length": 30.0,
+    "grid_resolution": 201,
+    "num_angles": 64,
+    "num_energies": 20,
+    "num_iterations_max": 1000,
+    "num_iterations_min": 20,
+    "plot_current_density": false,
+    "plot_order_parameter": true,
+    "print_iteration_status": true,
+    "save_data": true,
+    "solenoid": false,
+    "temperature": 0.5,
+    "visualize": true
+}
