@@ -33,6 +33,11 @@ public:
   T getRelativeTc() const { return _Tcthis_Tc; }
   void setRelativeTc(const T Tc) { _Tcthis_Tc = Tc; }
 
+  void setCrystalAxesRotation(const T inCrystalAxesRotation) {
+    m_crystalAxesRotation = inCrystalAxesRotation;
+  }
+  T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
+
   virtual void computeMomentumDependence(GridGPU *target, const T pX,
                                          const T pY,
                                          bool conjugateBasis = false) = 0;
@@ -66,21 +71,28 @@ private:
   // re-calculated
   bool m_isCouplingConstantInitialized;
 
+  // Specified in radians, as a rotational offset from the default.
+  // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
+  T m_crystalAxesRotation;
+
   // Order parameter component
   GridGPU *_deltaComp;
 };
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent()
-    : _param(0), _deltaComp(0), _Tcthis_Tc(1.0), m_couplingConstant(0),
-      m_isCouplingConstantInitialized(false) {}
+    : _param(0), _deltaComp(0), _Tcthis_Tc(1.0),
+      m_couplingConstant(static_cast<T>(0.0)),
+      m_isCouplingConstantInitialized(false),
+      m_crystalAxesRotation(static_cast<T>(0.0)) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
     const OrderParameterComponent<T> &other)
     : _param(other._param), _Tcthis_Tc(other._Tcthis_Tc),
       m_couplingConstant(other.m_couplingConstant),
-      m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized) {
+      m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized),
+      m_crystalAxesRotation(other.m_crystalAxesRotation) {
   if (other._deltaComp)
     _deltaComp = new GridGPU(*other._deltaComp);
 }
@@ -89,7 +101,9 @@ template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(Parameters<T> *param,
                                                     T Tcthis_Tc)
     : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
-      m_couplingConstant(0), m_isCouplingConstantInitialized(false) {
+      m_couplingConstant(static_cast<T>(0.0)),
+      m_isCouplingConstantInitialized(false),
+      m_crystalAxesRotation(static_cast<T>(0.0)) {
   // Do an initialization on creation so we can set initial value
   initialize();
 }
@@ -107,6 +121,7 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A.m_couplingConstant, B.m_couplingConstant);
   std::swap(A.m_isCouplingConstantInitialized,
             B.m_isCouplingConstantInitialized);
+  std::swap(A.m_crystalAxesRotation, B.m_crystalAxesRotation);
 }
 
 template <typename T> int OrderParameterComponent<T>::initialize() {

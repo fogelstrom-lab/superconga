@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
   OrderParameterComponent_D<T> *orderParameterComponent =
       new OrderParameterComponent_D<T>(parameters);
   // Rotate d-wave lobes (ab-axes) relative to grain
-  orderParameterComponent->setLatticeOrientation(
+  orderParameterComponent->setCrystalAxesRotation(
       simParams::CRYSTAL_AXES_ROTATION);
   Initial<T>::bulk(orderParameterComponent);
   // Add the initialized d-wave component to the total order parameter

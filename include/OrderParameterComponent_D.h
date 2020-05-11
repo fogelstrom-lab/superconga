@@ -19,7 +19,6 @@ class OrderParameterComponent_D : public OrderParameterComponent<T> {
 public:
   // Constructors and Destructors
   OrderParameterComponent_D();
-  virtual ~OrderParameterComponent_D();
 
   OrderParameterComponent_D(const OrderParameterComponent_D<T> &other);
 
@@ -27,18 +26,14 @@ public:
 
   OrderParameterComponent_D<T> &operator=(OrderParameterComponent_D<T> other);
 
-  virtual OrderParameterComponent_D<T> *clone() const;
+  OrderParameterComponent_D<T> *clone() const;
 
-  virtual void computeMomentumDependence(GridGPU *target, const T pX,
-                                         const T pY,
-                                         bool conjugateBasis = false);
+  void computeMomentumDependence(GridGPU *target, const T pX, const T pY,
+                                 bool conjugateBasis = false);
 
-  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface);
+  void initBasisNormalization(FermiSurface<T> *fermiSurface);
 
-  virtual T deltaBulk() const;
-
-  void setLatticeOrientation(T angle) { _latticeOrientation = angle; }
-  T getLatticeOrientation() const { return _latticeOrientation; }
+  T deltaBulk() const;
 
   std::string getType() const { return m_type; }
 
@@ -49,49 +44,28 @@ private:
                    OrderParameterComponent_D<T> B) {
     swap(static_cast<OrderParameterComponent<T> &>(A),
          static_cast<OrderParameterComponent<T> &>(B));
-    std::swap(A._latticeOrientation, B._latticeOrientation);
-    std::swap(A._latticeOrientationGrid, B._latticeOrientationGrid);
   }
 
   // Factor to make <|eta|^2> = 1.
   T m_basisNormalization;
-
-  // Specified in radians, as a rotational offset from the default.
-  // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
-  T _latticeOrientation;
-  GridGPU *_latticeOrientationGrid;
 
   const std::string m_type = std::string("d");
 };
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D()
-    : OrderParameterComponent<T>(), m_basisNormalization(0.0),
-      _latticeOrientation(0.0), _latticeOrientationGrid(0) {}
+    : OrderParameterComponent<T>(), m_basisNormalization(0.0) {}
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(
     const OrderParameterComponent_D<T> &other)
     : OrderParameterComponent<T>(other),
-      m_basisNormalization(other.m_basisNormalization),
-      _latticeOrientation(other._latticeOrientation),
-      _latticeOrientationGrid(0) {
-
-  if (other._latticeOrientationGrid)
-    _latticeOrientationGrid = new GridGPU(*other._latticeOrientationGrid);
-}
+      m_basisNormalization(other.m_basisNormalization) {}
 
 template <typename T>
 OrderParameterComponent_D<T>::OrderParameterComponent_D(Parameters<T> *param,
                                                         T Tcthis_Tc)
-    : OrderParameterComponent<T>(param, Tcthis_Tc), m_basisNormalization(0.0),
-      _latticeOrientation(0.0), _latticeOrientationGrid(0) {}
-
-template <typename T>
-OrderParameterComponent_D<T>::~OrderParameterComponent_D() {
-  if (_latticeOrientationGrid)
-    delete _latticeOrientationGrid;
-}
+    : OrderParameterComponent<T>(param, Tcthis_Tc), m_basisNormalization(0.0) {}
 
 template <typename T>
 OrderParameterComponent_D<T> &
@@ -108,9 +82,11 @@ OrderParameterComponent_D<T> *OrderParameterComponent_D<T>::clone() const {
 template <typename T>
 void OrderParameterComponent_D<T>::computeMomentumDependence(
     GridGPU *target, const T pX, const T pY, bool conjugateBasis) {
+  const T crystalAxesRotation =
+      OrderParameterComponent<T>::getCrystalAxesRotation();
   T pXRotated;
   T pYRotated;
-  utils::rotate(_latticeOrientation, pX, pY, pXRotated, pYRotated);
+  utils::rotate(crystalAxesRotation, pX, pY, pXRotated, pYRotated);
   const cplx<T> basis = Basis_D<T>::compute(pXRotated, pYRotated);
   (*target) *= m_basisNormalization * (conjugateBasis ? basis.conj() : basis);
 }
