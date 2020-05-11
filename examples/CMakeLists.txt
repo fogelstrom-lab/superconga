@@ -28,7 +28,8 @@ set(NVCC_WARN
 # Define the main set of source files
 set(SRC dwave_octagon.cu 
         swave_solenoid_flux_quantization.cu
-        swave_disc_meissner.cu)
+        swave_disc_meissner.cu
+        main.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
