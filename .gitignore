@@ -6,3 +6,6 @@ build/
 
 # Python compiled code
 *.pyc
+
+# docs local build directory
+docs/public/
