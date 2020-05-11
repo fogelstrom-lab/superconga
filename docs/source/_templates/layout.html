@@ -1,0 +1,8 @@
+{% extends '!layout.html' %}
+
+{% block document %}
+{{super()}}
+<a href="{{ gitlab_url }}">
+  <img style="position: absolute; top: 0; right: 0; border: 0;" src="_static/images/fork-me.png" alt="Fork me on Gitlab">
+</a>
+{% endblock %}
