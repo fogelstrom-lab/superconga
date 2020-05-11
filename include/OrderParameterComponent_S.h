@@ -13,7 +13,6 @@ class OrderParameterComponent_S : public OrderParameterComponent<T> {
 public:
   // Constructors and Destructors
   OrderParameterComponent_S();
-  virtual ~OrderParameterComponent_S() {}
 
   OrderParameterComponent_S(const OrderParameterComponent_S<T> &other);
 
@@ -21,18 +20,17 @@ public:
 
   OrderParameterComponent_S<T> &operator=(OrderParameterComponent_S<T> other);
 
-  virtual OrderParameterComponent_S<T> *clone() const;
+  OrderParameterComponent_S<T> *clone() const;
 
   // There is no momentum dependence.
-  virtual void computeMomentumDependence(GridGPU *target, const T pX,
-                                         const T pY,
-                                         bool conjugateBasis = false) {}
+  void computeMomentumDependence(GridGPU *target, const T pX, const T pY,
+                                 bool conjugateBasis = false) {}
 
   // Because there is no momentum dependence the basis function normalization is
   // trivially satisfied.
-  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface){};
+  void initBasisNormalization(FermiSurface<T> *fermiSurface){};
 
-  virtual T deltaBulk() const;
+  T deltaBulk() const;
 
   std::string getType() const { return m_type; }
 
