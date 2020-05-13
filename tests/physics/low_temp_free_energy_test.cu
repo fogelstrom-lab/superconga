@@ -33,7 +33,7 @@ const double TEMPERATURE = 0.005;
 // Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
 const double GRAIN_SIDE_LENGTH = 5.0;
 // Number of lattice points per grain side length
-const int GRID_RESOLUTION = 401;
+const int GRID_RESOLUTION = 128;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 64;
 // Number of discrete energies (poles)
