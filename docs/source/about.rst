@@ -1,15 +1,62 @@
 ================
- About Page
+ About
 ================
 
-Chapter 1
-=========
-*Hello*, **World** is the golden standard of programming.
+What is suprcongpu?
+===================
+Summary goes here.
 
-Math Test 1
-===========
-.. math::
+Developers
+==========
+Fix layout with css.
 
-   (a + b)^2 = a^2 + 2ab + b^2
+Current Developers
+------------------
+.. list-table::
 
-   (a - b)^2 = a^2 - 2ab + b^2
+    * - .. figure:: _static/images/developers/patric_holmvall.png
+           :width: 100%
+         
+        | Patric Holmvall
+        | Chalmers
+      - .. figure:: _static/images/developers/niclas_wall_wennerdal.png
+           :width: 100%
+         
+        | Niclas Wall-Wennerdal
+        | Chalmers
+    * - .. figure:: _static/images/developers/oleksii_shevtsov.png
+           :width: 100%
+
+        | Oleksii Shevtsov
+        | Chalmers
+      -
+
+Past Developers
+---------------
+.. list-table:: 
+
+    * - .. figure:: _static/images/developers/mikael_hakansson.png
+           :width: 100%
+         
+        | Mikael Håkansson
+        | Chalmers
+      - 
+   
+Project Supervisors
+-------------------
+.. list-table:: 
+
+    * - .. figure:: _static/images/developers/tomas_lofwander.png
+           :width: 100%
+         
+        | Tomas Löfwander
+        | Chalmers
+      - .. figure:: _static/images/developers/mikael_fogelstrom.png
+           :width: 100%
+         
+        | Mikael Fogelström
+        | Chalmers
+
+License
+=======
+License information goes here.
