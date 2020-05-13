@@ -37,7 +37,7 @@ T computeTolerance(const int inNumX, const int inNumY,
 // is correct. Every element is set to the same value, ranging from inMinValue
 // to inMaxValue.
 template <typename T, typename DEVICE>
-void testSumMagnitudeComplex(const int inNumValues = 20,
+void testSumMagnitudeComplex(const int inNumValues = 4,
                              const T inMinValue = static_cast<T>(1e-3),
                              const T inMaxValue = static_cast<T>(1e3)) {
 
@@ -110,7 +110,7 @@ void testSumMagnitudeComplex(const int inNumValues = 20,
 // is correct. Every element is set to the same value, ranging from inMinValue
 // to inMaxValue.
 template <typename T, typename DEVICE>
-void testSumMagnitudeReal(const int inNumValues = 20, const T inMinValue = 1e-3,
+void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
                           const T inMaxValue = 1e3) {
 
   for (const int &gridSize : GRID_SIZES) {
