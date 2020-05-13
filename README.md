@@ -17,7 +17,7 @@ In order to compile and run the simple example, use the following commands:
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 ninja
-./examples/dwave_octagon
+./examples/main -f ../examples/dwave_square.json
 ```
 where the `DCMAKE_BUILD_TYPE` argument is either `Debug` or `Release`.
 

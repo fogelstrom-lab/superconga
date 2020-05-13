@@ -33,8 +33,11 @@
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
 #include "run_utils.h" // Commonly used functions in run files
 
+#include <CLI/CLI.hpp>
+#include <cstdlib>
+#include <iomanip>
 #include <iostream>
-#include <stdlib.h>
+#include <nlohmann/json.hpp>
 #include <string>
 
 //*******************************************************
@@ -59,92 +62,51 @@ namespace {
 Context<T> *context = new Context<T>();
 // Create visualization object.
 Visualization<T> *gui;
+// JSON parameters.
+nlohmann::json jParameters;
 } // namespace
-
-//*******************************************************
-// SIMULATION PARAMETERS
-//*******************************************************
-namespace simParams {
-//******************************
-// Physics
-//******************************
-// Temperature in units of T_c.
-const T TEMPERATURE = 0.1;
-// Run with d-wave or s-wave.
-const bool D_WAVE = true;
-// Rotation between crystal axes and grain geometry.
-const T CRYSTAL_AXES_ROTATION = 0.25 * M_PI;
-// External magnetic flux in units of flux quanta.
-const T EXTERNAL_MAGNETIC_FLUX_QUANTA = 6.0;
-// Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kBTc).
-const T GRAIN_SIDE_LENGTH = 30.0;
-
-//******************************
-// Geometry
-//******************************
-// Run with circular or square grain.
-const bool DISC = true;
-// Run with a solenoid or not.
-const bool SOLENOID = true;
-
-//******************************
-// Numeric details
-//******************************
-// Number of lattice points per grain side length.
-const int GRID_RESOLUTION = 201;
-// Number of discrete trajectory angles (on the Fermi-surface).
-const int NUM_ANGLES = 64;
-// Number of discrete energies (poles).
-const int NUM_ENERGIES = 20;
-
-//******************************
-// Self-consistency and convergence
-//******************************
-// Convergence criterion for order-parameter residual.
-const T CONVERGENCE_CRITERION = 1E-6;
-// Maximum number of iterations.
-const int NUM_ITERATIONS_MAX = 1000;
-// Minimum number of iterations.
-const int NUM_ITERATIONS_MIN = 20;
-
-//******************************
-// Output and visualization
-//******************************
-// Print iteration status to terminal.
-const bool PRINT_ITERATION_STATUS = true;
-// Run with OpenGL visualization or in terminal.
-const bool VISUALIZE = true;
-// Plot the order parameter
-const bool PLOT_ORDER_PARAMETER = true;
-// Plot current density (x,y)-components and magnitude.
-const bool PLOT_CURRENT_DENSITY = true;
-// Save data to file upon completion.
-const bool SAVE_DATA = true;
-// Path to data, relative to build directory.
-const std::string DATA_BASE_PATH = "../examples/data/";
-} // namespace simParams
 
 //*******************************************************
 // MAIN
 //*******************************************************
 int main(int argc, char *argv[]) {
   //***************************************************
+  // READ PARAMETERS
+  //***************************************************
+  CLI::App app{"SuprConGPU"};
+
+  std::string filename;
+  app.add_option("-f,--file", filename, "JSON parameter file.");
+
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError &e) {
+    return app.exit(e);
+  }
+
+  // Read the parameter file.
+  std::ifstream file(filename);
+  file >> jParameters;
+
+  //***************************************************
   // APPLY PARAMETERS
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
   Parameters<T> *parameters = new Parameters<T>(context);
   // Set temperature.
-  parameters->setTemperature(simParams::TEMPERATURE);
+  parameters->setTemperature(jParameters["temperature"].get<T>());
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
-  parameters->setGrainWidthCoherenceLengths(simParams::GRAIN_SIDE_LENGTH);
+  parameters->setGrainWidthCoherenceLengths(
+      jParameters["grain_side_length"].get<T>());
   // Set grain resolution in number of lattice sites.
-  parameters->setGridResolution(simParams::GRID_RESOLUTION);
+  parameters->setGridResolution(jParameters["grid_resolution"].get<int>());
   // Set number of Matsubara energies (Ozaki poles).
-  parameters->setNumMatsubaraEnergies(simParams::NUM_ENERGIES);
+  parameters->setNumMatsubaraEnergies(jParameters["num_energies"].get<int>());
   // Number of discrete steps in momentum angle.
-  parameters->setAngularResolution(simParams::NUM_ANGLES);
+  parameters->setAngularResolution(jParameters["num_angles"].get<int>());
   // Set convergence criterion.
-  parameters->setConvergenceCriterion(simParams::CONVERGENCE_CRITERION);
+  parameters->setConvergenceCriterion(
+      jParameters["convergence_criterion"].get<T>());
 
   //***************************************************
   // CREATE GEOMETRY
@@ -166,7 +128,7 @@ int main(int argc, char *argv[]) {
   const int numVerticesSquare = 4;
 
   // Make the grain a disc or a square.
-  if (simParams::DISC) {
+  if (jParameters["disc"].get<bool>()) {
     geometry->add(new DiscGeometry<T>(grainScale), Type::add);
   } else {
     geometry->add(new PolygonGeometry<T>(numVerticesSquare, grainScale),
@@ -174,12 +136,12 @@ int main(int argc, char *argv[]) {
   }
 
   // Remove a portion to create a solenoid.
-  if (simParams::SOLENOID) {
+  if (jParameters["solenoid"].get<bool>()) {
     // Relative size of grain hole for solenoid.
     const T holeScale = 0.2;
 
     // Circular or square hole.
-    if (simParams::DISC) {
+    if (jParameters["disc"].get<bool>()) {
       geometry->add(new DiscGeometry<T>(holeScale), Type::remove);
     } else {
       geometry->add(new PolygonGeometry<T>(numVerticesSquare, holeScale),
@@ -196,23 +158,26 @@ int main(int argc, char *argv[]) {
 
   // Add a d-wave or an s-wave order-parameter component.
   OrderParameterComponent<T> *orderParameterComponent;
-  if (simParams::D_WAVE) {
+  if (jParameters["d_wave"].get<bool>()) {
     orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
 
     // Set rotation of crystal axes with respect to the grain geometry.
-    orderParameterComponent->setCrystalAxesRotation(
-        simParams::CRYSTAL_AXES_ROTATION);
+    const T crystalAxesRotation =
+        static_cast<T>(M_PI) * jParameters["crystal_axes_rotation"].get<T>();
+    orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
   } else {
     orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
   }
 
   // Initialize order parameter with a guess.
-  if (simParams::SOLENOID) {
+  if (jParameters["solenoid"].get<bool>()) {
     // Initialize order-parameter component with a phase winding corresponding
     // to the number of external flux quanta. If there is a mismatch, the system
     // might converge to a meta-stable state.
-    Initial<T>::phaseWinding(orderParameterComponent,
-                             simParams::EXTERNAL_MAGNETIC_FLUX_QUANTA);
+    Initial<T>::phaseWinding(
+        orderParameterComponent,
+        static_cast<int>(
+            jParameters["external_magnetic_flux_quanta"].get<T>()));
   } else {
     // Initialize order-parameter component to the (real) bulk value.
     Initial<T>::bulk(orderParameterComponent);
@@ -247,7 +212,7 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gague.
-  if (simParams::SOLENOID) {
+  if (jParameters["solenoid"].get<bool>()) {
     riccatiSolver =
         new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Solenoid>(
             context);
@@ -272,16 +237,17 @@ int main(int argc, char *argv[]) {
   context->initialize();
 
   // Set external magnetic field strength.
-  if (simParams::SOLENOID) {
+  if (jParameters["solenoid"].get<bool>()) {
     // External field in flux quanta.
     parameters->setMagneticFieldStrength(
-        simParams::EXTERNAL_MAGNETIC_FLUX_QUANTA);
+        jParameters["external_magnetic_flux_quanta"].get<T>());
   } else {
     // External field in fux quanta per unit area.
-    const T EXTERNAL_MAGNETIC_FLUX_DENSITY =
-        simParams::EXTERNAL_MAGNETIC_FLUX_QUANTA / geometry->area();
+    const T externalMagneticFluxDensity =
+        jParameters["external_magnetic_flux_quanta"].get<T>() /
+        geometry->area();
 
-    parameters->setMagneticFieldStrength(EXTERNAL_MAGNETIC_FLUX_DENSITY);
+    parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
   }
 
   // Re-initialize
@@ -293,10 +259,15 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  if (simParams::VISUALIZE) {
-    gui =
-        run_utils::createVisualization(context, simParams::PLOT_ORDER_PARAMETER,
-                                       simParams::PLOT_CURRENT_DENSITY);
+  const bool plotOrderParameter =
+      jParameters["plot_order_parameter"].get<bool>();
+  const bool plotCurrentDensity =
+      jParameters["plot_current_density"].get<bool>();
+  const bool visualize = jParameters["visualize"].get<bool>() &&
+                         (plotOrderParameter || plotCurrentDensity);
+  if (visualize) {
+    gui = run_utils::createVisualization(context, plotOrderParameter,
+                                         plotCurrentDensity);
     initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
     glutKeyboardFunc(run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
@@ -305,15 +276,16 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  run_utils::runSimulation(
-      context, simParams::VISUALIZE, simParams::PRINT_ITERATION_STATUS,
-      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
+  run_utils::runSimulation(context, visualize,
+                           jParameters["print_iteration_status"].get<bool>(),
+                           jParameters["num_iterations_min"].get<int>(),
+                           jParameters["num_iterations_max"].get<int>());
 
   //***********************************************
   // POST-PROCESSING
   //***********************************************
   // Save at the very end.
-  if (simParams::SAVE_DATA) {
+  if (jParameters["save_data"].get<bool>()) {
     saveDataWrapper();
   }
 
@@ -324,8 +296,9 @@ int main(int argc, char *argv[]) {
 
 // Plot data in OpenGL GUI.
 void display() {
-  run_utils::display(context, gui, simParams::PLOT_ORDER_PARAMETER,
-                     simParams::PLOT_CURRENT_DENSITY);
+  run_utils::display(context, gui,
+                     jParameters["plot_order_parameter"].get<bool>(),
+                     jParameters["plot_current_density"].get<bool>());
 
   // Tell Glut to update window.
   glutPostRedisplay();
@@ -334,8 +307,10 @@ void display() {
 void saveDataWrapper() {
 
   char dataPath[512];
-  snprintf(dataPath, sizeof(dataPath), "%sT%2.4f/",
-           simParams::DATA_BASE_PATH.c_str(), simParams::TEMPERATURE);
+  const std::string dataBasePath =
+      jParameters["data_base_path"].get<std::string>();
+  snprintf(dataPath, sizeof(dataPath), "%sT%2.4f/", dataBasePath.c_str(),
+           jParameters["temperature"].get<T>());
 
   // Todo(patric): Implement helper functions to save data.
 }

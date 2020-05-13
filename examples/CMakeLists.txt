@@ -25,39 +25,71 @@ set(NVCC_WARN
     -Wdouble-promotion,\
     -Wformat=2")
 
+# Declare the JSON lib. Note that this is a smaller mirror of the original repo:
+# https://github.com/nlohmann/json
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY
+    https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
+  GIT_TAG v3.7.3)
+
+# Fetch the JSON lib.
+FetchContent_GetProperties(json)
+if(NOT json_POPULATED)
+  FetchContent_Populate(json)
+  add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+# Declare the CLI11 lib (command line parser).
+FetchContent_Declare(
+  cli11
+  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
+  GIT_TAG v1.9.0)
+
+# Fetch the CLI11 lib.
+FetchContent_GetProperties(cli11)
+if(NOT cli11_POPULATED)
+  FetchContent_Populate(cli11)
+  add_subdirectory(${cli11_SOURCE_DIR} ${cli11_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 # Define the main set of source files
-set(SRC dwave_octagon.cu 
-        swave_solenoid_flux_quantization.cu
-        swave_disc_meissner.cu
-        main.cu)
+set(SRC main.cu)
 
-foreach(file ${SRC})
-  # string( REPLACE ".cu" "" name ${file})
-  get_filename_component(name ${file} NAME_WE)
+# string( REPLACE ".cu" "" name ${file})
+get_filename_component(name ${SRC} NAME_WE)
 
-  # Create command-line executable
-  add_executable(${name} ${file})
+# Create command-line executable
+add_executable(${name} ${SRC})
 
-  # Include directories
-  target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+# Include directories
+target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
-  # External libraries
-  target_link_libraries(${name} PRIVATE glut GL GLU gfortran lapack blas)
+# External libraries
+target_link_libraries(
+  ${name}
+  PRIVATE glut
+          GL
+          GLU
+          gfortran
+          lapack
+          blas
+          nlohmann_json::nlohmann_json
+          CLI11::CLI11)
 
-  # Use C++14 since it is the lates standard CUDA supports
-  message(STATUS "Enable C++ standard: C++14")
-  set_target_properties(${name} PROPERTIES CUDA_STANDARD 14
-                                           CUDA_STANDARD_REQUIRED ON)
-  set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
-                                                           ON)
+# Use C++14 since it is the latest standard CUDA supports
+message(STATUS "Enable C++ standard: C++14")
+set_target_properties(${name} PROPERTIES CUDA_STANDARD 14 CUDA_STANDARD_REQUIRED
+                                                          ON)
+set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
+                                                         ON)
 
-  # Set DEBUG compile flags
-  target_compile_options(
-    ${name}
-    PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
-    PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
-    PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
+# Set DEBUG compile flags
+target_compile_options(
+  ${name}
+  PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
+  PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
+  PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
 
-  # Set RELEASE compile flags
-  target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
-endforeach()
+# Set RELEASE compile flags
+target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
