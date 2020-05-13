@@ -1,5 +1,5 @@
 # SuprConGPU
-C++/CUDA library for calculation of physical properties of superconducting systems with confinement.
+C++/CUDA library for calculation of physical properties of superconducting systems with confinement. Below follows a summarized usage guide, see [the documentation](https://suprcongpu.gitlab.io/suprcongpu/) for more information.
 
 ## External packages required
 Here goes the list of external libraries and packages required to compile and run the examples:
