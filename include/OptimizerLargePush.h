@@ -25,7 +25,7 @@ public:
   ~OptimizerLargePush();
 
   // Take a step with the optimizer.
-  void step(const T inResidual, OrderParameter<T> *const inOutOrderParameter);
+  void step(OrderParameter<T> *const inOutOrderParameter, const T inResidual);
 
 private:
   // The previous order parameters.
@@ -81,8 +81,8 @@ template <typename T> OptimizerLargePush<T>::~OptimizerLargePush() {
 }
 
 template <typename T>
-void OptimizerLargePush<T>::step(const T inResidual,
-                                 OrderParameter<T> *const inOutOrderParameter) {
+void OptimizerLargePush<T>::step(OrderParameter<T> *const inOutOrderParameter,
+                                 const T inResidual) {
   // The current convergence rate.
   const T convergenceRate = m_residual / inResidual;
 
