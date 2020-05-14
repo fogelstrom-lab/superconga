@@ -239,22 +239,24 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
       component->applyCouplingConstant();
     }
 
-    OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
+    // Take step with the optimizer. Note, OptimizerLargePush requires the
+    // residual.
+    const T previousResidual = C::getResidual();
+    _opt->step(_delta, previousResidual);
 
+    // Compute residual.
+    OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
     const T residual = computeResidual(*(deltaOld->getOrderParameterField()),
                                        *(_delta->getOrderParameterField()));
     C::setResidual(residual);
 
-    const T convergenceCriterion = param->getConvergenceCriterion();
+    // Check convergence.
+    const bool isConverged = residual < param->getConvergenceCriterion();
+    C::setConverged(isConverged);
 
-    if (residual >= convergenceCriterion) {
-      _opt->step(residual, _delta);
-      // A little counter-intuitive perhaps, but we need to update the order
-      // parameter in the context module.
-      *deltaOld = *_delta;
-    } else {
-      C::setConverged();
-    }
+    // A little counter-intuitive perhaps, but we need to update the order
+    // parameter in the context module.
+    *deltaOld = *_delta;
 
     // Copy results to grid with one field per order parameter component.
     for (int i = 0; i < Nc; ++i) {

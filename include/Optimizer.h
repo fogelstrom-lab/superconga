@@ -12,8 +12,8 @@ public:
   virtual ~Optimizer(){};
 
   // Take naive fixed-point step, i.e. do nothing here.
-  virtual void step(const T inResidual,
-                    OrderParameter<T> *const inOutOrderParameter){};
+  virtual void step(OrderParameter<T> *const inOutOrderParameter,
+                    const T inResidual){};
 };
 
 #endif // OPTIMIZER_H_
