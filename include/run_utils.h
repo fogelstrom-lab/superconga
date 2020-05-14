@@ -62,6 +62,9 @@ void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
 template <typename T> void printIterationStatus(Context<T> *inContext) {
   std::cout << "Iteration = " << inContext->getNumIterations() << ", ";
   std::cout << "Residual = " << inContext->getResidual(0) << ", ";
+  std::cout << "Free Energy = "
+            << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea()
+            << ", ";
   std::cout << "Iteration time = " << inContext->getComputeTime() << std::endl;
 }
 
@@ -179,7 +182,7 @@ Status runIteration(Context<T> *inContext, const bool inPrintStatus = true,
 
   // Check for convergence.
   const bool isConverged =
-      (inContext->isConverged()) && (numIterations > inNumIterationsMin);
+      (inContext->isConverged()) && (numIterations >= inNumIterationsMin);
 
   // Check for maximum number of iterations.
   const bool patienceReached = (numIterations > inNumIterationsMax);

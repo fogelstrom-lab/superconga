@@ -160,14 +160,14 @@ int main(int argc, char *argv[]) {
   OrderParameterComponent<T> *orderParameterComponent;
   if (jParameters["d_wave"].get<bool>()) {
     orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
-
-    // Set rotation of crystal axes with respect to the grain geometry.
-    const T crystalAxesRotation =
-        static_cast<T>(M_PI) * jParameters["crystal_axes_rotation"].get<T>();
-    orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
   } else {
     orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
   }
+
+  // Set rotation of crystal axes with respect to the grain geometry.
+  const T crystalAxesRotation =
+      static_cast<T>(M_PI) * jParameters["crystal_axes_rotation"].get<T>();
+  orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
   // Initialize order parameter with a guess.
   if (jParameters["solenoid"].get<bool>()) {
