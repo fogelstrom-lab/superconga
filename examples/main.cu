@@ -259,15 +259,9 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  const bool plotOrderParameter =
-      jParameters["plot_order_parameter"].get<bool>();
-  const bool plotCurrentDensity =
-      jParameters["plot_current_density"].get<bool>();
-  const bool visualize = jParameters["visualize"].get<bool>() &&
-                         (plotOrderParameter || plotCurrentDensity);
+  const bool visualize = jParameters["visualize"].get<bool>();
   if (visualize) {
-    gui = run_utils::createVisualization(context, plotOrderParameter,
-                                         plotCurrentDensity);
+    gui = run_utils::createVisualization(context);
     initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
     glutKeyboardFunc(run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
@@ -296,9 +290,7 @@ int main(int argc, char *argv[]) {
 
 // Plot data in OpenGL GUI.
 void display() {
-  run_utils::display(context, gui,
-                     jParameters["plot_order_parameter"].get<bool>(),
-                     jParameters["plot_current_density"].get<bool>());
+  run_utils::display(context, gui);
 
   // Tell Glut to update window.
   glutPostRedisplay();

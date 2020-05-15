@@ -11,8 +11,6 @@
     "num_energies": 20,
     "num_iterations_max": 1000,
     "num_iterations_min": 20,
-    "plot_current_density": true,
-    "plot_order_parameter": true,
     "print_iteration_status": true,
     "save_data": true,
     "solenoid": false,
