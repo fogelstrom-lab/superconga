@@ -9,6 +9,7 @@
 template <typename> class CoherenceFunctions;
 template <typename> class ComputeCurrent;
 template <typename> class ComputeCurrentDensity;
+template <typename> class ComputeFreeEnergy;
 template <typename> class ComputeLDOS;
 template <typename> class ComputeOrderParameter;
 template <typename> class ComputeProperty;
@@ -28,127 +29,133 @@ public:
   Context();
   ~Context();
 
-  // Setters
-  void set(Parameters<T> *param) { _param = param; }
-  void set(GeometryGroup<T> *geom) { _geom = geom; }
-  void set(OrderParameter<T> *delta) { _delta = delta; }
-  void set(RiccatiSolver<T> *solver) { _solver = solver; }
-  void set(IntegrationIterator<T> *iter) { _iter = iter; }
-  void set(FermiSurface<T> *fermiSurface) { _fermiSurface = fermiSurface; }
-  int add(ComputeOrderParameter<T> *compute) {
-    _compute_delta = compute;
-    return add(static_cast<ComputeProperty<T> *>(compute));
+  // Setters non-compute objects.
+  void set(FermiSurface<T> *inFermiSurface) { m_fermiSurface = inFermiSurface; }
+  void set(GeometryGroup<T> *inGeometry) { m_geometry = inGeometry; }
+  void set(IntegrationIterator<T> *inIntegrationIterator) {
+    m_integrationIterator = inIntegrationIterator;
   }
-  int add(ComputeCurrent<T> *compute) {
-    _compute_current = compute;
-    return add(static_cast<ComputeProperty<T> *>(compute));
+  void set(OrderParameter<T> *inOrderParameter) {
+    m_orderParameter = inOrderParameter;
   }
-  int add(ComputeCurrentDensity<T> *compute) {
-    _compute_current_density = compute;
-    return add(static_cast<ComputeProperty<T> *>(compute));
+  void set(Parameters<T> *inParameters) { m_parameters = inParameters; }
+  void set(RiccatiSolver<T> *inRiccatiSolver) {
+    m_riccatiSolver = inRiccatiSolver;
   }
-  int add(ComputeLDOS<T> *compute) {
-    _compute_ldos = compute;
-    return add(static_cast<ComputeProperty<T> *>(compute));
-  }
-  int add(ComputeProperty<T> *compute);
+
+  // Adders of compute objects.
+  void add(ComputeCurrent<T> *inComputeCurrent);
+  void add(ComputeCurrentDensity<T> *inComputeCurrentDensity);
+  void add(ComputeFreeEnergy<T> *inComputeFreeEnergy);
+  void add(ComputeLDOS<T> *inComputeLDOS);
+  void add(ComputeOrderParameter<T> *inComputeOrderParameter);
+  void deleteComputeObjects();
 
   // Functions
   int initialize(int numEnergiesPerBlock = -1);
   void compute();
 
-  // Getters
-  Parameters<T> *getParameters() const { return _param; }
-  GeometryGroup<T> *getGeometry() const { return _geom; }
-  FermiSurface<T> *getFermiSurface() const { return _fermiSurface; }
-  OrderParameter<T> *getOrderParameter() const { return _delta; }
+  // Getters of non-compute objects.
+  FermiSurface<T> *getFermiSurface() const { return m_fermiSurface; }
+  GeometryGroup<T> *getGeometry() const { return m_geometry; }
+  IntegrationIterator<T> *getIntegrationIterator() const {
+    return m_integrationIterator;
+  }
+  OrderParameter<T> *getOrderParameter() const { return m_orderParameter; }
   OrderParameterComponent<T> *getOrderParameterComponent(int idx) const {
-    return _delta->getOrderParameterComponent(idx);
+    return m_orderParameter->getOrderParameterComponent(idx);
   }
-  RiccatiSolver<T> *getRiccatiSolver() const { return _solver; }
-  IntegrationIterator<T> *getIntegrationIterator() const { return _iter; }
+  Parameters<T> *getParameters() const { return m_parameters; }
+  RiccatiSolver<T> *getRiccatiSolver() const { return m_riccatiSolver; }
 
-  int getNumComputeObjects() const { return _computeObjectList.size(); }
-  ComputeProperty<T> *getComputeObject(int idx) const {
-    return _computeObjectList[idx];
-  }
-
-  ComputeOrderParameter<T> *getComputeOrderParameter() const {
-    return _compute_delta;
-  }
-  ComputeCurrent<T> *getComputeCurrent() const { return _compute_current; }
+  // Getters of compute objects.
+  ComputeCurrent<T> *getComputeCurrent() const { return m_computeCurrent; }
   ComputeCurrentDensity<T> *getComputeCurrentDensity() const {
-    return _compute_current_density;
+    return m_computeCurrentDensity;
   }
-  ComputeLDOS<T> *getComputeLDOS() const { return _compute_ldos; }
+  ComputeFreeEnergy<T> *getComputeFreeEnergy() const {
+    return m_computeFreeEnergy;
+  }
+  ComputeLDOS<T> *getComputeLDOS() const { return m_computeLDOS; }
+  ComputeOrderParameter<T> *getComputeOrderParameter() const {
+    return m_computeOrderParameter;
+  }
+  ComputeProperty<T> *getComputeObject(int idx) const {
+    return m_computeObjectList[idx];
+  }
 
-  T getResidual(int idx = 0) const;
+  T getResidual(const int inIdx) const;
 
-  double getComputeTime() const { return _compute_time; }
-  int getNumIterations() const { return _numIterations; }
+  T getComputeTime() const { return m_computeTime; }
+  int getNumIterations() const { return m_numIterations; }
+  int getNumComputeObjects() const { return m_computeObjectList.size(); }
 
   // Helpers
-  int isConverged() const;
+  bool isConverged() const;
 
 private:
-  Parameters<T> *_param;
-  GeometryGroup<T> *_geom;
-  OrderParameter<T> *_delta;
-  RiccatiSolver<T> *_solver;
-  IntegrationIterator<T> *_iter;
-  FermiSurface<T> *_fermiSurface;
+  void add(ComputeProperty<T> *inComputeProperty);
 
-  std::vector<ComputeProperty<T> *> _computeObjectList;
+  Parameters<T> *m_parameters;
+  GeometryGroup<T> *m_geometry;
+  OrderParameter<T> *m_orderParameter;
+  RiccatiSolver<T> *m_riccatiSolver;
+  IntegrationIterator<T> *m_integrationIterator;
+  FermiSurface<T> *m_fermiSurface;
 
-  double _compute_time;
-  int _numIterations;
+  std::vector<ComputeProperty<T> *> m_computeObjectList;
+
+  T m_computeTime;
+  int m_numIterations;
 
   // Helper pointers
-  ComputeOrderParameter<T> *_compute_delta;
-  ComputeCurrent<T> *_compute_current;
-  ComputeCurrentDensity<T> *_compute_current_density;
-  ComputeLDOS<T> *_compute_ldos;
+  ComputeCurrent<T> *m_computeCurrent;
+  ComputeCurrentDensity<T> *m_computeCurrentDensity;
+  ComputeFreeEnergy<T> *m_computeFreeEnergy;
+  ComputeLDOS<T> *m_computeLDOS;
+  ComputeOrderParameter<T> *m_computeOrderParameter;
 };
 
 template <typename T>
 Context<T>::Context()
-    : _param(0), _geom(0), _delta(0), _solver(0), _iter(0), _compute_current(0),
-      _compute_delta(0), _compute_time(0.0), _numIterations(0) {}
+    : m_parameters(0), m_geometry(0), m_orderParameter(0), m_riccatiSolver(0),
+      m_integrationIterator(0), m_computeCurrent(0), m_computeOrderParameter(0),
+      m_computeTime(0.0), m_numIterations(0) {}
 
 template <typename T> Context<T>::~Context() {
   std::cout << "~Context()\n";
 
-  if (_param) {
-    delete _param;
+  if (m_parameters) {
+    delete m_parameters;
     std::cout << "~Context(): Deleted Parameters\n";
   }
 
-  if (_geom) {
-    delete _geom;
+  if (m_geometry) {
+    delete m_geometry;
     std::cout << "~Context(): Deleted Geometry\n";
   }
-  if (_delta) {
-    delete _delta;
+
+  if (m_orderParameter) {
+    delete m_orderParameter;
     std::cout << "~Context(): Deleted OrderParameter\n";
   }
-  if (_solver) {
-    delete _solver;
+
+  if (m_riccatiSolver) {
+    delete m_riccatiSolver;
     std::cout << "~Context(): Deleted RiccatiSolver\n";
   }
-  if (_iter) {
-    delete _iter;
+
+  if (m_integrationIterator) {
+    delete m_integrationIterator;
     std::cout << "~Context(): Deleted IntegrationIterator\n";
   }
 
-  if (_fermiSurface) {
-    delete _fermiSurface;
+  if (m_fermiSurface) {
+    delete m_fermiSurface;
     std::cout << "~Context(): Deleted FermiSurface\n";
   }
 
-  for (int i = 0; i < getNumComputeObjects(); ++i) {
-    delete _computeObjectList[i];
-    std::cout << "~Context(): Deleted ComputeObject " << i << "\n";
-  }
+  deleteComputeObjects();
 
   Grid<float>::CPU::printAllocatedMemTotal();
   Grid<double>::CPU::printAllocatedMemTotal();
@@ -161,64 +168,100 @@ template <typename T> Context<T>::~Context() {
   Grid<char>::GPU::printAllocatedMemTotal();
 }
 
-template <typename T> int Context<T>::add(ComputeProperty<T> *property) {
-  _computeObjectList.push_back(property);
+template <typename T> void Context<T>::deleteComputeObjects() {
+  for (int i = 0; i < getNumComputeObjects(); ++i) {
+    delete m_computeObjectList[i];
+    std::cout << "~Context(): Deleted ComputeObject " << i << "\n";
+  }
+  m_computeObjectList.clear();
+}
 
-  return getNumComputeObjects();
+template <typename T>
+void Context<T>::add(ComputeProperty<T> *inComputeProperty) {
+  m_computeObjectList.push_back(inComputeProperty);
+}
+
+template <typename T>
+void Context<T>::add(ComputeOrderParameter<T> *inComputeOrderParameter) {
+  m_computeOrderParameter = inComputeOrderParameter;
+  add(static_cast<ComputeProperty<T> *>(inComputeOrderParameter));
+}
+
+template <typename T>
+void Context<T>::add(ComputeCurrent<T> *inComputeCurrent) {
+  m_computeCurrent = inComputeCurrent;
+  add(static_cast<ComputeProperty<T> *>(inComputeCurrent));
+}
+
+template <typename T>
+void Context<T>::add(ComputeCurrentDensity<T> *inComputeCurrentDensity) {
+  m_computeCurrentDensity = inComputeCurrentDensity;
+  add(static_cast<ComputeProperty<T> *>(inComputeCurrentDensity));
+}
+
+template <typename T>
+void Context<T>::add(ComputeFreeEnergy<T> *inComputeFreeEnergy) {
+  m_computeFreeEnergy = inComputeFreeEnergy;
+  add(static_cast<ComputeProperty<T> *>(inComputeFreeEnergy));
+}
+
+template <typename T> void Context<T>::add(ComputeLDOS<T> *inComputeLDOS) {
+  m_computeLDOS = inComputeLDOS;
+  add(static_cast<ComputeProperty<T> *>(inComputeLDOS));
 }
 
 template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
-  if (_iter == 0 && getNumComputeObjects() > 0) {
+  if (m_integrationIterator == 0 && getNumComputeObjects() > 0) {
     std::cout << "Context::initialize() --> Creating IntegrationIterator\n";
-    _computeObjectList[0]->createIntegrationIterator(
-        numEnergiesPerBlock); // sets _iter member
+    // Note, this sets m_integrationIterator member.
+    m_computeObjectList[0]->createIntegrationIterator(numEnergiesPerBlock);
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): createIntegrationIterator");
   }
 
-  if (_geom) {
+  if (m_geometry) {
     std::cout << "Context::initialize() --> Initializing Geometry\n";
-    _geom->initialize();
+    m_geometry->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): GeometryGroup");
   }
 
-  if (_fermiSurface) {
+  if (m_fermiSurface) {
     std::cout << "Context::initialize() --> Initializing FermiSurface\n";
-    const int numAngles = _param->getAngularResolution();
-    _fermiSurface->initialize(numAngles);
+    const int numAngles = m_parameters->getAngularResolution();
+    m_fermiSurface->initialize(numAngles);
     ContextModule<T>::checkCudaError("Context<T>::initialize(): FermiSurface");
   }
 
-  if (_delta) {
+  if (m_orderParameter) {
     std::cout << "Context::initialize() --> Initializing OrderParameter\n";
-    _delta->initialize();
+    m_orderParameter->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): OrderParameter");
   }
 
-  if (_iter) {
+  if (m_integrationIterator) {
     std::cout << "Context::initialize() --> Initializing IntegrationIterator\n";
-    _iter->initialize();
+    m_integrationIterator->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): IntegrationIterator");
   }
 
   // RiccatiSolver requires IntegrationIterator to be initialized first
-  if (_solver) {
+  if (m_riccatiSolver) {
     std::cout << "Context::initialize() --> Initializing RiccatiSolver\n";
-    _solver->initialize();
+    m_riccatiSolver->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): RiccatiSolver");
   }
 
   for (int i = 0; i < getNumComputeObjects(); ++i) {
     std::cout << "Context::initialize() --> Initializing ComputeObject " << i
               << ":\n";
-    _computeObjectList[i]->initialize();
+    m_computeObjectList[i]->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): ComputeProperty");
   }
 
-  _numIterations = 0;
+  m_numIterations = 0;
 
   std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
 
@@ -237,7 +280,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
 template <typename T> void Context<T>::compute() {
   const auto startTime = std::chrono::high_resolution_clock::now();
-  _iter->compute();
+  m_integrationIterator->compute();
   const auto stopTime = std::chrono::high_resolution_clock::now();
 
   // Count the number of milliseconds.
@@ -246,26 +289,27 @@ template <typename T> void Context<T>::compute() {
                             .count();
 
   // Convert to seconds.
-  _compute_time = static_cast<T>(duration) / static_cast<T>(1e6);
+  m_computeTime = static_cast<T>(duration) / static_cast<T>(1e6);
 
-  _numIterations++;
+  m_numIterations++;
 }
 
 template <typename T> T Context<T>::getResidual(int idx) const {
-  if (idx <= getNumComputeObjects())
-    return _computeObjectList[idx]->getResidual();
-  else
-    return 1.0;
+  if (idx < getNumComputeObjects()) {
+    return m_computeObjectList[idx]->getResidual();
+  } else {
+    // TODO(niclas): Is this behavior really what the user expects?!
+    return static_cast<T>(1.0);
+  }
 }
 
-template <typename T> int Context<T>::isConverged() const {
-  // If we are computing order parameter self-consistently, use it to
-  // determine convergence.
+template <typename T> bool Context<T>::isConverged() const {
   if (getComputeOrderParameter()) {
+    // If we are computing order parameter self-consistently, use it to
+    // determine convergence.
     return getComputeOrderParameter()->isConverged();
-  } else
-  // If no order parameter, use first compute object to determine convergence
-  {
+  } else {
+    // If no order parameter, use first compute object to determine convergence
     return getComputeObject(0)->isConverged();
   }
 }
