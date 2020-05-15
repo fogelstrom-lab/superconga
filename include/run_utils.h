@@ -76,8 +76,8 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
 // TODO(patric): Move this functionality to visualization class.
 template <typename T>
 Visualization<T> *createVisualization(const Context<T> *const inContext,
-                                      const bool inPlotOrderParameter,
-                                      const bool inPlotCurrentDensity) {
+                                      const bool inPlotOrderParameter = true,
+                                      const bool inPlotCurrentDensity = true) {
   // Number of plots in visualization = numPlotsY * numPlotsX.
   const int numPlotsX = (inPlotCurrentDensity ? 3 : 1);
   const int numPlotsY = static_cast<int>(inPlotOrderParameter) +
@@ -106,7 +106,8 @@ Visualization<T> *createVisualization(const Context<T> *const inContext,
 /// \return - void
 template <typename T>
 void display(Context<T> *inContext, Visualization<T> *inGUI,
-             const bool inPlotOrderParameter, const bool inPlotCurrentDensity) {
+             const bool inPlotOrderParameter = true,
+             const bool inPlotCurrentDensity = true) {
   // Clear the plotting region
   inGUI->clearImage();
 
