@@ -65,6 +65,10 @@ add_executable(${name} ${SRC})
 # Include directories
 target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
+# Build src binaries into build/bin/
+set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                      "${PROJECT_BINARY_DIR}/bin")
+
 # External libraries
 target_link_libraries(
   ${name}
