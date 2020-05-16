@@ -13,7 +13,7 @@ Here goes the list of external libraries and packages required to compile and ru
 - CMake
 
 ## How to compile
-Set up the build with the following commands:
+Set up the build with the following commands (starting from the root directory):
 ```
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
@@ -37,10 +37,9 @@ where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.).
 The folder `examples/` contains a collection of parameter files, one per example, 
 demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework.
 
-To run an example, navigate to to the `build/` folder, and execute the following commands
+To run an example, navigate to to the `build/` folder, and execute the following command
 ```
-ninja examples/main
-./examples/main -f ../examples/XXX.json
+./bin/main -f ../examples/XXX.json
 ```
 where `XXX.json` should be substituted with any JSON file in the `examples/` folder.
 

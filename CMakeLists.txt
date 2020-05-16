@@ -15,6 +15,6 @@ include(CheckLanguage)
 check_language(CUDA)
 
 # Add subdirectories
+add_subdirectory(src)
 add_subdirectory(research)
-add_subdirectory(examples)
 add_subdirectory(tests)

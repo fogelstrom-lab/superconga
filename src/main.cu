@@ -73,10 +73,13 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // READ PARAMETERS
   //***************************************************
-  CLI::App app{"SuprConGPU"};
+  CLI::App app{"SuprConGPU main file for setting up self-consistent "
+               "simulations in a finite geometry (a mesoscopic grain). "};
 
   std::string filename;
-  app.add_option("-f,--file", filename, "JSON parameter file.");
+  app.add_option(
+      "-f,--file", filename,
+      "JSON file with parameters specifying the simulation settings.");
 
   try {
     app.parse(argc, argv);
