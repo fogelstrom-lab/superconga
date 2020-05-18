@@ -73,13 +73,77 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // READ PARAMETERS
   //***************************************************
-  CLI::App app{"SuprConGPU main file for setting up self-consistent "
-               "simulations in a finite geometry (a mesoscopic grain). "};
+  CLI::App app{
+      "SuprConGPU main file for setting up self-consistent simulations in a "
+      "finite geometry (a mesoscopic grain). Different superconducting "
+      "order-paramers and geometries can be specified, as well as physical "
+      "parameters such as temperature and external fields. To set these, do "
+      "NOT modify the source file (i.e. the .cu file) directly. Instead, to "
+      "set up simulation properties and parameters, use the command-line "
+      "options specified below, or set up a .json parameter-file as in "
+      "examples/ and  give the path to this file with the -f option (see "
+      "below). Command-line options have highest priority."};
 
   std::string filename;
+  std::string dataBasePath;
+  T temperature;
+  T externalMagneticFluxQuanta;
+  T grainSideLength;
+  T crystalAxesRotation;
+  T convergenceCriterion;
+  int gridResolution;
+  int numNumOzakiEnergies;
+  int numAngles;
+  int maxIterations;
+  int minIterations;
+  bool useSolenoid;
+  bool visualize;
+  bool verbose;
+  bool printVersion;
+
   app.add_option(
       "-f,--file", filename,
-      "JSON file with parameters specifying the simulation settings.");
+      "path to JSON file with parameters specifying the simulation settings.");
+  app.add_option(
+      "-o,--out", dataBasePath,
+      "base folder for output (data and parameter files), default: ...");
+  app.add_option("-T,--temperature", temperature,
+                 "temperature in units of T_c. Valid range: (0,1].");
+  app.add_option(
+      "-B,--mfield", externalMagneticFluxQuanta,
+      "external magnetic field, perpendicular to sample, in units of "
+      "flux quanta. For non-solenoid field, it is distributed uniformly over "
+      "the sample. Default: 0.");
+  app.add_option("-s,--size", grainSideLength,
+                 "side length of grain in units of coherence lengths "
+                 "(hbar*v_F)/(2*pi*k_B*T_c).");
+  app.add_option(
+      "-N,--resolution", gridResolution,
+      "number of discrete lattice points in the grain. Set to odd value "
+      "for best convergence. Recommended to be at least 10 times the grain "
+      "size.");
+  app.add_option("-e,--energies", numNumOzakiEnergies,
+                 "number of Ozaki energies (similar to Matsubara energies, see "
+                 "the documentation).");
+  app.add_option("-a,--angles", numAngles,
+                 "number of discrete angles in Fermi-surface average. Set to "
+                 "odd value for best convergence. Recommended minumum: 101.");
+  app.add_option("-r,--rotation", crystalAxesRotation,
+                 "rotation between grain and crystal ab-axes. Default: 0.");
+  app.add_option("-c,--convergence", convergenceCriterion,
+                 "convergence criteron for self-consistency. Default: ...");
+  app.add_option(
+      "-M,--max-iter", maxIterations,
+      "maximum number of self-consistent iterations to run. Default: ...");
+  app.add_option(
+      "-m,--min-iter", minIterations,
+      "minimum number of self-consistent iterations to run. Default: ...");
+  app.add_flag("-S,--solenoid", useSolenoid,
+               "set up a solenoid, and use solenoid gauge for external field.");
+  app.add_flag("-V,--visualize", visualize, "run with real-time plotting.");
+  app.add_flag("-v,--verbose", verbose,
+               "print iteration status and other output to terminal.");
+  app.add_flag("--version", printVersion, "print version number.");
 
   try {
     app.parse(argc, argv);
@@ -90,6 +154,8 @@ int main(int argc, char *argv[]) {
   // Read the parameter file.
   std::ifstream file(filename);
   file >> jParameters;
+
+  // Update the jParameters with command-line values
 
   //***************************************************
   // APPLY PARAMETERS
@@ -103,7 +169,7 @@ int main(int argc, char *argv[]) {
       jParameters["grain_side_length"].get<T>());
   // Set grain resolution in number of lattice sites.
   parameters->setGridResolution(jParameters["grid_resolution"].get<int>());
-  // Set number of Matsubara energies (Ozaki poles).
+  // Set number of Ozaki energies.
   parameters->setNumMatsubaraEnergies(jParameters["num_energies"].get<int>());
   // Number of discrete steps in momentum angle.
   parameters->setAngularResolution(jParameters["num_angles"].get<int>());
@@ -168,7 +234,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Set rotation of crystal axes with respect to the grain geometry.
-  const T crystalAxesRotation =
+  crystalAxesRotation =
       static_cast<T>(M_PI) * jParameters["crystal_axes_rotation"].get<T>();
   orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
@@ -262,7 +328,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  const bool visualize = jParameters["visualize"].get<bool>();
+  visualize = jParameters["visualize"].get<bool>();
   if (visualize) {
     gui = run_utils::createVisualization(context);
     initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
