@@ -7,7 +7,7 @@
     "external_magnetic_flux_quanta": 0.5,
     "grain_side_length": 30.0,
     "grid_resolution": 201,
-    "num_angles": 64,
+    "num_angles": 55,
     "num_energies": 20,
     "num_iterations_max": 1000,
     "num_iterations_min": 20,
