@@ -69,7 +69,7 @@ Visualization<T> *gui;
 //*******************************************************
 int main(int argc, char *argv[]) {
   // JSON parameters.
-  nlohmann::json jParameters;
+  nlohmann::json simParams;
 
   //***************************************************
   // READ PARAMETERS
@@ -89,82 +89,114 @@ int main(int argc, char *argv[]) {
         "examples/ and give the path to this file with the -f option (see "
         "below).\nCommand-line options have highest priority."};
 
-    // Parameters to read from the command line.
-    std::string filename;
-    std::string dataBasePath = "data/";
-    T temperature = static_cast<T>(0.5);
-    T externalMagneticFluxQuanta = static_cast<T>(0.0);
-    T grainSideLength = static_cast<T>(30.0);
-    T crystalAxesRotation = static_cast<T>(0.0);
-    T convergenceCriterion = static_cast<T>(1e-6);
-    int gridResolution = 201;
-    int numNumOzakiEnergies = 20;
-    int numAngles = 55;
-    int maxIterations = 1000;
-    int minIterations = 0;
-    bool useSolenoid = false;
-    bool visualize = true;
-    bool verbose = true;
-    bool printVersion = false;
-    bool useDWaveSymmetry = true;
-    bool useDiscGeometry = false;
-    bool saveData = true;
+    // Set default values for user-modifieable parameters.
+    simParams["parameter_file"] = std::string("");
+    simParams["data_path"] = std::string("data/");
+    simParams["temperature"] = static_cast<T>(0.5);
+    simParams["external_flux_quanta"] = static_cast<T>(0.0);
+    simParams["grain_side_length"] = static_cast<T>(30.0);
+    simParams["crystal_axes_rotation"] = static_cast<T>(0.0);
+    simParams["convergence_criterion"] = static_cast<T>(1e-6);
+    simParams["lattice_side_length"] = 201;
+    simParams["num_ozaki_energies"] = 20;
+    simParams["num_fermi_momenta"] = 55;
+    simParams["num_iterations_max"] = 1000;
+    simParams["num_iterations_min"] = 20;
+    simParams["dwave_symmetry"] = true;
+    simParams["disc_geometry"] = false;
+    simParams["solenoid"] = false;
+    simParams["visualize"] = true;
+    simParams["verbose"] = true;
+    simParams["save_data"] = true;
+    simParams["print_version"] = false;
 
     // Command-line options (argument followed by value)
-    CLI::Option *optJSON =
-        app.add_option("-f,--file", filename,
-                       "path to JSON file with parameters specifying the "
-                       "simulation settings.");
+    CLI::Option *optJSON = app.add_option(
+        "-f,--file",
+        simParams["parameter_file"].get_ref<nlohmann::json::string_t &>(),
+        "path to JSON file with parameters specifying the "
+        "simulation settings.");
     optJSON->check(CLI::ExistingFile);
-
-    app.add_option("-o,--out", dataBasePath,
+    app.add_option("-o,--data-path",
+                   simParams["data_path"].get_ref<nlohmann::json::string_t &>(),
                    "base folder for output (data and parameter files).");
-    app.add_option("-T,--temperature", temperature,
-                   "temperature in units of T_c. Valid range: (0,1].");
     app.add_option(
-        "-B,--mfield", externalMagneticFluxQuanta,
+        "-T,--temperature",
+        simParams["temperature"].get_ref<nlohmann::json::number_float_t &>(),
+        "temperature in units of T_c. Valid range: (0,1].");
+    app.add_option(
+        "-B,--external-flux-quanta",
+        simParams["external_flux_quanta"]
+            .get_ref<nlohmann::json::number_float_t &>(),
         "external magnetic field, perpendicular to sample, in units of "
         "flux quanta.\nFor non-solenoid field, it is distributed uniformly "
-        "over "
-        "the sample.");
-    app.add_option("-s,--size", grainSideLength,
+        "over the sample.");
+    app.add_option("-s,--grain-side-length",
+                   simParams["grain_side_length"]
+                       .get_ref<nlohmann::json::number_float_t &>(),
                    "side length of grain in units of coherence lengths "
                    "(hbar*v_F)/(2*pi*k_B*T_c).");
+    app.add_option("-r,--crystal-axes-rotation",
+                   simParams["crystal_axes_rotation"]
+                       .get_ref<nlohmann::json::number_float_t &>(),
+                   "rotation between grain and crystal ab-axes.");
+    app.add_option("-c,--convergence-criterion",
+                   simParams["convergence_criterion"]
+                       .get_ref<nlohmann::json::number_float_t &>(),
+                   "convergence criteron for self-consistency.");
     app.add_option(
-        "-N,--resolution", gridResolution,
+        "-N,--lattice-side-length",
+        simParams["lattice_side_length"]
+            .get_ref<nlohmann::json::number_integer_t &>(),
         "number of discrete lattice points in the grain. Set to odd value "
         "for best convergence.\nRecommended to be at least 10 times the grain "
         "size.");
     app.add_option(
-        "-e,--energies", numNumOzakiEnergies,
+        "-e,--num-ozaki-energies",
+        simParams["num_ozaki_energies"]
+            .get_ref<nlohmann::json::number_integer_t &>(),
         "number of Ozaki energies (similar to Matsubara energies, see "
         "the documentation).");
     app.add_option(
-        "-a,--angles", numAngles,
+        "-p,--num-fermi-momenta",
+        simParams["num_fermi_momenta"]
+            .get_ref<nlohmann::json::number_integer_t &>(),
         "number of discrete angles in Fermi-surface average. Set to "
         "odd value for best convergence.\nRecommended minumum: 101.");
-    app.add_option("-r,--rotation", crystalAxesRotation,
-                   "rotation between grain and crystal ab-axes.");
-    app.add_option("-c,--convergence", convergenceCriterion,
-                   "convergence criteron for self-consistency.");
-    app.add_option("-M,--max-iter", maxIterations,
+    app.add_option("-M,--num-iterations-max",
+                   simParams["num_iterations_max"]
+                       .get_ref<nlohmann::json::number_integer_t &>(),
                    "maximum number of self-consistent iterations to run.");
-    app.add_option("-m,--min-iter", minIterations,
+    app.add_option("-m,--num-iterations-min",
+                   simParams["num_iterations_min"]
+                       .get_ref<nlohmann::json::number_integer_t &>(),
                    "minimum number of self-consistent iterations to run.");
     // Command-line flags (not followed by value: set something to true/false)
     app.add_flag(
-        "--solenoid", useSolenoid,
+        "--dwave-symmetry",
+        simParams["dwave_symmetry"].get_ref<nlohmann::json::boolean_t &>(),
+        "run with d-wave pairing symmetry (otherwise s-wave).");
+    app.add_flag(
+        "--disc-geometryp",
+        simParams["disc_geometry"].get_ref<nlohmann::json::boolean_t &>(),
+        "run with disc geometry (otherwise square).");
+    app.add_flag(
+        "--solenoid,!--no-solenoid",
+        simParams["solenoid"].get_ref<nlohmann::json::boolean_t &>(),
         "set up a solenoid, and use solenoid gauge for external field.");
-    app.add_flag("!--no-visualize", visualize,
+    app.add_flag("--visualize,!--no-visualize",
+                 simParams["visualize"].get_ref<nlohmann::json::boolean_t &>(),
                  "run without real-time plotting.");
-    app.add_flag("-v,--verbose", verbose,
+    app.add_flag("-v,--verbose,!--no-verbose",
+                 simParams["verbose"].get_ref<nlohmann::json::boolean_t &>(),
                  "print iteration status and other output to terminal.");
-    app.add_flag("--version", printVersion, "print version number.");
-    app.add_flag("--dwave", useDWaveSymmetry,
-                 "run with d-wave pairing symmetry (otherwise s-wave).");
-    app.add_flag("--disc", useDiscGeometry,
-                 "run with disc geometry (otherwise square).");
-    app.add_flag("!--no-save", saveData, "do not save data files to disc.");
+    app.add_flag("--save-data,!--no-save",
+                 simParams["save_data"].get_ref<nlohmann::json::boolean_t &>(),
+                 "do not save data files to disc.");
+    app.add_flag(
+        "--version",
+        simParams["print_version"].get_ref<nlohmann::json::boolean_t &>(),
+        "print version number.");
 
     try {
       app.parse(argc, argv);
@@ -174,29 +206,8 @@ int main(int argc, char *argv[]) {
 
     if (*optJSON) {
       // Read the parameter file.
-      std::ifstream file(filename);
-      file >> jParameters;
-    } else {
-      // Use the values from the command line.
-      jParameters = {
-          {"convergence_criterion", convergenceCriterion},
-          {"crystal_axes_rotation", crystalAxesRotation},
-          {"d_wave", useDWaveSymmetry},
-          {"data_base_path", dataBasePath},
-          {"disc", useDiscGeometry},
-          {"external_magnetic_flux_quanta", externalMagneticFluxQuanta},
-          {"grain_side_length", grainSideLength},
-          {"grid_resolution", gridResolution},
-          {"num_angles", numAngles},
-          {"num_energies", numNumOzakiEnergies},
-          {"num_iterations_max", maxIterations},
-          {"num_iterations_min", minIterations},
-          {"print_iteration_status", verbose},
-          {"save_data", saveData},
-          {"solenoid", useSolenoid},
-          {"temperature", temperature},
-          {"visualize", visualize},
-      };
+      std::ifstream file(simParams["parameter_file"].get<std::string>());
+      file >> simParams;
     }
   }
 
@@ -206,19 +217,20 @@ int main(int argc, char *argv[]) {
   // Storage for system simulation parameters (e.g. temperature, lattice size).
   Parameters<T> *parameters = new Parameters<T>(context);
   // Set temperature.
-  parameters->setTemperature(jParameters["temperature"].get<T>());
+  parameters->setTemperature(simParams["temperature"].get<T>());
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
   parameters->setGrainWidthCoherenceLengths(
-      jParameters["grain_side_length"].get<T>());
+      simParams["grain_side_length"].get<T>());
   // Set grain resolution in number of lattice sites.
-  parameters->setGridResolution(jParameters["grid_resolution"].get<int>());
+  parameters->setGridResolution(simParams["lattice_side_length"].get<int>());
   // Set number of Ozaki energies.
-  parameters->setNumMatsubaraEnergies(jParameters["num_energies"].get<int>());
+  parameters->setNumMatsubaraEnergies(
+      simParams["num_ozaki_energies"].get<int>());
   // Number of discrete steps in momentum angle.
-  parameters->setAngularResolution(jParameters["num_angles"].get<int>());
+  parameters->setAngularResolution(simParams["num_fermi_momenta"].get<int>());
   // Set convergence criterion.
   parameters->setConvergenceCriterion(
-      jParameters["convergence_criterion"].get<T>());
+      simParams["convergence_criterion"].get<T>());
 
   //***************************************************
   // CREATE GEOMETRY
@@ -240,7 +252,7 @@ int main(int argc, char *argv[]) {
   const int numVerticesSquare = 4;
 
   // Make the grain a disc or a square.
-  if (jParameters["disc"].get<bool>()) {
+  if (simParams["disc_geometry"].get<bool>()) {
     geometry->add(new DiscGeometry<T>(grainScale), Type::add);
   } else {
     geometry->add(new PolygonGeometry<T>(numVerticesSquare, grainScale),
@@ -248,12 +260,12 @@ int main(int argc, char *argv[]) {
   }
 
   // Remove a portion to create a solenoid.
-  if (jParameters["solenoid"].get<bool>()) {
+  if (simParams["solenoid"].get<bool>()) {
     // Relative size of grain hole for solenoid.
     const T holeScale = 0.2;
 
     // Circular or square hole.
-    if (jParameters["disc"].get<bool>()) {
+    if (simParams["disc_geometry"].get<bool>()) {
       geometry->add(new DiscGeometry<T>(holeScale), Type::remove);
     } else {
       geometry->add(new PolygonGeometry<T>(numVerticesSquare, holeScale),
@@ -270,7 +282,7 @@ int main(int argc, char *argv[]) {
 
   // Add a d-wave or an s-wave order-parameter component.
   OrderParameterComponent<T> *orderParameterComponent;
-  if (jParameters["d_wave"].get<bool>()) {
+  if (simParams["dwave_symmetry"].get<bool>()) {
     orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
   } else {
     orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
@@ -278,18 +290,17 @@ int main(int argc, char *argv[]) {
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation =
-      static_cast<T>(M_PI) * jParameters["crystal_axes_rotation"].get<T>();
+      static_cast<T>(M_PI) * simParams["crystal_axes_rotation"].get<T>();
   orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
   // Initialize order parameter with a guess.
-  if (jParameters["solenoid"].get<bool>()) {
+  if (simParams["solenoid"].get<bool>()) {
     // Initialize order-parameter component with a phase winding corresponding
     // to the number of external flux quanta. If there is a mismatch, the system
     // might converge to a meta-stable state.
     Initial<T>::phaseWinding(
         orderParameterComponent,
-        static_cast<int>(
-            jParameters["external_magnetic_flux_quanta"].get<T>()));
+        static_cast<int>(simParams["external_flux_quanta"].get<T>()));
   } else {
     // Initialize order-parameter component to the (real) bulk value.
     Initial<T>::bulk(orderParameterComponent);
@@ -324,7 +335,7 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gague.
-  if (jParameters["solenoid"].get<bool>()) {
+  if (simParams["solenoid"].get<bool>()) {
     riccatiSolver =
         new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Solenoid>(
             context);
@@ -349,15 +360,14 @@ int main(int argc, char *argv[]) {
   context->initialize();
 
   // Set external magnetic field strength.
-  if (jParameters["solenoid"].get<bool>()) {
+  if (simParams["solenoid"].get<bool>()) {
     // External field in flux quanta.
     parameters->setMagneticFieldStrength(
-        jParameters["external_magnetic_flux_quanta"].get<T>());
+        simParams["external_flux_quanta"].get<T>());
   } else {
     // External field in fux quanta per unit area.
     const T externalMagneticFluxDensity =
-        jParameters["external_magnetic_flux_quanta"].get<T>() /
-        geometry->area();
+        simParams["external_flux_quanta"].get<T>() / geometry->area();
 
     parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
   }
@@ -371,7 +381,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  if (jParameters["visualize"].get<bool>()) {
+  if (simParams["visualize"].get<bool>()) {
     gui = run_utils::createVisualization(context);
     initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
     glutKeyboardFunc(run_utils::myKeyboardFunc);
@@ -381,17 +391,17 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  run_utils::runSimulation(context, jParameters["visualize"].get<bool>(),
-                           jParameters["print_iteration_status"].get<bool>(),
-                           jParameters["num_iterations_min"].get<int>(),
-                           jParameters["num_iterations_max"].get<int>());
+  run_utils::runSimulation(context, simParams["visualize"].get<bool>(),
+                           simParams["verbose"].get<bool>(),
+                           simParams["num_iterations_min"].get<int>(),
+                           simParams["num_iterations_max"].get<int>());
 
   //***********************************************
   // POST-PROCESSING
   //***********************************************
   // Save at the very end.
-  if (jParameters["save_data"].get<bool>()) {
-    saveDataWrapper(jParameters);
+  if (simParams["save_data"].get<bool>()) {
+    saveDataWrapper(simParams);
   }
 
   // Cleanup dynamically allocated memory.
@@ -409,7 +419,7 @@ void display() {
 
 void saveDataWrapper(const nlohmann::json &inJSON) {
   char dataPath[512];
-  const std::string dataBasePath = inJSON["data_base_path"].get<std::string>();
+  const std::string dataBasePath = inJSON["data_path"].get<std::string>();
   snprintf(dataPath, sizeof(dataPath), "%sT%2.4f/", dataBasePath.c_str(),
            inJSON["temperature"].get<T>());
 
