@@ -21,7 +21,8 @@
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
-#include "OrderParameterComponent_D.h" // d-wave
+#include "OrderParameterBasis.h"
+#include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
@@ -221,8 +222,8 @@ int main(int argc, char *argv[]) {
   // Create order parameter (which might contain multiple components, i.e. d+is)
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
   // Add a d-wave component to the total order-parameter
-  OrderParameterComponent_D<T> *orderParameterComponent =
-      new OrderParameterComponent_D<T>(parameters);
+  OrderParameterComponent<T> *orderParameterComponent =
+      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE, parameters);
   // Period of phase crystal, converted to coordinate units. In coherence
   // lengths, it is typically 2*pi coherence lengths in QC simulations (see the
   // Nat. Comm. and PRR papers).

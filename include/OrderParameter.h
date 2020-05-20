@@ -114,9 +114,7 @@ template <typename T> int OrderParameter<T>::initialize() {
   FermiSurface<T> *fermiSurface = ContextModule<T>::getFermiSurface();
 
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
-    _orderParameterComponentList[i]->initialize();
-    _orderParameterComponentList[i]->initBasisFunctionNormalization(
-        fermiSurface);
+    _orderParameterComponentList[i]->initialize(fermiSurface);
   }
   return 0;
 }

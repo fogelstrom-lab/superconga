@@ -1,32 +1,143 @@
 #ifndef ORDER_PARAMETER_BASIS_H_
 #define ORDER_PARAMETER_BASIS_H_
 
+#include "FermiSurface.h"
 #include "cplx.h"
 #include <cmath>
-#include <cuda.h>
+#include <iostream>
+#include <string>
 
-template <typename T> struct BasisFunction_S {
-  __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
-    const T etaReal = static_cast<T>(1.0);
-    const T etaImag = static_cast<T>(0.0);
-    return cplx<T>(etaReal, etaImag);
-  }
+/// \brief Enum class with the supported basis-function symmetries.
+///
+/// The following values are supported:
+/// SWAVE, DWAVE, PWAVE
+enum class BasisFunctionSymmetry { SWAVE, DWAVE, PWAVE };
+
+/// \brief Basis-function class.
+template <typename T> class BasisFunction {
+private:
+  /// The symmetry of the basis function.
+  const BasisFunctionSymmetry m_symmetry;
+
+  /// Factor to ensure that the Fermi-surface average of the squared basis
+  /// function is one.
+  T m_normalizationFactor;
+
+public:
+  /// \brief Constructor.
+  ///
+  /// \param inSymmetry - BasisFunctionSymmetry enum
+  BasisFunction(const BasisFunctionSymmetry inSymmetry);
+
+  /// \brief Get the symmetry as an enum.
+  ///
+  /// \return - A symmetry enum.
+  BasisFunctionSymmetry getSymmetry() const { return m_symmetry; }
+
+  /// \brief Get the symmetry as a string.
+  ///
+  /// \return - A string e.g. "s"
+  std::string getSymmetryStr() const;
+
+  /// \brief Evaluate the basis function.
+  ///
+  /// \param inMomentumX - The x-component of the Fermi momentum
+  /// \param inMomentumY - The y-component of the Fermi momentum
+  ///
+  /// \return - The basis function value
+  cplx<T> evaluate(const T inMomentumX, const T inMomentumY) const;
+
+  /// \brief Normalize the basis function.
+  ///
+  /// \param inFermiSurface - The Fermi surface to normalize the basis function
+  ///                         over
+  ///
+  /// \return - void
+  void normalize(const FermiSurface<T> *const inFermiSurface);
 };
 
-template <typename T> struct BasisFunction_D {
-  __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
-    const T etaReal = cos(pX) - cos(pY);
-    const T etaImag = static_cast<T>(0.0);
-    return cplx<T>(etaReal, etaImag);
-  }
-};
+template <typename T>
+BasisFunction<T>::BasisFunction(const BasisFunctionSymmetry inSymmetry)
+    : m_symmetry(inSymmetry), m_normalizationFactor(static_cast<T>(1.0)) {}
 
-template <typename T> struct BasisFunction_P {
-  __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
-    const T etaReal = sin(pX);
-    const T etaImag = sin(pY);
-    return cplx<T>(etaReal, etaImag);
+template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
+  std::string str;
+
+  switch (m_symmetry) {
+  case BasisFunctionSymmetry::SWAVE: {
+    str = "s";
+    break;
   }
-};
+  case BasisFunctionSymmetry::DWAVE: {
+    str = "d";
+    break;
+  }
+  case BasisFunctionSymmetry::PWAVE: {
+    str = "p";
+    break;
+  }
+  default: {
+    // TODO(niclas): Raise exception instead!?
+    std::cout << "ERROR! Basis-function symmetry not implemented!" << std::endl;
+  }
+  }
+  return str;
+}
+
+template <typename T>
+cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
+                                   const T inMomentumY) const {
+  cplx<T> basisFunction;
+
+  switch (m_symmetry) {
+  case BasisFunctionSymmetry::SWAVE: {
+    basisFunction = cplx<T>(static_cast<T>(1.0), static_cast<T>(0.0));
+    break;
+  }
+  case BasisFunctionSymmetry::DWAVE: {
+    basisFunction = cplx<T>(std::cos(inMomentumX) - std::cos(inMomentumY),
+                            static_cast<T>(0.0));
+    break;
+  }
+  case BasisFunctionSymmetry::PWAVE: {
+    basisFunction = cplx<T>(std::sin(inMomentumX), std::sin(inMomentumY));
+    break;
+  }
+  default: {
+    // TODO(niclas): Raise exception instead!?
+    std::cout << "ERROR! Basis-function symmetry not implemented!" << std::endl;
+    basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
+  }
+  }
+
+  return basisFunction * m_normalizationFactor;
+}
+
+template <typename T>
+void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
+  const int numAngles = inFermiSurface->getNumAngles();
+
+  T avgBasisFunctionSquared = static_cast<T>(0.0);
+  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+    // Get Fermi momentum.
+    T momentumX;
+    T momentumY;
+    inFermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
+
+    // Evaluate the basis function.
+    const cplx<T> basisFunction = evaluate(momentumX, momentumY);
+
+    // Get integrand factor.
+    const T integrandFactor = inFermiSurface->getIntegrandFactor(angleIdx);
+
+    // Accumulate.
+    avgBasisFunctionSquared += basisFunction.cabsSq() * integrandFactor;
+  }
+
+  // The normalization needs to be updated multiplicatively because the previous
+  // value was used in the for loop above (via the 'evaluate' call).
+  m_normalizationFactor *=
+      static_cast<T>(1.0) / std::sqrt(avgBasisFunctionSquared);
+}
 
 #endif // ORDER_PARAMETER_BASIS_H_
