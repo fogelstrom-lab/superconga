@@ -1,0 +1,39 @@
+//===--------- configure.h.in - Collection of useful macro defines --------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains useful macro defines, like version number, project name,
+/// paths, etc. cmake parses this file and creates configure.h, the latter which
+/// can then be included e.g. in C++, such that the defines become available.
+///
+//===----------------------------------------------------------------------===//
+#ifndef CONFIGURE_H_
+#define CONFIGURE_H_
+
+#include <string>
+
+namespace configure {
+// Version number
+const std::string version = "${CMAKE_PROJECT_VERSION}";
+
+// Project name
+const std::string projectName = "${CMAKE_PROJECT_NAME}";
+
+// Paths
+const std::string buildPath = "${CMAKE_SOURCE_DIR}/build";
+const std::string includePath = "${CMAKE_SOURCE_DIR}/include";
+const std::string sourcePath = "${CMAKE_SOURCE_DIR}/src";
+
+// License statement
+const std::string licenseStatement =
+    "Copyright (C) 2020 suprcongpu developers, Inc.\nThis is free software; "
+    "see the source for copying conditions.\nThere is NO warranty; not even "
+    "for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+
+} // namespace configure
+
+#endif // CONFIGURE_H_
