@@ -15,6 +15,17 @@ File:
 dwave_square.json
 ```
 
+## D-Wave Phase Crystal
+
+A simulation of a d-wave superconductor in a square grain, with all edges being
+maximally pair-breaking. The temperature is low, inducing a crystallization of the
+phase, eliciting spontaneous current loops and magnetic fields.
+
+File:
+```
+dwave_phase_crystal.json
+```
+
 ## S-Wave Disc: Meissner Effect
 
 A simulation of an s-wave superconductor in a disc-shaped grain. 
