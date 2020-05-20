@@ -4,6 +4,10 @@ project(
   VERSION 0.0.1
   LANGUAGES CUDA CXX)
 
+# Output build messages
+message(STATUS "Project name: ${CMAKE_PROJECT_NAME}")
+message(STATUS "Version: ${CMAKE_PROJECT_VERSION}")
+
 # Enable CTest
 include(CTest)
 
@@ -15,6 +19,7 @@ include(CheckLanguage)
 check_language(CUDA)
 
 # Add subdirectories
-add_subdirectory(src)
+add_subdirectory(include)
 add_subdirectory(research)
+add_subdirectory(src)
 add_subdirectory(tests)

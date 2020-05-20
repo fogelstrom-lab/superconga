@@ -31,7 +31,8 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
-#include "json_utils.h"
+#include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
+#include "json_utils.h" // Helper functions to parse command-line, json-structs, and json-files
 #include "run_utils.h" // Commonly used functions in run files
 
 #include <CLI/CLI.hpp>
@@ -209,6 +210,14 @@ int main(int argc, char *argv[]) {
     } catch (const CLI::ParseError &e) {
       return app.exit(e);
     }
+  }
+
+  // Print version number and exit
+  if (simParams["print_version"].get<bool>()) {
+    std::cout << configure::projectName << " " << configure::version
+              << std::endl;
+    std::cout << configure::licenseStatement << std::endl;
+    exit(1);
   }
 
   //***************************************************
