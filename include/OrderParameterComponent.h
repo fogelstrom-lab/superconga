@@ -13,18 +13,16 @@ template <typename T> class OrderParameterComponent {
   typedef typename Grid<T>::GPU GridGPU;
 
 public:
-  // Constructors and Destructors
+  // Constructors and destructor.
   OrderParameterComponent();
-  virtual ~OrderParameterComponent();
-
   OrderParameterComponent(const OrderParameterComponent<T> &other);
-
   OrderParameterComponent(Parameters<T> *param, T Tcthis_Tc = 1.0);
+  virtual ~OrderParameterComponent();
 
   virtual OrderParameterComponent<T> *clone() const = 0;
 
   // Functions
-  virtual int initialize();
+  virtual void initialize();
 
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
@@ -38,18 +36,26 @@ public:
   }
   T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
 
-  virtual void computeMomentumDependence(GridGPU *target, const T pX,
-                                         const T pY,
-                                         bool conjugateBasis = false) = 0;
+  virtual void
+  computeMomentumDependence(GridGPU *target, const T pX, const T pY,
+                            bool conjugateBasisFunction = false) const = 0;
 
-  virtual void initBasisNormalization(FermiSurface<T> *fermiSurface) = 0;
+  virtual void
+  initBasisFunctionNormalization(FermiSurface<T> *fermiSurface) = 0;
 
   void initCouplingConstant(const T *energies, const T *residues);
 
   void applyCouplingConstant();
-  void applyCouplingConstant(GridGPU *target);
+  void applyCouplingConstant(GridGPU *target) const;
 
   virtual T deltaBulk() const;
+
+  void setBasisFunctionNormalization(const T inBasisFunctionNormalization) {
+    m_basisFunctionNormalization = inBasisFunctionNormalization;
+  }
+  T getBasisFunctionNormalization() const {
+    return m_basisFunctionNormalization;
+  }
 
   virtual std::string getType() const = 0;
 
@@ -67,6 +73,7 @@ private:
   // Store coupling constant, calculate only once
   // CAUTION!!! Upon changing T_Tc/energies/similar, need to re-calculate
   T m_couplingConstant;
+
   // True if coupling constant has been initialized, then it never needs to be
   // re-calculated
   bool m_isCouplingConstantInitialized;
@@ -74,6 +81,9 @@ private:
   // Specified in radians, as a rotational offset from the default.
   // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
   T m_crystalAxesRotation;
+
+  // Factor to make <|eta|^2> = 1.
+  T m_basisFunctionNormalization;
 
   // Order parameter component
   GridGPU *_deltaComp;
@@ -84,7 +94,8 @@ OrderParameterComponent<T>::OrderParameterComponent()
     : _param(0), _deltaComp(0), _Tcthis_Tc(1.0),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)) {}
+      m_crystalAxesRotation(static_cast<T>(0.0)),
+      m_basisFunctionNormalization(static_cast<T>(1.0)) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
@@ -92,9 +103,11 @@ OrderParameterComponent<T>::OrderParameterComponent(
     : _param(other._param), _Tcthis_Tc(other._Tcthis_Tc),
       m_couplingConstant(other.m_couplingConstant),
       m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized),
-      m_crystalAxesRotation(other.m_crystalAxesRotation) {
-  if (other._deltaComp)
+      m_crystalAxesRotation(other.m_crystalAxesRotation),
+      m_basisFunctionNormalization(other.m_basisFunctionNormalization) {
+  if (other._deltaComp) {
     _deltaComp = new GridGPU(*other._deltaComp);
+  }
 }
 
 template <typename T>
@@ -103,14 +116,16 @@ OrderParameterComponent<T>::OrderParameterComponent(Parameters<T> *param,
     : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)) {
+      m_crystalAxesRotation(static_cast<T>(0.0)),
+      m_basisFunctionNormalization(static_cast<T>(1.0)) {
   // Do an initialization on creation so we can set initial value
   initialize();
 }
 
 template <typename T> OrderParameterComponent<T>::~OrderParameterComponent() {
-  if (_deltaComp)
+  if (_deltaComp) {
     delete _deltaComp;
+  }
 }
 
 template <typename T>
@@ -122,17 +137,17 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A.m_isCouplingConstantInitialized,
             B.m_isCouplingConstantInitialized);
   std::swap(A.m_crystalAxesRotation, B.m_crystalAxesRotation);
+  std::swap(A.m_basisFunctionNormalization, B.m_basisFunctionNormalization);
 }
 
-template <typename T> int OrderParameterComponent<T>::initialize() {
+template <typename T> void OrderParameterComponent<T>::initialize() {
   int N = _param->getGridResolutionBase();
 
-  if (_deltaComp && _deltaComp->dimX() != N)
+  if (_deltaComp && _deltaComp->dimX() != N) {
     _deltaComp->resample(N, N);
-  else
+  } else {
     GridGPU::initializeGrid(_deltaComp, N, N);
-
-  return 0;
+  }
 }
 
 template <typename T>
@@ -168,7 +183,7 @@ template <typename T> void OrderParameterComponent<T>::applyCouplingConstant() {
 }
 
 template <typename T>
-void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) {
+void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) const {
   if (m_isCouplingConstantInitialized) {
     (*target) *= m_couplingConstant;
   } else {

@@ -211,9 +211,9 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
       _deltaTmp->insertRotatedGrid(greens, systemAngle);
 
       // It should be the complex conjugate of the basis function!
-      const bool conjugateBasis = true;
+      const bool conjugateBasisFunction = true;
       _delta->getOrderParameterComponent(i)->computeMomentumDependence(
-          _deltaTmp, momentumX, momentumY, conjugateBasis);
+          _deltaTmp, momentumX, momentumY, conjugateBasisFunction);
 
       // Add angle contribution (angle integration)
       *(_delta->getOrderParameterComponent(i)->getOrderParameterField()) +=

@@ -73,12 +73,12 @@ void testBasisFunctionNormaliztation(const T inTolerance) {
     fermiSurface->initialize(numAngles);
 
     // Normalize basis function
-    orderParameterComponentS.initBasisNormalization(fermiSurface.get());
-    orderParameterComponentD.initBasisNormalization(fermiSurface.get());
+    orderParameterComponentS.initBasisFunctionNormalization(fermiSurface.get());
+    orderParameterComponentD.initBasisFunctionNormalization(fermiSurface.get());
     const T basisNormalizationS =
-        orderParameterComponentS.getBasisNormalization();
+        orderParameterComponentS.getBasisFunctionNormalization();
     const T basisNormalizationD =
-        orderParameterComponentD.getBasisNormalization();
+        orderParameterComponentD.getBasisFunctionNormalization();
 
     T integrandFactorSumS = static_cast<T>(0.0);
     T integrandFactorSumD = static_cast<T>(0.0);
@@ -92,9 +92,11 @@ void testBasisFunctionNormaliztation(const T inTolerance) {
       T momentumY;
       fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
       const cplx<T> basisFunctionS =
-          basisNormalizationS * Basis_S<T>::compute(momentumX, momentumY);
+          basisNormalizationS *
+          BasisFunction_S<T>::compute(momentumX, momentumY);
       const cplx<T> basisFunctionD =
-          basisNormalizationD * Basis_D<T>::compute(momentumX, momentumY);
+          basisNormalizationD *
+          BasisFunction_D<T>::compute(momentumX, momentumY);
 
       // Compute the integrand of <|eta|^2 >
       integrandFactorSumS += integrandFactor * basisFunctionS.cabsSq();

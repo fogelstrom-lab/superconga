@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cuda.h>
 
-template <typename T> struct Basis_S {
+template <typename T> struct BasisFunction_S {
   __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
     const T etaReal = static_cast<T>(1.0);
     const T etaImag = static_cast<T>(0.0);
@@ -13,7 +13,7 @@ template <typename T> struct Basis_S {
   }
 };
 
-template <typename T> struct Basis_D {
+template <typename T> struct BasisFunction_D {
   __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
     const T etaReal = cos(pX) - cos(pY);
     const T etaImag = static_cast<T>(0.0);
@@ -21,7 +21,7 @@ template <typename T> struct Basis_D {
   }
 };
 
-template <typename T> struct Basis_P {
+template <typename T> struct BasisFunction_P {
   __host__ __device__ static cplx<T> compute(const T pX, const T pY) {
     const T etaReal = sin(pX);
     const T etaImag = sin(pY);

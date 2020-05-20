@@ -115,7 +115,8 @@ template <typename T> int OrderParameter<T>::initialize() {
 
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
     _orderParameterComponentList[i]->initialize();
-    _orderParameterComponentList[i]->initBasisNormalization(fermiSurface);
+    _orderParameterComponentList[i]->initBasisFunctionNormalization(
+        fermiSurface);
   }
   return 0;
 }
