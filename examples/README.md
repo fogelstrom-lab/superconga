@@ -37,3 +37,16 @@ File:
 ```
 swave_solenoid_flux_quantization.json
 ```
+
+## S-Wave Abrikosov Vortex Lattice
+
+A simulation of an s-wave superconductor in a square grain, with high external flux
+quanta, inducing an Abrikosov vortex lattice. The lattice illustrates several microscopic
+effects, including 1. the vortex shell effect where the vortices enter in concentric shells
+rather than one-by-one, and 2. the lattice shape effect where the lattice mimics the
+rotational symmetry of the grain (and the OP pairing symmetry if asymmetric).
+
+File:
+```
+swave_abrikosov_vortex_lattice.json
+```
