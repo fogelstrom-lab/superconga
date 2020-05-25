@@ -120,63 +120,76 @@ int main(int argc, char *argv[]) {
     const std::string defaultFile = "";
     app.set_config("-f,--file", defaultFile,
                    "path to JSON file with parameters specifying the "
-                   "simulation settings.");
+                   "simulation settings.")
+        ->check(CLI::ExistingFile);
 
     // Command-line options (argument followed by value)
-    app.add_option("-o,--data-path",
-                   simParams["data_path"].get_ref<nlohmann::json::string_t &>(),
-                   "base folder for output (data and parameter files).");
-    app.add_option(
-        "-T,--temperature",
-        simParams["temperature"].get_ref<nlohmann::json::number_float_t &>(),
-        "temperature in units of T_c. Valid range: (0,1].");
-    app.add_option(
-        "-B,--external-flux-quanta",
-        simParams["external_flux_quanta"]
-            .get_ref<nlohmann::json::number_float_t &>(),
-        "external magnetic field, perpendicular to sample, in units of "
-        "flux quanta.\nFor non-solenoid field, it is distributed uniformly "
-        "over the sample.");
+    app.add_option<std::string>(
+        "-o,--data-path",
+        simParams["data_path"].get_ref<nlohmann::json::string_t &>(),
+        "base folder for output (data and parameter files).");
+    app.add_option<T>(
+           "-T,--temperature",
+           simParams["temperature"].get_ref<nlohmann::json::number_float_t &>(),
+           "temperature in units of T_c.")
+        ->check(CLI::PositiveNumber);
+
+    app.add_option<T>(
+           "-B,--external-flux-quanta",
+           simParams["external_flux_quanta"]
+               .get_ref<nlohmann::json::number_float_t &>(),
+           "external magnetic field, perpendicular to sample, in units of "
+           "flux quanta.\nFor non-solenoid field, it is distributed uniformly "
+           "over the sample.")
+        ->check(CLI::Number);
     app.add_option("-s,--grain-side-length",
                    simParams["grain_side_length"]
                        .get_ref<nlohmann::json::number_float_t &>(),
                    "side length of grain in units of coherence lengths "
-                   "(hbar*v_F)/(2*pi*k_B*T_c).");
+                   "(hbar*v_F)/(2*pi*k_B*T_c).")
+        ->check(CLI::PositiveNumber);
     app.add_option("-r,--crystal-axes-rotation",
                    simParams["crystal_axes_rotation"]
                        .get_ref<nlohmann::json::number_float_t &>(),
-                   "rotation between grain and crystal ab-axes.");
+                   "rotation between grain and crystal ab-axes.")
+        ->check(CLI::Number);
     app.add_option("-c,--convergence-criterion",
                    simParams["convergence_criterion"]
                        .get_ref<nlohmann::json::number_float_t &>(),
-                   "convergence criteron for self-consistency.");
+                   "convergence criteron for self-consistency.")
+        ->check(CLI::PositiveNumber);
     app.add_option(
-        "-N,--lattice-side-length",
-        simParams["lattice_side_length"]
-            .get_ref<nlohmann::json::number_integer_t &>(),
-        "number of discrete lattice points in the grain. Set to odd value "
-        "for best convergence.\nRecommended to be at least 10 times the grain "
-        "size.");
+           "-N,--lattice-side-length",
+           simParams["lattice_side_length"]
+               .get_ref<nlohmann::json::number_integer_t &>(),
+           "number of discrete lattice points in the grain. Set to odd value "
+           "for best convergence.\nRecommended to be at least 10 times the "
+           "grain "
+           "size.")
+        ->check(CLI::PositiveNumber);
     app.add_option(
-        "-e,--num-ozaki-energies",
-        simParams["num_ozaki_energies"]
-            .get_ref<nlohmann::json::number_integer_t &>(),
-        "number of Ozaki energies (similar to Matsubara energies, see "
-        "the documentation).");
-    app.add_option(
-        "-p,--num-fermi-momenta",
-        simParams["num_fermi_momenta"]
-            .get_ref<nlohmann::json::number_integer_t &>(),
-        "number of discrete angles in Fermi-surface average. Set to "
-        "odd value for best convergence.\nRecommended minumum: 101.");
+           "-e,--num-ozaki-energies",
+           simParams["num_ozaki_energies"]
+               .get_ref<nlohmann::json::number_integer_t &>(),
+           "number of Ozaki energies (similar to Matsubara energies, see "
+           "the documentation).")
+        ->check(CLI::PositiveNumber);
+    app.add_option("-p,--num-fermi-momenta",
+                   simParams["num_fermi_momenta"]
+                       .get_ref<nlohmann::json::number_integer_t &>(),
+                   "number of discrete angles in Fermi-surface average. Set to "
+                   "odd value for best convergence.\nRecommended minumum: 101.")
+        ->check(CLI::PositiveNumber);
     app.add_option("-M,--num-iterations-max",
                    simParams["num_iterations_max"]
                        .get_ref<nlohmann::json::number_integer_t &>(),
-                   "maximum number of self-consistent iterations to run.");
+                   "maximum number of self-consistent iterations to run.")
+        ->check(CLI::PositiveNumber);
     app.add_option("-m,--num-iterations-min",
                    simParams["num_iterations_min"]
                        .get_ref<nlohmann::json::number_integer_t &>(),
-                   "minimum number of self-consistent iterations to run.");
+                   "minimum number of self-consistent iterations to run.")
+        ->check(CLI::PositiveNumber);
     // Command-line flags (not followed by value: set something to true/false)
     app.add_flag(
         "--dwave-symmetry,!--swave-symmetry",
@@ -199,7 +212,6 @@ int main(int argc, char *argv[]) {
     app.add_flag("--save-data,!--no-save",
                  simParams["save_data"].get_ref<nlohmann::json::boolean_t &>(),
                  "do not save data files to disc.");
-    // TODO(niclas): If set print version and exit.
     app.add_flag(
         "--version",
         simParams["print_version"].get_ref<nlohmann::json::boolean_t &>(),
