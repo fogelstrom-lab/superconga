@@ -393,12 +393,6 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
                          const std::pair<T, T> &inFermiMomentum,
                          const std::pair<T, T> &inFermiVelocity,
                          const std::pair<T, T> &inOffset) {
-  // Compute the partial derivatives of the dispersion.
-  const std::pair<T, T> partialDerivatives =
-      computeDispersionDerivative(inParameters, inFermiMomentum);
-  const T dEdKX = partialDerivatives.first;
-  const T dEdKY = partialDerivatives.second;
-
   // The momentum is parameterized as
   // pX = kX + offsetX
   // pY = kY + offsetY
@@ -413,29 +407,14 @@ T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
       inOffset.first + static_cast<T>(M_PI));
   const T kX = pXUnwrapped - inOffset.first;
   const T kY = pYUnwrapped - inOffset.second;
-  const T k = std::hypot(kX, kY);
-  const T cosPhi = kX / k;
-  const T sinPhi = kY / k;
 
-  // The derivative of the dispersion with respect to phi is:
-  // dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi = 0
-  // whith
-  // dKXdPhi = (dKdPhi * cos(phi) - kY)
-  // dKYdPhi = (dKdPhi * sin(phi) + kX)
-  // which gives
-  const T dKdPhi =
-      (dEdKX * kY - dEdKY * kX) / (dEdKX * cosPhi + dEdKY * sinPhi);
+  // See Eq. (16) on page 7 (1105) in "The Effect of Surfaces on the Tunneling
+  // Density of States of an Anisotropically Paired Superconductor" by Buchholtz
+  // et. al. (1995).
+  const T integrandFactor =
+      (kX * kX + kY * kY) /
+      std::abs(kX * inFermiVelocity.first + kY * inFermiVelocity.second);
 
-  // Thus, the norm of the partial derivative of the Fermi momentum with respect
-  // to phi is given by:
-  // sqrt(dPXdPhi^2 + dPYdPhi^2) = sqrt(dKXdPhi^2 + dKYdPhi^2)
-  const T dKXdPhi = dKdPhi * cosPhi - kY;
-  const T dKYdPhi = dKdPhi * sinPhi + kX;
-  const T dPdPhi = std::hypot(dKXdPhi, dKYdPhi);
-
-  const T fermiSpeed =
-      std::hypot(inFermiVelocity.first, inFermiVelocity.second);
-  const T integrandFactor = dPdPhi / fermiSpeed;
   return integrandFactor;
 }
 } // namespace tightbinding_internal
