@@ -161,11 +161,6 @@ def computeIntegrandWeights(
     inFermiVelocityY,
     offset,
 ):
-    # Compute the partial derivatives of the dispersion.
-    dEdKX, dEdKY = computeDispersionDerivative(
-        parameters, inFermiMomentumX, inFermiMomentumY
-    )
-
     # The momentum is parameterized as
     # pX = kX + offsetX
     # pY = kY + offsetY
@@ -176,27 +171,15 @@ def computeIntegrandWeights(
     kYUnwrapped = wrapToRange(inFermiMomentumY, offset[1] - np.pi, offset[1] + np.pi)
     kX = kXUnwrapped - offset[0]
     kY = kYUnwrapped - offset[1]
-    k = np.hypot(kX, kY)
-    cosPhi = kX / k
-    sinPhi = kY / k
 
-    # The derivative of the dispersion with respect to phi is:
-    # dEdPhi = dEdKX * dKXdPhi + dEdKY * dKYdPhi = 0
-    # whith
-    # dKXdPhi = (dKdPhi * cos(phi) - kY)
-    # dKYdPhi = (dKdPhi * sin(phi) + kX)
-    # which gives
-    dKdPhi = (dEdKX * kY - dEdKY * kX) / (dEdKX * cosPhi + dEdKY * sinPhi)
+    # See Eq. (16) on page 7 (1105) in "The Effect of Surfaces on the Tunneling
+    # Density of States of an Anisotropically Paired Superconductor" by Buchholtz
+    # et. al. (1995).
+    integrandFactor = (kX * kX + kY * kY) / np.abs(
+        kX * inFermiVelocityX + kY * inFermiVelocityY
+    )
 
-    # Thus, the norm of the partial derivative of the Fermi momentum with respect
-    # to phi is given by:
-    # sqrt(dPXdPhi^2 + dPYdPhi^2) = sqrt(dKXdPhi^2 + dKYdPhi^2)
-    dKXdPhi = dKdPhi * cosPhi - kY
-    dKYdPhi = dKdPhi * sinPhi + kX
-    dPdPhi = np.hypot(dKXdPhi, dKYdPhi)
-
-    fermiSpeed = np.hypot(inFermiVelocityX, inFermiVelocityY)
-    integrandFactor = dPdPhi / fermiSpeed
+    # Normalize.
     integrandFactor /= np.sum(integrandFactor)
     return integrandFactor
 
