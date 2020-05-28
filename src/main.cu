@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
     std::cout << configure::projectName << " " << configure::version
               << std::endl;
     std::cout << configure::licenseStatement << std::endl;
-    exit(1);
+    return 0;
   }
 
   //***************************************************
