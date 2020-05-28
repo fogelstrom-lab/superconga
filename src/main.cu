@@ -114,12 +114,15 @@ int main(int argc, char *argv[]) {
     simParams["visualize"] = true;
     simParams["verbose"] = true;
     simParams["save_data"] = true;
-    simParams["print_version"] = false;
+
+    // Only applicable from the command line.
+    bool printVersion = false;
+    bool dumpConfig = false;
 
     // Tell CLI11 to the read JSON-parameter file, if specified.
     const std::string defaultFile = "";
     app.set_config("-f,--file", defaultFile,
-                   "path to JSON file with parameters specifying the "
+                   "Path to JSON file with parameters specifying the "
                    "simulation settings.")
         ->check(CLI::ExistingFile);
 
@@ -127,42 +130,42 @@ int main(int argc, char *argv[]) {
     app.add_option<std::string>(
         "-o,--data-path",
         simParams["data_path"].get_ref<nlohmann::json::string_t &>(),
-        "base folder for output (data and parameter files).");
-    app.add_option<double>(
+        "Base folder for output (data and parameter files).");
+    app.add_option<T>(
            "-T,--temperature",
            simParams["temperature"].get_ref<nlohmann::json::number_float_t &>(),
-           "temperature in units of T_c.")
+           "Temperature in units of T_c.")
         ->check(CLI::PositiveNumber);
-
+    // TODO(niclas): Rename to "-F"?
     app.add_option<double>(
            "-B,--external-flux-quanta",
            simParams["external_flux_quanta"]
                .get_ref<nlohmann::json::number_float_t &>(),
-           "external magnetic field, perpendicular to sample, in units of "
+           "External magnetic field, perpendicular to sample, in units of "
            "flux quanta.\nFor non-solenoid field, it is distributed uniformly "
            "over the sample.")
         ->check(CLI::Number);
     app.add_option<double>("-s,--grain-side-length",
                            simParams["grain_side_length"]
                                .get_ref<nlohmann::json::number_float_t &>(),
-                           "side length of grain in units of coherence lengths "
+                           "Side length of grain in units of coherence lengths "
                            "(hbar*v_F)/(2*pi*k_B*T_c).")
         ->check(CLI::PositiveNumber);
     app.add_option<double>("-r,--crystal-axes-rotation",
                            simParams["crystal_axes_rotation"]
                                .get_ref<nlohmann::json::number_float_t &>(),
-                           "rotation between grain and crystal ab-axes.")
+                           "Rotation between grain and crystal ab-axes.")
         ->check(CLI::Number);
     app.add_option<double>("-c,--convergence-criterion",
                            simParams["convergence_criterion"]
                                .get_ref<nlohmann::json::number_float_t &>(),
-                           "convergence criteron for self-consistency.")
+                           "Convergence criteron for self-consistency.")
         ->check(CLI::PositiveNumber);
     app.add_option<int64_t>(
            "-N,--lattice-side-length",
            simParams["lattice_side_length"]
                .get_ref<nlohmann::json::number_integer_t &>(),
-           "number of discrete lattice points in the grain. Set to odd value "
+           "Number of discrete lattice points in the grain. Set to odd value "
            "for best convergence.\nRecommended to be at least 10 times the "
            "grain "
            "size.")
@@ -171,7 +174,7 @@ int main(int argc, char *argv[]) {
            "-e,--num-ozaki-energies",
            simParams["num_ozaki_energies"]
                .get_ref<nlohmann::json::number_integer_t &>(),
-           "number of Ozaki energies (similar to Matsubara energies, see "
+           "Number of Ozaki energies (similar to Matsubara energies, see "
            "the documentation).")
         ->check(CLI::PositiveNumber);
     app.add_option<int64_t>(
@@ -185,54 +188,60 @@ int main(int argc, char *argv[]) {
            "-M,--num-iterations-max",
            simParams["num_iterations_max"]
                .get_ref<nlohmann::json::number_integer_t &>(),
-           "maximum number of self-consistent iterations to run.")
+           "Maximum number of self-consistent iterations to run.")
         ->check(CLI::PositiveNumber);
     app.add_option<int64_t>(
            "-m,--num-iterations-min",
            simParams["num_iterations_min"]
                .get_ref<nlohmann::json::number_integer_t &>(),
-           "minimum number of self-consistent iterations to run.")
+           "Minimum number of self-consistent iterations to run.")
         ->check(CLI::PositiveNumber);
     // Command-line flags (not followed by value: set something to true/false)
     app.add_flag(
         "--dwave-symmetry,!--swave-symmetry",
         simParams["dwave_symmetry"].get_ref<nlohmann::json::boolean_t &>(),
-        "run with d-wave pairing symmetry (otherwise s-wave).");
+        "Run with d-wave pairing symmetry (otherwise s-wave).");
     app.add_flag(
         "--disc-geometry,!--square-geometry",
         simParams["disc_geometry"].get_ref<nlohmann::json::boolean_t &>(),
-        "run with disc geometry (otherwise square).");
+        "Run with disc geometry (otherwise square).");
     app.add_flag(
         "--solenoid,!--no-solenoid",
         simParams["solenoid"].get_ref<nlohmann::json::boolean_t &>(),
-        "set up a solenoid, and use solenoid gauge for external field.");
+        "Set up a solenoid, and use solenoid gauge for external field.");
     app.add_flag("--visualize,!--no-visualize",
                  simParams["visualize"].get_ref<nlohmann::json::boolean_t &>(),
-                 "run without real-time plotting.");
+                 "Run without real-time plotting.");
     app.add_flag("-v,--verbose,!--no-verbose",
                  simParams["verbose"].get_ref<nlohmann::json::boolean_t &>(),
-                 "print iteration status and other output to terminal.");
+                 "Print iteration status and other output to terminal.");
+    // TODO(niclas): Rename to "--no-save-data"?
     app.add_flag("--save-data,!--no-save",
                  simParams["save_data"].get_ref<nlohmann::json::boolean_t &>(),
-                 "do not save data files to disc.");
-    app.add_flag(
-        "--version",
-        simParams["print_version"].get_ref<nlohmann::json::boolean_t &>(),
-        "print version number.");
+                 "Save data files to disk.");
+    app.add_flag("--version", printVersion, "Print version number and exit.");
+    app.add_flag("--dump-config", dumpConfig,
+                 "Dump configuration options to the terminal, or to file "
+                 "with '> config.json'.");
 
     try {
       app.parse(argc, argv);
     } catch (const CLI::ParseError &e) {
       return app.exit(e);
     }
-  }
 
-  // Print version number and exit
-  if (simParams["print_version"].get<bool>()) {
-    std::cout << configure::projectName << " " << configure::version
-              << std::endl;
-    std::cout << configure::licenseStatement << std::endl;
-    return 0;
+    if (printVersion) {
+      // Print version number and exit.
+      std::cout << configure::projectName << " " << configure::version
+                << std::endl;
+      std::cout << configure::licenseStatement << std::endl;
+      return 0;
+    } else if (dumpConfig) {
+      // Dump config and exit.
+      const int indentation = 4;
+      std::cout << simParams.dump(indentation) << std::endl;
+      return 0;
+    }
   }
 
   //***************************************************
