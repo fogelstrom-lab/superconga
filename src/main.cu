@@ -128,13 +128,13 @@ int main(int argc, char *argv[]) {
         "-o,--data-path",
         simParams["data_path"].get_ref<nlohmann::json::string_t &>(),
         "base folder for output (data and parameter files).");
-    app.add_option<T>(
+    app.add_option<double>(
            "-T,--temperature",
            simParams["temperature"].get_ref<nlohmann::json::number_float_t &>(),
            "temperature in units of T_c.")
         ->check(CLI::PositiveNumber);
 
-    app.add_option<T>(
+    app.add_option<double>(
            "-B,--external-flux-quanta",
            simParams["external_flux_quanta"]
                .get_ref<nlohmann::json::number_float_t &>(),
@@ -142,23 +142,23 @@ int main(int argc, char *argv[]) {
            "flux quanta.\nFor non-solenoid field, it is distributed uniformly "
            "over the sample.")
         ->check(CLI::Number);
-    app.add_option("-s,--grain-side-length",
-                   simParams["grain_side_length"]
-                       .get_ref<nlohmann::json::number_float_t &>(),
-                   "side length of grain in units of coherence lengths "
-                   "(hbar*v_F)/(2*pi*k_B*T_c).")
+    app.add_option<double>("-s,--grain-side-length",
+                           simParams["grain_side_length"]
+                               .get_ref<nlohmann::json::number_float_t &>(),
+                           "side length of grain in units of coherence lengths "
+                           "(hbar*v_F)/(2*pi*k_B*T_c).")
         ->check(CLI::PositiveNumber);
-    app.add_option("-r,--crystal-axes-rotation",
-                   simParams["crystal_axes_rotation"]
-                       .get_ref<nlohmann::json::number_float_t &>(),
-                   "rotation between grain and crystal ab-axes.")
+    app.add_option<double>("-r,--crystal-axes-rotation",
+                           simParams["crystal_axes_rotation"]
+                               .get_ref<nlohmann::json::number_float_t &>(),
+                           "rotation between grain and crystal ab-axes.")
         ->check(CLI::Number);
-    app.add_option("-c,--convergence-criterion",
-                   simParams["convergence_criterion"]
-                       .get_ref<nlohmann::json::number_float_t &>(),
-                   "convergence criteron for self-consistency.")
+    app.add_option<double>("-c,--convergence-criterion",
+                           simParams["convergence_criterion"]
+                               .get_ref<nlohmann::json::number_float_t &>(),
+                           "convergence criteron for self-consistency.")
         ->check(CLI::PositiveNumber);
-    app.add_option(
+    app.add_option<int64_t>(
            "-N,--lattice-side-length",
            simParams["lattice_side_length"]
                .get_ref<nlohmann::json::number_integer_t &>(),
@@ -167,28 +167,31 @@ int main(int argc, char *argv[]) {
            "grain "
            "size.")
         ->check(CLI::PositiveNumber);
-    app.add_option(
+    app.add_option<int64_t>(
            "-e,--num-ozaki-energies",
            simParams["num_ozaki_energies"]
                .get_ref<nlohmann::json::number_integer_t &>(),
            "number of Ozaki energies (similar to Matsubara energies, see "
            "the documentation).")
         ->check(CLI::PositiveNumber);
-    app.add_option("-p,--num-fermi-momenta",
-                   simParams["num_fermi_momenta"]
-                       .get_ref<nlohmann::json::number_integer_t &>(),
-                   "number of discrete angles in Fermi-surface average. Set to "
-                   "odd value for best convergence.\nRecommended minumum: 101.")
+    app.add_option<int64_t>(
+           "-p,--num-fermi-momenta",
+           simParams["num_fermi_momenta"]
+               .get_ref<nlohmann::json::number_integer_t &>(),
+           "number of discrete angles in Fermi-surface average. Set to "
+           "odd value for best convergence.\nRecommended minumum: 101.")
         ->check(CLI::PositiveNumber);
-    app.add_option("-M,--num-iterations-max",
-                   simParams["num_iterations_max"]
-                       .get_ref<nlohmann::json::number_integer_t &>(),
-                   "maximum number of self-consistent iterations to run.")
+    app.add_option<int64_t>(
+           "-M,--num-iterations-max",
+           simParams["num_iterations_max"]
+               .get_ref<nlohmann::json::number_integer_t &>(),
+           "maximum number of self-consistent iterations to run.")
         ->check(CLI::PositiveNumber);
-    app.add_option("-m,--num-iterations-min",
-                   simParams["num_iterations_min"]
-                       .get_ref<nlohmann::json::number_integer_t &>(),
-                   "minimum number of self-consistent iterations to run.")
+    app.add_option<int64_t>(
+           "-m,--num-iterations-min",
+           simParams["num_iterations_min"]
+               .get_ref<nlohmann::json::number_integer_t &>(),
+           "minimum number of self-consistent iterations to run.")
         ->check(CLI::PositiveNumber);
     // Command-line flags (not followed by value: set something to true/false)
     app.add_flag(
