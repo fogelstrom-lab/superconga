@@ -1,4 +1,4 @@
-//===----- run_utils.h - Collection of useful for run file examples --===//
+//===----- run_utils.h - Useful functions for run file examples --===//
 //
 // Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
@@ -24,7 +24,7 @@
 
 namespace run_utils {
 namespace internal {
-//===----------------------------- Constants -----------------------------===//
+//===----------------------------- Variables -----------------------------===//
 // Constant used to check if user presses 'q' or 's' in the GUI to quit or save.
 bool guiUserQuit = false;
 bool guiUserSaveData = false;
