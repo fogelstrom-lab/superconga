@@ -24,8 +24,8 @@
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
-#include "OrderParameterComponent_D.h" // d-wave
-#include "OrderParameterComponent_S.h" // s-wave
+#include "OrderParameterBasis.h"
+#include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
@@ -176,12 +176,11 @@ int main(int argc, char *argv[]) {
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
 
   // Add a d-wave or an s-wave order-parameter component.
-  OrderParameterComponent<T> *orderParameterComponent;
-  if (simParams["dwave_symmetry"].get<bool>()) {
-    orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
-  } else {
-    orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
-  }
+  const BasisFunctionSymmetry symmetry = simParams["dwave_symmetry"].get<bool>()
+                                             ? BasisFunctionSymmetry::DWAVE
+                                             : BasisFunctionSymmetry::SWAVE;
+  OrderParameterComponent<T> *orderParameterComponent =
+      new OrderParameterComponent<T>(symmetry, parameters);
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation =

@@ -10,8 +10,8 @@
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
-#include "OrderParameterComponent_D.h" // d-wave
-#include "OrderParameterComponent_S.h" // s-wave
+#include "OrderParameterBasis.h"
+#include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
@@ -117,13 +117,12 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     // Set up order parameter
     OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
 
-    // Use s-wave or d-wave
-    OrderParameterComponent<T> *orderParameterComponent;
-    if (useSwave) {
-      orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
-    } else {
-      orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
-    }
+    // Add a d-wave or an s-wave order-parameter component.
+    const BasisFunctionSymmetry symmetry =
+        useSwave ? BasisFunctionSymmetry::SWAVE : BasisFunctionSymmetry::DWAVE;
+    OrderParameterComponent<T> *orderParameterComponent =
+        new OrderParameterComponent<T>(symmetry, parameters);
+
     Initial<T>::constant(orderParameterComponent, inStartRealPart,
                          inStartImaginaryPart);
     // Add the initialized s-wave component to the total order parameter
@@ -188,13 +187,11 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // Set up order parameter
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
 
-  // Use s-wave or d-wave
-  OrderParameterComponent<T> *orderParameterComponent;
-  if (inUseSwave) {
-    orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
-  } else {
-    orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
-  }
+  // Add a d-wave or an s-wave order-parameter component.
+  const BasisFunctionSymmetry symmetry =
+      inUseSwave ? BasisFunctionSymmetry::SWAVE : BasisFunctionSymmetry::DWAVE;
+  OrderParameterComponent<T> *orderParameterComponent =
+      new OrderParameterComponent<T>(symmetry, parameters);
 
   // Initialize order-parameter component to a constant
   Initial<T>::constant(orderParameterComponent, inStartValue, inStartValue);

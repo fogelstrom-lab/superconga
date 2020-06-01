@@ -3,6 +3,7 @@
 
 #include "FermiSurface.h"
 #include "Grid.h"
+#include "OrderParameterBasis.h"
 #include "OrderParameterBulk.h"
 #include "Parameters.h"
 #include <cmath>
@@ -14,15 +15,16 @@ template <typename T> class OrderParameterComponent {
 
 public:
   // Constructors and destructor.
-  OrderParameterComponent();
+  OrderParameterComponent(const BasisFunctionSymmetry inSymmetry);
   OrderParameterComponent(const OrderParameterComponent<T> &other);
-  OrderParameterComponent(Parameters<T> *param, T Tcthis_Tc = 1.0);
-  virtual ~OrderParameterComponent();
+  OrderParameterComponent(const BasisFunctionSymmetry inSymmetry,
+                          Parameters<T> *param, T Tcthis_Tc = 1.0);
+  ~OrderParameterComponent();
 
-  virtual OrderParameterComponent<T> *clone() const = 0;
+  OrderParameterComponent<T> *clone() const;
 
   // Functions
-  virtual void initialize();
+  void initialize(FermiSurface<T> *fermiSurface);
 
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
@@ -36,28 +38,17 @@ public:
   }
   T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
 
-  virtual void
-  computeMomentumDependence(GridGPU *target, const T pX, const T pY,
-                            bool conjugateBasisFunction = false) const = 0;
-
-  virtual void
-  initBasisFunctionNormalization(FermiSurface<T> *fermiSurface) = 0;
+  void computeMomentumDependence(GridGPU *target, const T pX, const T pY,
+                                 bool conjugateBasisFunction = false) const;
 
   void initCouplingConstant(const T *energies, const T *residues);
 
   void applyCouplingConstant();
   void applyCouplingConstant(GridGPU *target) const;
 
-  virtual T deltaBulk() const;
+  T deltaBulk() const;
 
-  void setBasisFunctionNormalization(const T inBasisFunctionNormalization) {
-    m_basisFunctionNormalization = inBasisFunctionNormalization;
-  }
-  T getBasisFunctionNormalization() const {
-    return m_basisFunctionNormalization;
-  }
-
-  virtual std::string getType() const = 0;
+  std::string getType() const { return m_basisFunction.getSymmetryStr(); };
 
 private:
   template <typename S>
@@ -82,20 +73,20 @@ private:
   // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
   T m_crystalAxesRotation;
 
-  // Factor to make <|eta|^2> = 1.
-  T m_basisFunctionNormalization;
+  // The basis function of this order-parameter component.
+  BasisFunction<T> m_basisFunction;
 
   // Order parameter component
   GridGPU *_deltaComp;
 };
 
 template <typename T>
-OrderParameterComponent<T>::OrderParameterComponent()
+OrderParameterComponent<T>::OrderParameterComponent(
+    const BasisFunctionSymmetry inSymmetry)
     : _param(0), _deltaComp(0), _Tcthis_Tc(1.0),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)),
-      m_basisFunctionNormalization(static_cast<T>(1.0)) {}
+      m_crystalAxesRotation(static_cast<T>(0.0)), m_basisFunction(inSymmetry) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
@@ -104,22 +95,23 @@ OrderParameterComponent<T>::OrderParameterComponent(
       m_couplingConstant(other.m_couplingConstant),
       m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized),
       m_crystalAxesRotation(other.m_crystalAxesRotation),
-      m_basisFunctionNormalization(other.m_basisFunctionNormalization) {
+      m_basisFunction(other.m_basisFunction) {
   if (other._deltaComp) {
     _deltaComp = new GridGPU(*other._deltaComp);
   }
 }
 
 template <typename T>
-OrderParameterComponent<T>::OrderParameterComponent(Parameters<T> *param,
-                                                    T Tcthis_Tc)
+OrderParameterComponent<T>::OrderParameterComponent(
+    const BasisFunctionSymmetry inSymmetry, Parameters<T> *param, T Tcthis_Tc)
     : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)),
-      m_basisFunctionNormalization(static_cast<T>(1.0)) {
-  // Do an initialization on creation so we can set initial value
-  initialize();
+      m_crystalAxesRotation(static_cast<T>(0.0)), m_basisFunction(inSymmetry) {
+  // Do an initialization on creation so we can set initial value.
+  // Note, pass a null pointer as the Fermi surface so it won't try to
+  // initialize the basis function.
+  initialize(nullptr);
 }
 
 template <typename T> OrderParameterComponent<T>::~OrderParameterComponent() {
@@ -137,16 +129,26 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A.m_isCouplingConstantInitialized,
             B.m_isCouplingConstantInitialized);
   std::swap(A.m_crystalAxesRotation, B.m_crystalAxesRotation);
-  std::swap(A.m_basisFunctionNormalization, B.m_basisFunctionNormalization);
+  std::swap(A.m_basisFunction, B.m_basisFunction);
 }
 
-template <typename T> void OrderParameterComponent<T>::initialize() {
+template <typename T>
+OrderParameterComponent<T> *OrderParameterComponent<T>::clone() const {
+  return new OrderParameterComponent<T>(*this);
+}
+
+template <typename T>
+void OrderParameterComponent<T>::initialize(FermiSurface<T> *inFermiSurface) {
   int N = _param->getGridResolutionBase();
 
   if (_deltaComp && _deltaComp->dimX() != N) {
     _deltaComp->resample(N, N);
   } else {
     GridGPU::initializeGrid(_deltaComp, N, N);
+  }
+
+  if (inFermiSurface) {
+    m_basisFunction.normalize(inFermiSurface);
   }
 }
 
@@ -191,10 +193,40 @@ void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) const {
   }
 }
 
+template <typename T>
+void OrderParameterComponent<T>::computeMomentumDependence(
+    GridGPU *target, const T pX, const T pY,
+    bool conjugateBasisFunction) const {
+  T pXRotated;
+  T pYRotated;
+  utils::rotate(m_crystalAxesRotation, pX, pY, pXRotated, pYRotated);
+  const cplx<T> basisFunction = m_basisFunction.evaluate(pXRotated, pYRotated);
+  (*target) *= (conjugateBasisFunction ? basisFunction.conj() : basisFunction);
+}
+
 template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
-  // TODO(Niclas): Is it really necessary to wrap it here?
+  // TODO(niclas): Shouldn't the temperature be scaled with the relative Tc?
   const T temperature = _param->getTemperature();
-  return computeOrderParameterBulkSWave(temperature);
+
+  // Compute the s-wave bulk order parameter for this temperature.
+  const T sWaveBulk = computeOrderParameterBulkSWave(temperature);
+
+  // This is an a bit ugly, but it is faster to just solve for s-wave and
+  // rescale it by the known d-wave value.
+  // TODO(niclas): Perhaps this functionality should lie in
+  // 'computeOrderParameterBulkSWave' instead? And rename that function if so.
+  const BasisFunctionSymmetry symmetry = m_basisFunction.getSymmetry();
+  T scale;
+  switch (symmetry) {
+  case BasisFunctionSymmetry::DWAVE: {
+    scale = static_cast<T>(qcs::D_WAVE_BULK / qcs::S_WAVE_BULK);
+    break;
+  }
+  default: {
+    scale = static_cast<T>(1.0);
+  }
+  }
+  return sWaveBulk * scale;
 }
 
 #endif // ORDER_PARAMETER_COMPONENT_H_

@@ -21,7 +21,6 @@
 #include "FermiSurfaceCircle.h"
 #include "FermiSurfaceTightBinding.h"
 #include "OrderParameterBasis.h"
-#include "OrderParameterComponent_D.h"
 #include "cplx.h"
 #include "defines.h"
 #include "utils.h"
@@ -122,13 +121,8 @@ int main(int argc, char *argv[]) {
     // Initialize Fermi surface
     fermiSurface->initialize(numAngles);
 
-    // Set up Order parameter
-    OrderParameterComponent_D<T> orderParameterComponent;
-
-    // Normalize basis function
-    orderParameterComponent.initBasisFunctionNormalization(fermiSurface.get());
-    const T basisFunctionNormalization =
-        orderParameterComponent.getBasisFunctionNormalization();
+    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE);
+    basisFunctionD.normalize(fermiSurface.get());
 
     // Storage for integrand sums
     T integrandBasisFunctionSquared = static_cast<T>(0.0);
@@ -148,8 +142,7 @@ int main(int argc, char *argv[]) {
 
       // Basis function: eta
       const cplx<T> basisFunction =
-          basisFunctionNormalization *
-          BasisFunction_D<T>::compute(momentumX, momentumY);
+          basisFunctionD.evaluate(momentumX, momentumY);
       // |eta|
       const T basisFunctionAbs = basisFunction.cabs();
       // |eta|^2

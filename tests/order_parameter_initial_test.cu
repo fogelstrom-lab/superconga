@@ -7,8 +7,7 @@
 #include "FermiSurfaceCircle.h" // Standard circle Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "OrderParameter.h" // Container class for order parameter components
-#include "OrderParameterComponent_D.h" // d-wave
-#include "OrderParameterComponent_S.h" // s-wave
+#include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
@@ -132,12 +131,11 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 4) {
 
       // Set up order parameter
       OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
-      OrderParameterComponent<T> *orderParameterComponent;
-      if (useSwave) {
-        orderParameterComponent = new OrderParameterComponent_S<T>(parameters);
-      } else {
-        orderParameterComponent = new OrderParameterComponent_D<T>(parameters);
-      }
+      const BasisFunctionSymmetry symmetry = useSwave
+                                                 ? BasisFunctionSymmetry::SWAVE
+                                                 : BasisFunctionSymmetry::DWAVE;
+      OrderParameterComponent<T> *orderParameterComponent =
+          new OrderParameterComponent<T>(symmetry, parameters);
 
       // Temporary initialization has to be done before adding it to the order
       // parameter. This is because we have to add it outside the inner for

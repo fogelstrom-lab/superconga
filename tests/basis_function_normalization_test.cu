@@ -4,9 +4,6 @@
 #include "FermiSurfaceCircle.h"
 #include "FermiSurfaceTightBinding.h"
 #include "OrderParameterBasis.h"
-#include "OrderParameterComponent.h"
-#include "OrderParameterComponent_D.h"
-#include "OrderParameterComponent_S.h"
 #include "cplx.h"
 #include "utils.h"
 
@@ -40,16 +37,15 @@ const double CHEMICAL_POTENTIAL_FS2 = -1.267;
 // Check that the order-parameter basis function is normalized, <|eta|^2 > = 1,
 // for different order parameter symmetries and different fermi surface types.
 template <typename T>
-void testBasisFunctionNormaliztation(const T inTolerance) {
+void testBasisFunctionNormaliztation(const T inTolerance,
+                                     const bool inNumNormalizations = 2) {
   // =================== ARRANGE ==================== //
   // Set up Fermi surface angles
   const int numAngles = 100;
   const std::vector<T> angles = utils::linspace(
       static_cast<T>(0.0), static_cast<T>(2.0 * M_PI), numAngles);
 
-  // Create order parameter and Fermi surface objects
-  OrderParameterComponent_S<T> orderParameterComponentS;
-  OrderParameterComponent_D<T> orderParameterComponentD;
+  // Create Fermi surface object
   std::unique_ptr<FermiSurface<T>> fermiSurface;
 
   // Loop over Fermi surface types
@@ -72,47 +68,43 @@ void testBasisFunctionNormaliztation(const T inTolerance) {
     // Initialize Fermi surface
     fermiSurface->initialize(numAngles);
 
-    // Normalize basis function
-    orderParameterComponentS.initBasisFunctionNormalization(fermiSurface.get());
-    orderParameterComponentD.initBasisFunctionNormalization(fermiSurface.get());
-    const T basisNormalizationS =
-        orderParameterComponentS.getBasisFunctionNormalization();
-    const T basisNormalizationD =
-        orderParameterComponentD.getBasisFunctionNormalization();
+    // Basis functions.
+    BasisFunction<T> basisFunctionS(BasisFunctionSymmetry::SWAVE);
+    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE);
 
-    T integrandFactorSumS = static_cast<T>(0.0);
-    T integrandFactorSumD = static_cast<T>(0.0);
+    for (int i = 0; i < inNumNormalizations; ++i) {
+      // Normalize basis function. It should not matter whether we have called
+      // 'normalize' before, hence the loop.
+      basisFunctionS.normalize(fermiSurface.get());
+      basisFunctionD.normalize(fermiSurface.get());
 
-    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
-      // =================== ACT ==================== //
-      const T angle = angles[angleIdx];
-      const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
+      T integrandFactorSumS = static_cast<T>(0.0);
+      T integrandFactorSumD = static_cast<T>(0.0);
 
-      T momentumX;
-      T momentumY;
-      fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
-      const cplx<T> basisFunctionS =
-          basisNormalizationS *
-          BasisFunction_S<T>::compute(momentumX, momentumY);
-      const cplx<T> basisFunctionD =
-          basisNormalizationD *
-          BasisFunction_D<T>::compute(momentumX, momentumY);
+      for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+        // =================== ACT ==================== //
+        const T angle = angles[angleIdx];
+        const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
 
-      // Compute the integrand of <|eta|^2 >
-      integrandFactorSumS += integrandFactor * basisFunctionS.cabsSq();
-      integrandFactorSumD += integrandFactor * basisFunctionD.cabsSq();
+        T momentumX;
+        T momentumY;
+        fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
+        const cplx<T> etaS = basisFunctionS.evaluate(momentumX, momentumY);
+        const cplx<T> etaD = basisFunctionD.evaluate(momentumX, momentumY);
+
+        // Compute the integrand of <|eta|^2 >
+        integrandFactorSumS += integrandFactor * etaS.cabsSq();
+        integrandFactorSumD += integrandFactor * etaD.cabsSq();
+      }
+
+      // =================== ASSERT ==================== //
+      const T integrandFactorSumExpected = static_cast<T>(1.0);
+
+      CHECK(integrandFactorSumS ==
+            doctest::Approx(integrandFactorSumExpected).epsilon(inTolerance));
+      CHECK(integrandFactorSumD ==
+            doctest::Approx(integrandFactorSumExpected).epsilon(inTolerance));
     }
-
-    // =================== ASSERT ==================== //
-    const T integrandFactorSumExpected = static_cast<T>(1.0);
-
-    std::cout << integrandFactorSumS << std::endl;
-    std::cout << integrandFactorSumD << std::endl;
-
-    CHECK(integrandFactorSumS ==
-          doctest::Approx(integrandFactorSumExpected).epsilon(inTolerance));
-    CHECK(integrandFactorSumD ==
-          doctest::Approx(integrandFactorSumExpected).epsilon(inTolerance));
   }
 }
 
