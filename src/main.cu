@@ -36,6 +36,7 @@
 #include "run_utils.h" // Commonly used functions in run files
 
 #include <CLI/CLI.hpp>
+#include <boost/filesystem.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -312,10 +313,27 @@ void display() {
 }
 
 void saveDataWrapper(const nlohmann::json &inJSON) {
+  // Construct full directory path.
   char dataPath[512];
   const std::string dataBasePath = inJSON["data_path"].get<std::string>();
-  snprintf(dataPath, sizeof(dataPath), "%sT%2.4f/", dataBasePath.c_str(),
+  snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
            inJSON["temperature"].get<T>());
 
-  // Todo(patric): Implement helper functions to save data.
+  // Todo(patric): remove Boost dependency and use C++17
+  boost::filesystem::path boostDataPath(dataPath);
+  boost::filesystem::create_directories(boostDataPath);
+
+  // Todo(patric): put in separate functions in separate util-file.
+
+  // Construct full filepath to json-file.
+  char fullPathJSON[512];
+  snprintf(fullPathJSON, sizeof(fullPathJSON), "%s/parameters.json", dataPath);
+
+  // Save run parameters (JSON-object) to json-file.
+  std::ofstream ofstreamJSON(fullPathJSON);
+  ofstreamJSON << std::setw(4) << inJSON << std::endl;
+
+  if (inJSON["verbose"].get<bool>()) {
+    std::cout << "Wrote parameters to JSON file: " << fullPathJSON << std::endl;
+  }
 }

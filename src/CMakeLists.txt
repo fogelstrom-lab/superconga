@@ -78,6 +78,8 @@ target_link_libraries(
           gfortran
           lapack
           blas
+          boost_system
+          boost_filesystem
           nlohmann_json::nlohmann_json
           CLI11::CLI11)
 
