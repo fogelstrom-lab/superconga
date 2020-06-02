@@ -36,7 +36,6 @@
 #include "run_utils.h" // Commonly used functions in run files
 
 #include <CLI/CLI.hpp>
-#include <boost/filesystem.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -48,7 +47,7 @@
 // FORWARD DECLARATIONS
 //*******************************************************
 void display();
-void saveDataWrapper(const nlohmann::json &inJSON);
+void saveDataWrapper(nlohmann::json &inOutJSON);
 
 //*******************************************************
 // TYPEDEFS
@@ -134,13 +133,8 @@ int main(int argc, char *argv[]) {
   // from the geometry group.
   GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
 
-  // Add an square to simulation space, scale to fit in simulation domain, then
-  // remove a square-shaped hole
-  // TODO: (Patric) Different polygon objects need different scaling in order to
-  // not fall outside simulation domain. This should however be done
-  // automatically (if possible) and hidden from the user.
-
-  // Relative size of grain (1.0 is 100% of simulation space).
+  // Add polygon to simulation space, scale to fit in simulation domain
+  // (grainScale 1.0 is 100% of simulation space).
   const T grainScale = 1.0;
 
   // Number of vertices in a square.
@@ -288,14 +282,18 @@ int main(int argc, char *argv[]) {
   run_utils::runSimulation(context, simParams["visualize"].get<bool>(),
                            simParams["verbose"].get<bool>(),
                            simParams["num_iterations_min"].get<int>(),
-                           simParams["num_iterations_max"].get<int>());
+                           simParams["num_iterations_max"].get<int>(),
+                           simParams["save_data"].get<bool>(),
+                           simParams["save_data_interval"].get<int>(),
+                           simParams);
 
   //***********************************************
   // POST-PROCESSING
   //***********************************************
   // Save at the very end.
   if (simParams["save_data"].get<bool>()) {
-    saveDataWrapper(simParams);
+    run_utils::saveDataWrapper(context, simParams,
+                               simParams["verbose"].get<bool>());
   }
 
   // Cleanup dynamically allocated memory.
@@ -309,30 +307,4 @@ void display() {
 
   // Tell Glut to update window.
   glutPostRedisplay();
-}
-
-void saveDataWrapper(const nlohmann::json &inJSON) {
-  // Construct full directory path.
-  char dataPath[512];
-  const std::string dataBasePath = inJSON["data_path"].get<std::string>();
-  snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
-           inJSON["temperature"].get<T>());
-
-  // Todo(patric): remove Boost dependency and use C++17
-  boost::filesystem::path boostDataPath(dataPath);
-  boost::filesystem::create_directories(boostDataPath);
-
-  // Todo(patric): put in separate functions in separate util-file.
-
-  // Construct full filepath to json-file.
-  char fullPathJSON[512];
-  snprintf(fullPathJSON, sizeof(fullPathJSON), "%s/parameters.json", dataPath);
-
-  // Save run parameters (JSON-object) to json-file.
-  std::ofstream ofstreamJSON(fullPathJSON);
-  ofstreamJSON << std::setw(4) << inJSON << std::endl;
-
-  if (inJSON["verbose"].get<bool>()) {
-    std::cout << "Wrote parameters to JSON file: " << fullPathJSON << std::endl;
-  }
 }

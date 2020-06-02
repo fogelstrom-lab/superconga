@@ -211,7 +211,7 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
   outApp.config_formatter(std::make_shared<internal::ConfigJSON>());
 
   // Set default values for user-modifieable parameters.
-  outParametersJSON["data_path"] = std::string("data/");
+  outParametersJSON["data_path"] = std::string("data");
   outParametersJSON["temperature"] = 0.5;
   outParametersJSON["external_flux_quanta"] = 0.0;
   outParametersJSON["grain_side_length"] = 30.0;
@@ -227,7 +227,8 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
   outParametersJSON["solenoid"] = false;
   outParametersJSON["visualize"] = true;
   outParametersJSON["verbose"] = true;
-  outParametersJSON["save_data"] = true;
+  outParametersJSON["save_data"] = false;
+  outParametersJSON["save_data_interval"] = 200;
 
   // Tell CLI11 to the read JSON-parameter file, if specified.
   const std::string defaultFile = "";
@@ -318,6 +319,12 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
           outParametersJSON["num_iterations_min"]
               .get_ref<nlohmann::json::number_integer_t &>(),
           "Minimum number of self-consistent iterations to run.")
+      ->check(CLI::PositiveNumber);
+  outApp
+      .add_option<int64_t>("--save-data-interval",
+                           outParametersJSON["save_data_interval"]
+                               .get_ref<nlohmann::json::number_integer_t &>(),
+                           "How frequently to save data.")
       ->check(CLI::PositiveNumber);
 
   // Command-line flags (not followed by value: set something to true/false)

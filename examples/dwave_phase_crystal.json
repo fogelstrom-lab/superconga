@@ -2,7 +2,7 @@
     "convergence_criterion": 1e-6,
     "crystal_axes_rotation": 0.25,
     "dwave_symmetry": true,
-    "data_path": "data/",
+    "data_path": "data",
     "disc_geometry": false,
     "external_flux_quanta": 0.05,
     "grain_side_length": 50.0,
@@ -12,7 +12,8 @@
     "num_iterations_max": 1000,
     "num_iterations_min": 20,
     "verbose": true,
-    "save_data": true,
+    "save_data": false,
+    "save_data_interval": 200,
     "solenoid": true,
     "temperature": 0.1,
     "visualize": true

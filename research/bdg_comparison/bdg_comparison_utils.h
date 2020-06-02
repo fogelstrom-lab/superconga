@@ -85,7 +85,7 @@ void saveInducedFluxDensity(
 // TODO(patric): Replace boost with standard functions. Create utils_io.h in lib
 // and move there
 void createProjectDirectory(const char *const inDirectory) {
-  boost::filesystem::path rootPath(inDirectory);
+  const boost::filesystem::path rootPath(inDirectory);
   boost::filesystem::create_directories(rootPath);
 }
 

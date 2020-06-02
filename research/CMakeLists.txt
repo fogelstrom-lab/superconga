@@ -25,6 +25,21 @@ set(NVCC_WARN
     -Wdouble-promotion,\
     -Wformat=2")
 
+# Declare the JSON lib. Note that this is a smaller mirror of the original repo:
+# https://github.com/nlohmann/json
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY
+    https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
+  GIT_TAG v3.7.3)
+
+# Fetch the JSON lib.
+FetchContent_GetProperties(json)
+if(NOT json_POPULATED)
+  FetchContent_Populate(json)
+  add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 # Define the main set of source files
 set(SRC bdg_comparison/bdg_comparison_main.cu
         bdg_comparison/analytic_zero_temp_expressions.cu)
@@ -40,12 +55,22 @@ foreach(file ${SRC})
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
   # External libraries
-  target_link_libraries(${name} PRIVATE glut GL GLU gfortran lapack blas boost_system boost_filesystem)
+  target_link_libraries(
+    ${name}
+    PRIVATE glut
+            GL
+            GLU
+            gfortran
+            lapack
+            blas
+            boost_system
+            boost_filesystem
+            nlohmann_json::nlohmann_json)
 
   # Use C++14 since it is the lates standard CUDA supports
   message(STATUS "Enable C++ standard: C++14")
-  set_target_properties(${name}
-                        PROPERTIES CUDA_STANDARD 14 CUDA_STANDARD_REQUIRED ON)
+  set_target_properties(${name} PROPERTIES CUDA_STANDARD 14
+                                           CUDA_STANDARD_REQUIRED ON)
   set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
                                                            ON)
 
