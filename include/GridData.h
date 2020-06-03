@@ -1482,7 +1482,6 @@ int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
     file.write((char *)data_ptr, numBytesData);
 
     file.close();
-    std::cout << "Wrote binary: " << filename << "\n";
     return 0;
   } else {
     std::cout << "Could not open file: " << filename << "\n";

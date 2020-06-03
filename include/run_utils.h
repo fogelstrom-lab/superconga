@@ -12,7 +12,12 @@
 #ifndef RUN_UTILS_H_
 #define RUN_UTILS_H_
 
+#include "ComputeVectorPotential.h" // Compute the vector potential induced by currents
 #include "Context.h"
+#include "Grid.h"     // Grid and GridData
+#include "GridData.h" // Grid and GridData
+#include "Parameters.h" // Parameters specifying which the superconducting system to simulate
+#include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
 
 #include <boost/filesystem.hpp>
@@ -202,6 +207,143 @@ void saveFreeEnergy(const Context<T> *const inContext,
   }
 }
 
+/// \brief Save induced magnetic flux density to file
+///
+/// \param inContext - Context object
+/// \param inDataPath - Path where to save save grid data file.
+/// \param inVerbose - Print success to terminal.
+/// \param inDataFileName - File name of induced flux density file.
+// Todo(patric): Create utils_io.h and move there.
+template <typename T>
+void saveInducedFluxDensity(
+    const Context<T> *const inContext, const char *const inDataPath,
+    const bool inVerbose = true,
+    const char *const inDataFileName = (char *)"magnetic_flux_density") {
+
+  // Construct full file name.
+  char gridDataFile[512];
+  snprintf(gridDataFile, sizeof(gridDataFile), "%s/%s.grd", inDataPath,
+           inDataFileName);
+
+  // Fetch parameters from context.
+  Parameters<T> *parameters = inContext->getParameters();
+
+  // Fetch current density and set to zero outside grain.
+  typename Grid<T>::GPU *current = inContext->getComputeCurrent()->getResult();
+  inContext->getGeometry()->zeroValuesOutsideDomain(current);
+  const int numLatticePoints = current->dimX();
+
+  // Domain structure for vector potential calculation.
+  Grid<char>::GPU *domain =
+      inContext->getGeometry()->createDomain(numLatticePoints);
+
+  // Create GPU storage for vector potential.
+  typename Grid<T>::GPU *vectorPotential = new
+      typename Grid<T>::GPU(numLatticePoints, numLatticePoints, 2, Type::real);
+
+  // Convert lattice spacing back to proper coherence lengths:
+  // hbar*vF/(2*Pi*kB*Tc).
+  const T latticeSpacing =
+      parameters->getGridElementSize() * static_cast<T>(2.0 * M_PI);
+
+  // Calculate coefficients for Poissons equation
+  // TODO(patric): this should be done inside computeVectorPotential!
+  const T penetrationDepth = parameters->getPenetrationDepth();
+  const T minusInvKappaSquared =
+      -static_cast<T>(1.0) / (penetrationDepth * penetrationDepth);
+
+  // Solve the vector potential from the current.
+  computeVectorPotential(vectorPotential, current, domain, latticeSpacing,
+                         minusInvKappaSquared);
+
+  // Solve the magnetic flux density from the vector potential through Maxwell.
+  typename Grid<T>::GPU magneticFluxDensity =
+      vectorPotential->curl(latticeSpacing);
+
+  delete vectorPotential;
+
+  // Try to save induced flux density to file. Exit program if fail.
+  if (magneticFluxDensity.write(gridDataFile, parameters)) {
+    std::cout << "ERROR! Could not save induced flux density to file: "
+              << gridDataFile << std::endl;
+    exit(1);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved induced flux density to file: " << gridDataFile
+                << std::endl;
+    }
+  }
+}
+
+/// \brief Save order parameter and current to file.
+///
+/// \param inContext - Context object for simulation.
+/// \param inDataPath - JSON object with parameter values.
+/// \param inVerbose - Print success to terminal.
+/// \param inOrderParameterFileName - File name of order-parameter file.
+/// \param inCurrentDensityFileName - File name of current-density file.
+///
+/// \return - void
+template <typename T>
+void saveGridData(
+    const Context<T> *const inContext, const char *const inDataPath,
+    const bool inVerbose = true,
+    const char *const inOrderParameterFileName = (char *)"order_parameter",
+    const char *const inCurrentDensityFileName = (char *)"current_density") {
+  // Fetch run parameters from context.
+  Parameters<T> *parameters = inContext->getParameters();
+
+  // Fetch order parameter.
+  typename Grid<T>::GPU *const orderParameterSave =
+      inContext->getComputeOrderParameter()->getResult();
+
+  // Set order parameter to zero outside simulation domain (non-zero values are
+  // used for interpolation).
+  inContext->getGeometry()->zeroValuesOutsideDomain(orderParameterSave);
+
+  // Construct full file name for order-parameter file.
+  char orderParameterFile[512];
+  snprintf(orderParameterFile, sizeof(orderParameterFile), "%s/%s.grd",
+           inDataPath, inOrderParameterFileName);
+
+  // Try to save order parameter to file. Exit program if fail.
+  if (orderParameterSave->write(orderParameterFile, parameters)) {
+    std::cout << "ERROR! Could not save Order Parameter to file: "
+              << orderParameterFile << std::endl;
+    exit(1);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved order parameter to file: " << orderParameterFile
+                << std::endl;
+    }
+  }
+
+  // Fetch current density.
+  typename Grid<T>::GPU *const currentSave =
+      inContext->getComputeCurrent()->getResult();
+
+  // Set current density to zero outside simulation domain (non-zero values are
+  // used for interpolation).
+  inContext->getGeometry()->zeroValuesOutsideDomain(currentSave);
+
+  // Construct full file name for current density.
+  char currentDensityFile[512];
+  snprintf(currentDensityFile, sizeof(currentDensityFile), "%s/%s.grd",
+           inDataPath, inCurrentDensityFileName);
+
+  // Try to save order parameter to file. Exit program if fail.
+  if (currentSave->write(currentDensityFile, parameters)) {
+    std::cout << "Could not save current density to file: "
+              << currentDensityFile << std::endl;
+    exit(1);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved current density to file: " << currentDensityFile
+                << std::endl;
+    }
+  }
+}
+
 /// \brief Wrapper to save data to file.
 ///
 /// Wrapper that calls functions to save metadata parameters, free energy, and
@@ -220,14 +362,20 @@ void saveDataWrapper(const Context<T> *const inContext,
   snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
            inJSON["temperature"].get<T>());
 
-  // Create directory if not existing
+  // Create directory if not existing.
   createDirectory(dataPath);
 
-  // Save parameters to JSON file
+  // Save parameters to JSON file.
   saveParametersWrapper(inContext, inJSON, dataPath, inVerbose);
 
-  // Append free energy and iteration status to file
+  // Append free energy and iteration status to file.
   saveFreeEnergy(inContext, dataPath, inVerbose);
+
+  // Save order parameter and current to file.
+  saveGridData(inContext, dataPath, inVerbose);
+
+  // Save induced magnetic field to file.
+  saveInducedFluxDensity(inContext, dataPath, inVerbose);
 }
 
 /// \brief Print iteration status.
@@ -370,7 +518,7 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 
   // Print status if simulation finished.
   if (isConverged) {
-    std::cout << "SUCCESS! Simulation did converge." << std::endl;
+    std::cout << "SUCCESS! Simulation converged." << std::endl;
   } else if (patienceReached) {
     std::cout << "FAILURE! Simulation did not converge." << std::endl;
   }
