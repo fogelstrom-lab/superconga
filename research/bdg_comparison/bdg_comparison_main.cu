@@ -11,8 +11,9 @@
 ///
 //===----------------------------------------------------------------------===//
 #include "BoundaryConditionSpecular.h" // Boundary condition for perfect specular reflection
-#include "ComputeCurrent.h"        // Compute the total charge current density
-#include "ComputeFreeEnergy.h"     // Compute the (Eilenberger) free energy
+#include "ComputeCurrent.h"    // Compute the total charge current density
+#include "ComputeFreeEnergy.h" // Compute the (Eilenberger) free energy
+#include "ComputeLDOS.h"
 #include "ComputeOrderParameter.h" // Compute order parameter
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
 #include "FermiSurface.h"
@@ -40,6 +41,7 @@
 //*******************************************************
 void display();
 void saveDataWrapper();
+void postProcessing();
 
 //*******************************************************
 // TYPEDEFS
@@ -68,12 +70,19 @@ char dataPath[512];
 //*******************************************************
 // TODO(patric): Make into a struct
 namespace simParams {
-// Run in OpenGL mode or terminal mode
+// Run in OpenGL mode or terminal mode.
 const bool RUN_VISUAL = false;
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
-// Run metastable state without vortices (real order parameter)
+// Run metastable state without current-loops (real order parameter).
 bool RUN_METASTABLE = false;
+// Load the order parameter from file.
+const bool LOAD_ORDER_PARAMETER = false;
+// Whether to compute the order parameter or just go to post-processing.
+const bool COMPUTE_ORDER_PARAMETER = true;
+// Whether to compute the LDOS as post-processing.
+const bool COMPUTE_LDOS = true;
+
 // Temperature in units of T_c
 T TEMPERATURE = static_cast<T>(0.1);
 // Size of pairbreaking edge in coherence lengths hbar*v_F/(2*pi*k_BT_c)
@@ -104,6 +113,16 @@ const int SAVE_DATA_INTERVAL = 200;
 // 2 - Tight Binding: NNN= -0.25, NNNN=0, mu=0
 // 3 - Tight Binding: NNN= -0.495, NNNN=0.156, mu=-1.267
 int fermiSurfaceLabel = 1;
+
+// ================= LDOS ================= //
+const int NUM_LDOS_ANGLES = 5 * 360;
+const int NUM_ENERGIES_PER_BLOCK = 8;
+const T ENERGY_MIN = static_cast<T>(0.0);
+const T ENERGY_MAX = static_cast<T>(3.0);
+const T ENERGY_SMEARING = static_cast<T>(0.05);
+const int NUM_LDOS_ENERGIES = 512;
+const int NUM_LDOS_ITERATIONS_MAX = 1000;
+const T LDOS_CONVERGENCE_CRITERION = static_cast<T>(1E-3);
 } // namespace simParams
 
 //*******************************************************
@@ -232,14 +251,33 @@ int main(int argc, char *argv[]) {
   // Decay length of phase crystal, converted to coordinate units.
   const T startPhaseDecay = static_cast<T>(1.0) / simParams::GRAIN_SIDE_LENGTH;
 
-  // Run with or without vortices: Useful when comparing free energy to find T^*
-  if (simParams::RUN_METASTABLE) {
+  // Run with or without current loops:
+  // Useful when comparing free energy to find T^*.
+  if (simParams::LOAD_ORDER_PARAMETER) {
+    Grid<T>::GPU orderParameterLoaded;
+    // Read orderparameter from file.
+    char orderParameterFile[512];
+    sprintf(orderParameterFile, "%sorder_parameter.grd", dataPath);
+    if (orderParameterLoaded.read(orderParameterFile, parameters)) {
+      std::cout << "Error reading file: " << std::endl;
+      std::cout << orderParameterFile << std::endl;
+      run_utils::cleanup(context, gui);
+      exit(0);
+    }
+    std::cout << "Initialize the order parameter from file." << std::endl;
+    Initial<T>::grid(orderParameterComponent, orderParameterLoaded);
+  } else if (simParams::RUN_METASTABLE) {
+    // This will set the imagniary part to zero, and it will not change during
+    // the simulation.
+    std::cout << "Initialize the order parameter with constant bulk value."
+              << std::endl;
     Initial<T>::bulk(orderParameterComponent);
   } else {
     Initial<T>::edgePhaseCrystal(orderParameterComponent, startPhasePeriod,
                                  startPhaseDecay, pbMidPointX, pbMidPointY,
                                  pbEdgeRotation);
   }
+
   // Add the initialized d-wave component to the total order parameter
   orderParameter->add(orderParameterComponent);
 
@@ -322,35 +360,39 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // RUN SIMULATION UNTIL END CRITERIA
   //***************************************************
-  run_utils::Status status = run_utils::Status::kContinue;
-  while (status != run_utils::Status::kQuit) {
-    // Run one iteration,
-    status = run_utils::runIteration(context, simParams::PRINT_ITERATION_STATUS,
-                                     simParams::NUM_ITERATIONS_MIN,
-                                     simParams::NUM_ITERATIONS_MAX,
-                                     simParams::SAVE_DATA_INTERVAL);
+  if (simParams::COMPUTE_ORDER_PARAMETER) {
+    run_utils::Status status = run_utils::Status::kContinue;
+    while (status != run_utils::Status::kQuit) {
+      // Run one iteration,
+      status = run_utils::runIteration(
+          context, simParams::PRINT_ITERATION_STATUS,
+          simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
+          simParams::SAVE_DATA_INTERVAL);
 
-    if (status == run_utils::Status::kSave) {
-      saveDataWrapper();
-    }
+      if (status == run_utils::Status::kSave) {
+        saveDataWrapper();
+      }
 
-    if (simParams::RUN_VISUAL) {
-      // Check if the Glut window is open.
-      const int windowID = glutGetWindow();
-      const bool openWindow = windowID > 0;
+      if (simParams::RUN_VISUAL) {
+        // Check if the Glut window is open.
+        const int windowID = glutGetWindow();
+        const bool openWindow = windowID > 0;
 
-      // Plot data in OpenGL.
-      if (openWindow) {
-        glutMainLoopEvent();
-      } else {
-        // The user closed the window so lets abort.
-        break;
+        // Plot data in OpenGL.
+        if (openWindow) {
+          glutMainLoopEvent();
+        } else {
+          // The user closed the window so lets abort.
+          break;
+        }
       }
     }
+
+    // Save at the very end.
+    saveDataWrapper();
   }
 
-  // Save at the very end.
-  saveDataWrapper();
+  postProcessing();
 
   run_utils::cleanup(context, gui);
   return 0;
@@ -364,6 +406,47 @@ void display() {
 
   // Tell Glut to update window.
   glutPostRedisplay();
+}
+
+void postProcessing() {
+  if (simParams::COMPUTE_LDOS) {
+    // Delete all compute objects, e.g. current, free energy.
+    context->deleteComputeObjects();
+
+    // Set new parameters relevant for a Keldysh integration iterator.
+    context->getParameters()->setEnergyRange(
+        simParams::ENERGY_MIN, simParams::ENERGY_MAX,
+        simParams::NUM_LDOS_ENERGIES, simParams::ENERGY_SMEARING);
+
+    // The LDOS needs more angles compared to computing the order parameter.
+    context->getParameters()->setAngularResolution(simParams::NUM_LDOS_ANGLES);
+
+    context->getParameters()->setConvergenceCriterion(
+        simParams::LDOS_CONVERGENCE_CRITERION);
+
+    // Add LDOS compute object.
+    new ComputeLDOS<T>(context);
+
+    // Re-initialize everything.
+    context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
+
+    // Compute the LDOS.
+    for (int i = 0; i < simParams::NUM_LDOS_ITERATIONS_MAX; ++i) {
+      context->compute();
+
+      // Output iteration status to terminal.
+      run_utils::printIterationStatus(context);
+
+      const bool isConverged = context->isConverged();
+      if (isConverged) {
+        break;
+      }
+    }
+
+    // Save the LDOS.
+    bdg_comp_utils::saveParametersLDOS(context, dataPath);
+    bdg_comp_utils::saveDataLDOS(context, dataPath);
+  }
 }
 
 void saveDataWrapper() {

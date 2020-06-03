@@ -2,6 +2,7 @@
 #define COMPUTE_LDOS_H_
 
 #include "ComputeProperty.h"
+#include "ComputeResidual.h"
 #include "IntegrationIteratorKeldysh.h"
 
 template <typename T> class ComputeLDOS : public ComputeProperty<T> {
@@ -15,9 +16,9 @@ public:
 
   ComputeLDOS(Context<T> *ctx);
 
-  virtual GridGPU *getResult() { return _ldos_all; }
-  GridGPU *getResult_interval() { return _ldos; }
-  GridCPU *getDOS() { return _dos; }
+  virtual GridGPU *getResult() { return m_ldosAll; }
+  GridGPU *getResultInterval() { return m_ldosInterval; }
+  GridCPU *getDOS() { return m_dos; }
 
   virtual IntegrationIterator<T> *
   createIntegrationIterator(int numEnergiesPerBlock = -1);
@@ -45,63 +46,70 @@ public:
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  // Set wheter to multiply result with fermi function or not.
-  int getMultFermiFunction() const { return _multFermiFunction; }
-  void setMultFermiFunction(const int mult) { _multFermiFunction = mult; }
+  // Set whether to multiply result with Fermi function or not.
+  bool getMultFermiFunction() const { return m_multFermiFunction; }
+  void setMultFermiFunction(const bool mult) { m_multFermiFunction = mult; }
 
 private:
   // Computed LDOS will be stored here at end of IntegrationIterator::compute()
   // function.
-  GridGPU *_ldos;
-  GridGPU *_ldos_all;
+  GridGPU *m_ldosInterval;
 
-  // Integrated DOS for system, for each energy level
-  GridCPU *_dos;
+  // The result when every energy level has converged.
+  GridGPU *m_ldosAll;
 
-  int _multFermiFunction;
+  // Integrated DOS for system, for each energy level.
+  GridCPU *m_dos;
+
+  bool m_multFermiFunction;
 };
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS()
-    : ComputeProperty<T>(), _ldos(0), _ldos_all(0), _dos(0),
-      _multFermiFunction(0) {}
+    : ComputeProperty<T>(), m_ldosInterval(0), m_ldosAll(0), m_dos(0),
+      m_multFermiFunction(false) {}
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), _ldos(0), _ldos_all(0), _dos(0),
-      _multFermiFunction(0) {
+    : ComputeProperty<T>(ctx), m_ldosInterval(0), m_ldosAll(0), m_dos(0),
+      m_multFermiFunction(false) {
   ctx->add(this);
 }
 
 template <typename T> ComputeLDOS<T>::~ComputeLDOS() {
-  if (_ldos)
-    delete _ldos;
-  if (_ldos_all)
-    delete _ldos_all;
-  if (_dos)
-    delete _dos;
+  if (m_ldosInterval) {
+    delete m_ldosInterval;
+  }
+  if (m_ldosAll) {
+    delete m_ldosAll;
+  }
+  if (m_dos) {
+    delete m_dos;
+  }
 }
 
 template <typename T> int ComputeLDOS<T>::initialize() {
   typedef ContextModule<T> C;
 
-  int N0 = C::getParameters()->getGridResolutionBase();
-  int N1 = C::getParameters()->getGridResolutionCoherence();
+  const int N0 = C::getParameters()->getGridResolutionBase();
+  const int N1 = C::getParameters()->getGridResolutionCoherence();
 
-  int numEnergies = C::getParameters()->getNumEnergies();
-  int numEnergiesInterval =
+  const int numEnergies = C::getParameters()->getNumEnergies();
+  const int numEnergiesInterval =
       C::getIntegrationIterator()->getEnergyIterator()->getNumInterval();
 
-  GridGPU::initializeGrid(_ldos, N0, N0, numEnergiesInterval, Type::real);
-  GridGPU::initializeGrid(_ldos_all, N0, N0, numEnergies, Type::real);
-  GridCPU::initializeGrid(_dos, numEnergies, 1, 2, Type::real);
+  GridGPU::initializeGrid(m_ldosInterval, N0, N0, numEnergiesInterval,
+                          Type::real);
+  GridGPU::initializeGrid(m_ldosAll, N0, N0, numEnergies, Type::real);
+  // Field 0 of m_dos contains E, field 1 contains DOS.
+  GridCPU::initializeGrid(m_dos, numEnergies, 1, 2, Type::real);
 
-  std::cout << "LDOS mem: "
-            << (_ldos_all->numElements() + _ldos->numElements()) * sizeof(T)
-            << "\n";
+  const int memoryLDOS =
+      (m_ldosAll->numElements() + m_ldosInterval->numElements()) *
+      static_cast<int>(sizeof(T));
+  std::cout << "LDOS memory: " << memoryLDOS << "\n";
 
-  // Field 0 of _dos contains E, field 1 contains DOS
-  _dos->setZero();
+  m_dos->setZero();
 
   ComputeProperty<T>::initGreensAngle(N1, numEnergiesInterval);
   return 0;
@@ -115,8 +123,9 @@ ComputeLDOS<T>::createIntegrationIterator(int numEnergiesPerBlock) {
 }
 
 template <typename T> void ComputeLDOS<T>::initializeIteration(int numFields) {
-  if (ComputeProperty<T>::doCompute())
-    _ldos->setZero();
+  if (ComputeProperty<T>::doCompute()) {
+    m_ldosInterval->setZero();
+  }
 }
 
 template <typename T> void ComputeLDOS<T>::initializeGreensAngle() {
@@ -150,7 +159,8 @@ void ComputeLDOS<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 
     const T systemAngle =
         ContextModule<T>::getFermiSurface()->getSystemAngle(angleIdx);
-    _ldos->insertRotatedGridAdditive(greens, systemAngle, -1, 0, 0, Type::imag);
+    m_ldosInterval->insertRotatedGridAdditive(greens, systemAngle, -1, 0, 0,
+                                              Type::imag);
   }
 }
 
@@ -167,66 +177,71 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
 
     const int numAngles = C::getParameters()->getAngularResolution();
     const T T_Tc = C::getParameters()->getTemperature();
-    const T h = C::getParameters()->getGridElementSize();
 
     GridGPU *energies = C::getIntegrationIterator()->getEnergies();
 
     // Compute LDOS
-    *_ldos *= -1.0;
+    *m_ldosInterval *= -1.0;
 
     // Add fermifunction
-    if (_multFermiFunction) {
+    if (m_multFermiFunction) {
       dim3 bpg, tpb;
-      _ldos->getKernelDimensionsFields(bpg, tpb);
+      m_ldosInterval->getKernelDimensionsFields(bpg, tpb);
 
-      addFermiFunction_kernel<<<bpg, tpb>>>(
-          _ldos->getDataPointer(0, Type::real),
+      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
+          m_ldosInterval->getDataPointer(0, Type::real),
           energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
-          numEnergiesCurrentBlock, _ldos->dimX());
+          numEnergiesCurrentBlock, m_ldosInterval->dimX());
     }
 
-    // Set values on border (representing fractional lattice sites) to zero.
-    C::getGeometry()->zeroValuesOutsideDomain(_ldos);
+    C::getGeometry()->zeroValuesOutsideDomain(m_ldosInterval);
 
-    // Copy temp LDOS to full grid
-    for (int i = 0; i < numEnergiesCurrentBlock; ++i)
-      _ldos->copyFieldTo(_ldos_all, i, i + energyIdx_offset);
+    // Copy temp LDOS to full grid.
+    for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
+      m_ldosInterval->copyFieldTo(m_ldosAll, i, i + energyIdx_offset);
+    }
 
     // Compute DOS
-    T *E_ptr = _dos->getDataPointer(0) + energyIdx_offset;
-    T *DOS_ptr = _dos->getDataPointer(1) + energyIdx_offset;
+    T *E_ptr = m_dos->getDataPointer(0) + energyIdx_offset;
+    T *DOS_ptr = m_dos->getDataPointer(1) + energyIdx_offset;
 
     GridCPU energies_cpu = *energies;
     T *energies_ptr =
         energies_cpu.getDataPointer(0, Type::real) + energyIdx_offset;
-
-    T sum_re, old, tmp, sumdiff = 0.0, sumold = 0.0;
 
     const int numGrainLatticeSites =
         C::getGeometry()->getNumGrainLatticeSites();
     const T invNumGrainLatticeSites =
         static_cast<T>(1.0) / numGrainLatticeSites;
 
+    T diffSquaredSum = static_cast<T>(0.0);
+    T oldSquaredSum = static_cast<T>(0.0);
     for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
-      // Sum for energy level
-      sum_re = _ldos->sumField(i);
-      old = DOS_ptr[i];
-      DOS_ptr[i] = sum_re * invNumGrainLatticeSites;
+      const T sumLDOS = m_ldosInterval->sumField(i);
+      const T newDOS = sumLDOS * invNumGrainLatticeSites;
+      const T oldDOS = DOS_ptr[i];
 
-      tmp = DOS_ptr[i] - old;
-      sumdiff += tmp * tmp;
-      sumold += old * old;
+      const T diff = newDOS - oldDOS;
+      diffSquaredSum += diff * diff;
+      oldSquaredSum += oldDOS * oldDOS;
 
-      // Store energy value
+      // Store energy and DOS values.
       E_ptr[i] = energies_ptr[i];
+      DOS_ptr[i] = newDOS;
     }
 
-    // TODO(niclas): Use computeResidual instead!
-    sumdiff = sqrt(sumdiff) / sqrt(sumold + 0.000001);
-    ComputeProperty<T>::setResidual(sumdiff);
+    // TODO(niclas): Use computeResidual.
+    const T epsilon =
+        compute_residual_internal::getGoodEpsilon<T>(numEnergiesCurrentBlock);
+    const T diffL2Norm = std::sqrt(diffSquaredSum);
+    const T oldL2Norm = std::sqrt(oldSquaredSum);
+    const T residual = diffL2Norm / std::max(oldL2Norm, epsilon);
 
-    if (sumdiff < C::getParameters()->getConvergenceCriterion())
-      ComputeProperty<T>::setConverged();
+    ComputeProperty<T>::setResidual(residual);
+
+    const bool isPartiallyConverged =
+        residual < C::getParameters()->getConvergenceCriterion();
+    ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
 

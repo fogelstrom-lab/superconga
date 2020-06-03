@@ -38,8 +38,10 @@ HSPACE = 0.5
 WSPACE = 0.0
 
 NAMES = [r"$\mathrm{Circular}$", r"$\mathrm{\#1}$", r"$\mathrm{\#2}$"]
-COLORS = ["k", "r", "m"]
-LINESTYLES = ["-.", "-", "--"]
+COLORMAP = mpl.cm.get_cmap("RdBu_r")
+COLORS = ["black", COLORMAP(0.2), COLORMAP(0.95)]
+LINESTYLES = ["--", "-", "-"]
+LINEWIDTHS = [1, 2, 2]
 FS_ORDER = [1, 2, 0]
 
 FS1 = {"t0": 1.0, "t1": -0.25, "t2": 0.0, "mu": 0.0}
@@ -51,10 +53,8 @@ NUM_ITERATIONS = 100
 
 NORMAL_ANGLE = np.pi * 0.75
 SURFACE_ANGLE = NORMAL_ANGLE - 0.5 * np.pi
-FACTOR = NUM_ANGLES
-MULT_W = False
-
-D_X2_Y2 = True
+INT_FACTOR = 2.0 * np.pi / NUM_ANGLES
+MULT_W = True
 
 
 def wrapK(kx, ky, origin):
@@ -63,30 +63,24 @@ def wrapK(kx, ky, origin):
     return kx, ky
 
 
-def getBasis(kx, ky, w):
-    basis = np.cos(kx) - np.cos(ky)
-    basis /= np.sqrt(np.sum(basis ** 2 * w))
-    return basis
+def avgFS(x, w, factor=INT_FACTOR):
+    return factor * np.sum(x * w)
 
 
-def computeStuff(fermisurface, origin):
+def computeStuff(fermisurface, origin, dxy=False):
     kx = np.array(fermisurface["kx"])
     ky = np.array(fermisurface["ky"])
     vx = np.array(fermisurface["vx"])
     vy = np.array(fermisurface["vy"])
-    w = np.array(fermisurface["weights"])
-
-    # Normalize the Fermi velocity.
-    avgV = np.sum(np.hypot(vx, vy) * w)
-    vx /= avgV
-    vy /= avgV
+    w = np.array(fermisurface["weights"]) / INT_FACTOR
 
     # Basis function.
-    if D_X2_Y2:
-        basis = np.cos(kx) - np.cos(ky)
-    else:
+    if dxy:
         basis = np.sin(kx) * np.sin(ky)
-    basis /= np.sqrt(np.sum(basis ** 2 * w))
+    else:
+        basis = np.cos(kx) - np.cos(ky)
+
+    basis /= np.sqrt(avgFS(basis ** 2, w))
 
     # Order stuff with increasing phi.
     kx, ky = wrapK(kx, ky, origin)
@@ -103,94 +97,119 @@ def computeStuff(fermisurface, origin):
     # Fermi speed.
     v = np.hypot(vx, vy)
 
-    if D_X2_Y2:
-        normalAngle = np.pi * 0.25
-    else:
+    if dxy:
         normalAngle = 0.0
+    else:
+        normalAngle = np.pi * 0.25
+
     surfaceAngle = normalAngle - 0.5 * np.pi
 
     stuff = {}
     stuff["angles"] = angles
     stuff["basis"] = basis
     stuff["weights"] = w
-    stuff["curvature"] = w * v
     stuff["fermiSpeed"] = v
     stuff["deltaExp"] = -(basis ** 2) * np.log(np.abs(basis) + 1e-16)
-    stuff["delta"] = np.pi * np.exp(np.sum(stuff["deltaExp"] * w)) * np.exp(-0.57721566)
+    stuff["delta"] = np.pi * np.exp(avgFS(stuff["deltaExp"], w)) * np.exp(-0.57721566)
     stuff["vDotN"] = np.abs(vx * np.cos(normalAngle) + vy * np.sin(normalAngle))
     stuff["vDotP"] = np.abs(vx * np.cos(surfaceAngle) + vy * np.sin(surfaceAngle))
+    stuff["normalAngle"] = normalAngle
     return stuff
 
 
-def plotWeight(stuff, ax, label, linestyle, color):
+def plotFermiSpeed(stuff, ax, label, linestyle, color, linewidth):
+    vF = stuff["fermiSpeed"]
     w = stuff["weights"]
     ax.plot(
-        stuff["angles"] / np.pi,
-        w * FACTOR,
+        (stuff["angles"] - stuff["normalAngle"]) / np.pi,
+        vF / avgFS(vF, w),
         label=label,
         linestyle=linestyle,
         color=color,
+        linewidth=linewidth,
     )
-    print("Weights=", np.sum(w))
 
 
-def plotBCS(stuff, ax, label, linestyle, color):
+def plotBCS(stuff, ax, label, linestyle, color, linewidth):
     w = stuff["weights"]
     basis = stuff["basis"]
     d = stuff["delta"] * basis
     result = -0.5 * d ** 2
+
     if MULT_W:
-        result *= w * FACTOR
+        result *= w
+
     ax.plot(
-        stuff["angles"] / np.pi, result, label=label, linestyle=linestyle, color=color,
+        (stuff["angles"] - stuff["normalAngle"]) / np.pi,
+        result,
+        label=label,
+        linestyle=linestyle,
+        color=color,
+        linewidth=linewidth,
     )
-    print("Basis=", np.sum(basis ** 2 * w))
+    print("Basis=", avgFS(basis ** 2, w))
     print("Delta=", stuff["delta"])
 
 
-def plotMGS(stuff, ax, label, linestyle, color):
+def plotMGS(stuff, ax, label, linestyle, color, linewidth):
     w = stuff["weights"]
     basis = stuff["basis"]
     vDotN = stuff["vDotN"]
     delta = stuff["delta"]
-    result = vDotN * np.abs(basis) * 0.5 * np.pi ** 2 * delta
+    vF = stuff["fermiSpeed"]
+    result = vDotN * np.abs(basis) * 0.5 * np.pi ** 2 * delta / avgFS(vF, w)
+
+    print("MGS=", avgFS(result, w))
+
     if MULT_W:
-        result *= w * FACTOR
+        result *= w
+
     ax.plot(
-        stuff["angles"] / np.pi, result, label=label, linestyle=linestyle, color=color
+        (stuff["angles"] - stuff["normalAngle"]) / np.pi,
+        result,
+        label=label,
+        linestyle=linestyle,
+        color=color,
+        linewidth=linewidth,
     )
-    print("MGS=", np.sum(result * w))
 
 
-def plotDoppler(stuff, ax, label, linestyle, color):
+def plotDoppler(stuff, ax, label, linestyle, color, linewidth):
     w = stuff["weights"]
     basis = stuff["basis"]
     vDotN = stuff["vDotN"]
     vDotP = stuff["vDotP"]
-    result = -np.pi ** 2 * vDotP * vDotN
+    vF = stuff["fermiSpeed"]
+    result = -np.pi ** 2 * vDotP * vDotN / avgFS(vF, w) ** 2
+
+    print("Doppler=", avgFS(result, w))
+
     if MULT_W:
-        result *= w * FACTOR
+        result *= w
+
     ax.plot(
-        stuff["angles"] / np.pi, result, label=label, linestyle=linestyle, color=color
+        (stuff["angles"] - stuff["normalAngle"]) / np.pi,
+        result,
+        label=label,
+        linestyle=linestyle,
+        color=color,
+        linewidth=linewidth,
     )
-    print("Doppler=", np.sum(result * w))
 
 
 def setStuff(
     ax,
     yLabel,
     plotLabel,
-    xLabel=r"$\phi_\mathrm{F}/\pi$",
+    xLabel=r"$\varphi/\pi$",
     doX=False,
     doLegend=False,
     highLabel=False,
+    dxy=False,
 ):
-    if D_X2_Y2:
-        xMin = -0.25
-        xMax = 0.75
-    else:
-        xMin = -0.5
-        xMax = 0.5
+
+    xMin = -0.5
+    xMax = 0.5
 
     # Set axis title and labels.
     if doX:
@@ -201,11 +220,12 @@ def setStuff(
     ax.set_xlim(xMin, xMax)
 
     # Set ticks.
+    ticks = np.linspace(xMin, xMax, NUM_TICKS)
+    ax.set_xticks(ticks)
     if doX:
-        ticks = np.linspace(xMin, xMax, NUM_TICKS)
-        ax.set_xticks(ticks)
+        ax.set_xticklabels([r"$-0.5$", r"$-0.25$", r"$0$", r"$0.25$", r"$0.5$"])
     else:
-        ax.set_xticks([])
+        ax.set_xticklabels(["", "", "", "", ""])
     ax.tick_params(labelsize=FONTSIZE)
 
     if doLegend:
@@ -260,6 +280,12 @@ def main():
         action="store_true",
         help="Whether to save. (default: %(default)s)",
     )
+    parser.add_argument(
+        "-d",
+        "--dxy",
+        action="store_true",
+        help="Whether to use dxy basis. (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     # Setup figure and subplots.
@@ -296,64 +322,73 @@ def main():
             )
             origin = np.pi
 
-        stuff = computeStuff(fermisurface, origin)
+        stuff = computeStuff(fermisurface, origin, args.dxy)
         label = NAMES[i]
         linestyle = LINESTYLES[i]
         color = COLORS[i]
+        linewidth = LINEWIDTHS[i]
 
-        plotWeight(stuff=stuff, ax=ax1, label=label, linestyle=linestyle, color=color)
-        plotBCS(stuff=stuff, ax=ax2, label=label, linestyle=linestyle, color=color)
-        plotMGS(stuff=stuff, ax=ax3, label=label, linestyle=linestyle, color=color)
-        plotDoppler(stuff=stuff, ax=ax4, label=label, linestyle=linestyle, color=color)
+        plotBCS(
+            stuff=stuff,
+            ax=ax1,
+            label=label,
+            linestyle=linestyle,
+            color=color,
+            linewidth=linewidth,
+        )
+        plotMGS(
+            stuff=stuff,
+            ax=ax2,
+            label=label,
+            linestyle=linestyle,
+            color=color,
+            linewidth=linewidth,
+        )
+        plotDoppler(
+            stuff=stuff,
+            ax=ax3,
+            label=label,
+            linestyle=linestyle,
+            color=color,
+            linewidth=linewidth,
+        )
+        plotFermiSpeed(
+            stuff=stuff,
+            ax=ax4,
+            label=label,
+            linestyle=linestyle,
+            color=color,
+            linewidth=linewidth,
+        )
 
-    if MULT_W:
-        setStuff(
-            ax1,
-            yLabel=r"$w(\phi_\mathrm{F})$",
-            plotLabel=r"$\mathrm{(a)}$",
-            doLegend=True,
-        )
-        setStuff(
-            ax2,
-            yLabel=r"$\Omega^\mathrm{BCS}(\phi_\mathrm{F}) w /\Omega_\mathcal{A} $",
-            plotLabel=r"$\mathrm{(b)}$",
-        )
-        setStuff(
-            ax3,
-            yLabel=r"$\Omega^\mathrm{MGS}(\phi_\mathrm{F}) w /\Omega_\mathcal{L} $",
-            plotLabel=r"$\mathrm{(c)}$",
-            highLabel=True,
-        )
-        setStuff(
-            ax4,
-            yLabel=r"$\Omega^\mathrm{DS}(\phi_\mathrm{F}) w /\Omega_\mathcal{L}$",
-            plotLabel=r"$\mathrm{(d)}$",
-            doX=True,
-        )
-    else:
-        setStuff(
-            ax1,
-            yLabel=r"$w(\phi_\mathrm{F})$",
-            plotLabel=r"$\mathrm{(a)}$",
-            doLegend=True,
-        )
-        setStuff(
-            ax2,
-            yLabel=r"$\Omega^\mathrm{BCS}(\phi_\mathrm{F}) /\Omega_\mathcal{A} $",
-            plotLabel=r"$\mathrm{(b)}$",
-        )
-        setStuff(
-            ax3,
-            yLabel=r"$\Omega^\mathrm{MGS}(\phi_\mathrm{F}) /\Omega_\mathcal{L} $",
-            plotLabel=r"$\mathrm{(c)}$",
-            highLabel=True,
-        )
-        setStuff(
-            ax4,
-            yLabel=r"$\Omega^\mathrm{DS}(\phi_\mathrm{F}) /\Omega_\mathcal{L}$",
-            plotLabel=r"$\mathrm{(d)}$",
-            doX=True,
-        )
+    setStuff(
+        ax1,
+        yLabel=r"$\mathcal{I}^\mathrm{BCS} / \Omega_\mathcal{A}$",
+        plotLabel=r"$\mathrm{(a)}$",
+        doLegend=True,
+        dxy=args.dxy,
+    )
+    setStuff(
+        ax2,
+        yLabel=r"$\mathcal{I}^\mathrm{MGS} / \Omega_\mathcal{L}$",
+        plotLabel=r"$\mathrm{(b)}$",
+        highLabel=True,
+        dxy=args.dxy,
+    )
+    setStuff(
+        ax3,
+        yLabel=r"$\mathcal{I}^\mathrm{DS} / \Omega_\mathcal{L}$",
+        plotLabel=r"$\mathrm{(c)}$",
+        dxy=args.dxy,
+    )
+    setStuff(
+        ax4,
+        yLabel=r"$v_\mathrm{F}/\bar{v}_\mathrm{F}$",
+        plotLabel=r"$\mathrm{(d)}$",
+        highLabel=True,
+        doX=True,
+        dxy=args.dxy,
+    )
 
     # ====================== MISC ====================== #
 
@@ -362,7 +397,11 @@ def main():
 
     # Save.
     if args.save:
-        filename = args.name + "." + args.extension
+        if args.dxy:
+            filename = args.name + "_xy"
+        else:
+            filename = args.name + "_x2_y2"
+        filename += "." + args.extension
         fig.savefig(filename, bbox_inches="tight", dpi=fig.dpi)
         print("Saved", filename)
     plt.close()

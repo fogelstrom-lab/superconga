@@ -31,29 +31,29 @@ class IntegrationIteratorOzaki : public IntegrationIterator<T> {
 
 public:
   IntegrationIteratorOzaki();
-  virtual ~IntegrationIteratorOzaki();
+  ~IntegrationIteratorOzaki();
 
   IntegrationIteratorOzaki(Context<T> *ctx, int numEnergiesPerBlock = -1);
 
-  virtual int initialize();
+  int initialize();
 
   // Compute Ozaki poles and residues
   void computeOzakiPoles(const int numPoles, T *poles, T *residues);
 
   // Configures energy iterators
   void initIterators(int numEnergiesPerBlock);
-  virtual void initEnergies();
+  void initEnergies();
 
-  virtual int getNumEnergiesInterval();
-  virtual int getEnergyIdxOffset_boundaryStorage();
+  int getNumEnergiesInterval();
+  int getEnergyIdxOffset_boundaryStorage();
 
   // Call this once before starting self consistent iteration, or when changing
   // initial condition.
-  virtual void setBoundaryInitialCondition();
+  void setBoundaryInitialCondition();
 
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
-  virtual void compute();
+  void compute();
 
 private:
 };

@@ -145,11 +145,6 @@ template <typename T> Context<T>::~Context() {
     std::cout << "~Context(): Deleted RiccatiSolver\n";
   }
 
-  if (m_integrationIterator) {
-    delete m_integrationIterator;
-    std::cout << "~Context(): Deleted IntegrationIterator\n";
-  }
-
   if (m_fermiSurface) {
     delete m_fermiSurface;
     std::cout << "~Context(): Deleted FermiSurface\n";
@@ -174,6 +169,11 @@ template <typename T> void Context<T>::deleteComputeObjects() {
     std::cout << "~Context(): Deleted ComputeObject " << i << "\n";
   }
   m_computeObjectList.clear();
+
+  if (m_integrationIterator) {
+    delete m_integrationIterator;
+    std::cout << "~Context(): Deleted IntegrationIterator\n";
+  }
 }
 
 template <typename T>
@@ -211,10 +211,11 @@ template <typename T> void Context<T>::add(ComputeLDOS<T> *inComputeLDOS) {
 }
 
 template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
-  if (m_integrationIterator == 0 && getNumComputeObjects() > 0) {
+  if (getNumComputeObjects() > 0) {
     std::cout << "Context::initialize() --> Creating IntegrationIterator\n";
     // Note, this sets m_integrationIterator member.
-    m_computeObjectList[0]->createIntegrationIterator(numEnergiesPerBlock);
+    m_integrationIterator =
+        m_computeObjectList[0]->createIntegrationIterator(numEnergiesPerBlock);
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): createIntegrationIterator");
   }
@@ -304,14 +305,8 @@ template <typename T> T Context<T>::getResidual(int idx) const {
 }
 
 template <typename T> bool Context<T>::isConverged() const {
-  if (getComputeOrderParameter()) {
-    // If we are computing order parameter self-consistently, use it to
-    // determine convergence.
-    return getComputeOrderParameter()->isConverged();
-  } else {
-    // If no order parameter, use first compute object to determine convergence
-    return getComputeObject(0)->isConverged();
-  }
+  // TODO(niclas): Check all compute objects?
+  return getComputeObject(0)->isConverged();
 }
 
 #endif // CONTEXT_H_

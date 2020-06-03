@@ -4,6 +4,7 @@
 #include "ComputeProperty.h"
 #include "IntegrationIteratorKeldysh.h"
 #include <cmath>
+#include <limits>
 
 template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -40,7 +41,7 @@ public:
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  GridGPU *getResult_interval(int field = 0) {
+  GridGPU *getResultInterval(int field = 0) {
     if (field == 0)
       return _lcurrent_x;
     else
@@ -203,12 +204,12 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
       dim3 bpg, tpb;
       _lcurrent_x->getKernelDimensionsFields(bpg, tpb);
 
-      addFermiFunction_kernel<<<bpg, tpb>>>(
+      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
           _lcurrent_x->getDataPointer(0, Type::real),
           energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
           numEnergiesCurrentBlock, _lcurrent_x->dimX());
 
-      addFermiFunction_kernel<<<bpg, tpb>>>(
+      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
           _lcurrent_y->getDataPointer(0, Type::real),
           energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
           numEnergiesCurrentBlock, _lcurrent_y->dimX());
@@ -252,11 +253,13 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
     }
 
     // TODO(niclas): Use computeResidual instead!
-    sumdiff = sqrt(sumdiff) / sqrt(sumold + 0.000001);
+    sumdiff = std::sqrt(sumdiff /
+                        std::max(sumold, std::numeric_limits<T>::epsilon()));
     ComputeProperty<T>::setResidual(sumdiff);
 
-    if (sumdiff < C::getParameters()->getConvergenceCriterion())
-      ComputeProperty<T>::setConverged();
+    const bool isPartiallyConverged =
+        sumdiff < C::getParameters()->getConvergenceCriterion();
+    ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
 

@@ -234,6 +234,55 @@ void saveGridData(
   }
 }
 
+// Save params to text file as METADATA
+template <typename T>
+void saveParametersLDOS(const Context<T> *const inContext,
+                        const char *const inDataPath) {
+  // Construct full file name for free energy
+  char fileName[512];
+  sprintf(fileName, "%sldos_params.dat", inDataPath);
+
+  // Add header
+  std::stringstream ss_header;
+  // TODO(niclas): Rename `Na` to numAngles?
+  ss_header << "# minEnergy maxEnergy numEnergies smearing Na";
+  appendLineToTextFile(fileName, ss_header, std::ios_base::trunc);
+
+  const Parameters<T> *const parameters = inContext->getParameters();
+
+  // Append line with energy and other information
+  std::stringstream ss;
+  ss << parameters->getEnergyMin() << " ";
+  ss << parameters->getEnergyMax() << " ";
+  ss << parameters->getNumEnergies() << " ";
+  ss << parameters->getSmearingFactor() << " ";
+  ss << parameters->getAngularResolution();
+  appendLineToTextFile(fileName, ss);
+}
+
+// Save data to file
+template <typename T>
+void saveDataLDOS(const Context<T> *const inContext,
+                  const char *const inDataPath) {
+  // Fetch run parameters from context
+  Parameters<T> *parameters = inContext->getParameters();
+
+  // Save LDOS
+  typename Grid<T>::GPU *const ldosSave =
+      inContext->getComputeLDOS()->getResult();
+
+  // Construct filenames
+  char fileName[512];
+  sprintf(fileName, "%sldos.grd", inDataPath);
+
+  inContext->getGeometry()->zeroValuesOutsideDomain(ldosSave);
+
+  if (ldosSave->write(fileName, parameters)) {
+    std::cout << "Could not save LDOS to file." << std::endl;
+    exit(0);
+  }
+}
+
 // TODO(patric): replace with proper argument parser and put in utils_io.h
 template <typename T>
 void readCommandLineArguments(const int inNumArguments,
@@ -261,7 +310,7 @@ void readCommandLineArguments(const int inNumArguments,
         } else if (thisArg == "--T") {
           outTemperature = static_cast<T>(std::stod(nextArg));
         } else if (thisArg == "--ms") {
-          outRunMetastable = std::stoi(nextArg);
+          outRunMetastable = static_cast<bool>(std::stoi(nextArg));
         }
       }
     }

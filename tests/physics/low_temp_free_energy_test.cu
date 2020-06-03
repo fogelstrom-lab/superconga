@@ -157,7 +157,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     // Clean up context
     run_utils::cleanup(context);
   }
-} // namespace helper
+}
 
 // *** Test bulk free energy and order-parameter value at low temperature *** //
 template <typename T>
@@ -266,7 +266,6 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // Clean up context
   run_utils::cleanup(context);
 }
-
 } // namespace helper
 
 // ================= Test grid normalization ================= //
