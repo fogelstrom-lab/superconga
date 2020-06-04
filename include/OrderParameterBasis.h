@@ -3,6 +3,7 @@
 
 #include "FermiSurface.h"
 #include "cplx.h"
+#include "defines.h"
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -41,19 +42,33 @@ public:
 
   /// \brief Evaluate the basis function.
   ///
+  /// \param inMomentum - The Fermi momentum (x,y).
+  ///
+  /// \return - The basis function value
+  cplx<T> evaluate(const vector2d<T> &inMomentum) const;
+
+  /// \brief Evaluate the basis function.
+  ///
   /// \param inMomentumX - The x-component of the Fermi momentum
   /// \param inMomentumY - The y-component of the Fermi momentum
   ///
   /// \return - The basis function value
   cplx<T> evaluate(const T inMomentumX, const T inMomentumY) const;
 
-  /// \brief Normalize the basis function.
+  /// \brief Normalize the basis function on the Fermi surface.
   ///
   /// \param inFermiSurface - The Fermi surface to normalize the basis function
   ///                         over
   ///
   /// \return - void
   void normalize(const FermiSurface<T> *const inFermiSurface);
+
+  /// \brief Normalize the basis function in the first Brillouin zone.
+  ///
+  /// \param inMomentum - All momenta in the first Brillouin zone.
+  ///
+  /// \return - void.
+  void normalize(const std::vector<vector2d<T>> &inMomentum);
 };
 
 template <typename T>
@@ -86,6 +101,11 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
   }
   }
   return str;
+}
+
+template <typename T>
+cplx<T> BasisFunction<T>::evaluate(const vector2d<T> &inMomentum) const {
+  return evaluate(inMomentum[0], inMomentum[1]);
 }
 
 template <typename T>
@@ -129,12 +149,10 @@ void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
   T avgBasisFunctionSquared = static_cast<T>(0.0);
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Get Fermi momentum.
-    T momentumX;
-    T momentumY;
-    inFermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
+    const vector2d<T> momentum = inFermiSurface->getFermiMomentum(angleIdx);
 
     // Evaluate the basis function.
-    const cplx<T> basisFunction = evaluate(momentumX, momentumY);
+    const cplx<T> basisFunction = evaluate(momentum);
 
     // Get integrand factor.
     const T integrandFactor = inFermiSurface->getIntegrandFactor(angleIdx);
@@ -142,6 +160,24 @@ void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
     // Accumulate.
     avgBasisFunctionSquared += basisFunction.cabsSq() * integrandFactor;
   }
+
+  // The normalization needs to be updated multiplicatively because the previous
+  // value was used in the for loop above (via the 'evaluate' call).
+  m_normalizationFactor *=
+      static_cast<T>(1.0) / std::sqrt(avgBasisFunctionSquared);
+}
+
+template <typename T>
+void BasisFunction<T>::normalize(const std::vector<vector2d<T>> &inMomenta) {
+  T avgBasisFunctionSquared = static_cast<T>(0.0);
+  for (const auto &momentum : inMomenta) {
+    // Evaluate the basis function.
+    const cplx<T> basisFunction = evaluate(momentum);
+
+    // Accumulate.
+    avgBasisFunctionSquared += basisFunction.cabsSq();
+  }
+  avgBasisFunctionSquared /= static_cast<T>(inMomenta.size());
 
   // The normalization needs to be updated multiplicatively because the previous
   // value was used in the for loop above (via the 'evaluate' call).

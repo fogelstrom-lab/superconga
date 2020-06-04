@@ -2,16 +2,14 @@
 #define FERMI_SURFACE_TIGHT_BINDING_H_
 
 #include "FermiSurface.h"
+#include "defines.h"
+#include "dispersion.h"
 #include "utils.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
-#include <utility>
-
-// Forward declaration, it is defined below.
-template <typename> struct TightBindingParameters;
 
 // Fermi surface from a tight-binding dispersion.
 // Note, there are tacit assumptions:
@@ -31,12 +29,14 @@ public:
   void initialize(const int inNumAngles);
 
   // Get the Fermi momentum.
-  void getFermiMomentum(const int inAngleIdx, T &outFermiMomentumX,
-                        T &outFermiMomentumY) const;
+  vector2d<T> getFermiMomentum(const int inAngleIdx) const;
+  void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
+                        T &outMomentumY) const;
 
   // Get the Fermi velocity.
-  void getFermiVelocity(const int inAngleIdx, T &outFermiVelocityX,
-                        T &outFermiVelocityY) const;
+  vector2d<T> getFermiVelocity(const int inAngleIdx) const;
+  void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
+                        T &outVelocityY) const;
 
   // Get the Fermi speed.
   T getFermiSpeed(const int inAngleIdx) const;
@@ -49,6 +49,7 @@ public:
   const T *getSystemAnglePointer() const;
 
   // Get momentum offset.
+  vector2d<T> getMomentumOffset() const;
   void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
 
   // Only used for tests.
@@ -65,12 +66,12 @@ private:
   const T m_convergence =
       static_cast<T>(1e2) * std::numeric_limits<T>::epsilon();
 
-  // Tight-binding parameters.
-  const TightBindingParameters<T> m_parameters;
+  // The dispersion.
+  const DispersionTightBinding<T> m_dispersion;
 
   // For doped materials the Fermi surface can encircle the point (pi, pi)
   // instead of (0, 0), this is simply that offset.
-  std::pair<T, T> m_originOffset;
+  vector2d<T> m_originOffset;
 
   // The Fermi momentum.
   thrust::host_vector<T> m_fermiMomentumX;
@@ -94,121 +95,25 @@ private:
   T m_avgFermiSpeed;
 };
 
-// A helper struct.
-template <typename T> struct TightBindingParameters {
-  TightBindingParameters(){};
-  TightBindingParameters(const T inHoppingNNN, const T inHoppingNNNN,
-                         const T inChemicalPotential)
-      : hoppingNNN(inHoppingNNN), hoppingNNNN(inHoppingNNNN),
-        chemicalPotential(inChemicalPotential){};
-
-  void print() const {
-    std::cout << "Tight-Binding Parameters:" << std::endl;
-    std::cout << "hoppingNN = " << hoppingNN << ", hoppingNNN = " << hoppingNNN
-              << ", hoppingNNNN = " << hoppingNNNN
-              << ", chemicalPotential = " << chemicalPotential << std::endl;
-  }
-
-  // Nearest neighbour hopping. It is always 1, all other hopping terms, and the
-  // chemical potential, is expressed in terms of it. It is out energy scale.
-  const T hoppingNN = static_cast<T>(1.0);
-
-  // Next-nearest neighbour.
-  T hoppingNNN;
-
-  // Next-next-nearest neighbour.
-  T hoppingNNNN;
-
-  // Chemical potential (or rather, Fermi level).
-  T chemicalPotential;
-};
-
 namespace tightbinding_internal {
-/// \brief Compute the value of the dispersion at a given momentum
-///
-/// Evaluates the dispersion, which is parameterized by inParameters, at the
-/// momentum inMomentum.
-///
-/// \param inParameters - The tight-binding parameters for a square lattice
-/// \param inMomentum - The momentum as a pair(x, y)
-///
-/// \return - The value of the dispersion at inMomentum
-template <typename T>
-T computeDispersion(const TightBindingParameters<T> &inParameters,
-                    const std::pair<T, T> &inMomentum) {
-  const T momentumX = inMomentum.first;
-  const T momentumY = inMomentum.second;
-
-  // Nearest neighbour.
-  const T factorNN = -static_cast<T>(2.0) * inParameters.hoppingNN;
-  const T termNN = factorNN * (std::cos(momentumX) + std::cos(momentumY));
-
-  // Next-nearest neighbour.
-  const T factorNNN = -static_cast<T>(4.0) * inParameters.hoppingNNN;
-  const T termNNN = factorNNN * std::cos(momentumX) * std::cos(momentumY);
-
-  // Next-next-nearest neighbour.
-  const T factorNNNN = -static_cast<T>(2.0) * inParameters.hoppingNNNN;
-  const T termNNNN = factorNNNN * (std::cos(static_cast<T>(2.0) * momentumX) +
-                                   std::cos(static_cast<T>(2.0) * momentumY));
-
-  return (termNN + termNNN + termNNNN - inParameters.chemicalPotential);
-}
-
-/// \brief Compute the partial derivatives of the dispersion at a given momentum
-///
-/// \param inParameters - The tight-binding parameters for a square lattice
-/// \param inMomentum - The momentum as a pair (x, y)
-///
-/// \return - The partial derivatives (dx, dy) of the dispersion at
-/// inMomentum
-template <typename T>
-std::pair<T, T>
-computeDispersionDerivative(const TightBindingParameters<T> &inParameters,
-                            const std::pair<T, T> &inMomentum) {
-  const T momentumX = inMomentum.first;
-  const T momentumY = inMomentum.second;
-
-  // Nearest neighbour.
-  const T factorNN = static_cast<T>(2.0) * inParameters.hoppingNN;
-  const T termNNdX = factorNN * std::sin(momentumX);
-  const T termNNdY = factorNN * std::sin(momentumY);
-
-  // Next-nearest neighbour.
-  const T factorNNN = static_cast<T>(4.0) * inParameters.hoppingNNN;
-  const T termNNNdX = factorNNN * std::sin(momentumX) * std::cos(momentumY);
-  const T termNNNdY = factorNNN * std::cos(momentumX) * std::sin(momentumY);
-
-  // Next-next-nearest neighbour.
-  const T factorNNNN = static_cast<T>(4.0) * inParameters.hoppingNNNN;
-  const T termNNNNdX = factorNNNN * std::sin(static_cast<T>(2.0) * momentumX);
-  const T termNNNNdY = factorNNNN * std::sin(static_cast<T>(2.0) * momentumY);
-
-  const T dX = (termNNdX + termNNNdX + termNNNNdX);
-  const T dY = (termNNdY + termNNNdY + termNNNNdY);
-  return {dX, dY};
-}
-
 /// \brief Compute the momentum offset for this dispersion
 ///
 /// The Fermi surface (given reasonable parameters) is either centered around
 /// (0,0) or (pi,pi), this function computes that offset.
 ///
-/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inDispersion - The tight-binding dispersion for a square lattice
 ///
 /// \return - The offset, either (0,0) or (pi, pi)
 template <typename T>
-std::pair<T, T>
-computeMomentumOffset(const TightBindingParameters<T> &inParameters) {
+vector2d<T>
+computeMomentumOffset(const DispersionTightBinding<T> &inDispersion) {
   // Compute the dispersion at k=(0,pi).
-  const std::pair<T, T> kA =
-      std::make_pair(static_cast<T>(0.0), static_cast<T>(M_PI));
-  const T eA = computeDispersion(inParameters, kA);
+  const vector2d<T> kA = {static_cast<T>(0.0), static_cast<T>(M_PI)};
+  const T eA = inDispersion.evaluate(kA);
 
   // Compute the dispersion at k=(pi,pi).
-  const std::pair<T, T> kB =
-      std::make_pair(static_cast<T>(M_PI), static_cast<T>(M_PI));
-  const T eB = computeDispersion(inParameters, kB);
+  const vector2d<T> kB = {static_cast<T>(M_PI), static_cast<T>(M_PI)};
+  const T eB = inDispersion.evaluate(kB);
 
   // Check if they have the same sign.
   const bool sameSign = utils::sign(eA) == utils::sign(eB);
@@ -223,30 +128,6 @@ computeMomentumOffset(const TightBindingParameters<T> &inParameters) {
   }
 }
 
-/// \brief Make momentum pair (x,y) from magnitude, angle, and offset
-///
-/// The momentum is parameterized by:
-/// kx = magnitude * cos(angle) + offsetX
-/// ky = magnitude * sin(angle) + offsetY
-///
-/// \param inMagnitude - The magnitude
-/// \param inAngle - The angle in radians
-/// \param inOffset - The offset (x, y)
-///
-/// \return - The momentum as a pair (x, y)
-template <typename T>
-std::pair<T, T> makeMomentum(const T inMagnitude, const T inAngle,
-                             const std::pair<T, T> &inOffset,
-                             const bool inWrapToBrillouinZone = false) {
-  T x = inMagnitude * std::cos(inAngle) + inOffset.first;
-  T y = inMagnitude * std::sin(inAngle) + inOffset.second;
-  if (inWrapToBrillouinZone) {
-    x = utils::wrapToRange(x, -static_cast<T>(M_PI), static_cast<T>(M_PI));
-    y = utils::wrapToRange(y, -static_cast<T>(M_PI), static_cast<T>(M_PI));
-  }
-  return {x, y};
-}
-
 /// \brief Compute the Fermi momentum for a given dispersion and direction
 ///
 /// Essentially it computes k in
@@ -255,33 +136,36 @@ std::pair<T, T> makeMomentum(const T inMagnitude, const T inAngle,
 /// where k is given as the root of the dispersion going from the offset along a
 /// ray with the given angle.
 ///
-/// \param inParameters - The tight-binding parameters for a square lattice
+/// \param inDispersion - The tight-binding dispersion for a square lattice
 /// \param inAngle - The angle in radians
 /// \param inOffset - The offset (x, y)
 /// \param inNumIterations - The maximum number of iterations
 /// \param inConvergenCriterion - The convergence criterion. We stop when the
 ///                               error is smaller than this
 ///
-/// \return - The Fermi momentum as a pair (x, y)
+/// \return - The Fermi momentum (x, y)
 template <typename T>
-std::pair<T, T> computeFermiMomentum(
-    const TightBindingParameters<T> &inParameters, const T inAngle,
-    const std::pair<T, T> inOriginOffset, const int inNumIterations = 100,
+vector2d<T> computeFermiMomentum(
+    const DispersionTightBinding<T> &inDispersion, const T inAngle,
+    const vector2d<T> inOriginOffset, const int inNumIterations = 100,
     const T inConvergenCriterion = static_cast<T>(1e2) *
                                    std::numeric_limits<T>::epsilon(),
     const bool inWrapToBrillouinZone = true) {
+  // For convenience.
+  const vector2d<T> unitVector = {std::cos(inAngle), std::sin(inAngle)};
+
   // For the bisection method we need to two end-points of the interval.
   // 1st point: The origin (which could be (pi, pi)).
   T kA = static_cast<T>(0.0);
-  const std::pair<T, T> momentumA = makeMomentum(kA, inAngle, inOriginOffset);
-  T eA = computeDispersion(inParameters, momentumA);
+  const vector2d<T> momentumA = utils::multAdd(kA, unitVector, inOriginOffset);
+  T eA = inDispersion.evaluate(momentumA);
 
   // 2nd point: The BZ "edge".
   const T maxAbsComponent =
-      std::max(std::abs(std::cos(inAngle)), std::abs(std::sin(inAngle)));
+      std::max(std::abs(unitVector[0]), std::abs(unitVector[1]));
   T kB = static_cast<T>(M_PI) / maxAbsComponent;
-  const std::pair<T, T> momentumB = makeMomentum(kB, inAngle, inOriginOffset);
-  T eB = computeDispersion(inParameters, momentumB);
+  const vector2d<T> momentumB = utils::multAdd(kB, unitVector, inOriginOffset);
+  T eB = inDispersion.evaluate(momentumB);
 
   // TODO(niclas): Make sure that the signs of eA and eB differ. Exit gracefully
   // otherwise.
@@ -300,10 +184,10 @@ std::pair<T, T> computeFermiMomentum(
 
   for (int i = 0; i < inNumIterations; ++i) {
     // Form the momentum.
-    const std::pair<T, T> momentum = makeMomentum(k, inAngle, inOriginOffset);
+    const vector2d<T> momentum = utils::multAdd(k, unitVector, inOriginOffset);
 
     // Compute the dispersion.
-    const T dispersion = computeDispersion(inParameters, momentum);
+    const T dispersion = inDispersion.evaluate(momentum);
 
     // The error is simply the magnitude of the dispersion.
     // We are looking for zeros.
@@ -331,11 +215,9 @@ std::pair<T, T> computeFermiMomentum(
       doBisectionStep = false;
 
       // Compute the gradient along the radial direction.
-      const std::pair<T, T> dE =
-          computeDispersionDerivative(inParameters, momentum);
-      // dXdK = cos(phi), dYdK = sin(phi)
-      const T dEdK =
-          dE.first * std::cos(inAngle) + dE.second * std::sin(inAngle);
+      const vector2d<T> dE = inDispersion.derivative(momentum);
+      // dXdK = cos(phi), dYdK = sin(phi).
+      const T dEdK = utils::dot(dE, unitVector);
 
       // Update the momentum.
       if (std::abs(dEdK) > static_cast<T>(0.0)) {
@@ -373,14 +255,23 @@ std::pair<T, T> computeFermiMomentum(
   }
 
   // Form the momentum.
-  return makeMomentum(k, inAngle, inOriginOffset, inWrapToBrillouinZone);
+  vector2d<T> momentum = utils::multAdd(k, unitVector, inOriginOffset);
+  if (inWrapToBrillouinZone) {
+    for (int i = 0; i < 2; ++i) {
+      momentum[i] = utils::wrapToRange(momentum[i], -static_cast<T>(M_PI),
+                                       static_cast<T>(M_PI));
+    }
+  }
+  return momentum;
 }
 
 /// \brief Compute the integrand factor for a Fermi momentum
 ///
 /// The factor is given by the norm of the partial derivative of the Fermi
 /// momentum with the respect to the angle phi, divided by the norm of the Fermi
-/// velocity.
+/// velocity. But it can be simplified a lot. See Eq. (16) on page 7 (1105) in
+/// "The Effect of Surfaces on the Tunneling Density of States of an
+/// Anisotropically Paired Superconductor" by Buchholtz et. al. (1995).
 ///
 /// \param inFermiMomentum - The Fermi momentum (x, y)
 /// \param inFermiVelocity - The Fermi velocity (x, y)
@@ -388,30 +279,22 @@ std::pair<T, T> computeFermiMomentum(
 ///
 /// \return - The integrand factor
 template <typename T>
-T computeIntegrandFactor(const std::pair<T, T> &inFermiMomentum,
-                         const std::pair<T, T> &inFermiVelocity,
-                         const std::pair<T, T> &inOffset) {
-  // The momentum is parameterized as
-  // pX = kX + offsetX
-  // pY = kY + offsetY
-  // with
-  // kX = k * cos(phi)
-  // kY = k * sin(phi)
-  const T pXUnwrapped = utils::wrapToRange(
-      inFermiMomentum.first, inOffset.first - static_cast<T>(M_PI),
-      inOffset.first + static_cast<T>(M_PI));
-  const T pYUnwrapped = utils::wrapToRange(
-      inFermiMomentum.second, inOffset.second - static_cast<T>(M_PI),
-      inOffset.first + static_cast<T>(M_PI));
-  const T kX = pXUnwrapped - inOffset.first;
-  const T kY = pYUnwrapped - inOffset.second;
+T computeIntegrandFactor(const vector2d<T> &inFermiMomentum,
+                         const vector2d<T> &inFermiVelocity,
+                         const vector2d<T> &inOffset) {
+  // The momentum is parameterized as: p = k + offset.
+  // To get k we must unwrap p at the offset, and then subtract it.
+  vector2d<T> k;
+  for (int i = 0; i < 2; ++i) {
+    const T pUnwrapped = utils::wrapToRange(inFermiMomentum[i],
+                                            inOffset[i] - static_cast<T>(M_PI),
+                                            inOffset[i] + static_cast<T>(M_PI));
+    k[i] = pUnwrapped - inOffset[i];
+  }
 
-  // See Eq. (16) on page 7 (1105) in "The Effect of Surfaces on the Tunneling
-  // Density of States of an Anisotropically Paired Superconductor" by Buchholtz
-  // et. al. (1995).
+  // Buchholtz simplified expression.
   const T integrandFactor =
-      (kX * kX + kY * kY) /
-      std::abs(kX * inFermiVelocity.first + kY * inFermiVelocity.second);
+      std::abs(utils::dot(k, k) / utils::dot(k, inFermiVelocity));
 
   return integrandFactor;
 }
@@ -424,7 +307,7 @@ FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
       m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
       m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
       m_avgFermiSpeed(0.0),
-      m_parameters(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
+      m_dispersion(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
 
 template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
   std::cout << "~FermiSurfaceTightBinding<T>\n";
@@ -437,13 +320,10 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
   // The base class needs to know the number of angles.
   FermiSurface<T>::initialize(inNumAngles);
 
-  // Print the tight-binding parameters.
-  m_parameters.print();
-
   // Compute momentum offset.
-  m_originOffset = tightbinding_internal::computeMomentumOffset(m_parameters);
-  std::cout << "Fermi Surface Origin: (x, y) = (" << m_originOffset.first
-            << ", " << m_originOffset.second << ")" << std::endl;
+  m_originOffset = tightbinding_internal::computeMomentumOffset(m_dispersion);
+  std::cout << "Fermi Surface Origin: (x, y) = (" << m_originOffset[0] << ", "
+            << m_originOffset[1] << ")" << std::endl;
 
   // Clear all arrays on the CPU.
   m_fermiMomentumX.clear();
@@ -461,27 +341,24 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
     const T phi = FermiSurface<T>::getPolarAngle(angleIdx);
 
     // Compute the Fermi momentum.
-    const std::pair<T, T> fermiMomentum =
+    const vector2d<T> fermiMomentum =
         tightbinding_internal::computeFermiMomentum(
-            m_parameters, phi, m_originOffset, m_maxIterations, m_convergence);
+            m_dispersion, phi, m_originOffset, m_maxIterations, m_convergence);
 
     // The Fermi velocity is the partial derivative of the dispersion at the
     // Fermi surface.
-    const std::pair<T, T> fermiVelocity =
-        tightbinding_internal::computeDispersionDerivative(m_parameters,
-                                                           fermiMomentum);
+    const vector2d<T> fermiVelocity = m_dispersion.derivative(fermiMomentum);
 
     // Update the Fermi momentum arrays.
-    m_fermiMomentumX.push_back(fermiMomentum.first);
-    m_fermiMomentumY.push_back(fermiMomentum.second);
+    m_fermiMomentumX.push_back(fermiMomentum[0]);
+    m_fermiMomentumY.push_back(fermiMomentum[1]);
 
     // Update the Fermi velocity arrays.
-    m_fermiVelocityX.push_back(fermiVelocity.first);
-    m_fermiVelocityY.push_back(fermiVelocity.second);
+    m_fermiVelocityX.push_back(fermiVelocity[0]);
+    m_fermiVelocityY.push_back(fermiVelocity[1]);
 
     // Update the system angle array.
-    const T fermiVelocityAngle =
-        std::atan2(fermiVelocity.second, fermiVelocity.first);
+    const T fermiVelocityAngle = std::atan2(fermiVelocity[1], fermiVelocity[0]);
     const T systemAngle = FermiSurface<T>::getSystemAngle(fermiVelocityAngle);
     m_systemAngles.push_back(systemAngle);
 
@@ -494,10 +371,8 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
     integrandFactorSum += factor;
 
     // For computing averages.
-    fermiMomentumSum +=
-        std::hypot(fermiMomentum.first, fermiMomentum.second) * factor;
-    fermiSpeedSum +=
-        std::hypot(fermiVelocity.first, fermiVelocity.second) * factor;
+    fermiMomentumSum += utils::normL2(fermiMomentum) * factor;
+    fermiSpeedSum += utils::normL2(fermiVelocity) * factor;
   }
 
   // The average Fermi momentum and speed.
@@ -519,29 +394,41 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
 }
 
 template <typename T>
+vector2d<T>
+FermiSurfaceTightBinding<T>::getFermiMomentum(const int inAngleIdx) const {
+  const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
+  return {m_fermiMomentumX[idx], m_fermiMomentumY[idx]};
+}
+
+template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiMomentum(const int inAngleIdx,
                                                    T &outFermiMomentumX,
                                                    T &outFermiMomentumY) const {
+  const vector2d<T> fermiMomentum = getFermiMomentum(inAngleIdx);
+  outFermiMomentumX = fermiMomentum[0];
+  outFermiMomentumY = fermiMomentum[1];
+}
+
+template <typename T>
+vector2d<T>
+FermiSurfaceTightBinding<T>::getFermiVelocity(const int inAngleIdx) const {
   const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-  outFermiMomentumX = m_fermiMomentumX[idx];
-  outFermiMomentumY = m_fermiMomentumY[idx];
+  return {m_fermiVelocityX[idx], m_fermiVelocityY[idx]};
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::getFermiVelocity(const int inAngleIdx,
                                                    T &outFermiVelocityX,
                                                    T &outFermiVelocityY) const {
-  const int idx = FermiSurface<T>::getWrappedAngleIndex(inAngleIdx);
-  outFermiVelocityX = m_fermiVelocityX[idx];
-  outFermiVelocityY = m_fermiVelocityY[idx];
+  const vector2d<T> fermiVelocity = getFermiVelocity(inAngleIdx);
+  outFermiVelocityX = fermiVelocity[0];
+  outFermiVelocityY = fermiVelocity[1];
 }
 
 template <typename T>
 T FermiSurfaceTightBinding<T>::getFermiSpeed(const int inAngleIdx) const {
-  T fermiVelocityX;
-  T fermiVelocityY;
-  getFermiVelocity(inAngleIdx, fermiVelocityX, fermiVelocityY);
-  return std::hypot(fermiVelocityX, fermiVelocityY);
+  const vector2d<T> fermiVelocity = getFermiVelocity(inAngleIdx);
+  return utils::normL2(fermiVelocity);
 }
 
 template <typename T>
@@ -562,10 +449,15 @@ T FermiSurfaceTightBinding<T>::getIntegrandFactor(const int inAngleIdx) const {
 }
 
 template <typename T>
+vector2d<T> FermiSurfaceTightBinding<T>::getMomentumOffset() const {
+  return m_originOffset;
+}
+
+template <typename T>
 void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
                                                     T &outOffsetY) const {
-  outOffsetX = m_originOffset.first;
-  outOffsetY = m_originOffset.second;
+  outOffsetX = m_originOffset[0];
+  outOffsetY = m_originOffset[1];
 }
 
 #endif // FERMI_SURFACE_TIGHT_BINDING_H_

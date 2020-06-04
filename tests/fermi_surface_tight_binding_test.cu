@@ -1,231 +1,31 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "FermiSurfaceTightBinding.h"
+#include "defines.h"
+#include "dispersion.h"
 #include "utils.h"
 #include <cmath>
 #include <doctest.h>
 #include <functional>
 #include <iostream>
-#include <utility>
 #include <vector>
 
 namespace helper {
-// The relevant tight-binding parameters for the BdG paper.
-// Almost ciruclar.
+// The relevant tight-binding parameters for the BdG paper:
+// https://arxiv.org/abs/2006.00456
+
+// Fermi surface 1: Almost ciruclar.
 const double HOPPING_NNN_FS1 = -0.25;
 const double HOPPING_NNNN_FS1 = 0.0;
 const double CHEMICAL_POTENTIAL_FS1 = 0.0;
 const double AVG_FERMI_SPEED_EXPECTED_FS1 = 2.53562285;
 const double AVG_FERMI_MOMENTUM_EXPECTED_FS1 = 2.61870038;
-// Less circular.
+// Fermi surface 2: Less circular.
 const double HOPPING_NNN_FS2 = -0.495;
 const double HOPPING_NNNN_FS2 = 0.156;
 const double CHEMICAL_POTENTIAL_FS2 = -1.267;
 const double AVG_FERMI_SPEED_EXPECTED_FS2 = 2.39512296;
 const double AVG_FERMI_MOMENTUM_EXPECTED_FS2 = 2.08128010;
-
-// Enum for the the different symmetries to test in testSquareSymmetry.
-enum class Symmetry { mirrorX, mirrorY, rotate180, mirrorDiag };
-
-// Apply some (square) symmetry operation to the momentum.
-template <typename T>
-std::pair<T, T> applySymmetry(const std::pair<T, T> &inMomentum,
-                              const Symmetry inSymmetry) {
-  T kX = inMomentum.first;
-  T kY = inMomentum.second;
-  switch (inSymmetry) {
-  case Symmetry::mirrorX: {
-    kY = -kY;
-    break;
-  }
-  case Symmetry::mirrorY: {
-    kX = -kX;
-    break;
-  }
-  case Symmetry::rotate180: {
-    kX = -kX;
-    kY = -kY;
-    break;
-  }
-  case Symmetry::mirrorDiag: {
-    const T tmp = kX;
-    kX = kY;
-    kY = tmp;
-    break;
-  }
-  default:
-    std::cout << "Error! Symmetry not implemented." << std::endl;
-  }
-  return {kX, kY};
-}
-
-// For checking the results in testSquareSymmetry.
-template <typename T>
-void checkResult(const T inExpected, const T inComputed, const T inTolerance,
-                 const Symmetry inSymmetry) {
-  // Unused.
-  (void)inSymmetry;
-  // This is a scalar so inSymmetry is unused.
-  REQUIRE(inExpected == doctest::Approx(inComputed).epsilon(inTolerance));
-}
-
-// For checking the results in testSquareSymmetry.
-template <typename T>
-void checkResult(const std::pair<T, T> &inExpected,
-                 const std::pair<T, T> &inComputed, const T inTolerance,
-                 const Symmetry inSymmetry) {
-  // The symmetries considered are involutory, i.e. the operation is its own
-  // inverse.
-  const std::pair<T, T> computed = applySymmetry(inComputed, inSymmetry);
-
-  REQUIRE(inExpected.first ==
-          doctest::Approx(computed.first).epsilon(inTolerance));
-  REQUIRE(inExpected.second ==
-          doctest::Approx(computed.second).epsilon(inTolerance));
-}
-
-// Test that the function inFunc has the symmetries of a square.
-template <typename T, class F>
-void testSquareSymmetry(const T inTolerance, const F inFunc,
-                        const int inNumTestsPerParameter = 5) {
-  // =================== ARRANGE ==================== //
-  // Next-nearest neighbour.
-  const T minHoppingNNN = static_cast<T>(-0.5);
-  const T maxHoppingNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNN =
-      utils::linspace(minHoppingNNN, maxHoppingNNN, inNumTestsPerParameter);
-
-  // Next-next-earest neighbour.
-  const T minHoppingNNNN = static_cast<T>(-0.5);
-  const T maxHoppingNNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNNN =
-      utils::linspace(minHoppingNNNN, maxHoppingNNNN, inNumTestsPerParameter);
-
-  // Chemical potential.
-  const T minChemicalPotential = static_cast<T>(-1.0);
-  const T maxChemicalPotential = static_cast<T>(1.0);
-  const std::vector<T> a_chemicalPotential = utils::linspace(
-      minChemicalPotential, maxChemicalPotential, inNumTestsPerParameter);
-
-  // X-component of momentum.
-  const T minKX = static_cast<T>(0.0);
-  const T maxKX = static_cast<T>(2.0 * M_PI);
-  const std::vector<T> a_kX =
-      utils::linspace(minKX, maxKX, inNumTestsPerParameter);
-
-  // Y-component of momentum.
-  const T minKY = static_cast<T>(0.0);
-  const T maxKY = static_cast<T>(2.0 * M_PI);
-  const std::vector<T> a_kY =
-      utils::linspace(minKY, maxKY, inNumTestsPerParameter);
-
-  const int numSymmetries = 4;
-  const std::array<Symmetry, numSymmetries> symmetries = {
-      Symmetry::mirrorX, Symmetry::mirrorY, Symmetry::rotate180,
-      Symmetry::mirrorDiag};
-
-  for (const T &hoppingNNN : a_hoppingNNN) {
-    for (const T &hoppingNNNN : a_hoppingNNNN) {
-      for (const T &chemicalPotential : a_chemicalPotential) {
-        const TightBindingParameters<T> parameters(hoppingNNN, hoppingNNNN,
-                                                   chemicalPotential);
-        for (const T &kX : a_kX) {
-          for (const T &kY : a_kY) {
-            const auto momentum = std::make_pair(kX, kY);
-            const auto funcValExpected = inFunc(parameters, momentum);
-            for (const Symmetry &symmetry : symmetries) {
-              const auto momentumSym = applySymmetry(momentum, symmetry);
-              // =================== ACT ==================== //
-              const auto funcVal = inFunc(parameters, momentumSym);
-
-              // =================== ASSERT ==================== //
-              checkResult(funcValExpected, funcVal, inTolerance, symmetry);
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-// Test that the analytical derivative of the dispersion is close to the
-// numerical derivative.
-template <typename T>
-void testDispersionDerivative(
-    const T inTolerance, const int inNumTestsPerParameter = 5,
-    const T inKEpsilon = static_cast<T>(1e3) *
-                         std::numeric_limits<T>::epsilon()) {
-  // =================== ARRANGE ==================== //
-  // Next-nearest neighbour.
-  const T minHoppingNNN = static_cast<T>(-0.5);
-  const T maxHoppingNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNN =
-      utils::linspace(minHoppingNNN, maxHoppingNNN, inNumTestsPerParameter);
-
-  // Next-next-earest neighbour.
-  const T minHoppingNNNN = static_cast<T>(-0.5);
-  const T maxHoppingNNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNNN =
-      utils::linspace(minHoppingNNNN, maxHoppingNNNN, inNumTestsPerParameter);
-
-  // Chemical potential.
-  const T minChemicalPotential = static_cast<T>(-1.0);
-  const T maxChemicalPotential = static_cast<T>(1.0);
-  const std::vector<T> a_chemicalPotential = utils::linspace(
-      minChemicalPotential, maxChemicalPotential, inNumTestsPerParameter);
-
-  // X-component of momentum.
-  const T minKX = static_cast<T>(0.0);
-  const T maxKX = static_cast<T>(2.0 * M_PI);
-  const std::vector<T> a_kX =
-      utils::linspace(minKX, maxKX, inNumTestsPerParameter);
-
-  // Y-component of momentum.
-  const T minKY = static_cast<T>(0.0);
-  const T maxKY = static_cast<T>(2.0 * M_PI);
-  const std::vector<T> a_kY =
-      utils::linspace(minKY, maxKY, inNumTestsPerParameter);
-
-  // For convenience.
-  const T invDenom = static_cast<T>(1.0) / (static_cast<T>(2.0) * inKEpsilon);
-
-  for (const T &hoppingNNN : a_hoppingNNN) {
-    for (const T &hoppingNNNN : a_hoppingNNNN) {
-      for (const T &chemicalPotential : a_chemicalPotential) {
-        const TightBindingParameters<T> parameters(hoppingNNN, hoppingNNNN,
-                                                   chemicalPotential);
-        for (const T &kX : a_kX) {
-          for (const T &kY : a_kY) {
-            // =================== ACT ==================== //
-            // Compute the analytical derivatives.
-            const std::pair<T, T> dE =
-                tightbinding_internal::computeDispersionDerivative(parameters,
-                                                                   {kX, kY});
-            const T dEdX = dE.first;
-            const T dEdY = dE.second;
-
-            // =================== ASSERT ==================== //
-            // Compute the numerical derivatives.
-            const T EXPlus = tightbinding_internal::computeDispersion(
-                parameters, {kX + inKEpsilon, kY});
-            const T EXMinus = tightbinding_internal::computeDispersion(
-                parameters, {kX - inKEpsilon, kY});
-            const T EYPlus = tightbinding_internal::computeDispersion(
-                parameters, {kX, kY + inKEpsilon});
-            const T EYMinus = tightbinding_internal::computeDispersion(
-                parameters, {kX, kY - inKEpsilon});
-
-            const T dEdXApprox = (EXPlus - EXMinus) * invDenom;
-            const T dEdYApprox = (EYPlus - EYMinus) * invDenom;
-
-            REQUIRE(dEdX == doctest::Approx(dEdXApprox).epsilon(inTolerance));
-            REQUIRE(dEdY == doctest::Approx(dEdYApprox).epsilon(inTolerance));
-          }
-        }
-      }
-    }
-  }
-}
 
 // Test that the integrand factor behaves as expected. This is done by comparing
 // the analytical value with the numerical one.
@@ -241,31 +41,29 @@ void testComputeIntegrandFactor(
   // For convenience.
   const T invDenom = static_cast<T>(1.0) / (static_cast<T>(2.0) * inPhiEpsilon);
 
-  // Fermi surface 1 in the BDG paper.
-  const TightBindingParameters<T> parameters1(
+  // Fermi surface 1.
+  const DispersionTightBinding<T> dispersion1(
       static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
       static_cast<T>(CHEMICAL_POTENTIAL_FS1));
 
-  // Fermi surface 2 in the BDG paper.
-  const TightBindingParameters<T> parameters2(
+  // Fermi surface 2.
+  const DispersionTightBinding<T> dispersion2(
       static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
       static_cast<T>(CHEMICAL_POTENTIAL_FS2));
 
-  // A vector of the tight-binding parameters.
-  const std::vector<TightBindingParameters<T>> v_parameters = {parameters1,
-                                                               parameters2};
+  // A vector of the tight-binding dispersions.
+  const std::vector<DispersionTightBinding<T>> v_dispersions = {dispersion1,
+                                                                dispersion2};
 
-  for (const auto &parameters : v_parameters) {
-    const std::pair<T, T> originOffset =
-        tightbinding_internal::computeMomentumOffset(parameters);
+  for (const auto &dispersion : v_dispersions) {
+    const vector2d<T> originOffset =
+        tightbinding_internal::computeMomentumOffset(dispersion);
 
     for (const T phi : angles) {
-      const std::pair<T, T> fermiMomentum =
-          tightbinding_internal::computeFermiMomentum(parameters, phi,
+      const vector2d<T> fermiMomentum =
+          tightbinding_internal::computeFermiMomentum(dispersion, phi,
                                                       originOffset);
-      const std::pair<T, T> fermiVelocity =
-          tightbinding_internal::computeDispersionDerivative(parameters,
-                                                             fermiMomentum);
+      const vector2d<T> fermiVelocity = dispersion.derivative(fermiMomentum);
 
       // =================== ACT ==================== //
       // Compute the integrand factor using analytical derivatives.
@@ -274,34 +72,27 @@ void testComputeIntegrandFactor(
 
       // =================== ASSERT ==================== //
       // Compute the integrand factor using numerical derivatives.
-      const std::pair<T, T> fermiMomentumPlus =
+      const vector2d<T> fermiMomentumPlus =
           tightbinding_internal::computeFermiMomentum(
-              parameters, phi + inPhiEpsilon, originOffset);
-      const std::pair<T, T> fermiMomentumMinus =
+              dispersion, phi + inPhiEpsilon, originOffset);
+      const vector2d<T> fermiMomentumMinus =
           tightbinding_internal::computeFermiMomentum(
-              parameters, phi - inPhiEpsilon, originOffset);
+              dispersion, phi - inPhiEpsilon, originOffset);
 
-      // Unwrap everything.
-      // TODO(niclas): Perhaps write a function that does this for pairs!?
-      const T fermiMomentumPlusX = utils::wrapToRange(
-          fermiMomentumPlus.first, originOffset.first - static_cast<T>(M_PI),
-          originOffset.first + static_cast<T>(M_PI));
-      const T fermiMomentumPlusY = utils::wrapToRange(
-          fermiMomentumPlus.second, originOffset.second - static_cast<T>(M_PI),
-          originOffset.second + static_cast<T>(M_PI));
-      const T fermiMomentumMinusX = utils::wrapToRange(
-          fermiMomentumMinus.first, originOffset.first - static_cast<T>(M_PI),
-          originOffset.first + static_cast<T>(M_PI));
-      const T fermiMomentumMinusY = utils::wrapToRange(
-          fermiMomentumMinus.second, originOffset.second - static_cast<T>(M_PI),
-          originOffset.second + static_cast<T>(M_PI));
-
-      const T dKXdPhi = (fermiMomentumPlusX - fermiMomentumMinusX) * invDenom;
-      const T dKYdPhi = (fermiMomentumPlusY - fermiMomentumMinusY) * invDenom;
+      // Unwrap the momenta and form the derivative (dkx/dphi, dky/dphi).
+      vector2d<T> dKdPhi;
+      for (int i = 0; i < 2; ++i) {
+        const T plus = utils::wrapToRange(
+            fermiMomentumPlus[i], originOffset[i] - static_cast<T>(M_PI),
+            originOffset[i] + static_cast<T>(M_PI));
+        const T minus = utils::wrapToRange(
+            fermiMomentumMinus[i], originOffset[i] - static_cast<T>(M_PI),
+            originOffset[i] + static_cast<T>(M_PI));
+        dKdPhi[i] = (plus - minus) * invDenom;
+      }
 
       const T integrandFactorExpected =
-          std::hypot(dKXdPhi, dKYdPhi) /
-          std::hypot(fermiVelocity.first, fermiVelocity.second);
+          utils::normL2(dKdPhi) / utils::normL2(fermiVelocity);
 
       REQUIRE(integrandFactor ==
               doctest::Approx(integrandFactorExpected).epsilon(inTolerance));
@@ -340,17 +131,14 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
   fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
-  T offsetX;
-  T offsetY;
-  fermiSurface.getMomentumOffset(offsetX, offsetY);
+  const vector2d<T> offset = fermiSurface.getMomentumOffset();
 
   // =================== ASSERT ==================== //
-  const T offsetXExpected =
+  const T offsetExpected =
       inCenteredOrigin ? static_cast<T>(0.0) : static_cast<T>(M_PI);
-  const T offsetYExpected =
-      inCenteredOrigin ? static_cast<T>(0.0) : static_cast<T>(M_PI);
-  CHECK(offsetX == doctest::Approx(offsetXExpected).epsilon(inTolerance));
-  CHECK(offsetY == doctest::Approx(offsetYExpected).epsilon(inTolerance));
+
+  CHECK(offset[0] == doctest::Approx(offsetExpected).epsilon(inTolerance));
+  CHECK(offset[1] == doctest::Approx(offsetExpected).epsilon(inTolerance));
 }
 
 // Test the angle offset. Instantiate the Fermi surface and check that the angle
@@ -390,36 +178,32 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
-  T offsetX;
-  T offsetY;
-  fermiSurface.getMomentumOffset(offsetX, offsetY);
+  const vector2d<T> offset = fermiSurface.getMomentumOffset();
 
   // For convenience.
   const T angleStep = static_cast<T>(2.0 * M_PI) / static_cast<T>(inNumAngles);
 
   for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
     // =================== ACT ==================== //
-    T fermiMomentumX;
-    T fermiMomentumY;
-    fermiSurface.getFermiMomentum(angleIdx, fermiMomentumX, fermiMomentumY);
+    const vector2d<T> fermiMomentum = fermiSurface.getFermiMomentum(angleIdx);
 
     // =================== ASSERT ==================== //
     const T angle = angleStep * static_cast<T>(angleIdx) + angleOffset;
-    const T cosAngle = std::cos(angle);
-    const T sinAngle = std::sin(angle);
+    // For convenience.
+    const vector2d<T> unitVector = {std::cos(angle), std::sin(angle)};
+
     // The magnitude is given by |x| + |y| = pi, i.e. a square with a diagonal
     // length of 2pi.
-    const T magnitude =
-        static_cast<T>(M_PI) / (std::abs(cosAngle) + std::abs(sinAngle));
-    const T fermiMomentumXExpected = magnitude * std::cos(angle) + offsetX;
-    const T fermiMomentumYExpected = magnitude * std::sin(angle) + offsetY;
+    const T magnitude = static_cast<T>(M_PI) / utils::normL1(unitVector);
+    const vector2d<T> fermiMomentumExpected =
+        utils::multAdd(magnitude, unitVector, offset);
 
-    CHECK(
-        std::cos(fermiMomentumX) ==
-        doctest::Approx(std::cos(fermiMomentumXExpected)).epsilon(inTolerance));
-    CHECK(
-        std::cos(fermiMomentumY) ==
-        doctest::Approx(std::cos(fermiMomentumYExpected)).epsilon(inTolerance));
+    CHECK(std::cos(fermiMomentum[0]) ==
+          doctest::Approx(std::cos(fermiMomentumExpected[0]))
+              .epsilon(inTolerance));
+    CHECK(std::cos(fermiMomentum[1]) ==
+          doctest::Approx(std::cos(fermiMomentumExpected[1]))
+              .epsilon(inTolerance));
   }
 }
 
@@ -467,52 +251,6 @@ void testCompareWithPython(const T inTolerance, const T inHoppingNNN,
         doctest::Approx(inAvgFermiMomentumExpected).epsilon(inTolerance));
 }
 } // namespace helper
-
-// =============== Test computeDispersion Symmetry =============== //
-
-TEST_CASE("Test Dispersion Symmetry <float>") {
-  // Relative tolerance.
-  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
-  helper::testSquareSymmetry(tolerance,
-                             tightbinding_internal::computeDispersion<float>);
-}
-
-TEST_CASE("Test Dispersion Symmetry <double>") {
-  // Relative tolerance.
-  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
-  helper::testSquareSymmetry(tolerance,
-                             tightbinding_internal::computeDispersion<double>);
-}
-
-// =============== Test computeDispersionDerivative Symmetry =============== //
-
-TEST_CASE("Test Dispersion Derivative Symmetry <float>") {
-  // Relative tolerance.
-  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
-  helper::testSquareSymmetry(
-      tolerance, tightbinding_internal::computeDispersionDerivative<float>);
-}
-
-TEST_CASE("Test Dispersion Derivative Symmetry <double>") {
-  // Relative tolerance.
-  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
-  helper::testSquareSymmetry(
-      tolerance, tightbinding_internal::computeDispersionDerivative<double>);
-}
-
-// ============ Test computeDispersionDerivative Numerically ============ //
-
-TEST_CASE("Test Dispersion Derivative <float>") {
-  // Relative tolerance.
-  const float tolerance = 1e-3F;
-  helper::testDispersionDerivative(tolerance);
-}
-
-TEST_CASE("Test Dispersion Derivative <double>") {
-  // Relative tolerance.
-  const double tolerance = 1e-3;
-  helper::testDispersionDerivative(tolerance);
-}
 
 // ============ Test computeIntegrandFactor Numerically ============ //
 

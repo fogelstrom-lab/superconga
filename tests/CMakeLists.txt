@@ -43,6 +43,8 @@ endif()
 # Define the main set of source files
 set(SRC
     basis_function_normalization_test.cu
+    bdg_utils_test.cu
+    dispersion_test.cu
     fermi_surface_test.cu
     fermi_surface_circle_test.cu
     fermi_surface_tight_binding_test.cu

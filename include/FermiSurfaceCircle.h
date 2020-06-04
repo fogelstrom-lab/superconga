@@ -2,6 +2,7 @@
 #define FERMI_SURFACE_CIRCLE_H_
 
 #include "FermiSurface.h"
+#include "defines.h"
 #include "utils.h"
 #include <cmath>
 #include <iostream>
@@ -21,10 +22,12 @@ public:
   void initialize(const int inNumAngles);
 
   // Get the Fermi momentum.
+  vector2d<T> getFermiMomentum(const int inAngleIdx) const;
   void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
                         T &outMomentumY) const;
 
   // Get the Fermi velocity.
+  vector2d<T> getFermiVelocity(const int inAngleIdx) const;
   void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
                         T &outVelocityY) const;
 
@@ -40,6 +43,7 @@ public:
   const T *getSystemAnglePointer() const;
 
   // Get momentum offset.
+  vector2d<T> getMomentumOffset() const;
   void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
 
 private:
@@ -80,27 +84,37 @@ void FermiSurfaceCircle<T>::initialize(const int inNumAngles) {
 }
 
 template <typename T>
-void FermiSurfaceCircle<T>::getFermiMomentum(const int inAngleIdx,
-                                             T &outMomentumX,
-                                             T &outMomentumY) const {
+vector2d<T>
+FermiSurfaceCircle<T>::getFermiMomentum(const int inAngleIdx) const {
   // Get phi.
   const T phi = FermiSurface<T>::getPolarAngle(inAngleIdx);
 
   // Remember, this is a circle.
-  outMomentumX = std::cos(phi);
-  outMomentumY = std::sin(phi);
+  return {std::cos(phi), std::sin(phi)};
+}
+
+template <typename T>
+void FermiSurfaceCircle<T>::getFermiMomentum(const int inAngleIdx,
+                                             T &outMomentumX,
+                                             T &outMomentumY) const {
+  const vector2d<T> fermiMomentum = getFermiMomentum(inAngleIdx);
+  outMomentumX = fermiMomentum[0];
+  outMomentumY = fermiMomentum[1];
+}
+
+template <typename T>
+vector2d<T>
+FermiSurfaceCircle<T>::getFermiVelocity(const int inAngleIdx) const {
+  // Momentum and velocity are equal.
+  return getFermiMomentum(inAngleIdx);
 }
 
 template <typename T>
 void FermiSurfaceCircle<T>::getFermiVelocity(const int inAngleIdx,
                                              T &outVelocityX,
                                              T &outVelocityY) const {
-  // Get phi.
-  const T phi = FermiSurface<T>::getPolarAngle(inAngleIdx);
-
-  // Once again, a boring circle.
-  outVelocityX = std::cos(phi);
-  outVelocityY = std::sin(phi);
+  // Momentum and velocity are equal.
+  getFermiMomentum(inAngleIdx, outVelocityX, outVelocityY);
 }
 
 template <typename T>
@@ -133,11 +147,17 @@ T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) const {
 }
 
 template <typename T>
+vector2d<T> FermiSurfaceCircle<T>::getMomentumOffset() const {
+  // This is a circle centered around the origin.
+  return {static_cast<T>(0.0), static_cast<T>(0.0)};
+}
+
+template <typename T>
 void FermiSurfaceCircle<T>::getMomentumOffset(T &outOffsetX,
                                               T &outOffsetY) const {
-  // This is a circle centered around the origin.
-  outOffsetX = static_cast<T>(0.0);
-  outOffsetY = static_cast<T>(0.0);
+  const vector2d<T> offset = getMomentumOffset();
+  outOffsetX = offset[0];
+  outOffsetY = offset[1];
 }
 
 #endif // FERMI_SURFACE_CIRCLE_H_
