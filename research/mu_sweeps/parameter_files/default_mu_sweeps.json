@@ -1,0 +1,20 @@
+{
+    "convergence_criterion": 1e-6,
+    "crystal_axes_rotation": 0.0,
+    "data_path": "data/qc",
+    "lattice_side_length": 801,
+    "num_fermi_momenta": 128,
+    "num_ozaki_energies": 20,
+    "num_iterations_max": 5000,
+    "num_iterations_min": 30,
+    "verbose": true,
+    "save_data": true,
+    "save_data_interval": 200,
+    "temperature": 0.1,
+    "visualize": true,
+    "grain_diagonal_length": 60.0,
+    "grain_corner_length": 4.0,
+    "fermi_surface_label": 0,
+    "chemical_potential": 0.0,
+    "meta_stable": false
+}

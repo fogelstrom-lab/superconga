@@ -106,6 +106,8 @@ const int NUM_ITERATIONS_MIN = 300;
 const int NUM_ITERATIONS_MAX = 5000;
 // Path to data, relative to build directory!
 const char *DATA_BASE_PATH = (char *)"data/qc/";
+// Whether or not to save data.
+const bool SAVE_DATA = true;
 // Number of iterations between regular saving of data
 const int SAVE_DATA_INTERVAL = 200;
 // Label which fermi surface it is:
@@ -367,7 +369,7 @@ int main(int argc, char *argv[]) {
       status = run_utils::runIteration(
           context, simParams::PRINT_ITERATION_STATUS,
           simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
-          simParams::SAVE_DATA_INTERVAL);
+          simParams::SAVE_DATA, simParams::SAVE_DATA_INTERVAL);
 
       if (status == run_utils::Status::kSave) {
         saveDataWrapper();

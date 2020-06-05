@@ -248,8 +248,7 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
                           outParametersJSON["temperature"]
                               .get_ref<nlohmann::json::number_float_t &>(),
                           "Temperature in units of T_c.")
-      ->check(CLI::PositiveNumber)
-      ->required();
+      ->check(CLI::PositiveNumber);
   // TODO(niclas): Rename to "-F"?
   outApp
       .add_option<double>(
@@ -266,8 +265,7 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
                               .get_ref<nlohmann::json::number_float_t &>(),
                           "Side length of grain in units of coherence lengths "
                           "(hbar*v_F)/(2*pi*k_B*T_c).")
-      ->check(CLI::PositiveNumber)
-      ->required();
+      ->check(CLI::PositiveNumber);
   outApp
       .add_option<double>("-r,--crystal-axes-rotation",
                           outParametersJSON["crystal_axes_rotation"]
@@ -328,18 +326,14 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
       ->check(CLI::PositiveNumber);
 
   // Command-line flags (not followed by value: set something to true/false)
-  outApp
-      .add_flag("--dwave-symmetry,!--swave-symmetry",
-                outParametersJSON["dwave_symmetry"]
-                    .get_ref<nlohmann::json::boolean_t &>(),
-                "Run with d-wave pairing symmetry (otherwise s-wave).")
-      ->required();
-  outApp
-      .add_flag("--disc-geometry,!--square-geometry",
-                outParametersJSON["disc_geometry"]
-                    .get_ref<nlohmann::json::boolean_t &>(),
-                "Run with disc geometry (otherwise square).")
-      ->required();
+  outApp.add_flag("--dwave-symmetry,!--swave-symmetry",
+                  outParametersJSON["dwave_symmetry"]
+                      .get_ref<nlohmann::json::boolean_t &>(),
+                  "Run with d-wave pairing symmetry (otherwise s-wave).");
+  outApp.add_flag(
+      "--disc-geometry,!--square-geometry",
+      outParametersJSON["disc_geometry"].get_ref<nlohmann::json::boolean_t &>(),
+      "Run with disc geometry (otherwise square).");
   outApp.add_flag(
       "--solenoid,!--no-solenoid",
       outParametersJSON["solenoid"].get_ref<nlohmann::json::boolean_t &>(),
