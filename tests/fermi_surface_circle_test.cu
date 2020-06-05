@@ -24,8 +24,7 @@ template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
 // A helper function to test the momentum offset. Instantiate the Fermi surface
 // and check that the momentum origin offset is zero, i.e. that it is centered
 // around the origin.
-template <typename T>
-void testGetMomentumOffset(const T inTolerance, const int inNumAngles = 1) {
+template <typename T> void testGetMomentumOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
   FermiSurfaceCircle<T> fermiSurface;
 
@@ -46,8 +45,7 @@ void testGetMomentumOffset(const T inTolerance, const int inNumAngles = 1) {
 // A helper function test the angle offset. Instantiate the Fermi surface
 // and check that the angle offset is pi/2, i.e. the angle corresponding to the
 // first angle index.
-template <typename T>
-void testGetAngleOffset(const T inTolerance, const int inNumAngles = 1) {
+template <typename T> void testGetAngleOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
   FermiSurfaceCircle<T> fermiSurface;
 

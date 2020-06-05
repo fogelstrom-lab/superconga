@@ -231,7 +231,7 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
     : GeometryComponent<T>() {
   // Apply margin to radius
   const T polygonRadiusPadded =
-      inDiameter * static_cast<T>(0.5) * qcs::GRAIN_SIZE_FRACTION;
+      inDiameter * static_cast<T>(0.5 * qcs::GRAIN_SIZE_FRACTION);
   m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
                              inCenterX, inCenterY);
 }
@@ -251,15 +251,15 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
               << inNumVertices << std::endl;
   }
 
-  T scaledVerticesX[inNumVertices] = {0.0};
-  T scaledVerticesY[inNumVertices] = {0.0};
+  T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
+  T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
   const T coordinateScaleFactor = static_cast<T>(0.5 / std::sqrt(2.0));
 
   // Loop over vertex coordinates
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
     // Check that vertex coordinates are reasonable
-    if ((std::abs(inVerticesX[vertexIdx]) > 1.0) ||
-        (std::abs(inVerticesY[vertexIdx]) > 1.0)) {
+    if ((std::abs(inVerticesX[vertexIdx]) > static_cast<T>(1.0)) ||
+        (std::abs(inVerticesY[vertexIdx]) > static_cast<T>(1.0))) {
       // Todo(patric): Raise exception
       std::cout
           << "ERROR! PolygonGeometry: Vertex coordinates must be within [-1,1]."
@@ -271,12 +271,14 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
     // hence multiplying by this factor. The constant GRAIN_SIZE_FRACTION
     // applies a margin to the edges of the superconducting grain (to allow
     // padding of the order parameter component).
+    // TODO(niclas): GRAIN_SIZE_FRACTION can be included in
+    // coordinateScaleFactor.
     scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] *
                                  coordinateScaleFactor *
-                                 qcs::GRAIN_SIZE_FRACTION;
+                                 static_cast<T>(qcs::GRAIN_SIZE_FRACTION);
     scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] *
                                  coordinateScaleFactor *
-                                 qcs::GRAIN_SIZE_FRACTION;
+                                 static_cast<T>(qcs::GRAIN_SIZE_FRACTION);
   }
 
   m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);

@@ -13,11 +13,11 @@
 #ifndef CLI_UTILS_H_
 #define CLI_UTILS_H_
 
+#include "nlohmann_json_wrapper.h"
 #include <CLI/CLI.hpp>
 #include <algorithm>
 #include <iostream>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 

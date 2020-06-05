@@ -706,7 +706,7 @@ template <typename T> int GeometryGroup<T>::getNumGrainLatticeSites() {
   const char *const data_ptr = thrust::raw_pointer_cast(data_cpu.data());
 
   int numGrainLatticeSites = 0;
-  for (int i = 0; i < data_cpu.size(); ++i) {
+  for (size_t i = 0; i < data_cpu.size(); ++i) {
     const char node = data_ptr[i];
     if (node < 0 || node > m_maxValidLabel) {
       // TODO(niclas): Raise exception instead?

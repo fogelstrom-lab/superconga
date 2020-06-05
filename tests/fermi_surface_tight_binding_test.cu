@@ -63,6 +63,8 @@ std::pair<T, T> applySymmetry(const std::pair<T, T> &inMomentum,
 template <typename T>
 void checkResult(const T inExpected, const T inComputed, const T inTolerance,
                  const Symmetry inSymmetry) {
+  // Unused.
+  (void)inSymmetry;
   // This is a scalar so inSymmetry is unused.
   REQUIRE(inExpected == doctest::Approx(inComputed).epsilon(inTolerance));
 }
@@ -268,7 +270,7 @@ void testComputeIntegrandFactor(
       // =================== ACT ==================== //
       // Compute the integrand factor using analytical derivatives.
       const T integrandFactor = tightbinding_internal::computeIntegrandFactor(
-          parameters, fermiMomentum, fermiVelocity, originOffset);
+          fermiMomentum, fermiVelocity, originOffset);
 
       // =================== ASSERT ==================== //
       // Compute the integrand factor using numerical derivatives.
@@ -353,8 +355,7 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
 
 // Test the angle offset. Instantiate the Fermi surface and check that the angle
 // offset is pi/2, i.e. the angle corresponding to the first angle index.
-template <typename T>
-void testGetAngleOffset(const T inTolerance, const int inNumAngles = 1) {
+template <typename T> void testGetAngleOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
   FermiSurfaceTightBinding<T> fermiSurface;
 

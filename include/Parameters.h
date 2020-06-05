@@ -256,7 +256,7 @@ void Parameters<T>::setEnergyRange(const T inEnergyMin, const T inEnergyMax,
   // Do the limits make sense?
   // TODO(niclas): Shouldn't we check that min < max? And why set the number of
   // energies to 1 if max = 0?
-  if (inEnergyMax == 0.0 || inEnergyMax == inEnergyMin) {
+  if (inEnergyMax == static_cast<T>(0.0) || inEnergyMax == inEnergyMin) {
     m_numEnergies = 1;
   } else {
     m_numEnergies = inNumEnergies;
@@ -286,7 +286,7 @@ void Parameters<T>::setGridResolution(const int inNumGridBase) {
 template <typename T> void Parameters<T>::setGridElementSize() {
   m_gridElementSize = m_grainWidthCoherenceLengths /
                       ((static_cast<T>(m_numGridBase) - static_cast<T>(1.0)) *
-                       (static_cast<T>(2.0 * M_PI) * qcs::GRAIN_SIZE_FRACTION));
+                       (static_cast<T>(2.0 * M_PI * qcs::GRAIN_SIZE_FRACTION)));
 }
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {

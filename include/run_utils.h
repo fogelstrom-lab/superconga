@@ -20,10 +20,10 @@
 #include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
 
+#include "nlohmann_json_wrapper.h"
 #include <boost/filesystem.hpp>
 #include <cmath>
 #include <iomanip>
-#include <nlohmann/json.hpp>
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -360,7 +360,7 @@ void saveDataWrapper(const Context<T> *const inContext,
   char dataPath[512];
   const std::string dataBasePath = inJSON["data_path"].get<std::string>();
   snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
-           inJSON["temperature"].get<T>());
+           inJSON["temperature"].get<double>());
 
   // Create directory if not existing.
   createDirectory(dataPath);

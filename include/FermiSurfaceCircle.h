@@ -30,7 +30,7 @@ public:
 
   // Get the Fermi speed.
   // This is a circle so it is a constant.
-  T getFermiSpeed(const int inAngleIdx) const { return static_cast<T>(1.0); }
+  T getFermiSpeed(const int inAngleIdx) const;
 
   // Get the integrand factor.
   T getIntegrandFactor(const int inAngleIdx) const;
@@ -115,7 +115,17 @@ const T *FermiSurfaceCircle<T>::getSystemAnglePointer() const {
 }
 
 template <typename T>
+T FermiSurfaceCircle<T>::getFermiSpeed(const int inAngleIdx) const {
+  // Unused.
+  (void)inAngleIdx;
+  return static_cast<T>(1.0);
+}
+
+template <typename T>
 T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) const {
+  // Unused.
+  (void)inAngleIdx;
+
   // Because this is a circle, and we are taking equidistant angular steps, the
   // only thing left to do is dividing by the number of angles.
   const int numAngles = FermiSurface<T>::getNumAngles();

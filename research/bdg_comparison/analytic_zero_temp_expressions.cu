@@ -43,7 +43,7 @@ typedef double T;
 //*******************************************************
 // MAIN
 //*******************************************************
-int main(int argc, char *argv[]) {
+int main() {
   // Enum for the the different Fermi-surfaces: fs1 and fs2 refer to the
   // tight-binding models of the BdG-comparison paper, with parameters given
   // below

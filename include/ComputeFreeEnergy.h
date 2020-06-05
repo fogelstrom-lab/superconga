@@ -179,6 +179,9 @@ IntegrationIterator<T> *ComputeFreeEnergy<T>::createIntegrationIterator(
 
 template <typename T>
 void ComputeFreeEnergy<T>::initializeIteration(const int inNumFields) {
+  // Unused.
+  (void)inNumFields;
+
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {

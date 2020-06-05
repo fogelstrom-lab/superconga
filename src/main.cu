@@ -35,12 +35,12 @@
 #include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
 #include "run_utils.h" // Commonly used functions in run files
 
+#include "nlohmann_json_wrapper.h"
 #include <CLI/CLI.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 
 //*******************************************************

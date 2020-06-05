@@ -7,6 +7,11 @@
 #include <limits>
 
 namespace legacy {
+// This legacy code generates a lot of warnings from promition to double. So,
+// lets turn it off.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
+
 // This is the implementation of atan2 that was present in the code previously.
 template <typename T> T atan2(const T y, const T x) {
   T phase = (T)0.0;
@@ -69,6 +74,9 @@ T computeOrderParameterBulkSWave(const T T_Tc, const T deltaConvergence,
 
   return delta;
 }
+
+// Turn warnings back on again.
+#pragma GCC diagnostic pop
 } // namespace legacy
 
 namespace helper {
@@ -166,6 +174,6 @@ TEST_CASE("Test legacy::atan2<float>") {
 TEST_CASE("Test legacy::atan2<double>") {
   // Relative tolerance.
   // Note, machine precision is too harsh.
-  const double TOLERANCE = 10.0F * std::numeric_limits<double>::epsilon();
+  const double TOLERANCE = 10.0 * std::numeric_limits<double>::epsilon();
   helper::testLegacyAtan2(TOLERANCE);
 }

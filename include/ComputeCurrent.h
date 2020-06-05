@@ -101,6 +101,9 @@ ComputeCurrent<T>::createIntegrationIterator(int numEnergiesPerBlock) {
 
 template <typename T>
 void ComputeCurrent<T>::initializeIteration(int numFields) {
+  // Unused.
+  (void)numFields;
+
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute())

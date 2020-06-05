@@ -123,6 +123,9 @@ ComputeLDOS<T>::createIntegrationIterator(int numEnergiesPerBlock) {
 }
 
 template <typename T> void ComputeLDOS<T>::initializeIteration(int numFields) {
+  // Unused.
+  (void)numFields;
+
   if (ComputeProperty<T>::doCompute()) {
     m_ldosInterval->setZero();
   }

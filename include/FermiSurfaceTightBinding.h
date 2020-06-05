@@ -382,15 +382,13 @@ std::pair<T, T> computeFermiMomentum(
 /// momentum with the respect to the angle phi, divided by the norm of the Fermi
 /// velocity.
 ///
-/// \param inParameters - The tight-binding parameters for a square lattice
 /// \param inFermiMomentum - The Fermi momentum (x, y)
 /// \param inFermiVelocity - The Fermi velocity (x, y)
 /// \param inOffset - The momentum offset (x, y)
 ///
 /// \return - The integrand factor
 template <typename T>
-T computeIntegrandFactor(const TightBindingParameters<T> &inParameters,
-                         const std::pair<T, T> &inFermiMomentum,
+T computeIntegrandFactor(const std::pair<T, T> &inFermiMomentum,
                          const std::pair<T, T> &inFermiVelocity,
                          const std::pair<T, T> &inOffset) {
   // The momentum is parameterized as
@@ -489,7 +487,7 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
 
     // Compute integrand factor.
     const T factor = tightbinding_internal::computeIntegrandFactor(
-        m_parameters, fermiMomentum, fermiVelocity, m_originOffset);
+        fermiMomentum, fermiVelocity, m_originOffset);
     m_integrandFactor.push_back(factor);
 
     // For normalizing the integrand factor.

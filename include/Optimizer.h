@@ -13,7 +13,11 @@ public:
 
   // Take naive fixed-point step, i.e. do nothing here.
   virtual void step(OrderParameter<T> *const inOutOrderParameter,
-                    const T inResidual){};
+                    const T inResidual) {
+    // Unused.
+    (void)inOutOrderParameter;
+    (void)inResidual;
+  };
 };
 
 #endif // OPTIMIZER_H_
