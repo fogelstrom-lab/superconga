@@ -151,6 +151,9 @@ void ComputeOrderParameter<T>::setOrderParameter(
 
 template <typename T>
 void ComputeOrderParameter<T>::initializeIteration(int numFields) {
+  // Unused.
+  (void)numFields;
+
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {

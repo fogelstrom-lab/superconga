@@ -771,7 +771,7 @@ int GridData<T, DEV>::setData(const T *p_host_data, size_t numElements) {
   thrust::host_vector<T> data_tmp(numElements);
   T *data_ptr = thrust::raw_pointer_cast(data_tmp.data());
 
-  for (int i = 0; i < numElements; ++i)
+  for (size_t i = 0; i < numElements; ++i)
     data_ptr[i] = p_host_data[i];
 
   *_data = data_tmp;

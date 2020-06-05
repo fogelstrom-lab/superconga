@@ -64,6 +64,9 @@ template <typename T> OptimizerRollingBall<T>::~OptimizerRollingBall() {
 template <typename T>
 void OptimizerRollingBall<T>::step(OrderParameter<T> *const inOutOrderParameter,
                                    const T inResidual) {
+  // Unused.
+  (void)inResidual;
+
   if (m_isInitialized) {
     // Compute ineartial weight.
     const T warmupFraction = static_cast<T>(m_iterationIndex) /

@@ -127,7 +127,7 @@ DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
 
   // Apply margin to radius
   const T discRadiusPadded =
-      inDiameter * static_cast<T>(0.5) * qcs::GRAIN_SIZE_FRACTION;
+      inDiameter * static_cast<T>(0.5 * qcs::GRAIN_SIZE_FRACTION);
   m_disc = new Disc<T>(discRadiusPadded, inCenterX, inCenterY);
 }
 
