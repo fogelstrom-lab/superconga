@@ -3,6 +3,7 @@ from __future__ import division
 import os
 import sys
 import re
+import json
 import numpy as np
 
 # Read metadata (header) and data from binary file
@@ -34,16 +35,17 @@ def readFieldsFromBinaryFile(inFile, inVerbose=True):
         # Output the file header contents
         names = ['sz','isComplex','dimX','dimY','dimZ','numFields','storeParameters',
                  'parametersVersion','numBytesParameters']
-        if inVerbose:
-            for i in range(0,len(names)):
-                print('%s: %s' % (names[i],header[i]))
-            print('numElements: %s' % numElements)
-            print('numBytesData: %s' % numBytesData)
         
         # Calculate some additional useful parameters
         numElements = numFields * dimX * dimY * int(1+isComplex)
         numBytesData = numElements * sizeOfDataType
         gridDataOffset = numBytesHeader
+
+        if inVerbose:
+            for i in range(0,len(names)):
+                print('%s: %s' % (names[i],header[i]))
+            print('numElements: %s' % numElements)
+            print('numBytesData: %s' % numBytesData)
 
         if storeParameters:
             gridDataOffset += numBytesParameters
@@ -122,20 +124,81 @@ def gridDataToNDArray(dict_in, data_in, slice_in=None, fieldName=None, zeroToNaN
 
     return data_out
 
-# Read parameter data file
-def readMetaDataFile(filePath):
-    if filePath[-4:] == '.dat':
-        # Filepath points to a .dat
-        paramsFile = filePath
+# Read meta data file if existing, else try to find one.
+def readMetaDataFile(inFilePath, inVerbose=False):
+    if os.path.splitext(inFilePath)[-1].lower() == 'json':
+        # Filepath points to a .json, parse it.
+        parametersDict = readMetaDataFileJSON(inFilePath, inVerbose)
+
+        # See if there is an _internal.json as well. Replace .json with _internal.json.
+        filePathJSON = os.path.splitext(inFilePath)[0]
+        testFileInternalJSON = str('%s_internal_parameters.json' % filePathJSON)
+        if os.path.exists(testFileInternalJSON):
+            parametersInternalDict = readMetaDataFileJSON(testFileInternalJSON, inVerbose)
+            
+            parametersDict.update(parametersInternalDict)
+
+        return parametersDict
+    elif (os.path.splitext(inFilePath)[-1].lower() == 'dat') and os.path.exists(inFilePath):
+        # Filepath points to a .dat, parse it.
+        return readMetaDataFileDAT(inFilePath, inVerbose)
     else:
-        # Filepath does not point to a .dat file. Attempt to construct full
-        # path, and add '/' if path does not end with it.
-        paramsFile = filePath + '/'*(filePath[-1]!='/') + 'parameters.dat'
+        # Filepath does not point to a known file, maybe it is a directory.
 
-    paramsDict = {}
+        # Parameter filenames to test. We do not want to parse for '*.json', who
+        # knows what we will end up parsing. This is more controlled.
+        testNames = ['config', 'parameters']
 
-    if os.path.exists(paramsFile):
-        with open(paramsFile) as f:
+        for testName in testNames:
+            # Test if there is a json-file in the directory.
+            testFileJSON = inFilePath + '/'*(inFilePath[-1]!='/') + str('%s.json' % testName)
+            if os.path.exists(testFileJSON):
+                # JSON file found, parse it.
+                parametersDict = readMetaDataFileJSON(testFileJSON, inVerbose)
+
+                # See if there is a _internal.json as well.
+                testFileInternalJSON = inFilePath + '/'*(inFilePath[-1]!='/') + str('%s_internal_parameters.json' % testName)
+                if os.path.exists(testFileInternalJSON):
+                    parametersInternalDict = readMetaDataFileJSON(testFileInternalJSON, inVerbose)
+                    parametersDict.update(parametersInternalDict)
+
+                return parametersDict
+
+            # Test if there is a .dat file in the directory.
+            testFileDAT = inFilePath + '/'*(inFilePath[-1]!='/') + str('%s.dat' % testName)
+            if os.path.exists(testFileDAT):
+                return readMetaDataFileDAT(testFileDAT, inVerbose)
+
+    print('Could not find a parameter file from path: %s' % inFilePath)
+    return None
+
+
+# Read parameter data from JSON file.
+def readMetaDataFileJSON(inFile, inVerbose=False):
+    parametersDict = {}
+
+    if os.path.exists(inFile):
+        if inVerbose:
+            print('Parsing .json file: %s' % inFile)
+
+        # Parse JSON file.
+        with open(inFile) as fileJSON:
+            dataStringJSON = fileJSON.read()
+            parametersDict = json.loads(dataStringJSON)
+
+        return parametersDict
+    else:
+        print('Could not find parameters file: %s' % inFile)
+        return None
+
+# Read parameter data from (old) .dat-file format.
+def readMetaDataFileDAT(inFile, inVerbose=False):
+    parametersDict = {}
+
+    if os.path.exists(inFile):
+        if inVerbose:
+            print('Parsing .dat file: %s' % inFilePath)
+        with open(inFile) as f:
             lines = 0
             rows = []
             for line in f:
@@ -143,17 +206,88 @@ def readMetaDataFile(filePath):
                     rows.append(line.strip().split(' '))
                     lines += 1
         if lines > 2:
-            raise Exception('Too many lines (%d) in paramsFile: %s' % (lines, paramsFile))
+            raise Exception('Too many lines (%d) in parameter file: %s' % (lines, inFile))
 
         for i in range(0, len(rows[1])):
             try:
-                paramsDict[str(rows[0][i+1])] = float(rows[1][i])
+                parametersDict[str(rows[0][i+1])] = float(rows[1][i])
             except ValueError:
-                paramsDict[str(rows[0][i+1])] = str(rows[1][i])
-        return paramsDict
+                paramsDparametersDictict[str(rows[0][i+1])] = str(rows[1][i])
+        return parametersDict
     else:
-        print('Could not find parameters file: %s' % paramsFile)
+        print('Could not find parameters file: %s' % inFile)
         return None
+
+# Make sure that parameters dictionary have the desired key names (the ones used in internally in the lib).
+def addParameterAliases(inDict, inVerbose=False):
+    # Return dict with original keys + all aliases defined below.
+    outDict = inDict.copy()
+
+    # Aliases for each desired key
+    aliasDictionary = {
+        'grain_side_length': ['R','sideLength','grainSideLength'],
+        'lattice_side_length': ['Nx','N','numLatticePoints'],
+        'grain_margin': ['grainMargin'],
+        'outer_radius': ['outerRadius'],
+        'inner_radius': ['innerRadius'],
+        'crystal_axes_rotation': ['latticeRotation','latticeOrientation'],
+        'temperature': ['T'],
+        'external_flux_quanta': ['externalFluxQuanta','B_factor'],
+        'external_flux_density': ['externalFluxDensity', 'externalMagneticFluxDensity', 'B_external'],
+        'internal_lattice_points': ['internalLatticePoints'],
+        'area_compute': ['areaInternalUnits','areaCompute'],
+        'num_fermi_momenta': ['Na','numAngles'],
+        'num_ozaki_energies': ['numOzakiPoles'],
+        'energy_cutoff': ['energyCutoff'],
+        'convergence_criterion': ['convergenceCriterion'],
+        'winding_number': ['windNum'],
+    }
+
+    # Loop over all keys and add every alias.
+    for key in aliasDictionary.keys():
+        
+        keyFound = False
+
+        # Check if dictionary already has key.
+        if key in inDict:
+            keyFound = True
+
+        anyAliasFound = False
+        foundAliases = []
+
+        # Loop over aliases to see if any of them were found.
+        for alias in aliasDictionary[key]:
+            aliasFound = False
+            
+            # Check if dictionary already has the alias.
+            if alias in inDict:
+                aliasFound = True
+                anyAliasFound = True
+                foundAliases.append(alias)
+
+            # Add alias if key exists (but alias does not already).
+            if keyFound and (not aliasFound):
+                outDict[alias] = inDict[key]
+        
+        # At least one alias was found, but no key. Add key (and remaining aliases).
+        if (not keyFound) and anyAliasFound:
+            # Add key from found alias.
+            outDict[key] = inDict[foundAliases[0]]
+
+            # Add remaining unfound aliases.
+            for alias in aliasDictionary[key]:
+                if (not alias in outDict):
+                    outDict[alias] = inDict[key]
+        
+        # Neither key nor alias was found.
+        if (not keyFound) and (not anyAliasFound):
+            # This edge case is hopefully irrelevant. This would most probably
+            # correspond to fields that are just additional information or
+            # deprecated.
+            pass
+
+    return outDict
+
 
 def readColumnsFromTextFile(inFile, inVerbose=True):
     if inVerbose:

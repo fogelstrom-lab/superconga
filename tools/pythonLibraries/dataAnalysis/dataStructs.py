@@ -33,8 +33,15 @@ class runData:
                  getPhase=True, verbose=False, zeroToNaN=True):
         self.filePath = filePath
 
-        # Initialize parameter object
-        self.params = RF.readMetaDataFile(self.filePath)
+        # Attempt to find config parameters and metadata from path.
+        self.paramsParsed = RF.readMetaDataFile(self.filePath, verbose)
+
+        if self.paramsParsed == None:
+            raise Exception('ERROR! Could not find any valid parameter file in path: %s' % (self.filePath))
+
+        # Create the expected dictionary names from a list of aliases.
+        # (Different code versions use different metadata field names)
+        self.params = RF.addParameterAliases(self.paramsParsed, verbose)
 
         # All the field and observable names were changed for the first git version.
         # As a result, here is a lot of messy code to try to ensure backwards compability.
