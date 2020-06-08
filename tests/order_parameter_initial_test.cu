@@ -60,7 +60,7 @@ template <typename T> void cleanup(Context<T> *context) { delete context; }
 // ======================== Wrappers for test cases ======================== //
 // **** Test that order parameter grid is normalized properly **** /
 template <typename T>
-void testIntialConstant(const T inTolerance, const int inNumValues = 4) {
+void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
 
   // Set up maxima for values to try. Values are sampled from
   // [-maxValue,maxValue] uniformly.
