@@ -33,15 +33,17 @@ public:
   IntegrationIteratorOzaki();
   ~IntegrationIteratorOzaki();
 
-  IntegrationIteratorOzaki(Context<T> *ctx, int numEnergiesPerBlock = -1);
+  IntegrationIteratorOzaki(Context<T> *const inOutContext,
+                           const int inNumEnergiesPerBlock = -1);
 
   int initialize();
 
   // Compute Ozaki poles and residues
-  void computeOzakiPoles(const int numPoles, T *poles, T *residues);
+  void computeOzakiPoles(const int numPoles, T *const outPoles,
+                         T *const outResidues);
 
   // Configures energy iterators
-  void initIterators(int numEnergiesPerBlock);
+  void initIterators(const int inNumEnergiesPerBlock);
   void initEnergies();
 
   int getNumEnergiesInterval();
@@ -63,11 +65,11 @@ IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki()
     : IntegrationIterator<T>() {}
 
 template <typename T>
-IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki(Context<T> *ctx,
-                                                      int numEnergiesPerBlock)
-    : IntegrationIterator<T>(ctx, numEnergiesPerBlock) {
+IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki(
+    Context<T> *const inOutContext, int inNumEnergiesPerBlock)
+    : IntegrationIterator<T>(inOutContext, inNumEnergiesPerBlock) {
   std::cout << "IntegrationIteratorOzaki<T>()\n";
-  ctx->set(this);
+  inOutContext->set(this);
 }
 
 template <typename T> IntegrationIteratorOzaki<T>::~IntegrationIteratorOzaki() {
@@ -78,21 +80,20 @@ template <typename T> int IntegrationIteratorOzaki<T>::initialize() {
   std::cout << "IntegrationIteratorOzaki::initialize()\n";
   IntegrationIterator<T>::initialize();
 
-  int numEnergies =
-      ContextModule<T>::getParameters()->getNumMatsubaraEnergies();
-
   initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
 
   return 0;
 }
 
 template <typename T>
-void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int numPoles,
-                                                    T *poles, T *residues) {
-  std::cout << "IntegrationIteratorOzaki<T>::computeOzakiPoles( numPoles: "
-            << numPoles << ", ... )\n";
-  // Dimension of matrices is 2*numPoles due to positive and negative poles
-  int64_t N = 2 * numPoles;
+void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int inNumOzakiPoles,
+                                                    T *const outPoles,
+                                                    T *const outResidues) {
+  std::cout
+      << "IntegrationIteratorOzaki<T>::computeOzakiPoles( inNumOzakiPoles: "
+      << inNumOzakiPoles << ", ... )\n";
+  // Dimension of matrices is 2*poles due to positive and negative poles
+  int64_t N = 2 * inNumOzakiPoles;
 
   // Ozaki matrices from PRB 75, 035123, (2007)
   // Note that A and B have switched place in relation to the paper.
@@ -119,8 +120,8 @@ void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int numPoles,
   int64_t LDB = N;       // Dimension of B: N*N
   int64_t LWORK = 3 * N; // Working dimension: (3*N)*(3*N)
 
-  int64_t ITYPE =
-      1;            // Generalized eigenvalue problem of type A*x = (lambda)*B*x
+  // ITYPE 1: Generalized eigenvalue problem of type A*x = (lambda)*B*x
+  int64_t ITYPE = 1;
   char JOBZ = 'V';  // Compute eigenvalues and eigenvectors
   char UPLO = 'U';  // Upper triangles of A and B are stored
   int64_t INFO = 0; // Storage for info returned from dsygv
@@ -131,43 +132,43 @@ void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int numPoles,
   dsygv_(&ITYPE, &JOBZ, &UPLO, &N, A.data(), &LDA, B.data(), &LDB, W.data(),
          WORK.data(), &LWORK, &INFO);
 
-  for (int i = 0; i < numPoles; ++i) {
+  for (int i = 0; i < inNumOzakiPoles; ++i) {
     const double pole = -1.0 / W[i];
     const double residueSqrt = 0.5 * A[N * i] * pole;
-    poles[i] = static_cast<T>(pole);
-    residues[i] = static_cast<T>(residueSqrt * residueSqrt);
+    outPoles[i] = static_cast<T>(pole);
+    outResidues[i] = static_cast<T>(residueSqrt * residueSqrt);
   }
 }
 
 template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
   const Parameters<T> *param = ContextModule<T>::getParameters();
 
-  T T_Tc = param->getTemperature();
-  int numEnergies = param->getNumMatsubaraEnergies();
+  const T temperature = param->getTemperature();
+  const int numEnergies = param->getNumMatsubaraEnergies();
 
   // Set ozaki energies
-  GridCPU *ozakiEnergies_cpu = new GridCPU(numEnergies, 1);
+  GridCPU *ozakiEnergiesCPU = new GridCPU(numEnergies, 1);
 
-  T *ozakiEnergies_re = ozakiEnergies_cpu->getDataPointer(0, Type::real);
-  T *ozakiEnergies_im = ozakiEnergies_cpu->getDataPointer(0, Type::imag);
+  T *ozakiEnergiesReal = ozakiEnergiesCPU->getDataPointer(0, Type::real);
+  T *ozakiEnergiesImag = ozakiEnergiesCPU->getDataPointer(0, Type::imag);
 
   GridCPU *ozakiPoles = new GridCPU(numEnergies, 1, 1, Type::real);
   GridCPU *ozakiResidues = new GridCPU(numEnergies, 1, 1, Type::real);
 
-  T *ozakiPoles_ptr = ozakiPoles->getDataPointer(0, Type::real);
-  T *ozakiResidues_ptr = ozakiResidues->getDataPointer(0, Type::real);
+  T *ozakiPolesPtr = ozakiPoles->getDataPointer(0, Type::real);
+  T *ozakiResiduesPtr = ozakiResidues->getDataPointer(0, Type::real);
 
   // Calculate Ozaki poles and residues
-  computeOzakiPoles(numEnergies, ozakiPoles_ptr, ozakiResidues_ptr);
+  computeOzakiPoles(numEnergies, ozakiPolesPtr, ozakiResiduesPtr);
 
   for (int i = 0; i < numEnergies; ++i) {
-    ozakiEnergies_re[i] = 0.0;
-    ozakiEnergies_im[i] = ozakiPoles_ptr[i] * T_Tc;
+    ozakiEnergiesReal[i] = static_cast<T>(0.0);
+    ozakiEnergiesImag[i] = ozakiPolesPtr[i] * temperature;
   }
 
   GridGPU *energies = new GridGPU;
   GridGPU *residues = new GridGPU;
-  *energies = *ozakiEnergies_cpu;
+  *energies = *ozakiEnergiesCPU;
   *residues = *ozakiResidues;
 
   IntegrationIterator<T>::setEnergies(energies);
@@ -175,23 +176,25 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
 }
 
 template <typename T>
-void IntegrationIteratorOzaki<T>::initIterators(int numEnergiesPerBlock) {
+void IntegrationIteratorOzaki<T>::initIterators(
+    const int inNumEnergiesPerBlock) {
   typedef IntegrationIterator<T> I;
 
   initEnergies();
 
-  int numEnergies = I::getEnergies()->dimX();
+  const int numEnergies = I::getEnergies()->dimX();
 
   ParameterIterator<int> *iter = new ParameterIterator<int>(0, numEnergies);
   I::setEnergyIterator(iter);
 
   std::cout << "Initializing ozaki iterator with Ne = " << numEnergies
-            << ", NeBlock = " << numEnergiesPerBlock << "\n";
+            << ", NeBlock = " << inNumEnergiesPerBlock << "\n";
 
-  if (numEnergiesPerBlock < 1)
+  if (inNumEnergiesPerBlock < 1) {
     iter->setIncrement(numEnergies);
-  else
-    iter->setIncrement(numEnergiesPerBlock);
+  } else {
+    iter->setIncrement(inNumEnergiesPerBlock);
+  }
 
   for (iter->begin(); !iter->isDone(); iter->next()) {
     std::cout << "min = " << iter->getMin() << "\n";
@@ -220,21 +223,21 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
 
   typedef IntegrationIterator<T> I;
 
-  Context<T> *ctx = ContextModule<T>::getContext();
+  Context<T> *context = ContextModule<T>::getContext();
 
   // Get some parameters and variables
-  const int numAngles = ctx->getParameters()->getAngularResolution();
+  const int numAngles = context->getParameters()->getAngularResolution();
 
-  GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
-                         // local frame
+  // Pointer to temporary grid for order parameter in local frame
+  GridGPU *rotatedOrderParameter;
 
-  ParameterIterator<int> *energy_iter = I::getEnergyIterator();
+  ParameterIterator<int> *energyIterator = I::getEnergyIterator();
   GridGPU *energies = I::getEnergies();
 
-  RiccatiSolver<T> *riccati = ctx->getRiccatiSolver();
-  GeometryGroup<T> *geom = ctx->getGeometry();
-  OrderParameter<T> *delta = ctx->getOrderParameter();
-  FermiSurface<T> *const fermiSurface = ctx->getFermiSurface();
+  RiccatiSolver<T> *riccatiSolver = context->getRiccatiSolver();
+  GeometryGroup<T> *geometryGroup = context->getGeometry();
+  OrderParameter<T> *orderParameter = context->getOrderParameter();
+  FermiSurface<T> *const fermiSurface = context->getFermiSurface();
 
   // Do angle loop (integrate over momentum angles)
   //
@@ -243,15 +246,17 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
 
     // Rotate order parameter field to current angle
-    deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
+    rotatedOrderParameter =
+        orderParameter->getOrderParameterFieldRotated(-angleIdx);
 
     // Create discrete geometry data for current angle
-    geom->create(-systemAngle);
+    geometryGroup->create(-systemAngle);
 
     // Compute coherence functions and store on boundary as initial condition
-    for (energy_iter->begin(); !energy_iter->isDone(); energy_iter->next()) {
-      riccati->computeInitialCondition(*energy_iter, energies, deltaRotated,
-                                       angleIdx);
+    for (energyIterator->begin(); !energyIterator->isDone();
+         energyIterator->next()) {
+      riccatiSolver->computeInitialCondition(*energyIterator, energies,
+                                             rotatedOrderParameter, angleIdx);
     }
   }
 
@@ -266,85 +271,94 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
 template <typename T> void IntegrationIteratorOzaki<T>::compute() {
   typedef IntegrationIterator<T> I;
 
-  Context<T> *ctx = ContextModule<T>::getContext();
+  Context<T> *context = ContextModule<T>::getContext();
 
   // Get some parameters and variables
-  const int numAngles = ctx->getParameters()->getAngularResolution();
-  FermiSurface<T> *const fermiSurface = ctx->getFermiSurface();
+  const int numAngles = context->getParameters()->getAngularResolution();
+  FermiSurface<T> *const fermiSurface = context->getFermiSurface();
 
-  GridGPU *deltaRotated; // Pointer to temporary grid for order parameter in
-                         // local frame
-  GridGPU deltaRotatedMultFactor; // This is different to one when computing
-                                  // free energy according to Sauls et al.
+  // Pointer to temporary grid for order parameter in local frame.
+  GridGPU *rotatedOrderParameter;
+  // This is != 1 when computing free energy according to Sauls et al.
+  GridGPU deltaRotatedMultFactor;
 
-  ParameterIterator<int> *energy_iter = I::getEnergyIterator();
+  ParameterIterator<int> *energyIterator = I::getEnergyIterator();
   GridGPU *energies = I::getEnergies();
 
-  RiccatiSolver<T> *riccati = ctx->getRiccatiSolver();
-  GeometryGroup<T> *geom = ctx->getGeometry();
-  OrderParameter<T> *delta = ctx->getOrderParameter();
+  RiccatiSolver<T> *riccatiSolver = context->getRiccatiSolver();
+  GeometryGroup<T> *geometryGroup = context->getGeometry();
+  OrderParameter<T> *orderParameter = context->getOrderParameter();
 
-  const int NC = ctx->getNumComputeObjects();
+  const int numComputeObjects = context->getNumComputeObjects();
 
-  // Set initial condition on boundary, if
-  if (!I::getNumIterations())
+  // Set initial condition on boundary.
+  if (!I::getNumIterations()) {
     setBoundaryInitialCondition();
+  }
 
   // Initialize compute objects (usually just make sure mem is allocated and
-  // zeroed)
-  for (int i = 0; i < NC; ++i)
-    ctx->getComputeObject(i)->initializeIteration(
-        energy_iter->getNumInterval());
+  // zeroed).
+  for (int i = 0; i < numComputeObjects; ++i) {
+    context->getComputeObject(i)->initializeIteration(
+        energyIterator->getNumInterval());
+  }
 
-  // Apply boundary condition(s)
-  riccati->computeBoundaryConditions();
+  // Apply boundary condition(s).
+  riccatiSolver->computeBoundaryConditions();
 
-  // Include magnetic field induced by currents
-  riccati->computeInducedVectorPotential();
+  // Include magnetic field induced by currents.
+  riccatiSolver->computeInducedVectorPotential();
 
-  // Do angle loop (=momentum integral, and sum over energies)
+  // Do angle loop (=momentum integral, and sum over energies).
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Rotate order parameter field to current angle.
     // A negative index is equivalent to a negative angle.
-    deltaRotated = delta->getOrderParameterFieldRotated(-angleIdx);
+    rotatedOrderParameter =
+        orderParameter->getOrderParameterFieldRotated(-angleIdx);
 
     // If we are computing free energy with Luttinger-Ward functional, the order
     // parameter is multiplied by a constant (which is
     // orderParameterMultFactor). In all other cases the constant is 1.
     deltaRotatedMultFactor =
-        (*deltaRotated) * riccati->getOrderParameterMultFactor();
+        (*rotatedOrderParameter) * riccatiSolver->getOrderParameterMultFactor();
 
     // Create discrete geometry data for current angle.
     // Angle (in radians) of system in local frame.
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
-    geom->create(-systemAngle);
+    geometryGroup->create(-systemAngle);
 
-    // Solve riccati equations for current angle and compute appropriate greens
-    // function
-    for (int i = 0; i < NC; ++i)
-      ctx->getComputeObject(i)->initializeGreensAngle();
-
-    // Iterate over (possibly) several blocks of energies.
-    for (energy_iter->begin(); !energy_iter->isDone(); energy_iter->next()) {
-      riccati->computeCoherenceFunctions(*energy_iter, energies,
-                                         &deltaRotatedMultFactor, angleIdx);
-
-      for (int i = 0; i < NC; ++i)
-        ctx->getComputeObject(i)->computeGreensAngle(
-            energy_iter, riccati->getGamma(), riccati->getGammabar(), geom);
+    // Solve Riccati equations for current angle and compute propagators.
+    for (int i = 0; i < numComputeObjects; ++i) {
+      context->getComputeObject(i)->initializeGreensAngle();
     }
 
-    // Add integration contribution of greens function from current angle
-    for (int i = 0; i < NC; ++i)
-      ctx->getComputeObject(i)->integrateGreensAngle(geom, angleIdx);
+    // Iterate over (possibly) several blocks of energies.
+    for (energyIterator->begin(); !energyIterator->isDone();
+         energyIterator->next()) {
+      riccatiSolver->computeCoherenceFunctions(
+          *energyIterator, energies, &deltaRotatedMultFactor, angleIdx);
+
+      for (int i = 0; i < numComputeObjects; ++i) {
+        context->getComputeObject(i)->computeGreensAngle(
+            energyIterator, riccatiSolver->getGamma(),
+            riccatiSolver->getGammabar(), geometryGroup);
+      }
+    }
+
+    // Add integration contribution of greens function from current angle.
+    for (int i = 0; i < numComputeObjects; ++i) {
+      context->getComputeObject(i)->integrateGreensAngle(geometryGroup,
+                                                         angleIdx);
+    }
   }
 
-  // Compute updated order parameter (components)
-  // Add coupling constant and angle integration normalization factor here
-  for (int i = 0; i < NC; ++i)
-    ctx->getComputeObject(i)->computePropertyFromGreens();
+  // Compute updated order parameter (components).
+  // Add coupling constant and angle integration normalization factor here.
+  for (int i = 0; i < numComputeObjects; ++i) {
+    context->getComputeObject(i)->computePropertyFromGreens();
+  }
 
-  // Print CUDA error, if any
+  // Print CUDA error, if any.
   ContextModule<T>::checkCudaError("IntegrationIteratorOzaki<T>::compute()");
 
   I::increaseIterationCount();
