@@ -5,6 +5,7 @@
 #include <cmath>
 #include <thrust/device_vector.h>
 
+namespace scg {
 ///////////////////////////////////////////
 // Code path for GPU (device) specific code
 ///////////////////////////////////////////
@@ -1001,5 +1002,6 @@ int GridFunctions<T, thrust::device_vector<T>>::checkCudaError(
   } else
     return 0;
 }
+} // namespace scg
 
 #endif // GRID_FUNCTIONS_GPU_H_

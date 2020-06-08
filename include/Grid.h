@@ -12,6 +12,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
+namespace scg {
 // Wrapper structs/typedefs for the GridData class. This makes it simpler to
 // read and write GridData variable declarations. For example:
 // GridData<double,thrust::host_vector<double> >    --->  Grid<double>::CPU
@@ -37,5 +38,6 @@ template <typename T> struct Grid {
   typedef GridData<T, thrust::host_vector<T>> GPU;
 #endif
 };
+} // namespace scg
 
 #endif // GRID_H_

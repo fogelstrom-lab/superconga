@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 
+namespace scg {
 template <typename, typename> class GridData;
 
 template <typename T> class Parameters : public ContextModule<T> {
@@ -284,9 +285,10 @@ void Parameters<T>::setGridResolution(const int inNumGridBase) {
 
 // Calculate the lattice spacing size in physical units of hbar*vF/(kB*Tc)
 template <typename T> void Parameters<T>::setGridElementSize() {
-  m_gridElementSize = m_grainWidthCoherenceLengths /
-                      ((static_cast<T>(m_numGridBase) - static_cast<T>(1.0)) *
-                       (static_cast<T>(2.0 * M_PI * qcs::GRAIN_SIZE_FRACTION)));
+  m_gridElementSize =
+      m_grainWidthCoherenceLengths /
+      ((static_cast<T>(m_numGridBase) - static_cast<T>(1.0)) *
+       (static_cast<T>(2.0 * M_PI * constants::GRAIN_SIZE_FRACTION)));
 }
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
@@ -376,5 +378,6 @@ template <typename T> void Parameters<T>::print() const {
   std::cout << "Convergence Criterion: " << m_convergenceCriterion << std::endl;
   std::cout << "Cutoff parameter: " << m_energyCutoff << std::endl;
 }
+} // namespace scg
 
 #endif // PARAMETERS_H_

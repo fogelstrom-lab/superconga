@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <limits>
 
+namespace scg {
 template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -353,5 +354,6 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     m_freeEnergy = static_cast<T>(0.0);
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_FREE_ENERGY_H_

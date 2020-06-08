@@ -59,9 +59,9 @@ typedef double T;
 //*******************************************************
 namespace {
 // Create context object.
-Context<T> *context = new Context<T>();
+scg::Context<T> *context = new scg::Context<T>();
 // Create visualization object.
-Visualization<T> *gui;
+scg::Visualization<T> *gui;
 } // namespace
 
 //*******************************************************
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
   // APPLY PARAMETERS
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set temperature.
   parameters->setTemperature(simParams["temperature"].get<T>());
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group.
-  GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
   // Add polygon to simulation space, scale to fit in simulation domain
   // (grainScale 1.0 is 100% of simulation space).
@@ -119,9 +119,9 @@ int main(int argc, char *argv[]) {
 
   // Make the grain a disc or a square.
   if (isDisc) {
-    geometry->add(new DiscGeometry<T>(grainScale), Type::add);
+    geometry->add(new scg::DiscGeometry<T>(grainScale), scg::Type::add);
   } else {
-    geometry->add(new PolygonGeometry<T>(numVertices, grainScale), Type::add);
+    geometry->add(new scg::PolygonGeometry<T>(numVertices, grainScale), scg::Type::add);
   }
 
   // Remove a portion to create a solenoid.
@@ -131,10 +131,10 @@ int main(int argc, char *argv[]) {
 
     // Circular or square hole.
     if (isDisc) {
-      geometry->add(new DiscGeometry<T>(holeScale), Type::remove);
+      geometry->add(new scg::DiscGeometry<T>(holeScale), scg::Type::remove);
     } else {
-      geometry->add(new PolygonGeometry<T>(numVertices, holeScale),
-                    Type::remove);
+      geometry->add(new scg::PolygonGeometry<T>(numVertices, holeScale),
+                    scg::Type::remove);
     }
   }
 
@@ -143,28 +143,28 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e.
   // d+is).
-  OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
   // Add a d-wave or an s-wave order-parameter component.
   const std::string symmetryStr = simParams["symmetry"].get<std::string>();
 
   // TODO(niclas): Move this to OrderParameterBasis.h?
-  BasisFunctionSymmetry symmetry;
+  scg::BasisFunctionSymmetry symmetry;
   if (symmetryStr == "s") {
-    symmetry = BasisFunctionSymmetry::SWAVE;
+    symmetry = scg::BasisFunctionSymmetry::SWAVE;
   } else if (symmetryStr == "dx2_y2") {
-    symmetry = BasisFunctionSymmetry::DWAVE_X2_Y2;
+    symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
   } else if (symmetryStr == "dxy") {
-    symmetry = BasisFunctionSymmetry::DWAVE_XY;
+    symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
   } else {
     std::cout << "Order parameter symmetry '" << symmetryStr
               << "' not understood." << std::endl;
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 1;
   }
 
-  OrderParameterComponent<T> *orderParameterComponent =
-      new OrderParameterComponent<T>(symmetry, parameters);
+  scg::OrderParameterComponent<T> *orderParameterComponent =
+      new scg::OrderParameterComponent<T>(symmetry, parameters);
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation =
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]) {
   orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
   // Initialize order parameter with a guess.
-  Initial<T>::perturbedPhaseWinding(orderParameterComponent,
+  scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
                                     simParams["initial_phase_winding"].get<T>(),
                                     simParams["initial_random_phase"].get<T>());
 
@@ -182,46 +182,46 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // CHOOSE FERMI SURFACE
   //***************************************************
-  FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
   context->set(fermiSurface);
 
   //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Order parameter compute object.
-  ComputeOrderParameter<T> *computeOrderParameter =
-      new ComputeOrderParameter<T>(context);
+  scg::ComputeOrderParameter<T> *computeOrderParameter =
+      new scg::ComputeOrderParameter<T>(context);
   // Add current compute object.
-  new ComputeCurrent<T>(context);
+  new scg::ComputeCurrent<T>(context);
   // Add free energy compute object.
-  new ComputeFreeEnergy<T>(context);
+  new scg::ComputeFreeEnergy<T>(context);
 
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS
   //***************************************************
   // RiccatiSolverConfined: provides analytic solutions to the Riccati equations
   // for a piecewise constant order parameter.
-  RiccatiSolver<T> *riccatiSolver;
+  scg::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gague.
   if (simParams["solenoid"].get<bool>()) {
     riccatiSolver =
-        new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Solenoid>(
-            context);
+        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                       scg::VectorPotential::Solenoid>(context);
   } else {
     riccatiSolver =
-        new RiccatiSolverConfined<T, Gamma::General, VectorPotential::Radial>(
-            context);
+        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                       scg::VectorPotential::Radial>(context);
   }
 
   // Add specular BC.
-  riccatiSolver->add(new BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   //***************************************************
   // CHOOSE CONVERGENCE ACCELERATOR
   //***************************************************
-  OptimizerRollingBall<T> *optimizer = new OptimizerRollingBall<T>();
+  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
   computeOrderParameter->setOptimizer(optimizer);
 
   //***************************************************
@@ -252,40 +252,41 @@ int main(int argc, char *argv[]) {
   // SET UP OPENGL VISUALIZATION
   //***********************************************
   if (simParams["visualize"].get<bool>()) {
-    gui = run_utils::createVisualization(context);
-    initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
-    glutKeyboardFunc(run_utils::myKeyboardFunc);
+    gui = scg::run_utils::createVisualization(context);
+    scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
+                gui->getNumPixelsWindowY());
+    glutKeyboardFunc(scg::run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
   }
 
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  run_utils::runSimulation(context, simParams["visualize"].get<bool>(),
-                           simParams["verbose"].get<bool>(),
-                           simParams["num_iterations_min"].get<int>(),
-                           simParams["num_iterations_max"].get<int>(),
-                           simParams["save_data"].get<bool>(),
-                           simParams["save_data_interval"].get<int>(),
-                           simParams);
+  scg::run_utils::runSimulation(context, simParams["visualize"].get<bool>(),
+                                simParams["verbose"].get<bool>(),
+                                simParams["num_iterations_min"].get<int>(),
+                                simParams["num_iterations_max"].get<int>(),
+                                simParams["save_data"].get<bool>(),
+                                simParams["save_data_interval"].get<int>(),
+                                simParams);
 
   //***********************************************
   // POST-PROCESSING
   //***********************************************
   // Save at the very end.
   if (simParams["save_data"].get<bool>()) {
-    run_utils::saveDataWrapper(context, simParams,
-                               simParams["verbose"].get<bool>());
+    scg::run_utils::saveDataWrapper(context, simParams,
+                                    simParams["verbose"].get<bool>());
   }
 
   // Cleanup dynamically allocated memory.
-  run_utils::cleanup(context, gui);
+  scg::run_utils::cleanup(context, gui);
   return 0;
 }
 
 // Plot data in OpenGL GUI.
 void display() {
-  run_utils::display(context, gui);
+  scg::run_utils::display(context, gui);
 
   // Tell Glut to update window.
   glutPostRedisplay();

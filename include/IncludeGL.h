@@ -7,6 +7,7 @@
 #include <GLUT/glut.h>
 #endif
 
+namespace scg {
 // Key logging functions
 namespace Key {
 unsigned char g_key_pressed;
@@ -61,5 +62,6 @@ int initGL(int argc, char *argv[], const int nx, const int ny) {
 
   return windowID;
 }
+} // namespace scg
 
 #endif // INCLUDE_GL_H_

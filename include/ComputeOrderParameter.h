@@ -6,6 +6,7 @@
 #include "IntegrationIteratorOzaki.h"
 #include "Optimizer.h"
 
+namespace scg {
 template <typename T> class ComputeOrderParameter : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -268,5 +269,6 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     }
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_ORDER_PARAMETER_H_

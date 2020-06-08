@@ -14,6 +14,7 @@
 #include "ParameterIterator.h"
 #include "Parameters.h"
 
+namespace scg {
 template <typename> class IntegrationIterator;
 
 template <typename T> class ComputeProperty : public ContextModule<T> {
@@ -186,5 +187,6 @@ ComputeProperty<T>::computeSFMomentum(Parameters<T> *param,
 
   return phaseGradient;
 }
+} // namespace scg
 
 #endif // COMPUTE_PROPERTY_H_

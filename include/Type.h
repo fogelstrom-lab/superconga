@@ -4,6 +4,7 @@
 #ifndef TYPE_H_
 #define TYPE_H_
 
+namespace scg {
 struct Type {
   enum type {
     real = 1,
@@ -17,5 +18,6 @@ struct Type {
   enum location { start = 1, begin = 1, end = 2 };
   enum coherence { singlet = 1, triplet = 4 };
 };
+} // namespace scg
 
 #endif // TYPE_H_

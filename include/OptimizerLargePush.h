@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 
+namespace scg {
 // TODO: (Patric) Implement warmup/burnin and final relaxation at end of
 // simulation, with getters and setters.
 template <typename T> class OptimizerLargePush : public Optimizer<T> {
@@ -161,5 +162,6 @@ void OptimizerLargePush<T>::step(OrderParameter<T> *const inOutOrderParameter,
   // Increase iteration index.
   m_iterationIndex++;
 }
+} // namespace scg
 
 #endif // OPTIMIZER_LARGE_PUSH_H_

@@ -19,10 +19,10 @@ void testComputeOrderParameterBulkSWaveZeroTemperature(
 
   // =================== ACT ==================== //
   const T orderParameter =
-      computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
+      scg::computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
   // =================== ASSERT ==================== //
-  const T orderParameterExpected = static_cast<T>(qcs::S_WAVE_BULK);
+  const T orderParameterExpected = static_cast<T>(scg::constants::S_WAVE_BULK);
   CHECK(orderParameter ==
         doctest::Approx(orderParameterExpected).epsilon(inTolerance));
 }
@@ -37,7 +37,7 @@ void testComputeOrderParameterBulkSWaveCriticalTemperature(
 
   // =================== ACT ==================== //
   const T orderParameter =
-      computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
+      scg::computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
   // =================== ASSERT ==================== //
   const T orderParameterExpected = static_cast<T>(0.0);
@@ -54,17 +54,17 @@ void testComputeOrderParameterBulkSWaveIntermediateTemperature(
     const T inMaxTemperature = static_cast<T>(0.999),
     const int inNumTemperatures = 10) {
   // =================== ARRANGE ==================== //
-  const std::vector<T> temperatures =
-      utils::linspace(inMinTemperature, inMaxTemperature, inNumTemperatures);
+  const std::vector<T> temperatures = scg::utils::linspace(
+      inMinTemperature, inMaxTemperature, inNumTemperatures);
 
   // See page 180 of P. Holmvall lic thesis.
   const T preFactor = std::sqrt(static_cast<T>(8.0 * M_PI * M_PI) /
-                                static_cast<T>(7.0 * qcs::APERY));
+                                static_cast<T>(7.0 * scg::constants::APERY));
 
   for (const T &temperature : temperatures) {
     // =================== ACT ==================== //
     const T orderParameter =
-        computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
+        scg::computeOrderParameterBulkSWave(temperature, inConvergenceCriteria);
 
     // =================== ASSERT ==================== //
     // See page 180 of P. Holmvall lic thesis.
@@ -83,11 +83,11 @@ template <typename T>
 void testComputeFreeEnergyBulkSWave(const T inTolerance, const T inTemperature,
                                     const T inFreeEnergyExpected) {
   // =================== ARRANGE ==================== //
-  const T orderParameter = computeOrderParameterBulkSWave(inTemperature);
+  const T orderParameter = scg::computeOrderParameterBulkSWave(inTemperature);
 
   // =================== ACT ==================== //
   const T freeEnergy =
-      computeFreeEnergyBulkSWave(inTemperature, orderParameter);
+      scg::computeFreeEnergyBulkSWave(inTemperature, orderParameter);
 
   // =================== ASSERT ==================== //
   CHECK(freeEnergy ==
@@ -104,24 +104,24 @@ void testComputeFreeEnergyBulkSWaveMinima(
     const T inMaxTemperature = static_cast<T>(0.9),
     const int inNumTemperatures = 10) {
   // =================== ARRANGE ==================== //
-  const std::vector<T> temperatures =
-      utils::linspace(inMinTemperature, inMaxTemperature, inNumTemperatures);
+  const std::vector<T> temperatures = scg::utils::linspace(
+      inMinTemperature, inMaxTemperature, inNumTemperatures);
 
   // A small value to add to the order parameter.
   const T epsilon = static_cast<T>(1e-3);
 
   for (const T temperature : temperatures) {
-    const T orderParameter = computeOrderParameterBulkSWave(temperature);
+    const T orderParameter = scg::computeOrderParameterBulkSWave(temperature);
 
     // =================== ACT ==================== //
     const T freeEnergy =
-        computeFreeEnergyBulkSWave(temperature, orderParameter);
+        scg::computeFreeEnergyBulkSWave(temperature, orderParameter);
 
     // =================== ASSERT ==================== //
     const T freeEnergyPlus =
-        computeFreeEnergyBulkSWave(temperature, orderParameter + epsilon);
+        scg::computeFreeEnergyBulkSWave(temperature, orderParameter + epsilon);
     const T freeEnergyMinus =
-        computeFreeEnergyBulkSWave(temperature, orderParameter - epsilon);
+        scg::computeFreeEnergyBulkSWave(temperature, orderParameter - epsilon);
     CHECK(freeEnergy < freeEnergyPlus);
     CHECK(freeEnergy < freeEnergyMinus);
   }
@@ -209,9 +209,9 @@ TEST_CASE("Test computeOrderParameterBulkSWave<double> - T < 1") {
 TEST_CASE("Test computeFreeEnergyBulkSWave<float> - T = 0") {
   const float tolerance = 1e-6F;
   const float temperature = 0.001F;
-  const float freeEnergyExpected = -0.5F *
-                                   static_cast<float>(qcs::S_WAVE_BULK) *
-                                   static_cast<float>(qcs::S_WAVE_BULK);
+  const float freeEnergyExpected =
+      -0.5F * static_cast<float>(scg::constants::S_WAVE_BULK) *
+      static_cast<float>(scg::constants::S_WAVE_BULK);
   helper::testComputeFreeEnergyBulkSWave(tolerance, temperature,
                                          freeEnergyExpected);
 }
@@ -219,7 +219,8 @@ TEST_CASE("Test computeFreeEnergyBulkSWave<float> - T = 0") {
 TEST_CASE("Test computeFreeEnergyBulkSWave<double> - T = 0") {
   const double tolerance = 1e-6;
   const double temperature = 0.001;
-  const double freeEnergyExpected = -0.5 * qcs::S_WAVE_BULK * qcs::S_WAVE_BULK;
+  const double freeEnergyExpected =
+      -0.5 * scg::constants::S_WAVE_BULK * scg::constants::S_WAVE_BULK;
   helper::testComputeFreeEnergyBulkSWave(tolerance, temperature,
                                          freeEnergyExpected);
 }

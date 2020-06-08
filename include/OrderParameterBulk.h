@@ -8,6 +8,7 @@
 #include <limits>
 #include <vector>
 
+namespace scg {
 namespace bulk_internal {
 /// \brief A helper function for updating the order parameter with a fixed-point
 /// step
@@ -91,7 +92,7 @@ T computeOrderParameterBulkSWave(
 
   // Initial guess of the order parameter.
   // It converges faster starting with sqrt(1 - T^3).
-  T orderParameter = static_cast<T>(qcs::S_WAVE_BULK) *
+  T orderParameter = static_cast<T>(constants::S_WAVE_BULK) *
                      std::sqrt(static_cast<T>(1.0) -
                                inTemperature * inTemperature * inTemperature);
 
@@ -174,5 +175,6 @@ T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
                        (std::log(inTemperature) + twoPiTemp * energySum);
   return freeEnergy;
 }
+} // namespace scg
 
 #endif // ORDER_PARAMETER_BULK_H_

@@ -9,6 +9,7 @@
 #include "RiccatiSolver.h"
 #include "utils.h"
 
+namespace scg {
 template <typename T>
 class IntegrationIteratorKeldysh : public IntegrationIterator<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -322,5 +323,6 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   // Update iteration counter.
   I::increaseIterationCount();
 }
+} // namespace scg
 
 #endif // INTEGRATION_ITERATOR_KELDYSH_H_

@@ -11,6 +11,7 @@
 #define _HD_ __host__ __device__
 #endif
 
+namespace scg {
 namespace VectorPotential {
 template <typename T> struct None {
   _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
@@ -144,5 +145,6 @@ _HD_ T VectorPotential::Solenoid<T>::computeVectorPotential_local(
          (-y_global * cos(systemAngle + T(0.5) * T(M_PI)) +
           x_global * sin(systemAngle + T(0.5) * T(M_PI)));
 }
+} // namespace scg
 
 #endif // LOCAL_VECTOR_POTENTIAL_H_

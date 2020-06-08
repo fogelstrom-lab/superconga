@@ -4,6 +4,7 @@
 #include "Context.h"
 #include "Grid.h"
 
+namespace scg {
 template <typename T> class BoundaryCondition {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -44,5 +45,6 @@ private:
   // to all boundary nodes.
   Grid<char> *_bc_map;
 };
+} // namespace scg
 
 #endif // BOUNDARY_CONDITION_H_

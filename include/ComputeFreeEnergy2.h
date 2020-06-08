@@ -6,6 +6,7 @@
 #include "IntegrationIteratorOzaki.h"
 #include <cuda.h>
 
+namespace scg {
 template <typename T> class ComputeFreeEnergy2 : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -198,5 +199,6 @@ template <typename T> void ComputeFreeEnergy2<T>::computePropertyFromGreens() {
     *_free_energy *= 2.0 * M_PI * T_Tc;
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_FREE_ENERGY_2_H_

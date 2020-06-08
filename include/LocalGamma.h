@@ -14,6 +14,7 @@
 #endif
 #endif
 
+namespace scg {
 namespace Gamma {
 // New method with unified template kernel for both gamma and gammabar
 template <typename T> struct General {
@@ -106,5 +107,6 @@ _HD_ void Gamma::Debug<T>::Gammabar::computeGamma_local(const cplx<T> &D,
                                                         cplx<T> &g) {
   Gamma::computeGamma_local(D, g0, e, h, y, g);
 }
+} // namespace scg
 
 #endif // LOCAL_GAMMA_H_

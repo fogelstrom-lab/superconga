@@ -13,6 +13,7 @@
 #include <iostream>
 #include <limits>
 
+namespace scg {
 template <typename T> struct Initial {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -126,9 +127,9 @@ __global__ void edgePhaseCrystal_kernel(
                       static_cast<T>(1.0);
     // Scale with margin so that physical grain is within [-1,1]
     const T xOriginMargin =
-        xOrigin / (static_cast<T>(1.0) - qcs::GRAIN_SIZE_MARGIN);
+        xOrigin / (static_cast<T>(1.0) - constants::GRAIN_SIZE_MARGIN);
     const T yOriginMargin =
-        yOrigin / (static_cast<T>(1.0) - qcs::GRAIN_SIZE_MARGIN);
+        yOrigin / (static_cast<T>(1.0) - constants::GRAIN_SIZE_MARGIN);
 
     T xRotated;
     T yRotated;
@@ -369,5 +370,6 @@ int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
 
   return read(inOutDeltaComponent, fn);
 }
+} // namespace scg
 
 #endif // ORDER_PARAMETER_INITIAL_H_

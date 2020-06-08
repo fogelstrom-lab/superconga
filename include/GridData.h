@@ -26,6 +26,7 @@
 #include <thrust/transform.h>
 #include <thrust/transform_reduce.h>
 
+namespace scg {
 // Forward declarations. These can be used when we want to refer to another
 // class without including the .h file.
 template <typename> class Parameters;
@@ -1741,5 +1742,6 @@ int GridData<T, DEV>::readParameters(const char *filename,
     return 1;
   }
 }
+} // namespace scg
 
 #endif // GRID_DATA_H_

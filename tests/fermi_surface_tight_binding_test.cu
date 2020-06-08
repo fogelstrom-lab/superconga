@@ -35,64 +35,66 @@ void testComputeIntegrandFactor(
     const T inPhiEpsilon = static_cast<T>(1e4) *
                            std::numeric_limits<T>::epsilon()) {
   // =================== ARRANGE ==================== //
-  const std::vector<T> angles = utils::linspace(
+  const std::vector<T> angles = scg::utils::linspace(
       static_cast<T>(0.0), static_cast<T>(2.0 * M_PI), inNumAngles);
 
   // For convenience.
   const T invDenom = static_cast<T>(1.0) / (static_cast<T>(2.0) * inPhiEpsilon);
 
-  // Fermi surface 1.
-  const DispersionTightBinding<T> dispersion1(
+  // Fermi surface 1 in the BDG paper.
+  const scg::DispersionTightBinding<T> dispersion1(
       static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
       static_cast<T>(CHEMICAL_POTENTIAL_FS1));
 
-  // Fermi surface 2.
-  const DispersionTightBinding<T> dispersion2(
+  // Fermi surface 2 in the BDG paper.
+  const scg::DispersionTightBinding<T> dispersion2(
       static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
       static_cast<T>(CHEMICAL_POTENTIAL_FS2));
 
   // A vector of the tight-binding dispersions.
-  const std::vector<DispersionTightBinding<T>> v_dispersions = {dispersion1,
-                                                                dispersion2};
+  const std::vector<scg::DispersionTightBinding<T>> v_dispersions = {
+      dispersion1, dispersion2};
 
   for (const auto &dispersion : v_dispersions) {
-    const vector2d<T> originOffset =
-        tightbinding_internal::computeMomentumOffset(dispersion);
+    const scg::vector2d<T> originOffset =
+        scg::tightbinding_internal::computeMomentumOffset(dispersion);
 
     for (const T phi : angles) {
-      const vector2d<T> fermiMomentum =
-          tightbinding_internal::computeFermiMomentum(dispersion, phi,
-                                                      originOffset);
-      const vector2d<T> fermiVelocity = dispersion.derivative(fermiMomentum);
+      const scg::vector2d<T> fermiMomentum =
+          scg::tightbinding_internal::computeFermiMomentum(dispersion, phi,
+                                                           originOffset);
+      const scg::vector2d<T> fermiVelocity =
+          dispersion.derivative(fermiMomentum);
 
       // =================== ACT ==================== //
       // Compute the integrand factor using analytical derivatives.
-      const T integrandFactor = tightbinding_internal::computeIntegrandFactor(
-          fermiMomentum, fermiVelocity, originOffset);
+      const T integrandFactor =
+          scg::tightbinding_internal::computeIntegrandFactor(
+              fermiMomentum, fermiVelocity, originOffset);
 
       // =================== ASSERT ==================== //
       // Compute the integrand factor using numerical derivatives.
-      const vector2d<T> fermiMomentumPlus =
-          tightbinding_internal::computeFermiMomentum(
+      const scg::vector2d<T> fermiMomentumPlus =
+          scg::tightbinding_internal::computeFermiMomentum(
               dispersion, phi + inPhiEpsilon, originOffset);
-      const vector2d<T> fermiMomentumMinus =
-          tightbinding_internal::computeFermiMomentum(
+      const scg::vector2d<T> fermiMomentumMinus =
+          scg::tightbinding_internal::computeFermiMomentum(
               dispersion, phi - inPhiEpsilon, originOffset);
 
       // Unwrap the momenta and form the derivative (dkx/dphi, dky/dphi).
-      vector2d<T> dKdPhi;
+      scg::vector2d<T> dKdPhi;
       for (int i = 0; i < 2; ++i) {
-        const T plus = utils::wrapToRange(
+        const T plus = scg::utils::wrapToRange(
             fermiMomentumPlus[i], originOffset[i] - static_cast<T>(M_PI),
             originOffset[i] + static_cast<T>(M_PI));
-        const T minus = utils::wrapToRange(
+        const T minus = scg::utils::wrapToRange(
             fermiMomentumMinus[i], originOffset[i] - static_cast<T>(M_PI),
             originOffset[i] + static_cast<T>(M_PI));
         dKdPhi[i] = (plus - minus) * invDenom;
       }
 
       const T integrandFactorExpected =
-          utils::normL2(dKdPhi) / utils::normL2(fermiVelocity);
+          scg::utils::normL2(dKdPhi) / scg::utils::normL2(fermiVelocity);
 
       REQUIRE(integrandFactor ==
               doctest::Approx(integrandFactorExpected).epsilon(inTolerance));
@@ -104,7 +106,7 @@ void testComputeIntegrandFactor(
 // angles and see that it returns the same value.
 template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface;
+  scg::FermiSurfaceTightBinding<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
@@ -126,12 +128,12 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
   const T chemicalPotential =
       inCenteredOrigin ? static_cast<T>(-1.0) : static_cast<T>(1.0);
 
-  FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
-                                           chemicalPotential);
+  scg::FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
+                                                chemicalPotential);
   fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
-  const vector2d<T> offset = fermiSurface.getMomentumOffset();
+  const scg::vector2d<T> offset = fermiSurface.getMomentumOffset();
 
   // =================== ASSERT ==================== //
   const T offsetExpected =
@@ -145,7 +147,7 @@ void testGetMomentumOffset(const T inTolerance, const bool inCenteredOrigin,
 // offset is pi/2, i.e. the angle corresponding to the first angle index.
 template <typename T> void testGetAngleOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface;
+  scg::FermiSurfaceTightBinding<T> fermiSurface;
 
   // =================== ACT ==================== //
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -172,31 +174,32 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
   const T hoppingNNNN = static_cast<T>(0.0);
   const T chemicalPotential = static_cast<T>(0.0);
 
-  FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
-                                           chemicalPotential);
+  scg::FermiSurfaceTightBinding<T> fermiSurface(hoppingNNN, hoppingNNNN,
+                                                chemicalPotential);
   fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
 
-  const vector2d<T> offset = fermiSurface.getMomentumOffset();
+  const scg::vector2d<T> offset = fermiSurface.getMomentumOffset();
 
   // For convenience.
   const T angleStep = static_cast<T>(2.0 * M_PI) / static_cast<T>(inNumAngles);
 
   for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
     // =================== ACT ==================== //
-    const vector2d<T> fermiMomentum = fermiSurface.getFermiMomentum(angleIdx);
+    const scg::vector2d<T> fermiMomentum =
+        fermiSurface.getFermiMomentum(angleIdx);
 
     // =================== ASSERT ==================== //
     const T angle = angleStep * static_cast<T>(angleIdx) + angleOffset;
     // For convenience.
-    const vector2d<T> unitVector = {std::cos(angle), std::sin(angle)};
+    const scg::vector2d<T> unitVector = {std::cos(angle), std::sin(angle)};
 
     // The magnitude is given by |x| + |y| = pi, i.e. a square with a diagonal
     // length of 2pi.
-    const T magnitude = static_cast<T>(M_PI) / utils::normL1(unitVector);
-    const vector2d<T> fermiMomentumExpected =
-        utils::multAdd(magnitude, unitVector, offset);
+    const T magnitude = static_cast<T>(M_PI) / scg::utils::normL1(unitVector);
+    const scg::vector2d<T> fermiMomentumExpected =
+        scg::utils::multAdd(magnitude, unitVector, offset);
 
     CHECK(std::cos(fermiMomentum[0]) ==
           doctest::Approx(std::cos(fermiMomentumExpected[0]))
@@ -211,7 +214,7 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
 template <typename T>
 void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface;
+  scg::FermiSurfaceTightBinding<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   // After looping over angles and summing this should be one.
@@ -237,8 +240,8 @@ void testCompareWithPython(const T inTolerance, const T inHoppingNNN,
                            const T inAvgFermiSpeedExpected,
                            const int inNumAngles = 100) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceTightBinding<T> fermiSurface(inHoppingNNN, inHoppingNNNN,
-                                           inChemicalPotential);
+  scg::FermiSurfaceTightBinding<T> fermiSurface(inHoppingNNN, inHoppingNNNN,
+                                                inChemicalPotential);
   fermiSurface.initialize(inNumAngles);
 
   const T avgFermiMomentum = fermiSurface.getAvgFermiMomentum();

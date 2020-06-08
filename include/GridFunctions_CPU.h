@@ -7,6 +7,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
+namespace scg {
 ///////////////////////////////////////////
 // Code path for CPU (host) specific code
 ///////////////////////////////////////////
@@ -695,5 +696,6 @@ void GridFunctions<T, thrust::host_vector<T>>::minmax(const GridCPU &grid,
   minv = *result.first;
   maxv = *result.second;
 }
+} // namespace scg
 
 #endif // GRID_FUNCTIONS_CPU_H_

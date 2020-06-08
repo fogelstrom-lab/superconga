@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cuda.h>
 
+namespace scg {
 template <typename T> class PolygonGeometry : public GeometryComponent<T> {
 public:
   PolygonGeometry();
@@ -234,9 +235,10 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
                                     const T inCenterY)
     : GeometryComponent<T>() {
   // Scale to internal coordinate system and apply the margin (grain size frac).
-  const T coordinateScaleFactor = static_cast<T>(
-      qcs::GRAIN_SIZE_FRACTION * qcs::INTERNAL_MAXIMUM_COORDINATE_POLY /
-      qcs::MAXIMUM_COORDINATE);
+  const T coordinateScaleFactor =
+      static_cast<T>(constants::GRAIN_SIZE_FRACTION *
+                     constants::INTERNAL_MAXIMUM_COORDINATE_POLY /
+                     constants::MAXIMUM_COORDINATE);
   // Calculate radius from diameter and apply margin/scaling.
   const T polygonRadiusPadded =
       static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
@@ -270,21 +272,22 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
     // Check that vertex coordinates are reasonable
     if ((std::abs(inVerticesX[vertexIdx]) >
-         static_cast<T>(qcs::MAXIMUM_COORDINATE)) ||
+         static_cast<T>(constants::MAXIMUM_COORDINATE)) ||
         (std::abs(inVerticesY[vertexIdx]) >
-         static_cast<T>(qcs::MAXIMUM_COORDINATE))) {
+         static_cast<T>(constants::MAXIMUM_COORDINATE))) {
       // Todo(patric): Raise exception
       std::cout << "ERROR! PolygonGeometry: Vertex coordinates must be within "
                    "[-"
-                << qcs::MAXIMUM_COORDINATE << ", " << qcs::MAXIMUM_COORDINATE
-                << "]." << std::endl;
+                << constants::MAXIMUM_COORDINATE << ", "
+                << constants::MAXIMUM_COORDINATE << "]." << std::endl;
     }
 
     // Scale to internal coordinate system and apply the margin (through grain
     // size fraction).
-    const T coordinateScaleFactor = static_cast<T>(
-        qcs::GRAIN_SIZE_FRACTION * qcs::INTERNAL_MAXIMUM_COORDINATE_POLY /
-        qcs::MAXIMUM_COORDINATE);
+    const T coordinateScaleFactor =
+        static_cast<T>(constants::GRAIN_SIZE_FRACTION *
+                       constants::INTERNAL_MAXIMUM_COORDINATE_POLY /
+                       constants::MAXIMUM_COORDINATE);
     scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] * coordinateScaleFactor;
     scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] * coordinateScaleFactor;
   }
@@ -344,5 +347,6 @@ Grid<char>::GPU *PolygonGeometry<T>::createDomain(const int N) {
 
   return dom_component;
 }
+} // namespace scg
 
 #endif // POLYGON_GEOMETRY_H_

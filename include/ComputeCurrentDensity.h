@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 
+namespace scg {
 template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -262,5 +263,6 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_CURRENT_DENSITY_H_

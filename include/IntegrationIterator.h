@@ -7,6 +7,7 @@
 #include "ParameterIterator.h"
 #include "RiccatiSolver.h"
 
+namespace scg {
 template <typename T> class IntegrationIterator : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -157,5 +158,6 @@ void IntegrationIterator<T>::setNumEnergiesPerBlock(int num) {
     initialize();
   }
 }
+} // namespace scg
 
 #endif // INTEGRATION_ITERATOR_H_

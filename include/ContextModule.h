@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 
+namespace scg {
 template <typename> class ComputeProperty;
 template <typename> class Context;
 template <typename> class FermiSurface;
@@ -69,5 +70,6 @@ template <typename T> void ContextModule<T>::checkCudaError(std::string msg) {
     std::cout << "CUDA ERROR: " << msg << ": " << cudaGetErrorString(err)
               << std::endl;
 }
+} // namespace scg
 
 #endif // CONTEXT_MODULE_H_

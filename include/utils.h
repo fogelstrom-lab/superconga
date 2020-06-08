@@ -23,6 +23,7 @@
 #include <cmath>
 #include <vector>
 
+namespace scg {
 namespace utils {
 /// \brief Wrap value to range
 ///
@@ -209,6 +210,7 @@ std::vector<T> linspace(const T inMinVal, const T inMaxVal,
   }
   return values;
 }
-
 } // namespace utils
+} // namespace scg
+
 #endif // UTILS_H_

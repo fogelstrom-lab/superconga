@@ -17,6 +17,7 @@
 #include "GeometryGroup.h"
 #endif
 
+namespace scg {
 template <typename T> class Visualization {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -772,5 +773,6 @@ template <typename T> void Visualization<T>::draw() {
   drawInfo();
   glutSwapBuffers();
 }
+} // namespace scg
 
 #endif // VISUALIZATION_H_

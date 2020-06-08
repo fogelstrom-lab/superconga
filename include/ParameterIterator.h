@@ -1,6 +1,7 @@
 #ifndef PARAMETER_ITERATOR_H_
 #define PARAMETER_ITERATOR_H_
 
+namespace scg {
 template <typename T> class ParameterIterator {
 public:
   ParameterIterator();
@@ -197,5 +198,6 @@ template <typename T> T ParameterIterator<T>::getNumInterval() const {
   else
     return getIncrement();
 }
+} // namespace scg
 
 #endif // PARAMETER_ITERATOR_H_

@@ -36,7 +36,7 @@ namespace bdg_comp_utils {
 // Todo(patric): Create utils_io.h and move there.
 template <typename T>
 void saveInducedFluxDensity(
-    const Context<T> *const inContext, const char *const inDataPath,
+    const scg::Context<T> *const inContext, const char *const inDataPath,
     const char *const inDataFileName = (char *)"magnetic_flux_density") {
 
   // Construct full file name
@@ -44,20 +44,21 @@ void saveInducedFluxDensity(
   sprintf(gridDataFile, "%s%s.grd", inDataPath, inDataFileName);
 
   // Fetch parameters
-  Parameters<T> *parameters = inContext->getParameters();
+  scg::Parameters<T> *parameters = inContext->getParameters();
 
   // Fetch current and set to zero outside grain
-  typename Grid<T>::GPU *current = inContext->getComputeCurrent()->getResult();
+  typename scg::Grid<T>::GPU *current =
+      inContext->getComputeCurrent()->getResult();
   inContext->getGeometry()->zeroValuesOutsideDomain(current);
   const int numLatticePoints = current->dimX();
 
   // Domain structure for vector potential calculation
-  Grid<char>::GPU *domain =
+  scg::Grid<char>::GPU *domain =
       inContext->getGeometry()->createDomain(numLatticePoints);
 
   // Create GPU storage for vector potential
-  typename Grid<T>::GPU *vectorPotential = new
-      typename Grid<T>::GPU(numLatticePoints, numLatticePoints, 2, Type::real);
+  typename scg::Grid<T>::GPU *vectorPotential = new typename scg::Grid<T>::GPU(
+      numLatticePoints, numLatticePoints, 2, scg::Type::real);
 
   // Convert lattice spacing back to proper coherence lengths:
   // hbar*vF/(2*Pi*kB*Tc)
@@ -70,10 +71,10 @@ void saveInducedFluxDensity(
   const T minusInvKappaSquared =
       -static_cast<T>(1.0) / (penetrationDepth * penetrationDepth);
 
-  computeVectorPotential(vectorPotential, current, domain, latticeSpacing,
-                         minusInvKappaSquared);
+  scg::computeVectorPotential(vectorPotential, current, domain, latticeSpacing,
+                              minusInvKappaSquared);
 
-  typename Grid<T>::GPU magneticFluxDensity =
+  typename scg::Grid<T>::GPU magneticFluxDensity =
       vectorPotential->curl(latticeSpacing);
 
   delete vectorPotential;
@@ -106,12 +107,12 @@ void appendLineToTextFile(
 // Save params to text file as METADATA
 template <typename T>
 void saveParamsMetaData(
-    const Context<T> *const inContext, const char *const inDataPath,
+    const scg::Context<T> *const inContext, const char *const inDataPath,
     const T inGrainSideLength, const T inGrainCornerSize,
     const T inGrainDiagonal,
     const char *const inDataFileName = (char *)"parameters") {
   // Fetch simulation parameters
-  Parameters<T> *parameters = inContext->getParameters();
+  scg::Parameters<T> *parameters = inContext->getParameters();
 
   // Construct full file name for meta data file
   char metaDataFile[512];
@@ -148,22 +149,22 @@ void saveParamsMetaData(
   ss << parameters->getAngularResolution() << " ";
   ss << parameters->getNumMatsubaraEnergies() << " ";
   ss << parameters->getCutOff() << " ";
-  ss << qcs::GRAIN_SIZE_MARGIN;
+  ss << scg::constants::GRAIN_SIZE_MARGIN;
   appendLineToTextFile(metaDataFile, ss);
 }
 
 // Save free energy to text file
 // TODO(patric): create methods in context for add() and get ComputeFreeEnergy
 template <typename T>
-void saveFreeEnergy(const Context<T> *const inContext,
+void saveFreeEnergy(const scg::Context<T> *const inContext,
                     const char *const inDataPath,
-                    const ComputeFreeEnergy<T> *const inComputeFreeEnergy,
+                    const scg::ComputeFreeEnergy<T> *const inComputeFreeEnergy,
                     const T inGrainSideLength, const T inGrainCornerSize,
                     const T inGrainDiagonal,
                     const char *const inDataFileName = (char *)"free_energy",
                     const int dataFloatDecimals = 10) {
   // Fetch simulation parameters
-  Parameters<T> *parameters = inContext->getParameters();
+  scg::Parameters<T> *parameters = inContext->getParameters();
 
   // Construct full file name for free energy
   char freeEnergyFile[512];
@@ -199,14 +200,14 @@ void saveFreeEnergy(const Context<T> *const inContext,
 // Save data to file
 template <typename T>
 void saveGridData(
-    const Context<T> *const inContext, const char *const inDataPath,
+    const scg::Context<T> *const inContext, const char *const inDataPath,
     const char *const inOrderParameterFileName = (char *)"order_parameter",
     const char *const inCurrentDensityFileName = (char *)"current_density") {
   // Fetch run parameters from context
-  Parameters<T> *parameters = inContext->getParameters();
+  scg::Parameters<T> *parameters = inContext->getParameters();
 
   // Save Order Parameter
-  typename Grid<T>::GPU *const orderParameterSave =
+  typename scg::Grid<T>::GPU *const orderParameterSave =
       inContext->getComputeOrderParameter()->getResult();
   inContext->getGeometry()->zeroValuesOutsideDomain(orderParameterSave);
 
@@ -220,7 +221,7 @@ void saveGridData(
   }
 
   // Save Current
-  typename Grid<T>::GPU *const currentSave =
+  typename scg::Grid<T>::GPU *const currentSave =
       inContext->getComputeCurrent()->getResult();
   inContext->getGeometry()->zeroValuesOutsideDomain(currentSave);
 
@@ -236,7 +237,7 @@ void saveGridData(
 
 // Save params to text file as METADATA
 template <typename T>
-void saveParametersLDOS(const Context<T> *const inContext,
+void saveParametersLDOS(const scg::Context<T> *const inContext,
                         const char *const inDataPath) {
   // Construct full file name for free energy
   char fileName[512];
@@ -248,7 +249,7 @@ void saveParametersLDOS(const Context<T> *const inContext,
   ss_header << "# minEnergy maxEnergy numEnergies smearing Na";
   appendLineToTextFile(fileName, ss_header, std::ios_base::trunc);
 
-  const Parameters<T> *const parameters = inContext->getParameters();
+  const scg::Parameters<T> *const parameters = inContext->getParameters();
 
   // Append line with energy and other information
   std::stringstream ss;
@@ -262,13 +263,13 @@ void saveParametersLDOS(const Context<T> *const inContext,
 
 // Save data to file
 template <typename T>
-void saveDataLDOS(const Context<T> *const inContext,
+void saveDataLDOS(const scg::Context<T> *const inContext,
                   const char *const inDataPath) {
   // Fetch run parameters from context
-  Parameters<T> *parameters = inContext->getParameters();
+  scg::Parameters<T> *parameters = inContext->getParameters();
 
   // Save LDOS
-  typename Grid<T>::GPU *const ldosSave =
+  typename scg::Grid<T>::GPU *const ldosSave =
       inContext->getComputeLDOS()->getResult();
 
   // Construct filenames

@@ -10,7 +10,9 @@
 #include <limits>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#include <utility>
 
+namespace scg {
 // Fermi surface from a tight-binding dispersion.
 // Note, there are tacit assumptions:
 // 1. A single species of atom.
@@ -468,5 +470,6 @@ void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
   outOffsetX = m_originOffset[0];
   outOffsetY = m_originOffset[1];
 }
+} // namespace scg
 
 #endif // FERMI_SURFACE_TIGHT_BINDING_H_
