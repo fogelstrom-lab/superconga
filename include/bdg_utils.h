@@ -95,10 +95,10 @@ std::pair<T, T> computeCriticalTempResidual(
     const DispersionTightBinding<T> &inDispersion,
     const BasisFunction<T> &inBasisFunction, const T inPotential) {
   // The residual of the critical temperature equation.
-  T r = static_cast<T>(0);
+  double r = 0.0;
 
   // The derivative of the residual with respect to the critical temperature.
-  T drdTc = static_cast<T>(0);
+  double drdTc = 0.0;
 
   // Loop over all momenta in order to compute the mean over the Brillouin zone.
   for (const auto &momentum : inMomenta) {
@@ -116,7 +116,8 @@ std::pair<T, T> computeCriticalTempResidual(
     const T tanh = std::tanh(arg);
 
     // Add the residual for this particual momentum.
-    r += tanh * basisFunctionSquared / absDispersion;
+    const T rUpdate = tanh * basisFunctionSquared / absDispersion;
+    r += static_cast<double>(rUpdate);
 
     // The derivative of tanh(arg(Tc)) with respect to Tc.
     const T tanhDerivative =
@@ -124,17 +125,18 @@ std::pair<T, T> computeCriticalTempResidual(
 
     // Add the derivative of the residual with respect to the critical
     // temperature for this particular momentum.
-    drdTc += tanhDerivative * basisFunctionSquared / absDispersion;
+    const T drdTcUpdate = tanhDerivative * basisFunctionSquared / absDispersion;
+    drdTc += static_cast<double>(drdTcUpdate);
   }
 
   // Divide by the number of momenta to get the means.
-  r /= static_cast<T>(inMomenta.size());
-  drdTc /= static_cast<T>(inMomenta.size());
+  r /= static_cast<double>(inMomenta.size());
+  drdTc /= static_cast<double>(inMomenta.size());
 
   // Subtract the potential term.
-  r -= static_cast<T>(2.0) / inPotential;
+  r -= 2.0 / static_cast<double>(inPotential);
 
-  return {r, drdTc};
+  return {static_cast<T>(r), static_cast<T>(drdTc)};
 }
 } // namespace internal
 
@@ -151,13 +153,13 @@ std::pair<T, T> computeCriticalTempResidual(
 ///
 /// \return - The critical temperature.
 template <typename T>
-T computeCriticalTemperature(
+std::pair<bool, T> computeCriticalTemperature(
     const DispersionTightBinding<T> &inDispersion, const T inPotential,
     const BasisFunctionSymmetry &inSymmetry,
     const int inNumMomentaPerAxis = 100,
-    const T inConvergenceCriterion = static_cast<T>(10.0) *
+    const T inConvergenceCriterion = static_cast<T>(100.0) *
                                      std::numeric_limits<T>::epsilon(),
-    const int inMaxIterations = static_cast<int>(1e3)) {
+    const int inMaxIterations = static_cast<int>(1e4)) {
 
   // The momenta along on axis of the first Brillouin zone.
   const T minVal = -static_cast<T>(M_PI);
@@ -181,7 +183,7 @@ T computeCriticalTemperature(
   // In order to enforce that Tc >= 0 we parameterize Tc as
   // Tc = softplus(x) = log(1 + e^x)
   // and solve for x, which is in the range (-\infty, +\infty).
-  T x = static_cast<T>(0);
+  T x = static_cast<T>(0.0);
 
   bool isConverged = false;
   for (int iterationIdx = 0; iterationIdx < inMaxIterations; ++iterationIdx) {
@@ -232,7 +234,8 @@ T computeCriticalTemperature(
   }
 
   // Form the critical temperature.
-  return internal::softplus(x);
+  const T Tc = internal::softplus(x);
+  return {isConverged, Tc};
 }
 } // namespace bdg
 

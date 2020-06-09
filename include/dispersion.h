@@ -15,6 +15,7 @@
 
 #include "defines.h"
 #include <cmath>
+#include <iostream>
 
 /// \brief Dispersion base class.
 template <typename T> class Dispersion {

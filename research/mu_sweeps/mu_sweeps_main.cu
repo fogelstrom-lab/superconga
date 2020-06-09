@@ -30,6 +30,8 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
+#include "bdg_utils.h"
+#include "dispersion.h"
 #include "run_utils.h" // Commonly used functions in run files
 
 #include "mu_sweeps_utils.h" // Common utils for this project
@@ -38,7 +40,9 @@
 #include <cuda.h>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <nlohmann/json.hpp>
+#include <utility>
 
 //*******************************************************
 // TYPEDEFS
@@ -65,6 +69,14 @@ Context<T> *context = new Context<T>();
 Visualization<T> *gui;
 // Used to construct data file path
 char dataPath[512];
+
+// Fermi surface parameters.
+const std::map<std::string, T> FS1 = {{"hoppingNNN", static_cast<T>(-0.25)},
+                                      {"hoppingNNNN", static_cast<T>(0.0)},
+                                      {"potential", static_cast<T>(1.4)}};
+const std::map<std::string, T> FS2 = {{"hoppingNNN", static_cast<T>(-0.495)},
+                                      {"hoppingNNNN", static_cast<T>(0.156)},
+                                      {"potential", static_cast<T>(1.279)}};
 } // namespace
 
 //*******************************************************
@@ -97,12 +109,12 @@ int main(int argc, char *argv[]) {
       (grainCornerLength * static_cast<T>(std::sqrt(2.0)))) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE too large:" << grainCornerLength
               << std::endl;
-    return 0;
+    return 1;
   }
   if (grainCornerLength < static_cast<T>(0.0)) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE negative: " << grainCornerLength
               << std::endl;
-    return 0;
+    return 1;
   }
 
   Parameters<T> *parameters = new Parameters<T>(context);
@@ -147,10 +159,12 @@ int main(int argc, char *argv[]) {
   // Create geometry group, add polygon and remove corners
   GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
   const int numVertices = 5;
-  const T outerEdgeCoordinate = static_cast<T>(1.0);
+  // The coordinate system is in the range:
+  // [-qcs::MAXIMUM_COORDINATE,qcs::MAXIMUM_COORDINATE].
+  const T outerEdgeCoordinate = static_cast<T>(qcs::MAXIMUM_COORDINATE);
   const T diagonalCornerCoordinate =
-      static_cast<T>(1.0) -
-      static_cast<T>(2.0) * grainCornerLength / grainSideLength;
+      outerEdgeCoordinate - static_cast<T>(2.0) * outerEdgeCoordinate *
+                                grainCornerLength / grainSideLength;
 
   // DIAGONAL DOES NOT GO THROUGH THE CENTER
   // Vertex coords: start w. top-right corner (counter-clockwise order)
@@ -189,44 +203,94 @@ int main(int argc, char *argv[]) {
   riccatiSolver->add(new BoundaryConditionSpecular<T>);
 
   //***************************************************
+  // SET DISPERSION
+  //***************************************************
+  const bool isFS1 = simParams["fermi_surface_label"].get<int>() == 1;
+  const auto fermiSurfaceParams = isFS1 ? FS1 : FS2;
+  const DispersionTightBinding<T> dispersion = {
+      fermiSurfaceParams.at("hoppingNNN"), fermiSurfaceParams.at("hoppingNNNN"),
+      simParams["chemical_potential"].get<T>()};
+
+  //***************************************************
+  // SET FERMI SURFACE
+  //***************************************************
+  FermiSurface<T> *fermiSurface = new FermiSurfaceTightBinding<T>(dispersion);
+  context->set(fermiSurface);
+
+  //***************************************************
   // SET UP ORDER PARAMETER
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e. d+is)
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
 
-  // Add a d-wave component to the total order-parameter
-  OrderParameterComponent<T> *orderParameterComponentD =
-      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
-                                     parameters,
-                                     simParams["dwave_tc"].get<T>());
-  // TODO(patric): add extended s-wave to order parameter components
-  OrderParameterComponent<T> *orderParameterComponentS =
-      new OrderParameterComponent<T>(BasisFunctionSymmetry::SWAVE_EXT,
-                                     parameters,
-                                     simParams["swave_tc"].get<T>());
-  // Period of phase crystal, converted to coordinate units. In coherence
-  // lengths, it is typically 2*pi coherence lengths in QC simulations (see the
-  // Nat. Comm. and PRR papers).
-  const T startPhasePeriod = static_cast<T>(4.0 * M_PI) / grainSideLength;
-  // Decay length of phase crystal, converted to coordinate units.
-  const T startPhaseDecay = static_cast<T>(1.0) / grainSideLength;
+  // Compute the critical temperatures.
+  // D-wave.
+  const std::pair<bool, T> dWaveTmp = bdg::computeCriticalTemperature(
+      dispersion, fermiSurfaceParams.at("potential"),
+      BasisFunctionSymmetry::DWAVE_X2_Y2);
+  const bool dWaveSuccess = std::get<0>(dWaveTmp);
+  const T dWaveTcRaw = std::get<1>(dWaveTmp);
+  std::cout << "Tc: d = " << dWaveTcRaw << std::endl;
 
-  // Run with or without vortices: Useful when comparing free energy to find T^*
-  if (simParams["meta_stable"].get<bool>()) {
-    Initial<T>::bulk(orderParameterComponentD);
-    Initial<T>::bulk(orderParameterComponentS);
-  } else {
-    Initial<T>::edgePhaseCrystal(orderParameterComponentD, startPhasePeriod,
-                                 startPhaseDecay, pbMidPointX, pbMidPointY,
-                                 pbEdgeRotation);
-    // Todo(patric): add better start guess that captures translational
-    // invariant superflow
-    Initial<T>::bulk(orderParameterComponentS);
+  // S-wave.
+  const std::pair<bool, T> sWaveTmp = bdg::computeCriticalTemperature(
+      dispersion, fermiSurfaceParams.at("potential"),
+      BasisFunctionSymmetry::SWAVE_EXT);
+  const bool sWaveSuccess = std::get<0>(sWaveTmp);
+  const T sWaveTcRaw = std::get<1>(sWaveTmp);
+  std::cout << "Tc: s = " << sWaveTcRaw << std::endl;
+
+  const T dWaveTc = dWaveTcRaw / std::max(dWaveTcRaw, sWaveTcRaw);
+  const T sWaveTc = sWaveTcRaw / std::max(dWaveTcRaw, sWaveTcRaw);
+  std::cout << "Tc: d = " << dWaveTc << " : s = " << sWaveTc << std::endl;
+
+  if (!(dWaveSuccess && sWaveSuccess)) {
+    run_utils::cleanup(context, gui);
+    return 1;
   }
 
   // Add the initialized components to the total order parameter
-  orderParameter->add(orderParameterComponentD);
-  orderParameter->add(orderParameterComponentS);
+  const T TcLimit = static_cast<T>(1e-3);
+
+  if (dWaveTc > TcLimit) {
+    std::cout << "Adding d-wave component:" << std::endl;
+    std::cout << "Tc: raw = " << dWaveTcRaw << " : scaled = " << dWaveTc
+              << std::endl;
+    // Add a d-wave component to the total order-parameter
+    OrderParameterComponent<T> *orderParameterComponentD =
+        new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
+                                       parameters, dWaveTc);
+
+    // Period of phase crystal, converted to coordinate units. In coherence
+    // lengths, it is typically 2*pi coherence lengths in QC simulations (see
+    // the Nat. Comm. and PRR papers).
+    const T startPhasePeriod = static_cast<T>(4.0 * M_PI) / grainSideLength;
+    // Decay length of phase crystal, converted to coordinate units.
+    const T startPhaseDecay = static_cast<T>(1.0) / grainSideLength;
+
+    // Run with or without vortices: Useful when comparing free energy to find
+    // T^*
+    if (simParams["meta_stable"].get<bool>()) {
+      Initial<T>::bulk(orderParameterComponentD);
+    } else {
+      Initial<T>::edgePhaseCrystal(orderParameterComponentD, startPhasePeriod,
+                                   startPhaseDecay, pbMidPointX, pbMidPointY,
+                                   pbEdgeRotation);
+    }
+
+    orderParameter->add(orderParameterComponentD);
+  }
+
+  if (sWaveTc > TcLimit) {
+    std::cout << "Adding s-wave component:" << std::endl;
+    std::cout << "Tc: raw = " << sWaveTc << " : scaled = " << sWaveTc
+              << std::endl;
+    OrderParameterComponent<T> *orderParameterComponentS =
+        new OrderParameterComponent<T>(BasisFunctionSymmetry::SWAVE_EXT,
+                                       parameters, sWaveTc);
+    Initial<T>::bulk(orderParameterComponentS);
+    orderParameter->add(orderParameterComponentS);
+  }
 
   //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE
@@ -244,38 +308,6 @@ int main(int argc, char *argv[]) {
   //***************************************************
   OptimizerRollingBall<T> *optimizer = new OptimizerRollingBall<T>();
   computeOrderParameter->setOptimizer(optimizer);
-
-  //***************************************************
-  // CHOOSE FERMI SURFACE
-  //***************************************************
-
-  FermiSurface<T> *fermiSurface;
-  switch (simParams["fermi_surface_label"].get<int>()) {
-  case 0: {
-    fermiSurface = new FermiSurfaceCircle<T>();
-    break;
-  }
-  case 1: {
-    const T hoppingNNN = static_cast<T>(-0.25);
-    const T hoppingNNNN = static_cast<T>(0.0);
-    fermiSurface = new FermiSurfaceTightBinding<T>(
-        hoppingNNN, hoppingNNNN, simParams["chemical_potential"].get<T>());
-    break;
-  }
-  case 2: {
-    const T hoppingNNN = static_cast<T>(-0.495);
-    const T hoppingNNNN = static_cast<T>(0.156);
-    fermiSurface = new FermiSurfaceTightBinding<T>(
-        hoppingNNN, hoppingNNNN, simParams["chemical_potential"].get<T>());
-    break;
-  }
-  default:
-    std::cout << "ERROR! Illegal value for Fermi-Surface Label:"
-              << simParams["fermi_surface_label"].get<int>() << std::endl;
-    run_utils::cleanup(context, gui);
-    return 0;
-  }
-  context->set(fermiSurface);
 
   //***************************************************
   // INITIALIZE SIMULATION

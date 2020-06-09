@@ -407,10 +407,15 @@ template <typename T>
 Visualization<T> *createVisualization(const Context<T> *const inContext,
                                       const bool inPlotOrderParameter = true,
                                       const bool inPlotCurrentDensity = true) {
+
+  const int numOrderParameterComponents =
+      inContext->getOrderParameter()->getNumOrderParameterComponents();
+
   // Number of plots in visualization = numPlotsY * numPlotsX.
-  const int numPlotsX = (inPlotCurrentDensity ? 3 : 1);
-  const int numPlotsY = static_cast<int>(inPlotOrderParameter) +
-                        static_cast<int>(inPlotCurrentDensity);
+  const int numPlotsX = (inPlotCurrentDensity ? 3 : 2);
+  const int numPlotsY =
+      static_cast<int>(inPlotOrderParameter) * numOrderParameterComponents +
+      static_cast<int>(inPlotCurrentDensity);
 
   // Create visualization object.
   const int gridResolutionBase =
@@ -440,34 +445,37 @@ void display(Context<T> *inContext, Visualization<T> *inGUI,
   // Clear the plotting region
   inGUI->clearImage();
 
-  // Plot the order parameter.
-  if (inPlotOrderParameter) {
-    // Plot the magnitude of the order parameter.
-    inGUI->plotImage(inContext->getComputeOrderParameter()->getResult()->abs(),
-                     0, Type::real, 0, 0);
-
-    if (inPlotCurrentDensity) {
-      // Plot the phase of the order parameter.
-      inGUI->plotImage(
-          inContext->getComputeOrderParameter()->getResult()->complexPhase(), 0,
-          Type::real, 1, 0);
-    }
-  }
-
   // Plot the current density.
   if (inPlotCurrentDensity) {
     // Plot the x-component of the current density.
     inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 0,
-                     Type::real, 0, 1);
+                     Type::real, 0, 0);
 
     // Plot the y-component of the current density.
     inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 1,
-                     Type::real, 1, 1);
+                     Type::real, 1, 0);
 
     // Plot the magnitude of the current density.
     inGUI->plotImage(
         inContext->getComputeCurrent()->getResult()->fieldMagnitude(), 0,
-        Type::real, 2, 1);
+        Type::real, 2, 0);
+  }
+
+  // Plot the order parameter.
+  if (inPlotOrderParameter) {
+    const int numOrderParameterComponents =
+        inContext->getOrderParameter()->getNumOrderParameterComponents();
+    for (int i = 0; i < numOrderParameterComponents; ++i) {
+      // Plot the magnitude of the order parameter.
+      inGUI->plotImage(
+          inContext->getComputeOrderParameter()->getResult()->abs(), i,
+          Type::real, 0, i + 1);
+
+      // Plot the phase of the order parameter.
+      inGUI->plotImage(
+          inContext->getComputeOrderParameter()->getResult()->complexPhase(), i,
+          Type::real, 1, i + 1);
+    }
   }
 
   // Render the plots

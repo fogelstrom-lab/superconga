@@ -17,10 +17,11 @@
 // 2. A square lattice.
 template <typename T> class FermiSurfaceTightBinding : public FermiSurface<T> {
 public:
-  // Constructor.
+  // Constructors.
   FermiSurfaceTightBinding(const T inHoppingNNN = static_cast<T>(0.0),
                            const T inHoppingNNNN = static_cast<T>(0.0),
                            const T inChemicalPotential = static_cast<T>(1.0));
+  FermiSurfaceTightBinding(const DispersionTightBinding<T> &inDispersion);
 
   // Destructor.
   ~FermiSurfaceTightBinding();
@@ -308,6 +309,14 @@ FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
       m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
       m_avgFermiSpeed(0.0),
       m_dispersion(inHoppingNNN, inHoppingNNNN, inChemicalPotential) {}
+
+template <typename T>
+FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
+    const DispersionTightBinding<T> &inDispersion)
+    : FermiSurface<T>(), m_fermiMomentumX(0), m_fermiMomentumY(0),
+      m_fermiVelocityX(0), m_fermiVelocityY(0), m_systemAngles(0),
+      m_systemAnglesGPU(0), m_integrandFactor(0), m_avgFermiMomentum(0.0),
+      m_avgFermiSpeed(0.0), m_dispersion(inDispersion) {}
 
 template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
   std::cout << "~FermiSurfaceTightBinding<T>\n";
