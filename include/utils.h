@@ -19,6 +19,7 @@
 #define HOST_DEVICE
 #endif
 
+#include "defines.h"
 #include <cmath>
 #include <vector>
 
@@ -129,6 +130,49 @@ HOST_DEVICE void rotate(const T inAngle, T &inOutX, T &inOutY) {
   inOutY = y;
 }
 
+/// \brief Compute the dot product between two 2D vectors.
+///
+/// \param inVectorA - The first vector.
+/// \param inVectorB - The second vector.
+///
+/// \return - The dot product between the two vectors.
+template <typename T>
+T dot(const vector2d<T> &inVectorA, const vector2d<T> &inVectorB) {
+  return (inVectorA[0] * inVectorB[0] + inVectorA[1] * inVectorB[1]);
+}
+
+/// \brief Compute the L1 norm of a 2D vector.
+///
+/// \param inVector - The vector.
+///
+/// \return - The L1 norm.
+template <typename T> T normL1(const vector2d<T> &inVector) {
+  return std::abs(inVector[0]) + std::abs(inVector[1]);
+}
+
+/// \brief Compute the L2 norm of a 2D vector.
+///
+/// \param inVector - The vector.
+///
+/// \return - The L2 norm.
+template <typename T> T normL2(const vector2d<T> &inVector) {
+  return std::hypot(inVector[0], inVector[1]);
+}
+
+/// \brief Compute c*X+Y where c is a scalar, and X and Y are 2D vectors.
+///
+/// \param inFactor - The scalar factor.
+/// \param inVectorA - The first vector.
+/// \param inVectorB - The second vector.
+///
+/// \return - The result of c*X+Y.
+template <typename T>
+vector2d<T> multAdd(const T inFactor, const vector2d<T> &inVectorA,
+                    const vector2d<T> &inVectorB) {
+  return {inFactor * inVectorA[0] + inVectorB[0],
+          inFactor * inVectorA[1] + inVectorB[1]};
+}
+
 /// \brief Compute the sign of a value
 ///
 /// \param inValue - The value to compute the sign of
@@ -143,17 +187,21 @@ template <typename T> HOST_DEVICE int sign(const T inValue) {
 /// \brief Create a vector with equidistant values
 ///
 /// Works just like linspace in Python. It creates a vector with inNumValues
-/// values in the range [inMinVal, inMaxVal].
+/// values in the range [inMinVal, inMaxVal]. Or [inMinVal, inMaxVal) if not
+/// including the end point.
 ///
 /// \param inMinVal - The minimum value
 /// \param inMaxVal - The maximum value
 /// \param inNumValues - The number of values
+/// \param InIncludeEndPoint - If true inMaxVal is included
 ///
 /// \return - The resulting vector
 template <typename T>
 std::vector<T> linspace(const T inMinVal, const T inMaxVal,
-                        const int inNumValues) {
-  const T step = (inMaxVal - inMinVal) / static_cast<T>(inNumValues - 1);
+                        const int inNumValues,
+                        const bool inIncludeEndPoint = true) {
+  const int N = inIncludeEndPoint ? inNumValues - 1 : inNumValues;
+  const T step = (inMaxVal - inMinVal) / static_cast<T>(N);
   std::vector<T> values;
   for (int i = 0; i < inNumValues; ++i) {
     const T value = inMinVal + static_cast<T>(i) * step;

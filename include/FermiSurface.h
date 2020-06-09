@@ -12,6 +12,7 @@
 #ifndef FERMI_SURFACE_H_
 #define FERMI_SURFACE_H_
 
+#include "defines.h"
 #include "utils.h"
 #include <cmath>
 #include <iostream>
@@ -44,10 +45,12 @@ public:
   int getWrappedAngleIndex(const int inAngleIdx) const;
 
   // Get the Fermi momentum.
+  virtual vector2d<T> getFermiMomentum(const int inAngleIdx) const = 0;
   virtual void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
                                 T &outMomentumY) const = 0;
 
   // Get the Fermi velocity.
+  virtual vector2d<T> getFermiVelocity(const int inAngleIdx) const = 0;
   virtual void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
                                 T &outVelocityY) const = 0;
 
@@ -62,6 +65,7 @@ public:
   virtual const T *getSystemAnglePointer() const = 0;
 
   // Get momentum offset.
+  virtual vector2d<T> getMomentumOffset() const = 0;
   virtual void getMomentumOffset(T &outOffsetX, T &outOffsetY) const = 0;
 
   // This function is called from within a CUDA kernel. Thus it has to be a
