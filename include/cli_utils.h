@@ -205,10 +205,12 @@ void makeDefaultApp(CLI::App &outApp, nlohmann::json &outParametersJSON,
 
   // Specify the JSON-config formatter to use when parsing the JSON-parameter
   // files with CLI11.
-
-  // Specify the JSON-config formatter to use when parsing the JSON-parameter
-  // files with CLI11.
   outApp.config_formatter(std::make_shared<internal::ConfigJSON>());
+
+  // Format the help output.
+  // Set the size of the left column (i.e. the options).
+  const int helpOptionsColumnWidth = 45;
+  outApp.get_formatter()->column_width(helpOptionsColumnWidth);
 
   // Set default values for user-modifieable parameters.
   outParametersJSON["data_path"] = std::string("data");
