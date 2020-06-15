@@ -13,33 +13,34 @@ Here goes the list of external libraries and packages required to compile and ru
 - CMake
 
 ## How to compile
-Set up the build with the following commands (starting from the root directory):
+Set up the build with the `setup.sh` script (starting from the project root directory):
 ```
-mkdir build && cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
+./setup.sh
 ```
-where the `DCMAKE_BUILD_TYPE` argument is either `Debug` or `Release`. Then compile by simply writing
+Then compile by simply writing
 ```
 ninja
 ```
-in the `build/` folder.
+in e.g. the `build/release/` folder.
 
-### Build with custom CUDA architecture
+### Build manually with custom CUDA architecture
 By default, CMake tries to autodetect the appropriate CUDA architecture. 
-One can override this by using the command-line option `-DCUDA_ARCH`, i.e.
+One can override this by using the command-line option `-DCUDA_ARCH`, 
+i.e. go to `build/release/` folder and write
 ```
-cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ..
+cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ../..
 ```
-where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.).
+where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.),
+and `build_type` is either `Release` or `Debug`.
 
 ## How to run the examples
 
 The folder `examples/` contains a collection of parameter files, one per example, 
 demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework.
 
-To run an example, navigate to to the `build/` folder, and execute the following command
+To run an example, navigate to to the `build/release/` folder, and execute the following command
 ```
-./bin/main -f ../examples/XXX.json
+./bin/main -f ../../examples/XXX.json
 ```
 where `XXX.json` should be substituted with any JSON file in the `examples/` folder.
 
