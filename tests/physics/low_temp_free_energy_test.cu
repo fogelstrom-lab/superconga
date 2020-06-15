@@ -174,8 +174,15 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // from the geometry group
   GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
 
+  // Maximum side-length of a non-rotated square, i.e. with corners in the
+  // maximum coordinates.
+  const double maximumSideLength = 2.0 * qcs::MAXIMUM_COORDINATE;
+  const T maximumSideLengthSquare =
+      static_cast<T>(std::sqrt(2.0) * maximumSideLength);
   // Add a square to the simulation geometry.
-  geometry->add(new PolygonGeometry<T>(NUM_VERTICES_SQUARE), Type::add);
+  geometry->add(
+      new PolygonGeometry<T>(NUM_VERTICES_SQUARE, maximumSideLengthSquare),
+      Type::add);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   RiccatiSolver<T> *riccatiSolver =

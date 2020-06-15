@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
   // Add polygon to simulation space, scale to fit in simulation domain
   // (grainScale 1.0 is 100% of simulation space).
-  const T grainScale = 1.0;
+  const T grainScale = static_cast<T>(1.0);
 
   // Number of vertices in a square.
   const int numVerticesSquare = 4;
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
   // Remove a portion to create a solenoid.
   if (simParams["solenoid"].get<bool>()) {
     // Relative size of grain hole for solenoid.
-    const T holeScale = 0.2;
+    const T holeScale = static_cast<T>(0.2);
 
     // Circular or square hole.
     if (simParams["disc_geometry"].get<bool>()) {
