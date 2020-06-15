@@ -85,7 +85,7 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
 
       switch (grainShape) {
       case GrainShape::disc: {
-        const T discGrainScale = 0.8;
+        const T discGrainScale = static_cast<T>(0.8);
         geometry->add(new DiscGeometry<T>(discGrainScale), Type::add);
         break;
       }
@@ -96,7 +96,7 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
       }
       case GrainShape::octagon: {
         const int numVerticesOctagon = 8;
-        const T octagonGrainScale = 0.75;
+        const T octagonGrainScale = static_cast<T>(0.75);
         geometry->add(
             new PolygonGeometry<T>(numVerticesOctagon, octagonGrainScale),
             Type::add);
@@ -105,14 +105,24 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
       case GrainShape::irregular: {
         // Add irregular pentagon
         const int numVertices = 5;
-        const T xVertices[numVertices] = {0.9, 0.0, -1.0, -0.8, 0.5};
-        const T yVertices[numVertices] = {0.8, 1.0, 0.0, -0.8, -0.6};
+        const T xVertices[numVertices] = {
+            static_cast<T>(0.9 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(-1.0 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(0.5 * qcs::MAXIMUM_COORDINATE)};
+        const T yVertices[numVertices] = {
+            static_cast<T>(0.8 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(1.0 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * qcs::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.6 * qcs::MAXIMUM_COORDINATE)};
         geometry->add(new PolygonGeometry<T>(numVertices, xVertices, yVertices),
                       Type::add);
         // Remove small disc
-        const T discGrainScale = 0.2;
-        const T discCenterX = 0.2;
-        const T discCenterY = 0.1;
+        const T discGrainScale = static_cast<T>(0.2);
+        const T discCenterX = static_cast<T>(0.2 * qcs::MAXIMUM_COORDINATE);
+        const T discCenterY = static_cast<T>(0.1 * qcs::MAXIMUM_COORDINATE);
         geometry->add(
             new DiscGeometry<T>(discGrainScale, discCenterX, discCenterY),
             Type::remove);

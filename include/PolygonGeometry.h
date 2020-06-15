@@ -224,20 +224,32 @@ PolygonGeometry<T>::PolygonGeometry(const PolygonGeometry<T> &other)
     m_polygon = new Polygon<T>(*other.m_polygon);
 }
 
+// Create an n-gon, where the vertices are put equidistantly on a circle. Note
+// that the diameter is the diameter of this circle, not the side-length of the
+// n-gon. A square (4-gon) will hence have a side-length that is a factor
+// sqrt(2) smaller than inDiameter.
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
                                     const T inAngle, const T inCenterX,
                                     const T inCenterY)
     : GeometryComponent<T>() {
-  // Apply margin to radius
+  // Scale to internal coordinate system and apply the margin (grain size frac).
+  const T coordinateScaleFactor = static_cast<T>(
+      qcs::GRAIN_SIZE_FRACTION * qcs::INTERNAL_MAXIMUM_COORDINATE_POLY /
+      qcs::MAXIMUM_COORDINATE);
+  // Calculate radius from diameter and apply margin/scaling.
   const T polygonRadiusPadded =
-      inDiameter * static_cast<T>(0.5 * qcs::GRAIN_SIZE_FRACTION);
+      static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
+  // Apply scaling and margin to center coordinates.
+  const T centerPaddedX = inCenterX * coordinateScaleFactor;
+  const T centerPaddedY = inCenterY * coordinateScaleFactor;
   m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
-                             inCenterX, inCenterY);
+                             centerPaddedX, centerPaddedY);
 }
 
+// Create an n-gon by explicitly specifying the vertex coordinates.
 // Todo(patric): Check that inVertices actually has the same length as
-// inNumVertices
+// inNumVertices, or better yet, send in a vector.
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
                                     const T *const inVerticesX,
@@ -253,32 +265,28 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
 
   T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
   T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
-  const T coordinateScaleFactor = static_cast<T>(0.5 / std::sqrt(2.0));
 
-  // Loop over vertex coordinates
+  // Loop over vertex coordinates and check that all lie within allowed domain.
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
     // Check that vertex coordinates are reasonable
-    if ((std::abs(inVerticesX[vertexIdx]) > static_cast<T>(1.0)) ||
-        (std::abs(inVerticesY[vertexIdx]) > static_cast<T>(1.0))) {
+    if ((std::abs(inVerticesX[vertexIdx]) >
+         static_cast<T>(qcs::MAXIMUM_COORDINATE)) ||
+        (std::abs(inVerticesY[vertexIdx]) >
+         static_cast<T>(qcs::MAXIMUM_COORDINATE))) {
       // Todo(patric): Raise exception
-      std::cout
-          << "ERROR! PolygonGeometry: Vertex coordinates must be within [-1,1]."
-          << std::endl;
+      std::cout << "ERROR! PolygonGeometry: Vertex coordinates must be within "
+                   "[-"
+                << qcs::MAXIMUM_COORDINATE << ", " << qcs::MAXIMUM_COORDINATE
+                << "]." << std::endl;
     }
 
-    // Scale vertex coordinates: the corner coordinates of the simulation domain
-    // are (in the internal scaling of the program) at +/- 0.5/sqrt(2),
-    // hence multiplying by this factor. The constant GRAIN_SIZE_FRACTION
-    // applies a margin to the edges of the superconducting grain (to allow
-    // padding of the order parameter component).
-    // TODO(niclas): GRAIN_SIZE_FRACTION can be included in
-    // coordinateScaleFactor.
-    scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] *
-                                 coordinateScaleFactor *
-                                 static_cast<T>(qcs::GRAIN_SIZE_FRACTION);
-    scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] *
-                                 coordinateScaleFactor *
-                                 static_cast<T>(qcs::GRAIN_SIZE_FRACTION);
+    // Scale to internal coordinate system and apply the margin (through grain
+    // size fraction).
+    const T coordinateScaleFactor = static_cast<T>(
+        qcs::GRAIN_SIZE_FRACTION * qcs::INTERNAL_MAXIMUM_COORDINATE_POLY /
+        qcs::MAXIMUM_COORDINATE);
+    scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] * coordinateScaleFactor;
+    scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] * coordinateScaleFactor;
   }
 
   m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);

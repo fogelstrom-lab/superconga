@@ -32,6 +32,20 @@ const double GRAIN_SIZE_MARGIN = 0.04;
 // setGridElementSize(), and in the classes PolygonGeometry and DiscGeometry.
 const double GRAIN_SIZE_FRACTION = 1.0 - GRAIN_SIZE_MARGIN;
 
+// Size of coordinate system where grain is allowed to be, as seen by the user:
+// [-MAXIMUM_COORDINATE, +MAXIMUM_COORDINATE], used when specifying size
+// and coordinates of of discs/polygons.
+// Maximum grain "radius": MAXIMUM_COORDINATE
+// Maximum grain "diameter": 2*MAXIMUM_COORDINATE
+const double MAXIMUM_COORDINATE = 0.5;
+
+// The maximum coordinate expected by the internal Disc and Polygon classes.
+// They are different, because polygons (n-gons) are defined via the square that
+// bounds the circle they lie on, while the discs are defined straight up.
+// DO NOT MODIFY!
+const double INTERNAL_MAXIMUM_COORDINATE_POLY = 0.5 / std::sqrt(2.0);
+const double INTERNAL_MAXIMUM_COORDINATE_DISC = 0.5;
+
 // The Euler-Mascheroni constant, gamma. Value taken from Wikipedia:
 // https://en.wikipedia.org/wiki/Euler%E2%80%93Mascheroni_constant
 const double EULER_MASCHERONI = 0.57721566490153286060651209008240243;

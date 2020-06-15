@@ -195,9 +195,12 @@ int main(int argc, char *argv[]) {
   // Create geometry group, add polygon and remove corners
   GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
   const int numVertices = 5;
-  const T outerEdgeCoordinate = static_cast<T>(1.0);
+  // The coordinate system is in the range:
+  // [-qcs::MAXIMUM_COORDINATE,qcs::MAXIMUM_COORDINATE].
+  const T outerEdgeCoordinate = static_cast<T>(qcs::MAXIMUM_COORDINATE);
   const T diagonalCornerCoordinate =
-      static_cast<T>(1.0) - static_cast<T>(2.0) * simParams::GRAIN_CORNER_SIZE /
+      outerEdgeCoordinate - static_cast<T>(2.0) * outerEdgeCoordinate *
+                                simParams::GRAIN_CORNER_SIZE /
                                 simParams::GRAIN_SIDE_LENGTH;
 
   // DIAGONAL DOES NOT GO THROUGH THE CENTER
