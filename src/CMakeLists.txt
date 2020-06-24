@@ -40,19 +40,6 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-# Declare the CLI11 lib (command line parser).
-FetchContent_Declare(
-  cli11
-  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-  GIT_TAG v1.9.0)
-
-# Fetch the CLI11 lib.
-FetchContent_GetProperties(cli11)
-if(NOT cli11_POPULATED)
-  FetchContent_Populate(cli11)
-  add_subdirectory(${cli11_SOURCE_DIR} ${cli11_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
 # Define the main set of source files
 set(SRC main.cu)
 
@@ -67,7 +54,7 @@ target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 # Build src binaries into build/bin/
 set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                      "${PROJECT_BINARY_DIR}/bin")
+                                         "${PROJECT_BINARY_DIR}/bin")
 
 # External libraries
 target_link_libraries(
@@ -80,8 +67,7 @@ target_link_libraries(
           blas
           boost_system
           boost_filesystem
-          nlohmann_json::nlohmann_json
-          CLI11::CLI11)
+          nlohmann_json::nlohmann_json)
 
 # Use C++14 since it is the latest standard CUDA supports
 message(STATUS "Enable C++ standard: C++14")

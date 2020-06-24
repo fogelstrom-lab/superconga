@@ -30,12 +30,10 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
-#include "cli_utils.h" // Helper functions to parse command-line, and json-files.
 #include "run_utils.h" // Commonly used functions in run files
 
 #include "mu_sweeps_utils.h" // Common utils for this project
 
-#include <CLI/CLI.hpp>
 #include <cstdlib>
 #include <cuda.h>
 #include <iomanip>
@@ -73,82 +71,16 @@ char dataPath[512];
 // MAIN
 //*******************************************************
 int main(int argc, char *argv[]) {
-  // CLI11 application that parses all arguments.
-  CLI::App app;
-
-  // JSON parameters which will contain the parsed arguments.
-  nlohmann::json simParams;
-
-  // Only applicable from the command line. They will be parsed by the CLI11
-  // app.
-  bool printVersion = false;
-  bool dumpConfig = false;
-
-  // Setup the application and default parameter values.
-  cli_utils::makeDefaultApp(app, simParams, printVersion, dumpConfig);
-
-  // Retire default options that are not used here (or in the same way)
-  CLI::retire_option(app, "--grain-side-length");
-
-  // Add additional parameters not present in default
-  simParams["chemical_potential"] = static_cast<T>(0.0);
-  // Relative Tc: put dominant component to 1.0, and sub-dominant between 0.0
-  // and 1.0
-  simParams["swave_tc"] = static_cast<T>(0.0);
-  simParams["dwave_tc"] = static_cast<T>(1.0);
-  // Label which fermi surface it is:
-  // 0 - Circular
-  // 1 - Tight Binding: NNN= -0.25, NNNN=0, mu=0
-  // 2 - Tight Binding: NNN= -0.495, NNNN=0.156, mu=-1.267
-  const int fermiSurfaceLabelMin = 0;
-  const int fermiSurfaceLabelMax = 2;
-  simParams["fermi_surface_label"] = 0;
-  simParams["meta_stable"] = false;
-  simParams["grain_corner_length"] = 4.0;
-  simParams["grain_diagonal_length"] = 60.0;
-
-  // Add extra options
-  app.add_option<double>("--chemical-potential",
-                         simParams["chemical_potential"]
-                             .get_ref<nlohmann::json::number_float_t &>(),
-                         "The chemical potential.")
-      ->check(CLI::Number)
-      ->required();
-  app.add_option<int64_t>("--fermi-surface-label",
-                          simParams["fermi_surface_label"]
-                              .get_ref<nlohmann::json::number_integer_t &>(),
-                          "Integer labeling the fermisurface.")
-      ->check(CLI::Range(fermiSurfaceLabelMin, fermiSurfaceLabelMax))
-      ->required();
-  // Size of pairbreaking edge in coherence lengths hbar*v_F/(2*pi*k_BT_c)
-  app.add_option<double>(
-         "--grain-diagonal-length",
-         simParams["grain_diagonal_length"]
-             .get_ref<nlohmann::json::number_float_t &>(),
-         "Side length of the diagonal (pair-breaking) interface, in units of "
-         "coherence lengths (hbar*v_F)/(2*pi*k_B*T_c).")
-      ->check(CLI::PositiveNumber)
-      ->required();
-  // Size (in coherence lengths) that defines the grain geometry: 0 gives a
-  // triangle, >0 gives an irregular pentagon
-  app.add_option<double>(
-         "--grain-corner-length",
-         simParams["grain_corner_length"]
-             .get_ref<nlohmann::json::number_float_t &>(),
-         "Size of the chopped off corner next to the diagonal (pair-breaking) "
-         "interface, in units of coherence lengths (hbar*v_F)/(2*pi*k_B*T_c).")
-      ->check(CLI::PositiveNumber)
-      ->required();
-  app.add_flag("--meta-stable",
-               simParams["meta_stable"].get_ref<nlohmann::json::boolean_t &>(),
-               "Run with meta stable configuration (real order parameters).");
-
-  // Parse the arguments.
-  try {
-    app.parse(argc, argv);
-  } catch (const CLI::ParseError &e) {
-    return app.exit(e);
+  if (argc < 2) {
+    std::cerr << "Please provide config file.\n";
+    exit(1);
   }
+  const std::string filename = argv[1];
+
+  // Parse JSON parameter file.
+  nlohmann::json simParams;
+  std::ifstream ifile(filename);
+  ifile >> simParams;
 
   //***************************************************
   // APPLY PARAMETERS

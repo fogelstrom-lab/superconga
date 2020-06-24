@@ -40,23 +40,11 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-# Declare the CLI11 lib (command line parser).
-FetchContent_Declare(
-  cli11
-  GIT_REPOSITORY https://github.com/CLIUtils/CLI11
-  GIT_TAG v1.9.0)
-
-# Fetch the CLI11 lib.
-FetchContent_GetProperties(cli11)
-if(NOT cli11_POPULATED)
-  FetchContent_Populate(cli11)
-  add_subdirectory(${cli11_SOURCE_DIR} ${cli11_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
 # Define the main set of source files
-set(SRC bdg_comparison/bdg_comparison_main.cu
-        bdg_comparison/analytic_zero_temp_expressions.cu
-        mu_sweeps/mu_sweeps_main.cu)
+set(SRC
+    bdg_comparison/bdg_comparison_main.cu
+    bdg_comparison/analytic_zero_temp_expressions.cu
+    mu_sweeps/mu_sweeps_main.cu)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
@@ -79,8 +67,7 @@ foreach(file ${SRC})
             blas
             boost_system
             boost_filesystem
-            nlohmann_json::nlohmann_json
-            CLI11::CLI11)
+            nlohmann_json::nlohmann_json)
 
   # Use C++14 since it is the lates standard CUDA supports
   message(STATUS "Enable C++ standard: C++14")

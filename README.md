@@ -38,11 +38,26 @@ and `build_type` is either `Release` or `Debug`.
 The folder `examples/` contains a collection of parameter files, one per example, 
 demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework.
 
-To run an example, navigate to to the `build/release/` folder, and execute the following command
+The examples can be run in two different ways; either call the C++ executable directly, or use the Python wrapper (recommended).
+Simply execute the following command in the project root folder
 ```
-./bin/main -f ../../examples/XXX.json
+python suprcongpu.py -f examples/XXX.json
 ```
-where `XXX.json` should be substituted with any JSON file in the `examples/` folder.
+where `XXX.json` should be substituted with any JSON file in the `examples/` folder. 
+All parameters in the JSON file can be overridden from the terminal, e.g. 
+```
+python suprcongpu.py -f examples/XXX.json -T 0.5
+```
+will set the temperature to `T=0.5T_c` regardless of the value in the JSON file. If you try to provide invalid parameters, 
+the Python wrapper will spot this, print what the error is, and exit.
+
+In order to call the C++ executable, navigate to the `build/release/` folder, and execute the following command
+```
+./bin/main ../../examples/XXX.json
+```
+Note that there is no support for overriding parameters from the command line when using the C++ executable directly, 
+nor is any validation of the parameters made.
+
 
 ## Clang-Format
 We enforce consistent LLVM style with clang-format version 9. On Ubuntu install with
