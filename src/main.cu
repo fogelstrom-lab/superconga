@@ -154,21 +154,13 @@ int main(int argc, char *argv[]) {
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation =
-      static_cast<T>(M_PI) * simParams["crystal_axes_rotation"].get<T>();
+      static_cast<T>(2.0 * M_PI) * simParams["crystal_axes_rotation"].get<T>();
   orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
   // Initialize order parameter with a guess.
-  if (simParams["solenoid"].get<bool>()) {
-    // Initialize order-parameter component with a phase winding corresponding
-    // to the number of external flux quanta. If there is a mismatch, the system
-    // might converge to a meta-stable state.
-    Initial<T>::phaseWinding(
-        orderParameterComponent,
-        static_cast<int>(simParams["external_flux_quanta"].get<T>()));
-  } else {
-    // Initialize order-parameter component to the (real) bulk value.
-    Initial<T>::bulk(orderParameterComponent);
-  }
+  Initial<T>::perturbedPhaseWinding(orderParameterComponent,
+                                    simParams["initial_phase_winding"].get<T>(),
+                                    simParams["initial_random_phase"].get<T>());
 
   // Add the initialized component to the total order parameter. This
   orderParameter->add(orderParameterComponent);
