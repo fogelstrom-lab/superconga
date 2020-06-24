@@ -36,11 +36,10 @@ public:
   // ...a given phase winding (one flux vortex has a phase winding of 2pi)
   static void
   phaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
-               const T inNumWinding,
-               const T inCutoffRadius = static_cast<T>(0.0),
-               const T inPhaseShift = static_cast<T>(0.0),
+               const T inNumWinding, const T inPhaseShift = static_cast<T>(0.0),
                const T inCenterX = static_cast<T>(0.0),
-               const T inCenterY = static_cast<T>(0.0));
+               const T inCenterY = static_cast<T>(0.0),
+               const T inCutoffRadius = static_cast<T>(0.0));
 
   // ...an edge phase crystal.
   static void
@@ -59,10 +58,10 @@ public:
   perturbedPhaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
                         const T numWinding,
                         const T inRandomPhaseMix = static_cast<T>(0.5),
-                        const T inCutoffRadius = static_cast<T>(0.0),
                         const T inPhaseShift = static_cast<T>(0.0),
                         const T inCenterX = static_cast<T>(0.0),
-                        const T inCenterY = static_cast<T>(0.0));
+                        const T inCenterY = static_cast<T>(0.0),
+                        const T inCutoffRadius = static_cast<T>(0.0));
 
   // ...the grid in the input file argument
   static int read(OrderParameterComponent<T> *inOutDeltaComponent,
@@ -190,8 +189,8 @@ void Initial<T>::grid(OrderParameterComponent<T> *inOutDeltaComponent,
 template <typename T>
 void Initial<T>::phaseWinding(
     OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
-    const T inCutoffRadius, const T inPhaseShift, const T inCenterX,
-    const T inCenterY) {
+    const T inPhaseShift, const T inCenterX, const T inCenterY,
+    const T inCutoffRadius) {
   GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   const int numLatticePoints = deltaGrid->dimX();
@@ -293,8 +292,8 @@ void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
 template <typename T>
 void Initial<T>::perturbedPhaseWinding(
     OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
-    const T inRandomPhaseMix, const T inCutoffRadius, const T inPhaseShift,
-    const T inCenterX, const T inCenterY) {
+    const T inRandomPhaseMix, const T inPhaseShift, const T inCenterX,
+    const T inCenterY, const T inCutoffRadius) {
   const Parameters<T> *const params = inOutDeltaComponent->getParameters();
   GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
@@ -307,24 +306,27 @@ void Initial<T>::perturbedPhaseWinding(
   GridCPU *delta = 0;
   Grid<T>::CPU::initializeGrid(delta, deltaGrid);
 
+  const T step = static_cast<T>(1) / static_cast<T>(N - 1);
+
+  const T offsetX = inCenterX + static_cast<T>(constants::MAXIMUM_COORDINATE);
+  const T offsetY = inCenterY + static_cast<T>(constants::MAXIMUM_COORDINATE);
+
   for (int c = 0; c < delta->numFields(); ++c) {
     T *const data_re = delta->getDataPointer(c, Type::real);
     T *const data_im = delta->getDataPointer(c, Type::imag);
 
     for (int j = 0; j < N; ++j) {
+      const T y = static_cast<T>(j) * step - offsetY;
       for (int i = 0; i < N; ++i) {
-        const int idx = j * N + i;
-
         // Normalize coordinates to -0.5 <= x,y <= +0.5, and offset with center
-        const T x = ((T)i / (T)(N - 1) - (T)0.5) - inCenterX;
-        const T y = ((T)j / (T)(N - 1) - (T)0.5) - inCenterY;
+        const T x = static_cast<T>(i) * step - offsetX;
+
         const T radius = std::sqrt(x * x + y * y);
 
         // Check if point is within cutoff, set to zero in that case. Otherwise,
         // compute angle and add phase shift.
         const bool isPointWithinCutoff = (radius < inCutoffRadius);
-        const T phase = isPointWithinCutoff ? static_cast<T>(0.0)
-                                            : atan2(y, x) + inPhaseShift;
+        const T angle = isPointWithinCutoff ? static_cast<T>(0.0) : atan2(y, x);
 
         // Check if point is at the center. If so, set to zero, otherwise use
         // the bulk value.
@@ -333,11 +335,16 @@ void Initial<T>::perturbedPhaseWinding(
         const T magnitude = isPointAtCenter ? static_cast<T>(0.0) : deltaBulk;
 
         // A random phase.
-        const T rand_phase =
-            ((T)rand() / (T)RAND_MAX - 0.5) * (T)2.0 * M_PI * inRandomPhaseMix;
+        const T randomPhase = static_cast<T>(2.0 * M_PI) *
+                              static_cast<T>(rand()) / static_cast<T>(RAND_MAX);
 
-        data_re[idx] = magnitude * std::cos(phase * inNumWinding + rand_phase);
-        data_im[idx] = magnitude * std::sin(phase * inNumWinding + rand_phase);
+        // The total phase.
+        const T phase = angle * inNumWinding + randomPhase * inRandomPhaseMix +
+                        inPhaseShift;
+
+        const int idx = j * N + i;
+        data_re[idx] = magnitude * std::cos(phase);
+        data_im[idx] = magnitude * std::sin(phase);
       }
     }
   }

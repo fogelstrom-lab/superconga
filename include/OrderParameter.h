@@ -157,9 +157,10 @@ typename Grid<T>::GPU *OrderParameter<T>::getOrderParameterField() {
   // Add delta components together
   _orderParameterCompound->setZero();
 
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i)
+  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
     *_orderParameterCompound +=
         (*(getOrderParameterComponent(i)->getOrderParameterField()));
+  }
 
   return _orderParameterCompound;
 }

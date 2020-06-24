@@ -448,34 +448,40 @@ void display(Context<T> *inContext, Visualization<T> *inGUI,
 
   // Plot the current density.
   if (inPlotCurrentDensity) {
+    const int rowIdx = 0;
     // Plot the x-component of the current density.
     inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 0,
-                     Type::real, 0, 0);
+                     Type::real, 0, rowIdx);
 
     // Plot the y-component of the current density.
     inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 1,
-                     Type::real, 1, 0);
+                     Type::real, 1, rowIdx);
 
     // Plot the magnitude of the current density.
     inGUI->plotImage(
         inContext->getComputeCurrent()->getResult()->fieldMagnitude(), 0,
-        Type::real, 2, 0);
+        Type::real, 2, rowIdx);
   }
 
   // Plot the order parameter.
   if (inPlotOrderParameter) {
+    const int rowOffset = static_cast<int>(inPlotCurrentDensity);
     const int numOrderParameterComponents =
         inContext->getOrderParameter()->getNumOrderParameterComponents();
     for (int i = 0; i < numOrderParameterComponents; ++i) {
+      // Do it in the opposite order so the first OP component is plotted at the
+      // top.
+      const int rowIdx = rowOffset + numOrderParameterComponents - 1 - i;
+
       // Plot the magnitude of the order parameter.
       inGUI->plotImage(
           inContext->getComputeOrderParameter()->getResult()->abs(), i,
-          Type::real, 0, i + 1);
+          Type::real, 0, rowIdx);
 
       // Plot the phase of the order parameter.
       inGUI->plotImage(
           inContext->getComputeOrderParameter()->getResult()->complexPhase(), i,
-          Type::real, 1, i + 1);
+          Type::real, 1, rowIdx);
     }
   }
 
