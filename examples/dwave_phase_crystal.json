@@ -1,20 +1,20 @@
 {
     "convergence_criterion": 1e-6,
     "crystal_axes_rotation": 0.25,
-    "dwave_symmetry": true,
     "data_path": "data",
     "disc_geometry": false,
+    "dwave_symmetry": true,
     "external_flux_quanta": 0.05,
     "grain_side_length": 50.0,
     "lattice_side_length": 401,
     "num_fermi_momenta": 55,
-    "num_ozaki_energies": 20,
     "num_iterations_max": 1000,
     "num_iterations_min": 20,
-    "verbose": true,
+    "num_ozaki_energies": 20,
     "save_data": false,
     "save_data_interval": 200,
     "solenoid": true,
     "temperature": 0.1,
+    "verbose": true,
     "visualize": true
 }

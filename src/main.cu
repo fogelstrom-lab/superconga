@@ -31,12 +31,10 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
-#include "cli_utils.h" // Helper functions to parse command-line, and json-files.
 #include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
 #include "run_utils.h" // Commonly used functions in run files
 
 #include "nlohmann_json_wrapper.h"
-#include <CLI/CLI.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -47,7 +45,6 @@
 // FORWARD DECLARATIONS
 //*******************************************************
 void display();
-void saveDataWrapper(nlohmann::json &inOutJSON);
 
 //*******************************************************
 // TYPEDEFS
@@ -71,39 +68,18 @@ Visualization<T> *gui;
 // MAIN
 //*******************************************************
 int main(int argc, char *argv[]) {
-  // CLI11 application that parses all arguments.
-  CLI::App app;
+  if (argc < 2) {
+    std::cerr << "Please provide config file.\n";
+    exit(1);
+  }
+  const std::string filename = argv[1];
 
-  // JSON parameters which will contain the parsed arguments.
+  // Parse JSON.
   nlohmann::json simParams;
+  std::ifstream ifile(filename);
+  ifile >> simParams;
 
-  // Only applicable from the command line. They will be parsed by the CLI11
-  // app.
-  bool printVersion = false;
-  bool dumpConfig = false;
-
-  // Setup the application and default parameter values.
-  cli_utils::makeDefaultApp(app, simParams, printVersion, dumpConfig);
-
-  // Parse the arguments.
-  try {
-    app.parse(argc, argv);
-  } catch (const CLI::ParseError &e) {
-    return app.exit(e);
-  }
-
-  if (printVersion) {
-    // Print version number and exit.
-    std::cout << configure::projectName << " " << configure::version
-              << std::endl;
-    std::cout << configure::licenseStatement << std::endl;
-    return 0;
-  } else if (dumpConfig) {
-    // Dump config and exit.
-    const int indentation = 4;
-    std::cout << simParams.dump(indentation) << std::endl;
-    return 0;
-  }
+  // TODO(niclas): Add sanity check of all parameters here!?
 
   //***************************************************
   // APPLY PARAMETERS
