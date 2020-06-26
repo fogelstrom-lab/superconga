@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import Optional, Union
 
-VALID_SYMMETRIES = ["s", "dx2-y2", "dxy"]
+VALID_SYMMETRIES = ["s", "dx2-y2", "dxy", "g"]
 
 
 def make_default_parser():
