@@ -69,7 +69,7 @@ void testBasisFunctionNormaliztation(const T inTolerance,
 
     // Basis functions.
     BasisFunction<T> basisFunctionS(BasisFunctionSymmetry::SWAVE);
-    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE);
+    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE_X2_Y2);
 
     for (int i = 0; i < inNumNormalizations; ++i) {
       // Normalize basis function. It should not matter whether we have called

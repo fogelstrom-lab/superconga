@@ -11,8 +11,14 @@
 /// \brief Enum class with the supported basis-function symmetries.
 ///
 /// The following values are supported:
-/// SWAVE, SWAVE_EXT, DWAVE, PWAVE
-enum class BasisFunctionSymmetry { SWAVE, SWAVE_EXT, DWAVE, PWAVE };
+/// SWAVE, SWAVE_EXT, DWAVE_X2_Y2, DWAVE_XY, PWAVE
+enum class BasisFunctionSymmetry {
+  SWAVE,
+  SWAVE_EXT,
+  DWAVE_X2_Y2,
+  DWAVE_XY,
+  PWAVE
+};
 
 /// \brief Basis-function class.
 template <typename T> class BasisFunction {
@@ -87,8 +93,12 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
     str = "s_ext";
     break;
   }
-  case BasisFunctionSymmetry::DWAVE: {
-    str = "d";
+  case BasisFunctionSymmetry::DWAVE_X2_Y2: {
+    str = "dx2_y2";
+    break;
+  }
+  case BasisFunctionSymmetry::DWAVE_XY: {
+    str = "dxy";
     break;
   }
   case BasisFunctionSymmetry::PWAVE: {
@@ -123,8 +133,13 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
                             static_cast<T>(0.0));
     break;
   }
-  case BasisFunctionSymmetry::DWAVE: {
+  case BasisFunctionSymmetry::DWAVE_X2_Y2: {
     basisFunction = cplx<T>(std::cos(inMomentumX) - std::cos(inMomentumY),
+                            static_cast<T>(0.0));
+    break;
+  }
+  case BasisFunctionSymmetry::DWAVE_XY: {
+    basisFunction = cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY),
                             static_cast<T>(0.0));
     break;
   }

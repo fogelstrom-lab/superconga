@@ -141,9 +141,9 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
 
       // Set up order parameter
       OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
-      const BasisFunctionSymmetry symmetry = useSwave
-                                                 ? BasisFunctionSymmetry::SWAVE
-                                                 : BasisFunctionSymmetry::DWAVE;
+      const BasisFunctionSymmetry symmetry =
+          useSwave ? BasisFunctionSymmetry::SWAVE
+                   : BasisFunctionSymmetry::DWAVE_X2_Y2;
       OrderParameterComponent<T> *orderParameterComponent =
           new OrderParameterComponent<T>(symmetry, parameters);
 

@@ -146,9 +146,23 @@ int main(int argc, char *argv[]) {
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
 
   // Add a d-wave or an s-wave order-parameter component.
-  const BasisFunctionSymmetry symmetry = simParams["dwave_symmetry"].get<bool>()
-                                             ? BasisFunctionSymmetry::DWAVE
-                                             : BasisFunctionSymmetry::SWAVE;
+  const std::string symmetryStr = simParams["symmetry"].get<std::string>();
+
+  // TODO(niclas): Move this to OrderParameterBasis.h?
+  BasisFunctionSymmetry symmetry;
+  if (symmetryStr == "s") {
+    symmetry = BasisFunctionSymmetry::SWAVE;
+  } else if (symmetryStr == "dx2_y2") {
+    symmetry = BasisFunctionSymmetry::DWAVE_X2_Y2;
+  } else if (symmetryStr == "dxy") {
+    symmetry = BasisFunctionSymmetry::DWAVE_XY;
+  } else {
+    std::cout << "Order parameter symmetry '" << symmetryStr
+              << "' not understood." << std::endl;
+    run_utils::cleanup(context, gui);
+    return 1;
+  }
+
   OrderParameterComponent<T> *orderParameterComponent =
       new OrderParameterComponent<T>(symmetry, parameters);
 

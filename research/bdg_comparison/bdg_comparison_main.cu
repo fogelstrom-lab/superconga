@@ -247,7 +247,8 @@ int main(int argc, char *argv[]) {
   OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
   // Add a d-wave component to the total order-parameter
   OrderParameterComponent<T> *orderParameterComponent =
-      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE, parameters);
+      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
+                                     parameters);
   // Period of phase crystal, converted to coordinate units. In coherence
   // lengths, it is typically 2*pi coherence lengths in QC simulations (see the
   // Nat. Comm. and PRR papers).

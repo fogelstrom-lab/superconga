@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import Union
 
-VALID_SYMMETRIES = ["s", "d"]
+VALID_SYMMETRIES = ["s", "dx2_y2", "dxy"]
 
 
 def make_default_parser():
@@ -44,14 +44,13 @@ def make_default_parser():
     )
 
     # Symmetry.
-    group_symmetry = parser.add_mutually_exclusive_group()
-    group_symmetry.add_argument(
-        "--dwave-symmetry",
-        action="store_true",
-        help="Order parameter d-wave symmetry.",
-    )
-    group_symmetry.add_argument(
-        "--swave-symmetry", action="store_true", help="Order parameter s-wave symmetry."
+    parser.add_argument(
+        "-H",
+        "--symmetry",
+        type=str,
+        choices=VALID_SYMMETRIES,
+        default=None,
+        help="The symmetry of the order parameter.",
     )
 
     # External flux quanta.
@@ -245,7 +244,7 @@ def set_flag(simparams: dict, key: str, on: bool, off: bool) -> None:
         simparams[key] = on
 
 
-def check_value(key: str, value: Union[bool, float, int], checks: dict) -> bool:
+def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> bool:
     # Check that the value is of the expected type.
     expected_type = checks["type"]
     if not isinstance(value, expected_type):
@@ -265,6 +264,13 @@ def check_value(key: str, value: Union[bool, float, int], checks: dict) -> bool:
                 print(f"--The field '{key}' cannot have value {exc}.")
                 return False
 
+    # Check that the value is in some pre-defined set.
+    if "one_of" in checks:
+        valid_values = checks["one_of"]
+        if not value in valid_values:
+            print(f"--The field '{key}' must one of {valid_values}.")
+            return False
+
     # No errors.
     return True
 
@@ -275,7 +281,6 @@ def validate(simparams: dict) -> bool:
         "convergence_criterion": {"type": float, "low": 0.0},
         "crystal_axes_rotation": {"type": float},
         "data_path": {"type": str},
-        "dwave_symmetry": {"type": bool},
         "external_flux_quanta": {"type": float},
         "grain_side_length": {"type": float, "low": 0.0},
         "initial_phase_winding": {"type": float},
@@ -289,6 +294,7 @@ def validate(simparams: dict) -> bool:
         "save_data": {"type": bool},
         "save_data_interval": {"type": int, "low": 0},
         "solenoid": {"type": bool},
+        "symmetry": {"type": str, "one_of": VALID_SYMMETRIES},
         "temperature": {"type": float, "low": 0.0},
         "verbose": {"type": bool},
         "visualize": {"type": bool},
@@ -329,7 +335,6 @@ def main() -> None:
     set_value(simparams, "convergence_criterion", args.convergence_criterion)
     set_value(simparams, "crystal_axes_rotation", args.crystal_axes_rotation)
     set_value(simparams, "data_path", args.data_path)
-    set_flag(simparams, "dwave_symmetry", args.dwave_symmetry, args.swave_symmetry)
     set_value(simparams, "external_flux_quanta", args.external_flux_quanta)
     set_value(simparams, "grain_side_length", args.grain_side_length)
     set_value(simparams, "initial_phase_winding", args.initial_phase_winding)
@@ -343,6 +348,7 @@ def main() -> None:
     set_flag(simparams, "save_data", args.save_data, args.no_save_data)
     set_value(simparams, "save_data_interval", args.save_data_interval)
     set_flag(simparams, "solenoid", args.solenoid, args.no_solenoid)
+    set_value(simparams, "symmetry", args.symmetry)
     set_value(simparams, "temperature", args.temperature)
     set_flag(simparams, "verbose", args.verbose, args.quiet)
     set_flag(simparams, "visualize", args.visualize, args.no_visualize)
