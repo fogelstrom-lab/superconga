@@ -79,7 +79,7 @@ def make_default_parser():
         "--crystal-axes-rotation",
         type=float,
         default=None,
-        help="Rotation between grain and crystal ab-axes, in units of pi.",
+        help="Rotation between grain and crystal ab-axes, in units of 2pi.",
     )
 
     # Geometry.
@@ -100,6 +100,24 @@ def make_default_parser():
     )
     group_solenoid.add_argument(
         "--no-solenoid", action="store_true", help="Do not set up a solenoid."
+    )
+
+    # =============== INITIAL =============== #
+
+    # Num phase windings.
+    parser.add_argument(
+        "--initial-phase-winding",
+        type=float,
+        default=None,
+        help="The phase winding of the initial order parameter guess, in units of 2pi.",
+    )
+
+    # Random phase mix.
+    parser.add_argument(
+        "--initial-random-phase",
+        type=float,
+        default=None,
+        help="The fraction of random phase of the initial order parameter guess.",
     )
 
     # =============== ACCURACY =============== #
@@ -255,6 +273,8 @@ def validate(simparams: dict) -> bool:
         "dwave_symmetry": {"type": bool},
         "external_flux_quanta": {"type": float},
         "grain_side_length": {"type": float, "low": 0.0},
+        "initial_phase_winding": {"type": float},
+        "initial_random_phase": {"type": float},
         "lattice_side_length": {"type": int, "low": 1},
         "num_fermi_momenta": {"type": int, "low": 1},
         "num_iterations_max": {"type": int, "low": 1},
@@ -307,6 +327,8 @@ def main() -> None:
     set_flag(simparams, "dwave_symmetry", args.dwave_symmetry, args.swave_symmetry)
     set_value(simparams, "external_flux_quanta", args.external_flux_quanta)
     set_value(simparams, "grain_side_length", args.grain_side_length)
+    set_value(simparams, "initial_phase_winding", args.initial_phase_winding)
+    set_value(simparams, "initial_random_phase", args.initial_random_phase)
     set_value(simparams, "lattice_side_length", args.lattice_side_length)
     set_value(simparams, "num_fermi_momenta", args.num_fermi_momenta)
     set_value(simparams, "num_iterations_max", args.num_iterations_max)
