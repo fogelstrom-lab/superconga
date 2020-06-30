@@ -113,15 +113,15 @@ int main(int argc, char *argv[]) {
   // (grainScale 1.0 is 100% of simulation space).
   const T grainScale = static_cast<T>(1.0);
 
-  // Number of vertices in a square.
-  const int numVerticesSquare = 4;
+  // Check if to set up a disc or polygon.
+  const int numVertices = simParams["num_polygon_edges"].get<int>();
+  const bool isDisc = numVertices < 0;
 
   // Make the grain a disc or a square.
-  if (simParams["disc_geometry"].get<bool>()) {
+  if (isDisc) {
     geometry->add(new DiscGeometry<T>(grainScale), Type::add);
   } else {
-    geometry->add(new PolygonGeometry<T>(numVerticesSquare, grainScale),
-                  Type::add);
+    geometry->add(new PolygonGeometry<T>(numVertices, grainScale), Type::add);
   }
 
   // Remove a portion to create a solenoid.
@@ -130,10 +130,10 @@ int main(int argc, char *argv[]) {
     const T holeScale = static_cast<T>(0.2);
 
     // Circular or square hole.
-    if (simParams["disc_geometry"].get<bool>()) {
+    if (isDisc) {
       geometry->add(new DiscGeometry<T>(holeScale), Type::remove);
     } else {
-      geometry->add(new PolygonGeometry<T>(numVerticesSquare, holeScale),
+      geometry->add(new PolygonGeometry<T>(numVertices, holeScale),
                     Type::remove);
     }
   }

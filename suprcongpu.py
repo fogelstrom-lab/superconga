@@ -83,12 +83,12 @@ def make_default_parser():
     )
 
     # Geometry.
-    group_geometry = parser.add_mutually_exclusive_group()
-    group_geometry.add_argument(
-        "--disc-geometry", action="store_true", help="Run with disc geometry"
-    )
-    group_geometry.add_argument(
-        "--square-geometry", action="store_true", help="Run with square geometry."
+    parser.add_argument(
+        "-z",
+        "--num-polygon-edges",
+        type=int,
+        default=None,
+        help="Number edges of the grain polygon. Negative values yield a circle.",
     )
 
     # Solenoid.
@@ -259,6 +259,12 @@ def check_value(key: str, value: Union[bool, float, int], checks: dict) -> bool:
             print(f"--The field '{key}' must be larger than {low}.")
             return False
 
+    if "excluded" in checks:
+        for exc in checks["excluded"]:
+            if value == exc:
+                print(f"--The field '{key}' cannot have value {exc}.")
+                return False
+
     # No errors.
     return True
 
@@ -269,7 +275,6 @@ def validate(simparams: dict) -> bool:
         "convergence_criterion": {"type": float, "low": 0.0},
         "crystal_axes_rotation": {"type": float},
         "data_path": {"type": str},
-        "disc_geometry": {"type": bool},
         "dwave_symmetry": {"type": bool},
         "external_flux_quanta": {"type": float},
         "grain_side_length": {"type": float, "low": 0.0},
@@ -280,6 +285,7 @@ def validate(simparams: dict) -> bool:
         "num_iterations_max": {"type": int, "low": 1},
         "num_iterations_min": {"type": int, "low": 1},
         "num_ozaki_energies": {"type": int, "low": 1},
+        "num_polygon_edges": {"type": int, "excluded": [0, 1, 2]},
         "save_data": {"type": bool},
         "save_data_interval": {"type": int, "low": 0},
         "solenoid": {"type": bool},
@@ -323,7 +329,6 @@ def main() -> None:
     set_value(simparams, "convergence_criterion", args.convergence_criterion)
     set_value(simparams, "crystal_axes_rotation", args.crystal_axes_rotation)
     set_value(simparams, "data_path", args.data_path)
-    set_flag(simparams, "disc_geometry", args.disc_geometry, args.square_geometry)
     set_flag(simparams, "dwave_symmetry", args.dwave_symmetry, args.swave_symmetry)
     set_value(simparams, "external_flux_quanta", args.external_flux_quanta)
     set_value(simparams, "grain_side_length", args.grain_side_length)
@@ -334,6 +339,7 @@ def main() -> None:
     set_value(simparams, "num_iterations_max", args.num_iterations_max)
     set_value(simparams, "num_iterations_min", args.num_iterations_min)
     set_value(simparams, "num_ozaki_energies", args.num_ozaki_energies)
+    set_value(simparams, "num_polygon_edges", args.num_polygon_edges)
     set_flag(simparams, "save_data", args.save_data, args.no_save_data)
     set_value(simparams, "save_data_interval", args.save_data_interval)
     set_flag(simparams, "solenoid", args.solenoid, args.no_solenoid)
