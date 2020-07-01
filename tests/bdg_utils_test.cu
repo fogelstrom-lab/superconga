@@ -42,8 +42,8 @@ void testComputeCriticalTemperature(
   T hoppingNNNN;
   T chemicalPotential;
   T potential;
-  T expectedTcDwave;
-  T expectedTcSExtWave;
+  T expectedDWaveTc;
+  T expectedSExtWaveTc;
 
   if (InUseFermiSurface1) {
     // Dispersion parameters.
@@ -53,16 +53,16 @@ void testComputeCriticalTemperature(
     potential = static_cast<T>(1.4);
 
     // Expeted critical temperatures.
-    expectedTcDwave = static_cast<T>(0.118);
-    expectedTcSExtWave = static_cast<T>(0.0);
+    expectedDWaveTc = static_cast<T>(0.118);
+    expectedSExtWaveTc = static_cast<T>(0.0);
   } else {
     // Dispersion parameters.
     hoppingNNN = -static_cast<T>(0.495);
     hoppingNNNN = static_cast<T>(0.156);
     chemicalPotential = -static_cast<T>(1.267);
     potential = static_cast<T>(1.279);
-    expectedTcDwave = static_cast<T>(0.114);
-    expectedTcSExtWave = static_cast<T>(0.0);
+    expectedDWaveTc = static_cast<T>(0.114);
+    expectedSExtWaveTc = static_cast<T>(0.0);
   }
 
   // Define the dispersion.
@@ -75,14 +75,21 @@ void testComputeCriticalTemperature(
   const BasisFunctionSymmetry sExtSymmetry = BasisFunctionSymmetry::SWAVE_EXT;
 
   // =================== ACT ==================== //
-  const T TcDWave =
+  const std::pair<bool, T> dWaveTmp =
       bdg::computeCriticalTemperature(dispersion, potential, dWaveSymmetry);
-  const T TcSextWave =
+  const bool dWaveSuccess = std::get<0>(dWaveTmp);
+  const T dWaveTc = std::get<1>(dWaveTmp);
+
+  const std::pair<bool, T> sExtWaveTmp =
       bdg::computeCriticalTemperature(dispersion, potential, sExtSymmetry);
+  const bool sExtWaveSuccess = std::get<0>(sExtWaveTmp);
+  const T sExtWaveTc = std::get<1>(sExtWaveTmp);
 
   // =================== ASSERT ==================== //
-  CHECK(TcDWave == doctest::Approx(expectedTcDwave).epsilon(inTolerance));
-  CHECK(TcSextWave == doctest::Approx(expectedTcSExtWave).epsilon(inTolerance));
+  CHECK(dWaveSuccess);
+  CHECK(dWaveTc == doctest::Approx(expectedDWaveTc).epsilon(inTolerance));
+  CHECK(sExtWaveSuccess);
+  CHECK(sExtWaveTc == doctest::Approx(expectedSExtWaveTc).epsilon(inTolerance));
 }
 } // namespace helper
 
