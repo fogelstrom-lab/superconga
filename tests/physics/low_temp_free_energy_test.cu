@@ -119,7 +119,8 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
 
     // Add a d-wave or an s-wave order-parameter component.
     const BasisFunctionSymmetry symmetry =
-        useSwave ? BasisFunctionSymmetry::SWAVE : BasisFunctionSymmetry::DWAVE;
+        useSwave ? BasisFunctionSymmetry::SWAVE
+                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
     OrderParameterComponent<T> *orderParameterComponent =
         new OrderParameterComponent<T>(symmetry, parameters);
 
@@ -196,7 +197,8 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
 
   // Add a d-wave or an s-wave order-parameter component.
   const BasisFunctionSymmetry symmetry =
-      inUseSwave ? BasisFunctionSymmetry::SWAVE : BasisFunctionSymmetry::DWAVE;
+      inUseSwave ? BasisFunctionSymmetry::SWAVE
+                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
   OrderParameterComponent<T> *orderParameterComponent =
       new OrderParameterComponent<T>(symmetry, parameters);
 

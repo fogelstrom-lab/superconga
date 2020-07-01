@@ -1,8 +1,7 @@
 {
     "convergence_criterion": 1e-6,
-    "crystal_axes_rotation": 0.125,
+    "crystal_axes_rotation": 0.0,
     "data_path": "data",
-    "dwave_symmetry": true,
     "external_flux_quanta": 0.0,
     "grain_side_length": 50.0,
     "initial_phase_winding": 0.0,
@@ -16,6 +15,7 @@
     "save_data": false,
     "save_data_interval": 200,
     "solenoid": true,
+    "symmetry": "dxy",
     "temperature": 0.1,
     "verbose": true,
     "visualize": true

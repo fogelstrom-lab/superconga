@@ -120,7 +120,7 @@ int main() {
     // Initialize Fermi surface
     fermiSurface->initialize(numAngles);
 
-    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE);
+    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE_X2_Y2);
     basisFunctionD.normalize(fermiSurface.get());
 
     // Storage for integrand sums

@@ -196,7 +196,8 @@ int main(int argc, char *argv[]) {
 
   // Add a d-wave component to the total order-parameter
   OrderParameterComponent<T> *orderParameterComponentD =
-      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE, parameters,
+      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
+                                     parameters,
                                      simParams["dwave_tc"].get<T>());
   // TODO(patric): add extended s-wave to order parameter components
   OrderParameterComponent<T> *orderParameterComponentS =

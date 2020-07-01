@@ -70,7 +70,8 @@ void testComputeCriticalTemperature(
                                        chemicalPotential);
 
   // D-wave and extended s-wave.
-  const BasisFunctionSymmetry dWaveSymmetry = BasisFunctionSymmetry::DWAVE;
+  const BasisFunctionSymmetry dWaveSymmetry =
+      BasisFunctionSymmetry::DWAVE_X2_Y2;
   const BasisFunctionSymmetry sExtSymmetry = BasisFunctionSymmetry::SWAVE_EXT;
 
   // =================== ACT ==================== //

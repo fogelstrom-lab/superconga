@@ -113,7 +113,8 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
   // Use s-wave or d-wave.
   const BasisFunctionSymmetry symmetry =
-      inUseSwave ? BasisFunctionSymmetry::SWAVE : BasisFunctionSymmetry::DWAVE;
+      inUseSwave ? BasisFunctionSymmetry::SWAVE
+                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
 
   OrderParameterComponent<T> *orderParameterComponent =
       new OrderParameterComponent<T>(symmetry, parameters);
