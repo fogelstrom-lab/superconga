@@ -42,7 +42,7 @@ void saveInducedFluxDensity(
 
   // Construct full file name
   char gridDataFile[512];
-  sprintf(gridDataFile, "%s%s.grd", inDataPath, inDataFileName);
+  sprintf(gridDataFile, "%s/%s.grd", inDataPath, inDataFileName);
 
   // Fetch parameters
   Parameters<T> *parameters = inContext->getParameters();
