@@ -8,6 +8,7 @@
 #define _DEV_
 #endif
 
+namespace scg {
 template <typename T> struct cplx {
   // Constructor
   _DEV_ cplx() {}
@@ -233,5 +234,6 @@ template <typename T> _DEV_ cplx<T> cplx<T>::cexp(const cplx<T> &r) {
   c.y = tmp * sin(r.y);
   return c;
 }
+} // namespace scg
 
 #endif // CPLX_H_

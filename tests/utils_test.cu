@@ -5,9 +5,10 @@
 #include <doctest.h>
 #include <limits>
 
-// ====================== Test utils::wrapToRange ====================== //
+// ====================== Test scg::utils::wrapToRange ======================
+// //
 
-TEST_CASE("Test utils::wrapToRange<int> - low = 0") {
+TEST_CASE("Test scg::utils::wrapToRange<int> - low = 0") {
   // Interval to wrap to [low, high).
   const int LOW = 0;
   const int HIGH = 10;
@@ -20,12 +21,12 @@ TEST_CASE("Test utils::wrapToRange<int> - low = 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const int value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const int value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == valuesExpected[i]);
   }
 }
 
-TEST_CASE("Test utils::wrapToRange<int> - low != 0") {
+TEST_CASE("Test scg::utils::wrapToRange<int> - low != 0") {
   // Interval to wrap to [low, high).
   const int LOW = 5;
   const int HIGH = 10;
@@ -37,12 +38,12 @@ TEST_CASE("Test utils::wrapToRange<int> - low != 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const int value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const int value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == valuesExpected[i]);
   }
 }
 
-TEST_CASE("Test utils::wrapToRange<float> - low = 0") {
+TEST_CASE("Test scg::utils::wrapToRange<float> - low = 0") {
   // Relative tolerance.
   // Note, machine precision is too harsh.
   const float TOLERANCE = 10.0F * std::numeric_limits<float>::epsilon();
@@ -60,12 +61,12 @@ TEST_CASE("Test utils::wrapToRange<float> - low = 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const float value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const float value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
   }
 }
 
-TEST_CASE("Test utils::wrapToRange<float> - low != 0") {
+TEST_CASE("Test scg::utils::wrapToRange<float> - low != 0") {
   // Relative tolerance.
   // Note, machine precision is too harsh.
   const float TOLERANCE = 10.0F * std::numeric_limits<float>::epsilon();
@@ -81,12 +82,12 @@ TEST_CASE("Test utils::wrapToRange<float> - low != 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const float value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const float value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
   }
 }
 
-TEST_CASE("Test utils::wrapToRange<double> - low = 0") {
+TEST_CASE("Test scg::utils::wrapToRange<double> - low = 0") {
   // Relative tolerance.
   // Note, machine precision is too harsh.
   const double TOLERANCE = 10.0 * std::numeric_limits<double>::epsilon();
@@ -104,12 +105,12 @@ TEST_CASE("Test utils::wrapToRange<double> - low = 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const double value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const double value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
   }
 }
 
-TEST_CASE("Test utils::wrapToRange<double> - low != 0") {
+TEST_CASE("Test scg::utils::wrapToRange<double> - low != 0") {
   // Relative tolerance.
   // Note, machine precision is too harsh.
   const double TOLERANCE = 10.0 * std::numeric_limits<double>::epsilon();
@@ -125,14 +126,14 @@ TEST_CASE("Test utils::wrapToRange<double> - low != 0") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const double value = utils::wrapToRange(valuesTest[i], LOW, HIGH);
+    const double value = scg::utils::wrapToRange(valuesTest[i], LOW, HIGH);
     CHECK(value == doctest::Approx(valuesExpected[i]).epsilon(TOLERANCE));
   }
 }
 
-// ======================= Test utils::rotate ======================= //
+// ======================= Test scg::utils::rotate ======================= //
 
-// A helper function for testing utils::rotate.
+// A helper function for testing scg::utils::rotate.
 // TODO(niclas): Should helper functions be in a separate namespace here?
 template <typename T>
 void rotateTest(const T inMinExponent, const T inMaxExponent,
@@ -165,7 +166,7 @@ void rotateTest(const T inMinExponent, const T inMaxExponent,
         // Rotate base point.
         T x;
         T y;
-        utils::rotate(angle, xBase, yBase, x, y);
+        scg::utils::rotate(angle, xBase, yBase, x, y);
 
         // Out expected output.
         const T xExpected = cos(angle + angleBase);
@@ -259,7 +260,7 @@ TEST_CASE("Test utils:rotate<double> - large angles") {
   rotateTest(minExponent, maxExponent, tolerance);
 }
 
-// ======================== Test utils::sign ======================== //
+// ======================== Test scg::utils::sign ======================== //
 
 TEST_CASE("Test utils:sign<int>") {
   // Define test values.
@@ -269,7 +270,7 @@ TEST_CASE("Test utils:sign<int>") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const int value = utils::sign(valuesTest[i]);
+    const int value = scg::utils::sign(valuesTest[i]);
     CHECK(value == valuesExpected[i]);
   }
 }
@@ -283,7 +284,7 @@ TEST_CASE("Test utils:sign<float>") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const int value = utils::sign(valuesTest[i]);
+    const int value = scg::utils::sign(valuesTest[i]);
     CHECK(value == valuesExpected[i]);
   }
 }
@@ -297,7 +298,7 @@ TEST_CASE("Test utils:sign<double>") {
 
   // Perform tests.
   for (int i = 0; i < NUM_TESTS; ++i) {
-    const int value = utils::sign(valuesTest[i]);
+    const int value = scg::utils::sign(valuesTest[i]);
     CHECK(value == valuesExpected[i]);
   }
 }

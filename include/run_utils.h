@@ -31,6 +31,7 @@
 #include <GLUT/glut.h>
 #endif
 
+namespace scg {
 namespace run_utils {
 namespace internal {
 //===----------------------------- Variables -----------------------------===//
@@ -161,7 +162,7 @@ void saveParametersWrapper(
       inContext->getRiccatiSolver()->getVectorPotentialType();
   internalParameters["external_flux_density"] =
       inContext->getParameters()->getMagneticFieldStrength();
-  internalParameters["grain_margin"] = qcs::GRAIN_SIZE_MARGIN;
+  internalParameters["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
 
   // Save additional JSON parameters (if not already saved or updated)
   saveParameterFileJSON(internalParameters, fullPathInternalParameters,
@@ -623,5 +624,6 @@ void cleanup(Context<T> *inContext, Visualization<T> *inGUI = NULL) {
   std::cout << "Done!" << std::endl;
 }
 } // namespace run_utils
+} // namespace scg
 
 #endif // RUN_UTILS_H_

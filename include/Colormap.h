@@ -1,8 +1,9 @@
 #ifndef COLORMAP_H
 #define COLORMAP_H
 
-#include <algorithm>  // std::swap
+#include <algorithm> // std::swap
 
+namespace scg {
 namespace Color {
 struct Base {
   Base();
@@ -49,9 +50,12 @@ Base::Base(int numCol) {
 }
 
 Base::~Base() {
-  if (_r) delete[] _r;
-  if (_g) delete[] _g;
-  if (_b) delete[] _b;
+  if (_r)
+    delete[] _r;
+  if (_g)
+    delete[] _g;
+  if (_b)
+    delete[] _b;
 }
 
 void Base::setColors(float *r, float *g, float *b) {
@@ -129,7 +133,7 @@ Copper::Copper() : Base(5) {
 
   setColors(r, g, b);
 }
+} // namespace Color
+} // namespace scg
 
-}  // namespace Color
-
-#endif  // COLORMAP_H
+#endif // COLORMAP_H

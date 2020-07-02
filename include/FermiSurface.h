@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 
+namespace scg {
 template <typename T> class FermiSurface {
 public:
   // Constructor.
@@ -202,5 +203,6 @@ __host__ __device__ T FermiSurface<T>::getFractionalAngleIndex(
                                            inOffsetY, m_angleOffset,
                                            inNumAngles);
 }
+} // namespace scg
 
 #endif // FERMI_SURFACE_H_

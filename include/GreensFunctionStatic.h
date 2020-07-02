@@ -1,12 +1,13 @@
 #ifndef GREENS_FUNCTION_STATIC_H_
 #define GREENS_FUNCTION_STATIC_H_
 
-#include "LocalGreens.h"
 #include "Grid.h"
+#include "LocalGreens.h"
 #include "ParameterIterator.h"
 #include "Parameters.h"
 #include "cplx.h"
 
+namespace scg {
 template <typename> class GeometryGroup;
 
 template <typename T, template <typename> class GREENS>
@@ -227,5 +228,6 @@ void GreensFunctionStatic<T, GREENS>::getKernelDimensions(dim3 &blocksPerGrid,
   threadsPerBlock = dim3(tpb_x, tpb_y, 1);
   blocksPerGrid = dim3(bpg_x, bpg_y, numEnergies);
 }
+} // namespace scg
 
 #endif // GREENS_FUNCTION_STATIC_H_

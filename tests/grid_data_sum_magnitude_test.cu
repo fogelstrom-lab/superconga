@@ -8,10 +8,10 @@
 #include <doctest.h>
 
 // Typedefs for Grid objects (wrapper for GridData objects)
-typedef typename Grid<float>::GPU floatGridGPU;
-typedef typename Grid<float>::CPU floatGridCPU;
-typedef typename Grid<double>::GPU doubleGridGPU;
-typedef typename Grid<double>::CPU doubleGridCPU;
+typedef typename scg::Grid<float>::GPU floatGridGPU;
+typedef typename scg::Grid<float>::CPU floatGridCPU;
+typedef typename scg::Grid<double>::GPU doubleGridGPU;
+typedef typename scg::Grid<double>::CPU doubleGridCPU;
 
 namespace helper {
 // ============ Constants used in multiple tests ============ //
@@ -55,7 +55,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
 
       // Construct a GridData object of (numX*numY) complex numbers, with
       // numFields number of components
-      DEVICE testComplexGrid(numX, numY, numFields, Type::complex);
+      DEVICE testComplexGrid(numX, numY, numFields, scg::Type::complex);
 
       // Stepsize between each different value to try
       const T valueStep =
@@ -68,7 +68,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
             valueStep * static_cast<T>(realPartIdx) + inMinValue;
 
         for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-          testComplexGrid.setValue(realPartValue, Type::real, fieldIdx);
+          testComplexGrid.setValue(realPartValue, scg::Type::real, fieldIdx);
         }
 
         // Vary the imaginary part
@@ -79,7 +79,8 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
               valueStep * static_cast<T>(imaginaryPartIdx) + inMinValue;
 
           for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-            testComplexGrid.setValue(imaginaryPartValue, Type::imag, fieldIdx);
+            testComplexGrid.setValue(imaginaryPartValue, scg::Type::imag,
+                                     fieldIdx);
           }
 
           // =================== ACT ==================== //
@@ -127,7 +128,7 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
       // Construct a GridData object of (numX*numY) real numbers, with
       // numFields number of components
-      DEVICE testRealGrid(numX, numY, numFields, Type::real);
+      DEVICE testRealGrid(numX, numY, numFields, scg::Type::real);
 
       // Stepsize between each different value to try
       const T valueStep =
@@ -139,7 +140,7 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
         const T testValue = valueStep * static_cast<T>(valueIdx) + inMinValue;
 
         for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-          testRealGrid.setValue(testValue, Type::real, fieldIdx);
+          testRealGrid.setValue(testValue, scg::Type::real, fieldIdx);
         }
 
         // =================== ACT ==================== //

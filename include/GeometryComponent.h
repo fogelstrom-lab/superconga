@@ -11,6 +11,7 @@
 #include <cuda.h>
 #include <iostream>
 
+namespace scg {
 template <typename T> class GeometryComponent {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -243,5 +244,6 @@ template <typename T> T *GeometryComponent<T>::getNormals(const int dim) const {
 template <typename T> T *GeometryComponent<T>::getBoundaryDistance() const {
   return _boundaryDistance->getDataPointer();
 }
+} // namespace scg
 
 #endif // GEOMETRY_COMPONENT_H_

@@ -17,6 +17,7 @@
 #include <cmath>
 #include <iostream>
 
+namespace scg {
 /// \brief Dispersion base class.
 template <typename T> class Dispersion {
 public:
@@ -170,5 +171,6 @@ public:
     outVelocityY = (termNNdY + termNNNdY + termNNNNdY);
   }
 };
+} // namespace scg
 
 #endif // DISPERSION_H_

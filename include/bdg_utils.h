@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+namespace scg {
 namespace bdg {
 namespace internal {
 /// \brief Compute softplus(x).
@@ -238,5 +239,6 @@ std::pair<bool, T> computeCriticalTemperature(
   return {isConverged, Tc};
 }
 } // namespace bdg
+} // namespace scg
 
 #endif // BDG_H_

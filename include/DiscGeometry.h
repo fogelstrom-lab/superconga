@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cuda.h>
 
+namespace scg {
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
 public:
   DiscGeometry();
@@ -126,9 +127,10 @@ DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
     : GeometryComponent<T>() {
 
   // Scale to internal coordinate system and apply the margin (grain size frac).
-  const T coordinateScaleFactor = static_cast<T>(
-      qcs::GRAIN_SIZE_FRACTION * qcs::INTERNAL_MAXIMUM_COORDINATE_DISC /
-      qcs::MAXIMUM_COORDINATE);
+  const T coordinateScaleFactor =
+      static_cast<T>(constants::GRAIN_SIZE_FRACTION *
+                     constants::INTERNAL_MAXIMUM_COORDINATE_DISC /
+                     constants::MAXIMUM_COORDINATE);
   // Calculate radius from diameter and apply margin/scaling.
   const T discRadiusPadded =
       static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
@@ -194,4 +196,6 @@ Grid<char>::GPU *DiscGeometry<T>::createDomain(const int N) {
 
   return dom_component;
 }
+} // namespace scg
+
 #endif // DISC_GEOMETRY_H_

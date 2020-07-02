@@ -8,6 +8,7 @@
 // See p. 12 of Polyak (1964):
 // https://www.researchgate.net/publication/243648538_Some_methods_of_speeding_up_the_convergence_of_iteration_methods
 
+namespace scg {
 // TODO: (Patric) Implement warmup/burnin and final relaxation at end of
 // simulation, with getters and setters.
 template <typename T> class OptimizerRollingBall : public Optimizer<T> {
@@ -112,5 +113,6 @@ void OptimizerRollingBall<T>::step(OrderParameter<T> *const inOutOrderParameter,
   // Increase iteration index.
   m_iterationIndex++;
 }
+} // namespace scg
 
 #endif // OPTIMIZER_ROLLING_BALL_H_

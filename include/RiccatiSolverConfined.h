@@ -6,6 +6,7 @@
 #include <cmath>
 #include <string>
 
+namespace scg {
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
 class RiccatiSolverConfined : public RiccatiSolver<T> {
@@ -501,5 +502,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
 }
+} // namespace scg
 
 #endif // RICCATI_SOLVER_CONFINED_H_

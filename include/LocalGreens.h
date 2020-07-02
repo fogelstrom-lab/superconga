@@ -13,6 +13,7 @@
 
 #include "cplx.h"
 
+namespace scg {
 template <typename T> struct Greens {
   _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
                                        cplx<T> &greens) {
@@ -62,5 +63,6 @@ template <typename T> struct Greens_Current {
     greens = T(-2.0) * cplx<T>::i() * (1.0 - g_gb) / (1.0 + g_gb);
   }
 };
+} // namespace scg
 
 #endif // LOCAL_GREENS_H_

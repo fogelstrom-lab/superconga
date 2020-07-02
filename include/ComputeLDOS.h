@@ -5,6 +5,7 @@
 #include "ComputeResidual.h"
 #include "IntegrationIteratorKeldysh.h"
 
+namespace scg {
 template <typename T> class ComputeLDOS : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -247,5 +248,6 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_LDOS_H_

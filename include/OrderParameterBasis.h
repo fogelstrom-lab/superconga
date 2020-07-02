@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 
+namespace scg {
 /// \brief Enum class with the supported basis-function symmetries.
 ///
 /// The following values are supported:
@@ -199,5 +200,6 @@ void BasisFunction<T>::normalize(const std::vector<vector2d<T>> &inMomenta) {
   m_normalizationFactor *=
       static_cast<T>(1.0) / std::sqrt(avgBasisFunctionSquared);
 }
+} // namespace scg
 
 #endif // ORDER_PARAMETER_BASIS_H_

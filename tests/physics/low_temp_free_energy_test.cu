@@ -63,9 +63,10 @@ T computeTolerance(const T inToleranceBaseFactor = static_cast<T>(5.0)) {
 }
 
 // Helper class for setting up simulation parameters
-template <typename T> Parameters<T> *applySimParams(Context<T> *context) {
+template <typename T>
+scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set grain resolution in number of lattice sites
   parameters->setGridResolution(simParams::GRID_RESOLUTION);
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
@@ -94,44 +95,46 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
   for (const bool useSwave : {true, false}) {
     // =================== ARRANGE ==================== //
     // Create Context
-    Context<T> *context = new Context<T>();
+    scg::Context<T> *context = new scg::Context<T>();
 
     // Set parameters to the values specified in simParams struct
-    Parameters<T> *parameters = applySimParams<T>(context);
+    scg::Parameters<T> *parameters = applySimParams<T>(context);
 
     // Create geometry group: add/remove geometry objects (e.g. discs,
     // polygons) from the geometry group
-    GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
-    geometry->add(new PolygonGeometry<T>(NUM_VERTICES_SQUARE), Type::add);
+    scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+    geometry->add(new scg::PolygonGeometry<T>(NUM_VERTICES_SQUARE),
+                  scg::Type::add);
 
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields
-    RiccatiSolver<T> *riccatiSolver =
-        new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-            context);
+    scg::RiccatiSolver<T> *riccatiSolver =
+        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                       scg::VectorPotential::None>(context);
 
     // Choose FermiSurface
-    FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+    scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
     context->set(fermiSurface);
 
     // Set up order parameter
-    OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+    scg::OrderParameter<T> *orderParameter =
+        new scg::OrderParameter<T>(context);
 
     // Add a d-wave or an s-wave order-parameter component.
-    const BasisFunctionSymmetry symmetry =
-        useSwave ? BasisFunctionSymmetry::SWAVE
-                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
-    OrderParameterComponent<T> *orderParameterComponent =
-        new OrderParameterComponent<T>(symmetry, parameters);
+    const scg::BasisFunctionSymmetry symmetry =
+        useSwave ? scg::BasisFunctionSymmetry::SWAVE
+                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+    scg::OrderParameterComponent<T> *orderParameterComponent =
+        new scg::OrderParameterComponent<T>(symmetry, parameters);
 
-    Initial<T>::constant(orderParameterComponent, inStartRealPart,
-                         inStartImaginaryPart);
+    scg::Initial<T>::constant(orderParameterComponent, inStartRealPart,
+                              inStartImaginaryPart);
     // Add the initialized s-wave component to the total order parameter
     orderParameter->add(orderParameterComponent);
 
     // Create compute objects
-    ComputeOrderParameter<T> *computeOrderParameter =
-        new ComputeOrderParameter<T>(context);
+    scg::ComputeOrderParameter<T> *computeOrderParameter =
+        new scg::ComputeOrderParameter<T>(context);
 
     // =================== ACT ==================== //
     // Initialize simulation
@@ -156,7 +159,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
             doctest::Approx(expectedSumOrderParameter).epsilon(inTolerance));
 
     // Clean up context
-    run_utils::cleanup(context);
+    scg::run_utils::cleanup(context);
   }
 }
 
@@ -166,59 +169,61 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
                            const T inStartValue) {
   // =================== ARRANGE ==================== //
   // Create Context
-  Context<T> *context = new Context<T>();
+  scg::Context<T> *context = new scg::Context<T>();
 
   // Set parameters to the values specified in simParams struct
-  Parameters<T> *parameters = applySimParams<T>(context);
+  scg::Parameters<T> *parameters = applySimParams<T>(context);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
   // Maximum side-length of a non-rotated square, i.e. with corners in the
   // maximum coordinates.
-  const double maximumSideLength = 2.0 * qcs::MAXIMUM_COORDINATE;
+  const double maximumSideLength = 2.0 * scg::constants::MAXIMUM_COORDINATE;
   const T maximumSideLengthSquare =
       static_cast<T>(std::sqrt(2.0) * maximumSideLength);
   // Add a square to the simulation geometry.
   geometry->add(
-      new PolygonGeometry<T>(NUM_VERTICES_SQUARE, maximumSideLengthSquare),
-      Type::add);
+      new scg::PolygonGeometry<T>(NUM_VERTICES_SQUARE, maximumSideLengthSquare),
+      scg::Type::add);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-          context);
+  scg::RiccatiSolver<T> *riccatiSolver =
+      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                     scg::VectorPotential::None>(context);
   // Add specular BC
-  riccatiSolver->add(new BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
-  OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
   // Add a d-wave or an s-wave order-parameter component.
-  const BasisFunctionSymmetry symmetry =
-      inUseSwave ? BasisFunctionSymmetry::SWAVE
-                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
-  OrderParameterComponent<T> *orderParameterComponent =
-      new OrderParameterComponent<T>(symmetry, parameters);
+  const scg::BasisFunctionSymmetry symmetry =
+      inUseSwave ? scg::BasisFunctionSymmetry::SWAVE
+                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  scg::OrderParameterComponent<T> *orderParameterComponent =
+      new scg::OrderParameterComponent<T>(symmetry, parameters);
 
   // Initialize order-parameter component to a constant
-  Initial<T>::constant(orderParameterComponent, inStartValue, inStartValue);
+  scg::Initial<T>::constant(orderParameterComponent, inStartValue,
+                            inStartValue);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
   // Create compute objects
-  ComputeOrderParameter<T> *computeOrderParameter =
-      new ComputeOrderParameter<T>(context);
-  ComputeFreeEnergy<T> *computeFreeEnergy = new ComputeFreeEnergy<T>(context);
-  ComputeCurrent<T> *computeCurrent = new ComputeCurrent<T>(context);
+  scg::ComputeOrderParameter<T> *computeOrderParameter =
+      new scg::ComputeOrderParameter<T>(context);
+  scg::ComputeFreeEnergy<T> *computeFreeEnergy =
+      new scg::ComputeFreeEnergy<T>(context);
+  scg::ComputeCurrent<T> *computeCurrent = new scg::ComputeCurrent<T>(context);
 
   // Choose convergence accelerator
-  OptimizerRollingBall<T> *optimizer = new OptimizerRollingBall<T>();
+  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
   computeOrderParameter->setOptimizer(optimizer);
 
   // Choose FermiSurface
-  FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
   context->set(fermiSurface);
 
   // =================== ACT ==================== //
@@ -226,7 +231,7 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   context->initialize();
 
   const bool visualize = false;
-  run_utils::runSimulation(
+  scg::run_utils::runSimulation(
       context, visualize, simParams::PRINT_ITERATION_STATUS,
       simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
 
@@ -253,8 +258,8 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // =================== ASSERT ==================== //
   // Expected average bulk gap
   const T expectedAverageOrderParameter =
-      (inUseSwave ? static_cast<T>(qcs::S_WAVE_BULK)
-                  : static_cast<T>(qcs::D_WAVE_BULK));
+      (inUseSwave ? static_cast<T>(scg::constants::S_WAVE_BULK)
+                  : static_cast<T>(scg::constants::D_WAVE_BULK));
   // Expected average current density
   const T expectedAverageCurrent = static_cast<T>(0.0);
   // The bulk free energy, see page 106 of P. Holmvall PhD Thesis
@@ -273,7 +278,7 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   CHECK(context->isConverged());
 
   // Clean up context
-  run_utils::cleanup(context);
+  scg::run_utils::cleanup(context);
 }
 } // namespace helper
 

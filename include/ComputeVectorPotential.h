@@ -5,6 +5,7 @@
 #include "Grid.h"
 #include <cuda.h>
 
+namespace scg {
 namespace internal {
 // Compute vector potential by integrating greens function kernel
 template <typename T>
@@ -65,5 +66,6 @@ void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
   }
   *A *= (-1.0 / (2.0 * M_PI));
 }
+} // namespace scg
 
 #endif // COMPUTE_VECTOR_POTENTIAL_H_

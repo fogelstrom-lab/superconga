@@ -9,6 +9,7 @@
 #include "utils.h"
 #include <string>
 
+namespace scg {
 template <typename T> class OrderParameter : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -211,5 +212,6 @@ template <typename T> std::string OrderParameter<T>::getTypes() const {
 
   return types;
 }
+} // namespace scg
 
 #endif // ORDER_PARAMETER_H_

@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iostream>
 
+namespace scg {
 template <typename> class CoherenceFunctions;
 template <typename> class ComputeCurrent;
 template <typename> class ComputeCurrentDensity;
@@ -308,5 +309,6 @@ template <typename T> bool Context<T>::isConverged() const {
   // TODO(niclas): Check all compute objects?
   return getComputeObject(0)->isConverged();
 }
+} // namespace scg
 
 #endif // CONTEXT_H_

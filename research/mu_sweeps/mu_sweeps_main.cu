@@ -64,9 +64,9 @@ void saveDataWrapper(const T inGrainSideLength, const T inGrainCornerLength,
 //*******************************************************
 namespace {
 // Context object
-Context<T> *context = new Context<T>();
+scg::Context<T> *context = new scg::Context<T>();
 // Visualization object
-Visualization<T> *gui;
+scg::Visualization<T> *gui;
 // Used to construct data file path
 char dataPath[512];
 
@@ -85,7 +85,7 @@ const std::map<std::string, T> FS2 = {{"hoppingNNN", static_cast<T>(-0.495)},
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Please provide config file.\n";
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 1;
   }
   const std::string filename = argv[1];
@@ -110,17 +110,17 @@ int main(int argc, char *argv[]) {
       (grainCornerLength * static_cast<T>(std::sqrt(2.0)))) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE too large:" << grainCornerLength
               << std::endl;
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 1;
   }
   if (grainCornerLength < static_cast<T>(0.0)) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE negative: " << grainCornerLength
               << std::endl;
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 1;
   }
 
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set temperature.
   parameters->setTemperature(simParams["temperature"].get<T>());
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
@@ -146,17 +146,18 @@ int main(int argc, char *argv[]) {
            grainCornerLength, simParams["temperature"].get<T>());
 
   // Create data path if it does not exist
-  run_utils::createDirectory(dataPath);
+  scg::run_utils::createDirectory(dataPath);
 
   //***************************************************
   // CREATE GEOMETRY
   //***************************************************
   // Create geometry group, add polygon and remove corners
-  GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
   const int numVertices = 5;
   // The coordinate system is in the range:
-  // [-qcs::MAXIMUM_COORDINATE,qcs::MAXIMUM_COORDINATE].
-  const T outerEdgeCoordinate = static_cast<T>(qcs::MAXIMUM_COORDINATE);
+  // [-MAXIMUM_COORDINATE, MAXIMUM_COORDINATE].
+  const T outerEdgeCoordinate =
+      static_cast<T>(scg::constants::MAXIMUM_COORDINATE);
   const T diagonalCornerCoordinate =
       outerEdgeCoordinate - static_cast<T>(2.0) * outerEdgeCoordinate *
                                 grainCornerLength / grainSideLength;
@@ -170,8 +171,8 @@ int main(int argc, char *argv[]) {
                                     -outerEdgeCoordinate, -outerEdgeCoordinate,
                                     diagonalCornerCoordinate};
 
-  geometry->add(new PolygonGeometry<T>(numVertices, xVertices, yVertices),
-                Type::add);
+  geometry->add(new scg::PolygonGeometry<T>(numVertices, xVertices, yVertices),
+                scg::Type::add);
 
   // Horizontal distance to pairbreaking edge from the middle of the grain
   const T pbEdgeOffset = grainCornerLength / static_cast<T>(std::sqrt(2.0));
@@ -186,46 +187,47 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::Radial used to have a weak external field for seeding the
   // phase
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-          context);
+  scg::RiccatiSolver<T> *riccatiSolver =
+      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                     scg::VectorPotential::None>(context);
   // Add specular BC
-  riccatiSolver->add(new BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   //***************************************************
   // SET DISPERSION
   //***************************************************
   const bool isFS1 = simParams["fermi_surface_label"].get<int>() == 1;
   const auto fermiSurfaceParams = isFS1 ? FS1 : FS2;
-  const DispersionTightBinding<T> dispersion = {
+  const scg::DispersionTightBinding<T> dispersion = {
       fermiSurfaceParams.at("hoppingNNN"), fermiSurfaceParams.at("hoppingNNNN"),
       simParams["chemical_potential"].get<T>()};
 
   //***************************************************
   // SET FERMI SURFACE
   //***************************************************
-  FermiSurface<T> *fermiSurface = new FermiSurfaceTightBinding<T>(dispersion);
+  scg::FermiSurface<T> *fermiSurface =
+      new scg::FermiSurfaceTightBinding<T>(dispersion);
   context->set(fermiSurface);
 
   //***************************************************
   // SET UP ORDER PARAMETER
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e. d+is)
-  OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
   // Compute the critical temperatures.
   // D-wave.
-  const std::pair<bool, T> dWaveTmp = bdg::computeCriticalTemperature(
+  const std::pair<bool, T> dWaveTmp = scg::bdg::computeCriticalTemperature(
       dispersion, fermiSurfaceParams.at("potential"),
-      BasisFunctionSymmetry::DWAVE_X2_Y2);
+      scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
   const bool dWaveSuccess = std::get<0>(dWaveTmp);
   const T dWaveTcRaw = std::get<1>(dWaveTmp);
   std::cout << "Tc: d = " << dWaveTcRaw << std::endl;
 
   // S-wave.
-  const std::pair<bool, T> sWaveTmp = bdg::computeCriticalTemperature(
+  const std::pair<bool, T> sWaveTmp = scg::bdg::computeCriticalTemperature(
       dispersion, fermiSurfaceParams.at("potential"),
-      BasisFunctionSymmetry::SWAVE_EXT);
+      scg::BasisFunctionSymmetry::SWAVE_EXT);
   const bool sWaveSuccess = std::get<0>(sWaveTmp);
   const T sWaveTcRaw = std::get<1>(sWaveTmp);
   std::cout << "Tc: s = " << sWaveTcRaw << std::endl;
@@ -235,7 +237,7 @@ int main(int argc, char *argv[]) {
   std::cout << "Tc: d = " << dWaveTc << " : s = " << sWaveTc << std::endl;
 
   if (!(dWaveSuccess && sWaveSuccess)) {
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 1;
   }
 
@@ -251,9 +253,9 @@ int main(int argc, char *argv[]) {
     std::cout << "Tc: raw = " << dWaveTcRaw << " : scaled = " << dWaveTc
               << std::endl;
     // Add a d-wave component to the total order-parameter
-    OrderParameterComponent<T> *orderParameterComponentD =
-        new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
-                                       parameters, dWaveTc);
+    scg::OrderParameterComponent<T> *orderParameterComponentD =
+        new scg::OrderParameterComponent<T>(
+            scg::BasisFunctionSymmetry::DWAVE_X2_Y2, parameters, dWaveTc);
 
     // Different start guesses: useful when comparing free energy to find T^*.
     // start guess label:
@@ -263,12 +265,12 @@ int main(int argc, char *argv[]) {
     // 4 - s-wave real, d-wave phase crystal guess
     switch (simParams["start_guess_label"].get<int>()) {
     case 1: {
-      Initial<T>::bulk(orderParameterComponentD);
+      scg::Initial<T>::bulk(orderParameterComponentD);
       break;
     }
     case 2: {
-      Initial<T>::random(orderParameterComponentD, startRandomPhaseMix,
-                         startRandomPhaseShift);
+      scg::Initial<T>::random(orderParameterComponentD, startRandomPhaseMix,
+                              startRandomPhaseShift);
       break;
     }
     case 3: {
@@ -277,7 +279,7 @@ int main(int argc, char *argv[]) {
       snprintf(orderParameterStartFile, sizeof(orderParameterStartFile),
                "../../research/mu_sweeps/data/op_phase_crystal_fs%d_t0-1.grd",
                simParams["fermi_surface_label"].get<int>());
-      Initial<T>::read(orderParameterComponentD, orderParameterStartFile);
+      scg::Initial<T>::read(orderParameterComponentD, orderParameterStartFile);
       break;
     }
     case 4: {
@@ -292,16 +294,16 @@ int main(int argc, char *argv[]) {
       const T pbMidPointY = -pbEdgeCoordinate;
       // Rotation of pairbreaking edge with respect to the screen
       const T pbEdgeRotation = -static_cast<T>(0.25 * M_PI);
-      Initial<T>::edgePhaseCrystal(orderParameterComponentD, startPhasePeriod,
-                                   startPhaseDecay, pbMidPointX, pbMidPointY,
-                                   pbEdgeRotation);
+      scg::Initial<T>::edgePhaseCrystal(
+          orderParameterComponentD, startPhasePeriod, startPhaseDecay,
+          pbMidPointX, pbMidPointY, pbEdgeRotation);
       break;
     }
     default:
       std::cout << "Error! Start guess '"
                 << simParams["start_guess_label"].get<int>()
                 << "' not implemented." << std::endl;
-      run_utils::cleanup(context, gui);
+      scg::run_utils::cleanup(context, gui);
       return 1;
     }
 
@@ -312,33 +314,33 @@ int main(int argc, char *argv[]) {
     std::cout << "Adding s-wave component:" << std::endl;
     std::cout << "Tc: raw = " << sWaveTc << " : scaled = " << sWaveTc
               << std::endl;
-    OrderParameterComponent<T> *orderParameterComponentS =
-        new OrderParameterComponent<T>(BasisFunctionSymmetry::SWAVE_EXT,
-                                       parameters, sWaveTc);
+    scg::OrderParameterComponent<T> *orderParameterComponentS =
+        new scg::OrderParameterComponent<T>(
+            scg::BasisFunctionSymmetry::SWAVE_EXT, parameters, sWaveTc);
 
     switch (simParams["start_guess_label"].get<int>()) {
     case 1: {
-      Initial<T>::bulk(orderParameterComponentS);
+      scg::Initial<T>::bulk(orderParameterComponentS);
       break;
     }
     case 2: {
-      Initial<T>::random(orderParameterComponentS, startRandomPhaseMix,
-                         startRandomPhaseShift);
+      scg::Initial<T>::random(orderParameterComponentS, startRandomPhaseMix,
+                              startRandomPhaseShift);
       break;
     }
     case 3: {
-      Initial<T>::bulk(orderParameterComponentS);
+      scg::Initial<T>::bulk(orderParameterComponentS);
       break;
     }
     case 4: {
-      Initial<T>::bulk(orderParameterComponentS);
+      scg::Initial<T>::bulk(orderParameterComponentS);
       break;
     }
     default:
       std::cout << "Error! Start guess '"
                 << simParams["start_guess_label"].get<int>()
                 << "' not implemented." << std::endl;
-      run_utils::cleanup(context, gui);
+      scg::run_utils::cleanup(context, gui);
       return 1;
     }
 
@@ -349,17 +351,17 @@ int main(int argc, char *argv[]) {
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Create compute object(s) for observable(s)
-  ComputeOrderParameter<T> *computeOrderParameter =
-      new ComputeOrderParameter<T>(context);
+  scg::ComputeOrderParameter<T> *computeOrderParameter =
+      new scg::ComputeOrderParameter<T>(context);
   // Current compute object
-  new ComputeCurrent<T>(context);
+  new scg::ComputeCurrent<T>(context);
   // Free energy compute object
-  new ComputeFreeEnergy<T>(context);
+  new scg::ComputeFreeEnergy<T>(context);
 
   //***************************************************
   // CHOOSE CONVERGENCE ACCELERATOR
   //***************************************************
-  OptimizerRollingBall<T> *optimizer = new OptimizerRollingBall<T>();
+  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
   computeOrderParameter->setOptimizer(optimizer);
 
   //***************************************************
@@ -379,27 +381,28 @@ int main(int argc, char *argv[]) {
   if (simParams["visualize"].get<bool>()) {
     const bool plotOrderParameter = true;
     const bool plotCurentDensity = true;
-    gui = run_utils::createVisualization(context, plotOrderParameter,
-                                         plotCurentDensity);
-    initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
-    glutKeyboardFunc(run_utils::myKeyboardFunc);
+    gui = scg::run_utils::createVisualization(context, plotOrderParameter,
+                                              plotCurentDensity);
+    scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
+                gui->getNumPixelsWindowY());
+    glutKeyboardFunc(scg::run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
   }
 
   //***************************************************
   // RUN SIMULATION UNTIL END CRITERIA
   //***************************************************
-  run_utils::Status status = run_utils::Status::kContinue;
-  while (status != run_utils::Status::kQuit) {
+  scg::run_utils::Status status = scg::run_utils::Status::kContinue;
+  while (status != scg::run_utils::Status::kQuit) {
     // Run one iteration,
-    status =
-        run_utils::runIteration(context, simParams["verbose"].get<bool>(),
-                                simParams["num_iterations_min"].get<int>(),
-                                simParams["num_iterations_max"].get<int>(),
-                                simParams["save_data"].get<bool>(),
-                                simParams["save_data_interval"].get<int>());
+    status = scg::run_utils::runIteration(
+        context, simParams["verbose"].get<bool>(),
+        simParams["num_iterations_min"].get<int>(),
+        simParams["num_iterations_max"].get<int>(),
+        simParams["save_data"].get<bool>(),
+        simParams["save_data_interval"].get<int>());
 
-    if (status == run_utils::Status::kSave) {
+    if (status == scg::run_utils::Status::kSave) {
       saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength);
     }
 
@@ -421,7 +424,7 @@ int main(int argc, char *argv[]) {
   // Save at the very end.
   saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength);
 
-  run_utils::cleanup(context, gui);
+  scg::run_utils::cleanup(context, gui);
   return 0;
 }
 
@@ -429,7 +432,7 @@ int main(int argc, char *argv[]) {
 void display() {
   const bool plotOrderParameter = true;
   const bool plotCurentDensity = true;
-  run_utils::display(context, gui, plotOrderParameter, plotCurentDensity);
+  scg::run_utils::display(context, gui, plotOrderParameter, plotCurentDensity);
 
   // Tell Glut to update window.
   glutPostRedisplay();

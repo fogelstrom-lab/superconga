@@ -100,7 +100,7 @@ void testLegacyAtan2(const T inTolerance, const int inNumAngles = 32,
       const T y = radius * sin(angle);
 
       const T angleOld = legacy::atan2(y, x);
-      const T angleNew = utils::wrapToRangeTwoPi(atan2(y, x));
+      const T angleNew = scg::utils::wrapToRangeTwoPi(atan2(y, x));
       CHECK(angle == doctest::Approx(angleNew).epsilon(inTolerance));
       CHECK(angleOld == doctest::Approx(angleNew).epsilon(inTolerance));
     }
@@ -129,8 +129,8 @@ void testComputeOrderParameterBulkSWave(const T inTolerance) {
           temperature, convergenceCriterion);
 
       // Compute the new value.
-      const T newOrderParameter =
-          computeOrderParameterBulkSWave(temperature, convergenceCriterion);
+      const T newOrderParameter = scg::computeOrderParameterBulkSWave(
+          temperature, convergenceCriterion);
 
       // Compare results.
       CHECK(oldOrderParameter ==

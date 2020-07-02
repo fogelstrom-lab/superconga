@@ -5,6 +5,7 @@
 #include "ContextModule.h"
 #include "Grid.h"
 
+namespace scg {
 template <typename T> class CoherenceFunctions : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -96,5 +97,6 @@ template <typename T> int CoherenceFunctions<T>::initialize() {
   std::cout << "numFields = " << Ne << "\n\n";
   return 0;
 }
+} // namespace scg
 
 #endif // COHERENCE_FUNCTIONS_H_

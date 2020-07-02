@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 
+namespace scg {
 template <typename T> class OrderParameterComponent {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -220,7 +221,7 @@ template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
   switch (symmetry) {
   case BasisFunctionSymmetry::DWAVE_XY:
   case BasisFunctionSymmetry::DWAVE_X2_Y2: {
-    scale = static_cast<T>(qcs::D_WAVE_BULK / qcs::S_WAVE_BULK);
+    scale = static_cast<T>(constants::D_WAVE_BULK / constants::S_WAVE_BULK);
     break;
   }
   default: {
@@ -229,5 +230,6 @@ template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
   }
   return sWaveBulk * scale;
 }
+} // namespace scg
 
 #endif // ORDER_PARAMETER_COMPONENT_H_

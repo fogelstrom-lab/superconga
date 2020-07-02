@@ -11,6 +11,7 @@
 #include "cplx.h"
 #include <cuda.h>
 
+namespace scg {
 template <typename T> class GeometryGroup : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -1012,5 +1013,6 @@ template <typename T> T *GeometryGroup<T>::getNormals(const int dim) const {
 template <typename T> T *GeometryGroup<T>::getBoundaryDistance() const {
   return _boundaryDistance->getDataPointer();
 }
+} // namespace scg
 
 #endif // GEOMETRY_GROUP_H_

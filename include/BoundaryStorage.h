@@ -1,19 +1,16 @@
 #ifndef BOUNDARY_STORAGE_H_
 #define BOUNDARY_STORAGE_H_
 
-template <typename T> class GeometryGroup;
-template <typename T> class BoundaryStorage;
-template <typename T> class IntegrationIterator;
-template <typename T> class ComputeProperty;
-
 #include "ComputeProperty.h"
 #include "FermiSurface.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
-#include "IntegrationIterator.h"
 #include "Type.h"
 #include "utils.h"
 #include <iostream>
+
+namespace scg {
+template <typename T> class ComputeProperty;
 
 template <typename T> class BoundaryStorage {
   typedef typename Grid<T>::GPU GridGPU;
@@ -562,5 +559,6 @@ template <typename T> void BoundaryStorage<T>::setBoundaryZero() {
   _boundary_in_gammabar->setZero();
   _boundary_out_gammabar->setZero();
 }
+} // namespace scg
 
 #endif // BOUNDARY_STORAGE_H_

@@ -43,9 +43,10 @@ T computeTolerance(const T inToleranceBaseFactor = static_cast<T>(5.0)) {
 }
 
 // Helper class for setting up simulation parameters
-template <typename T> Parameters<T> *applySimParams(Context<T> *context) {
+template <typename T>
+scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set grain resolution in number of lattice sites
   parameters->setGridResolution(simParams::GRID_RESOLUTION);
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
@@ -55,7 +56,7 @@ template <typename T> Parameters<T> *applySimParams(Context<T> *context) {
 }
 
 // Cleanup of context objects.
-template <typename T> void cleanup(Context<T> *context) { delete context; }
+template <typename T> void cleanup(scg::Context<T> *context) { delete context; }
 
 // ======================== Wrappers for test cases ======================== //
 // **** Test that order parameter grid is normalized properly **** /
@@ -74,89 +75,95 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
     for (GrainShape grainShape : allGrainShapes) {
       // =================== ARRANGE ==================== //
       // Create Context
-      Context<T> *context = new Context<T>();
+      scg::Context<T> *context = new scg::Context<T>();
 
       // Set parameters to the values specified in simParams struct
-      Parameters<T> *parameters = applySimParams<T>(context);
+      scg::Parameters<T> *parameters = applySimParams<T>(context);
 
       // Create geometry group: add/remove geometry objects (e.g. discs,
       // polygons) from the geometry group
-      GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+      scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
       switch (grainShape) {
       case GrainShape::disc: {
         const T discGrainScale = static_cast<T>(0.8);
-        geometry->add(new DiscGeometry<T>(discGrainScale), Type::add);
+        geometry->add(new scg::DiscGeometry<T>(discGrainScale), scg::Type::add);
         break;
       }
       case GrainShape::square: {
         const int numVerticesSquare = 4;
-        geometry->add(new PolygonGeometry<T>(numVerticesSquare), Type::add);
+        geometry->add(new scg::PolygonGeometry<T>(numVerticesSquare),
+                      scg::Type::add);
         break;
       }
       case GrainShape::octagon: {
         const int numVerticesOctagon = 8;
         const T octagonGrainScale = static_cast<T>(0.75);
         geometry->add(
-            new PolygonGeometry<T>(numVerticesOctagon, octagonGrainScale),
-            Type::add);
+            new scg::PolygonGeometry<T>(numVerticesOctagon, octagonGrainScale),
+            scg::Type::add);
         break;
       }
       case GrainShape::irregular: {
         // Add irregular pentagon
         const int numVertices = 5;
         const T xVertices[numVertices] = {
-            static_cast<T>(0.9 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(0.0 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(-1.0 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.8 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(0.5 * qcs::MAXIMUM_COORDINATE)};
+            static_cast<T>(0.9 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-1.0 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.5 * scg::constants::MAXIMUM_COORDINATE)};
         const T yVertices[numVertices] = {
-            static_cast<T>(0.8 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(1.0 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(0.0 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.8 * qcs::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.6 * qcs::MAXIMUM_COORDINATE)};
-        geometry->add(new PolygonGeometry<T>(numVertices, xVertices, yVertices),
-                      Type::add);
+            static_cast<T>(0.8 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(1.0 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * scg::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.6 * scg::constants::MAXIMUM_COORDINATE)};
+        geometry->add(
+            new scg::PolygonGeometry<T>(numVertices, xVertices, yVertices),
+            scg::Type::add);
         // Remove small disc
         const T discGrainScale = static_cast<T>(0.2);
-        const T discCenterX = static_cast<T>(0.2 * qcs::MAXIMUM_COORDINATE);
-        const T discCenterY = static_cast<T>(0.1 * qcs::MAXIMUM_COORDINATE);
+        const T discCenterX =
+            static_cast<T>(0.2 * scg::constants::MAXIMUM_COORDINATE);
+        const T discCenterY =
+            static_cast<T>(0.1 * scg::constants::MAXIMUM_COORDINATE);
         geometry->add(
-            new DiscGeometry<T>(discGrainScale, discCenterX, discCenterY),
-            Type::remove);
+            new scg::DiscGeometry<T>(discGrainScale, discCenterX, discCenterY),
+            scg::Type::remove);
         break;
       }
       }
 
       // Choose a Riccati solver for a confined geometry, no magnetic fields
-      RiccatiSolver<T> *riccatiSolver =
-          new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-              context);
+      scg::RiccatiSolver<T> *riccatiSolver =
+          new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                         scg::VectorPotential::None>(context);
 
       // Choose FermiSurface
-      FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+      scg::FermiSurfaceCircle<T> *fermiSurface =
+          new scg::FermiSurfaceCircle<T>();
       context->set(fermiSurface);
 
       // Set up order parameter
-      OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
-      const BasisFunctionSymmetry symmetry =
-          useSwave ? BasisFunctionSymmetry::SWAVE
-                   : BasisFunctionSymmetry::DWAVE_X2_Y2;
-      OrderParameterComponent<T> *orderParameterComponent =
-          new OrderParameterComponent<T>(symmetry, parameters);
+      scg::OrderParameter<T> *orderParameter =
+          new scg::OrderParameter<T>(context);
+      const scg::BasisFunctionSymmetry symmetry =
+          useSwave ? scg::BasisFunctionSymmetry::SWAVE
+                   : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+      scg::OrderParameterComponent<T> *orderParameterComponent =
+          new scg::OrderParameterComponent<T>(symmetry, parameters);
 
       // Temporary initialization has to be done before adding it to the order
       // parameter. This is because we have to add it outside the inner for
       // loops.
-      Initial<T>::constant(orderParameterComponent);
+      scg::Initial<T>::constant(orderParameterComponent);
       // Add the initialized s-wave component to the total order parameter
       orderParameter->add(orderParameterComponent);
 
       // Create compute objects
-      ComputeOrderParameter<T> *computeOrderParameter =
-          new ComputeOrderParameter<T>(context);
+      scg::ComputeOrderParameter<T> *computeOrderParameter =
+          new scg::ComputeOrderParameter<T>(context);
 
       // Loop over maxVales (small and large initialization values)
       for (const T &maxValue : maxValues) {
@@ -180,8 +187,8 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
                 valueStep * static_cast<T>(imaginaryPartIdx) + minValue;
 
             // Initialize order-parameter component to the (real) bulk value
-            Initial<T>::constant(orderParameterComponent, realPartValue,
-                                 imaginaryPartValue);
+            scg::Initial<T>::constant(orderParameterComponent, realPartValue,
+                                      imaginaryPartValue);
 
             // Initialize simulation
             context->initialize();

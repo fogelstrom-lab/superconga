@@ -3,6 +3,7 @@
 
 #include <cuda.h>
 
+namespace scg {
 template <typename T, template <typename> class POTENTIAL>
 __global__ void
 computeEnergyShift_external_kernel(T *eShift, const T systemAngle, const T B,
@@ -31,5 +32,6 @@ computeEnergyShift_internal_kernel(T *eShift, const T *jx, const T *jy,
     eShift[idx] +=
         T(M_PI) * (cos(systemAngle) * jx[idx] + sin(systemAngle) * jy[idx]);
 }
+} // namespace scg
 
 #endif // VECTOR_POTENTIAL_KERNEL_H_

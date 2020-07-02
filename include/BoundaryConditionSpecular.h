@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cuda.h>
 
+namespace scg {
 template <typename T>
 class BoundaryConditionSpecular : public BoundaryCondition<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -356,5 +357,6 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   cudaStreamDestroy(s1);
   cudaStreamDestroy(s2);
 }
+} // namespace scg
 
 #endif // BOUNDARY_CONDITION_SPECULAR_H_

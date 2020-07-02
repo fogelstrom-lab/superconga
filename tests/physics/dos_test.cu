@@ -65,10 +65,10 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
                          const T inConvergenceCriterion) {
   // =================== ARRANGE ==================== //
   // Create Context
-  Context<T> *context = new Context<T>();
+  scg::Context<T> *context = new scg::Context<T>();
 
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set grain resolution in number of lattice sites.
   parameters->setGridResolution(simParams::GRID_RESOLUTION);
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
@@ -88,48 +88,48 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
   if (inUseSwave) {
     // Add a disc to the simulation geometry.
     // Note, corners introduce artifacts. For an s-wave we can have a disc
     // instead, and lower the tolerance.
     const T discDiameter = static_cast<T>(1.0);
-    geometry->add(new DiscGeometry<T>(discDiameter), Type::add);
+    geometry->add(new scg::DiscGeometry<T>(discDiameter), scg::Type::add);
   } else {
     // Add a square to the simulation geometry.
-    geometry->add(new PolygonGeometry<T>(4), Type::add);
+    geometry->add(new scg::PolygonGeometry<T>(4), scg::Type::add);
   }
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-          context);
+  scg::RiccatiSolver<T> *riccatiSolver =
+      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                     scg::VectorPotential::None>(context);
   // Add specular BC
-  riccatiSolver->add(new BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
-  OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
   // Use s-wave or d-wave.
-  const BasisFunctionSymmetry symmetry =
-      inUseSwave ? BasisFunctionSymmetry::SWAVE
-                 : BasisFunctionSymmetry::DWAVE_X2_Y2;
+  const scg::BasisFunctionSymmetry symmetry =
+      inUseSwave ? scg::BasisFunctionSymmetry::SWAVE
+                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
-  OrderParameterComponent<T> *orderParameterComponent =
-      new OrderParameterComponent<T>(symmetry, parameters);
+  scg::OrderParameterComponent<T> *orderParameterComponent =
+      new scg::OrderParameterComponent<T>(symmetry, parameters);
 
   // Initialize order-parameter component to the bulk value.
-  Initial<T>::bulk(orderParameterComponent);
+  scg::Initial<T>::bulk(orderParameterComponent);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
   // Choose FermiSurface
-  FermiSurfaceCircle<T> *fermiSurface = new FermiSurfaceCircle<T>();
+  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
   context->set(fermiSurface);
 
   // Add LDOS compute object.
-  new ComputeLDOS<T>(context);
+  new scg::ComputeLDOS<T>(context);
 
   // Initialize everything.
   context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
@@ -146,7 +146,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   }
 
   // Get results.
-  typename Grid<T>::CPU *dosObject = context->getComputeLDOS()->getDOS();
+  typename scg::Grid<T>::CPU *dosObject = context->getComputeLDOS()->getDOS();
   const T *const energies = dosObject->getDataPointer(0);
   const T *const dos = dosObject->getDataPointer(1);
 
@@ -155,7 +155,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   // the normalization factor for the basis function.
   // TODO(niclas): The basis functions should return normalized values.
   const T orderParameterBulk = orderParameterComponent->deltaBulk();
-  BasisFunction<T> basisFunction(symmetry);
+  scg::BasisFunction<T> basisFunction(symmetry);
   basisFunction.normalize(fermiSurface);
 
   // Loop over energies and check the DOS for each.
@@ -169,7 +169,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
       // Construct the complex valued order parameter.
       // Strictly speaking it unnecessary to have it complex valued when we only
       // consider s- and d-wave.
-      const cplx<T> tmp =
+      const scg::cplx<T> tmp =
           basisFunction.evaluate(fermiMomentumX, fermiMomentumY);
       const std::complex<T> eta(tmp.x, tmp.y);
       const std::complex<T> orderParameter = eta * orderParameterBulk;

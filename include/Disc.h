@@ -4,6 +4,7 @@
 #ifndef DISC_H_
 #define DISC_H_
 
+namespace scg {
 template <typename T> class Disc {
 public:
   Disc();
@@ -66,5 +67,6 @@ template <typename T> void Disc<T>::setPosX(const T inCenterX) {
 template <typename T> void Disc<T>::setPosY(const T inCenterY) {
   m_centerY = inCenterY;
 }
+} // namespace scg
 
 #endif // DISC_H_

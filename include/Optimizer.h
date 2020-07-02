@@ -3,6 +3,7 @@
 
 #include "OrderParameter.h"
 
+namespace scg {
 template <typename T> class Optimizer {
 public:
   // Constructor.
@@ -19,5 +20,6 @@ public:
     (void)inResidual;
   };
 };
+} // namespace scg
 
 #endif // OPTIMIZER_H_

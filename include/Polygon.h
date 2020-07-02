@@ -7,6 +7,7 @@
 // This class provides a basic shape implementation for a polygon.
 // Polygons must be defined in a counterclockwise fashion.
 
+namespace scg {
 template <typename T> class Polygon {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -168,5 +169,6 @@ void Polygon<T>::transformPhysicalToNormalized(const int inNumVertices,
     inOutVerticesY[i] = yPhysical * scale + offset;
   }
 }
+} // namespace scg
 
 #endif // POLYGON_H_

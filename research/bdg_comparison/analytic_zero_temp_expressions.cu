@@ -93,7 +93,7 @@ int main() {
   const std::vector<T> surfaceParallel = {cosParallel, sinParallel};
 
   // Set up Fermi surfaces
-  std::unique_ptr<FermiSurface<T>> fermiSurface;
+  std::unique_ptr<scg::FermiSurface<T>> fermiSurface;
 
   T TStar;
 
@@ -101,15 +101,15 @@ int main() {
   for (FermiSurfaceModels fermiSurfaceModel : allFermiSurfaceModels) {
     // Construct appropriate fermi surface
     if (fermiSurfaceModel == FermiSurfaceModels::circular) {
-      fermiSurface = std::make_unique<FermiSurfaceCircle<T>>();
+      fermiSurface = std::make_unique<scg::FermiSurfaceCircle<T>>();
       TStar = TSTAR_CIRC;
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs1) {
-      fermiSurface = std::make_unique<FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
           static_cast<T>(CHEMICAL_POTENTIAL_FS1));
       TStar = TSTAR_FS1;
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs2) {
-      fermiSurface = std::make_unique<FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
           static_cast<T>(CHEMICAL_POTENTIAL_FS2));
       TStar = TSTAR_FS2;
@@ -120,7 +120,7 @@ int main() {
     // Initialize Fermi surface
     fermiSurface->initialize(numAngles);
 
-    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE_X2_Y2);
+    scg::BasisFunction<T> basisFunctionD(scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
     basisFunctionD.normalize(fermiSurface.get());
 
     // Storage for integrand sums
@@ -140,7 +140,7 @@ int main() {
       fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
 
       // Basis function: eta
-      const cplx<T> basisFunction =
+      const scg::cplx<T> basisFunction =
           basisFunctionD.evaluate(momentumX, momentumY);
       // |eta|
       const T basisFunctionAbs = basisFunction.cabs();
@@ -182,7 +182,7 @@ int main() {
     // see Eq. (D11) on p. 104 in P. Holmvall PhD Thesis (2019)
     const T bulkOrderParameter =
         static_cast<T>(M_PI) *
-        std::exp(-static_cast<T>(qcs::EULER_MASCHERONI)) *
+        std::exp(-static_cast<T>(scg::constants::EULER_MASCHERONI)) *
         std::exp(-integrandOrderParameter);
     // BCS energy: Omega = -<|Delta|^2>/2 = -|Delta_0|^2 * <|eta|^2>,
     // see Eq. (D.26) on p. 106 in P. Holmvall PhD Thesis (2019)
@@ -201,15 +201,17 @@ int main() {
         -static_cast<T>(M_PI * M_PI) * integrandFreeEnergyDoppler;
 
     // Expected bulk OP at T=0, circular FS
-    const T expecteOrderParameter = qcs::D_WAVE_BULK;
+    const T expecteOrderParameter = scg::constants::D_WAVE_BULK;
     // Expected BCS energy at T=0, circular FS
-    const T expecteFreeEnergyBCS = -0.5 * qcs::D_WAVE_BULK * qcs::D_WAVE_BULK;
+    const T expecteFreeEnergyBCS =
+        -0.5 * scg::constants::D_WAVE_BULK * scg::constants::D_WAVE_BULK;
     // Expected values for circular FS:
     // MGS cost: Eq. (E.106) on p. 131 in P. Holmvall PhD Thesis (2019) - note
     // that there is a typo in the thesis, since it should be sin(2*theta) in
     // instead of cos(2*theta) in Eq. (E.105)
     const T expectedFreeEnergyMGS =
-        static_cast<T>(std::sqrt(8.0) * M_PI / 3.0) * qcs::D_WAVE_BULK;
+        static_cast<T>(std::sqrt(8.0) * M_PI / 3.0) *
+        scg::constants::D_WAVE_BULK;
     // Doppler gain: slightly rewritten Eq. (E.121) on p. 132 in P. Holmvall PhD
     // Thesis (2019)
     const T expectedFreeEnergyDoppler = -static_cast<T>(M_PI);

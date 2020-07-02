@@ -6,6 +6,7 @@
 #include "IntegrationIteratorOzaki.h"
 #include "utils.h"
 
+namespace scg {
 template <typename T> class ComputeCurrent : public ComputeProperty<T> {
   typedef typename Grid<T>::GPU GridGPU;
 
@@ -185,5 +186,6 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     }
   }
 }
+} // namespace scg
 
 #endif // COMPUTE_CURRENT_H_

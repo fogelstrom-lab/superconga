@@ -16,6 +16,7 @@
 
 #include <string>
 
+namespace scg {
 namespace configure {
 // Version number
 const std::string version = "${CMAKE_PROJECT_VERSION}";
@@ -35,5 +36,6 @@ const std::string licenseStatement =
     "for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 
 } // namespace configure
+} // namespace scg
 
 #endif // CONFIGURE_H_

@@ -11,7 +11,7 @@ namespace helper {
 // value.
 template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   // =================== ACT ==================== //
@@ -26,7 +26,7 @@ template <typename T> void testGetNumAngles(const int inNumAngles = 10) {
 // around the origin.
 template <typename T> void testGetMomentumOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
 
   // =================== ACT ==================== //
   T offsetX;
@@ -47,7 +47,7 @@ template <typename T> void testGetMomentumOffset(const T inTolerance) {
 // first angle index.
 template <typename T> void testGetAngleOffset(const T inTolerance) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
 
   // =================== ACT ==================== //
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -68,7 +68,7 @@ template <typename T> void testGetAngleOffset(const T inTolerance) {
 template <typename T>
 void testGetSystemAngle(const T inTolerance, const int inNumAngles = 11) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -80,12 +80,12 @@ void testGetSystemAngle(const T inTolerance, const int inNumAngles = 11) {
     // =================== ACT ==================== //
     // We need to wrap the angles to not get false negatives.
     const T systemAngle =
-        utils::wrapToRangeTwoPi(fermiSurface.getSystemAngle(angleIdx));
+        scg::utils::wrapToRangeTwoPi(fermiSurface.getSystemAngle(angleIdx));
 
     // =================== ASSERT ==================== //
     const T angle = angleStep * static_cast<T>(angleIdx) + angleOffset;
     const T systemAngleExpected =
-        utils::wrapToRangeTwoPi(angle - static_cast<T>(0.5 * M_PI));
+        scg::utils::wrapToRangeTwoPi(angle - static_cast<T>(0.5 * M_PI));
 
     CHECK(systemAngle ==
           doctest::Approx(systemAngleExpected).epsilon(inTolerance));
@@ -97,7 +97,7 @@ void testGetSystemAngle(const T inTolerance, const int inNumAngles = 11) {
 template <typename T>
 void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -132,7 +132,7 @@ void testGetFermiMomentum(const T inTolerance, const int inNumAngles = 12) {
 template <typename T>
 void testGetFermiVelocity(const T inTolerance, const int inNumAngles = 7) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   const T angleOffset = fermiSurface.getAngleOffset();
@@ -168,7 +168,7 @@ void testGetFermiVelocity(const T inTolerance, const int inNumAngles = 7) {
 template <typename T>
 void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
   // =================== ARRANGE ==================== //
-  FermiSurfaceCircle<T> fermiSurface;
+  scg::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(inNumAngles);
 
   // After looping over angles and summing this should be one.

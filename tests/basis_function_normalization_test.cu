@@ -41,23 +41,23 @@ void testBasisFunctionNormaliztation(const T inTolerance,
   // =================== ARRANGE ==================== //
   // Set up Fermi surface angles
   const int numAngles = 100;
-  const std::vector<T> angles = utils::linspace(
+  const std::vector<T> angles = scg::utils::linspace(
       static_cast<T>(0.0), static_cast<T>(2.0 * M_PI), numAngles);
 
   // Create Fermi surface object
-  std::unique_ptr<FermiSurface<T>> fermiSurface;
+  std::unique_ptr<scg::FermiSurface<T>> fermiSurface;
 
   // Loop over Fermi surface types
   for (FermiSurfaceModels fermiSurfaceModel : allFermiSurfaceModels) {
     // Construct appropriate fermi surface
     if (fermiSurfaceModel == FermiSurfaceModels::circular) {
-      fermiSurface = std::make_unique<FermiSurfaceCircle<T>>();
+      fermiSurface = std::make_unique<scg::FermiSurfaceCircle<T>>();
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs1) {
-      fermiSurface = std::make_unique<FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
           static_cast<T>(CHEMICAL_POTENTIAL_FS1));
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs2) {
-      fermiSurface = std::make_unique<FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
           static_cast<T>(CHEMICAL_POTENTIAL_FS2));
     } else {
@@ -68,8 +68,8 @@ void testBasisFunctionNormaliztation(const T inTolerance,
     fermiSurface->initialize(numAngles);
 
     // Basis functions.
-    BasisFunction<T> basisFunctionS(BasisFunctionSymmetry::SWAVE);
-    BasisFunction<T> basisFunctionD(BasisFunctionSymmetry::DWAVE_X2_Y2);
+    scg::BasisFunction<T> basisFunctionS(scg::BasisFunctionSymmetry::SWAVE);
+    scg::BasisFunction<T> basisFunctionD(scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
 
     for (int i = 0; i < inNumNormalizations; ++i) {
       // Normalize basis function. It should not matter whether we have called
@@ -88,8 +88,8 @@ void testBasisFunctionNormaliztation(const T inTolerance,
         T momentumX;
         T momentumY;
         fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
-        const cplx<T> etaS = basisFunctionS.evaluate(momentumX, momentumY);
-        const cplx<T> etaD = basisFunctionD.evaluate(momentumX, momentumY);
+        const scg::cplx<T> etaS = basisFunctionS.evaluate(momentumX, momentumY);
+        const scg::cplx<T> etaD = basisFunctionD.evaluate(momentumX, momentumY);
 
         // Compute the integrand of <|eta|^2 >
         integrandFactorSumS += integrandFactor * etaS.cabsSq();

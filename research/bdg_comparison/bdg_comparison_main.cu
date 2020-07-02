@@ -56,11 +56,11 @@ typedef double T;
 //*******************************************************
 namespace {
 // Context object
-Context<T> *context = new Context<T>();
+scg::Context<T> *context = new scg::Context<T>();
 // Visualization object
-Visualization<T> *gui;
+scg::Visualization<T> *gui;
 // Free energy object
-ComputeFreeEnergy<T> *computeFreeEnergy;
+scg::ComputeFreeEnergy<T> *computeFreeEnergy;
 // Used to construct data file path
 char dataPath[512];
 } // namespace
@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  Parameters<T> *parameters = new Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set grain resolution in number of lattice sites
   parameters->setGridResolution(simParams::GRID_RESOLUTION);
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
@@ -193,11 +193,12 @@ int main(int argc, char *argv[]) {
   // CREATE GEOMETRY
   //***************************************************
   // Create geometry group, add polygon and remove corners
-  GeometryGroup<T> *geometry = new GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
   const int numVertices = 5;
   // The coordinate system is in the range:
-  // [-qcs::MAXIMUM_COORDINATE,qcs::MAXIMUM_COORDINATE].
-  const T outerEdgeCoordinate = static_cast<T>(qcs::MAXIMUM_COORDINATE);
+  // [-scg::constants::MAXIMUM_COORDINATE,scg::constants::MAXIMUM_COORDINATE].
+  const T outerEdgeCoordinate =
+      static_cast<T>(scg::constants::MAXIMUM_COORDINATE);
   const T diagonalCornerCoordinate =
       outerEdgeCoordinate - static_cast<T>(2.0) * outerEdgeCoordinate *
                                 simParams::GRAIN_CORNER_SIZE /
@@ -212,8 +213,8 @@ int main(int argc, char *argv[]) {
                                     -outerEdgeCoordinate, -outerEdgeCoordinate,
                                     diagonalCornerCoordinate};
 
-  geometry->add(new PolygonGeometry<T>(numVertices, xVertices, yVertices),
-                Type::add);
+  geometry->add(new scg::PolygonGeometry<T>(numVertices, xVertices, yVertices),
+                scg::Type::add);
 
   // Horizontal distance to pairbreaking edge from the middle of the grain
   const T pbEdgeOffset =
@@ -234,21 +235,21 @@ int main(int argc, char *argv[]) {
   // for a piecewise constant order parameter Gauge choice:
   // VectorPotential::Radial used to have a weak external field for seeding the
   // phase
-  RiccatiSolver<T> *riccatiSolver =
-      new RiccatiSolverConfined<T, Gamma::General, VectorPotential::None>(
-          context);
+  scg::RiccatiSolver<T> *riccatiSolver =
+      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
+                                     scg::VectorPotential::None>(context);
   // Add specular BC
-  riccatiSolver->add(new BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   //***************************************************
   // SET UP ORDER PARAMETER
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e. d+is)
-  OrderParameter<T> *orderParameter = new OrderParameter<T>(context);
+  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
   // Add a d-wave component to the total order-parameter
-  OrderParameterComponent<T> *orderParameterComponent =
-      new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
-                                     parameters);
+  scg::OrderParameterComponent<T> *orderParameterComponent =
+      new scg::OrderParameterComponent<T>(
+          scg::BasisFunctionSymmetry::DWAVE_X2_Y2, parameters);
   // Period of phase crystal, converted to coordinate units. In coherence
   // lengths, it is typically 2*pi coherence lengths in QC simulations (see the
   // Nat. Comm. and PRR papers).
@@ -260,28 +261,28 @@ int main(int argc, char *argv[]) {
   // Run with or without current loops:
   // Useful when comparing free energy to find T^*.
   if (simParams::LOAD_ORDER_PARAMETER) {
-    Grid<T>::GPU orderParameterLoaded;
+    scg::Grid<T>::GPU orderParameterLoaded;
     // Read orderparameter from file.
     char orderParameterFile[512];
     sprintf(orderParameterFile, "%sorder_parameter.grd", dataPath);
     if (orderParameterLoaded.read(orderParameterFile, parameters)) {
       std::cout << "Error reading file: " << std::endl;
       std::cout << orderParameterFile << std::endl;
-      run_utils::cleanup(context, gui);
+      scg::run_utils::cleanup(context, gui);
       exit(0);
     }
     std::cout << "Initialize the order parameter from file." << std::endl;
-    Initial<T>::grid(orderParameterComponent, orderParameterLoaded);
+    scg::Initial<T>::grid(orderParameterComponent, orderParameterLoaded);
   } else if (simParams::RUN_METASTABLE) {
     // This will set the imagniary part to zero, and it will not change during
     // the simulation.
     std::cout << "Initialize the order parameter with constant bulk value."
               << std::endl;
-    Initial<T>::bulk(orderParameterComponent);
+    scg::Initial<T>::bulk(orderParameterComponent);
   } else {
-    Initial<T>::edgePhaseCrystal(orderParameterComponent, startPhasePeriod,
-                                 startPhaseDecay, pbMidPointX, pbMidPointY,
-                                 pbEdgeRotation);
+    scg::Initial<T>::edgePhaseCrystal(orderParameterComponent, startPhasePeriod,
+                                      startPhaseDecay, pbMidPointX, pbMidPointY,
+                                      pbEdgeRotation);
   }
 
   // Add the initialized d-wave component to the total order parameter
@@ -291,49 +292,49 @@ int main(int argc, char *argv[]) {
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Create compute object(s) for observable(s)
-  ComputeOrderParameter<T> *computeOrderParameter =
-      new ComputeOrderParameter<T>(context);
+  scg::ComputeOrderParameter<T> *computeOrderParameter =
+      new scg::ComputeOrderParameter<T>(context);
   // Current compute object
-  new ComputeCurrent<T>(context);
+  new scg::ComputeCurrent<T>(context);
   // Free energy compute object
-  computeFreeEnergy = new ComputeFreeEnergy<T>(context);
+  computeFreeEnergy = new scg::ComputeFreeEnergy<T>(context);
 
   //***************************************************
   // CHOOSE CONVERGENCE ACCELERATOR
   //***************************************************
-  OptimizerRollingBall<T> *optimizer = new OptimizerRollingBall<T>();
+  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
   computeOrderParameter->setOptimizer(optimizer);
 
   //***************************************************
   // CHOOSE FERMI SURFACE
   //***************************************************
 
-  FermiSurface<T> *fermiSurface;
+  scg::FermiSurface<T> *fermiSurface;
   switch (simParams::fermiSurfaceLabel) {
   case 1: {
-    fermiSurface = new FermiSurfaceCircle<T>();
+    fermiSurface = new scg::FermiSurfaceCircle<T>();
     break;
   }
   case 2: {
     const T hoppingNNN = static_cast<T>(-0.25);
     const T hoppingNNNN = static_cast<T>(0.0);
     const T chemicalPotential = static_cast<T>(0.0);
-    fermiSurface = new FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
-                                                   chemicalPotential);
+    fermiSurface = new scg::FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
+                                                        chemicalPotential);
     break;
   }
   case 3: {
     const T hoppingNNN = static_cast<T>(-0.495);
     const T hoppingNNNN = static_cast<T>(0.156);
     const T chemicalPotential = static_cast<T>(-1.267);
-    fermiSurface = new FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
-                                                   chemicalPotential);
+    fermiSurface = new scg::FermiSurfaceTightBinding<T>(hoppingNNN, hoppingNNNN,
+                                                        chemicalPotential);
     break;
   }
   default:
     std::cout << "ERROR! Illegal value for simParams::fermiSurfaceLabel:"
               << simParams::fermiSurfaceLabel << std::endl;
-    run_utils::cleanup(context, gui);
+    scg::run_utils::cleanup(context, gui);
     return 0;
   }
   context->set(fermiSurface);
@@ -356,10 +357,11 @@ int main(int argc, char *argv[]) {
   if (simParams::RUN_VISUAL) {
     const bool plotOrderParameter = true;
     const bool plotCurentDensity = true;
-    gui = run_utils::createVisualization(context, plotOrderParameter,
-                                         plotCurentDensity);
-    initGL(argc, argv, gui->getNumPixelsWindowX(), gui->getNumPixelsWindowY());
-    glutKeyboardFunc(run_utils::myKeyboardFunc);
+    gui = scg::run_utils::createVisualization(context, plotOrderParameter,
+                                              plotCurentDensity);
+    scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
+                gui->getNumPixelsWindowY());
+    glutKeyboardFunc(scg::run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
   }
 
@@ -367,15 +369,15 @@ int main(int argc, char *argv[]) {
   // RUN SIMULATION UNTIL END CRITERIA
   //***************************************************
   if (simParams::COMPUTE_ORDER_PARAMETER) {
-    run_utils::Status status = run_utils::Status::kContinue;
-    while (status != run_utils::Status::kQuit) {
+    scg::run_utils::Status status = scg::run_utils::Status::kContinue;
+    while (status != scg::run_utils::Status::kQuit) {
       // Run one iteration,
-      status = run_utils::runIteration(
+      status = scg::run_utils::runIteration(
           context, simParams::PRINT_ITERATION_STATUS,
           simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
           simParams::SAVE_DATA, simParams::SAVE_DATA_INTERVAL);
 
-      if (status == run_utils::Status::kSave) {
+      if (status == scg::run_utils::Status::kSave) {
         saveDataWrapper();
       }
 
@@ -400,7 +402,7 @@ int main(int argc, char *argv[]) {
 
   postProcessing();
 
-  run_utils::cleanup(context, gui);
+  scg::run_utils::cleanup(context, gui);
   return 0;
 }
 
@@ -408,7 +410,7 @@ int main(int argc, char *argv[]) {
 void display() {
   const bool plotOrderParameter = true;
   const bool plotCurentDensity = true;
-  run_utils::display(context, gui, plotOrderParameter, plotCurentDensity);
+  scg::run_utils::display(context, gui, plotOrderParameter, plotCurentDensity);
 
   // Tell Glut to update window.
   glutPostRedisplay();
@@ -431,7 +433,7 @@ void postProcessing() {
         simParams::LDOS_CONVERGENCE_CRITERION);
 
     // Add LDOS compute object.
-    new ComputeLDOS<T>(context);
+    new scg::ComputeLDOS<T>(context);
 
     // Re-initialize everything.
     context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
@@ -441,7 +443,7 @@ void postProcessing() {
       context->compute();
 
       // Output iteration status to terminal.
-      run_utils::printIterationStatus(context);
+      scg::run_utils::printIterationStatus(context);
 
       const bool isConverged = context->isConverged();
       if (isConverged) {

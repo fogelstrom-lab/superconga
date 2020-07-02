@@ -66,22 +66,23 @@ void testComputeCriticalTemperature(
   }
 
   // Define the dispersion.
-  DispersionTightBinding<T> dispersion(hoppingNNN, hoppingNNNN,
-                                       chemicalPotential);
+  scg::DispersionTightBinding<T> dispersion(hoppingNNN, hoppingNNNN,
+                                            chemicalPotential);
 
   // D-wave and extended s-wave.
-  const BasisFunctionSymmetry dWaveSymmetry =
-      BasisFunctionSymmetry::DWAVE_X2_Y2;
-  const BasisFunctionSymmetry sExtSymmetry = BasisFunctionSymmetry::SWAVE_EXT;
+  const scg::BasisFunctionSymmetry dWaveSymmetry =
+      scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  const scg::BasisFunctionSymmetry sExtSymmetry =
+      scg::BasisFunctionSymmetry::SWAVE_EXT;
 
   // =================== ACT ==================== //
   const std::pair<bool, T> dWaveTmp =
-      bdg::computeCriticalTemperature(dispersion, potential, dWaveSymmetry);
+      scg::bdg::computeCriticalTemperature(dispersion, potential, dWaveSymmetry);
   const bool dWaveSuccess = std::get<0>(dWaveTmp);
   const T dWaveTc = std::get<1>(dWaveTmp);
 
   const std::pair<bool, T> sExtWaveTmp =
-      bdg::computeCriticalTemperature(dispersion, potential, sExtSymmetry);
+      scg::bdg::computeCriticalTemperature(dispersion, potential, sExtSymmetry);
   const bool sExtWaveSuccess = std::get<0>(sExtWaveTmp);
   const T sExtWaveTc = std::get<1>(sExtWaveTmp);
 

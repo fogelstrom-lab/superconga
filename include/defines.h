@@ -16,10 +16,12 @@
 #include <array>
 #include <cmath>
 
+namespace scg {
 // Convenient 2D vector definition.
 template <typename T> using vector2d = std::array<T, 2>;
 
-namespace qcs {
+namespace constants {
+
 // Margin around superconducting grain in simulation space. A margin
 // of 0.04 means that the grain covers 1.0-0.04 = 96 percent of the total
 // simulation space.
@@ -64,6 +66,7 @@ const double D_WAVE_BULK =
 // https://en.wikipedia.org/wiki/Ap%C3%A9ry%27s_constant
 // TODO(niclas): When moving to C++17 we can use std::riemann_zeta(3) instead.
 const double APERY = 1.202056903159594285399738161511;
-} // namespace qcs
+} // namespace constants
+} // namespace scg
 
 #endif // DEFINES_H_

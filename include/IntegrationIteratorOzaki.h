@@ -23,7 +23,7 @@ void dsygv_(int64_t *ITYPE, char *JOBZ, char *UPLO, int64_t *N, double *A,
             int64_t *LDA, double *B, int64_t *LDB, double *W, double *WORK,
             int64_t *LWORK, int64_t *INFO);
 }
-
+namespace scg {
 template <typename T>
 class IntegrationIteratorOzaki : public IntegrationIterator<T> {
   typedef typename Grid<T>::GPU GridGPU;
@@ -363,5 +363,6 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
 
   I::increaseIterationCount();
 }
+} // namespace scg
 
 #endif // INTEGRATION_ITERATOR_OZAKI_H_

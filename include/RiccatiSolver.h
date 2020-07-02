@@ -24,6 +24,9 @@
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE
 /////////////////////////////////////////////////////////
 
+namespace scg {
+template <typename T> class BoundaryStorage;
+
 template <typename T> class RiccatiSolver : public ContextModule<T> {
   typedef typename Grid<T>::GPU GridGPU;
   typedef typename Grid<T>::CPU GridCPU;
@@ -394,5 +397,6 @@ void RiccatiSolver<T>::getKernelDimensionsOptim(dim3 &blocksPerGrid,
   threadsPerBlock = dim3(tpb_x, tpb_y);
   blocksPerGrid = dim3(bpg_x, bpg_y);
 }
+} // namespace scg
 
 #endif // RICCATI_SOLVER_H_
