@@ -85,7 +85,8 @@ const std::map<std::string, T> FS2 = {{"hoppingNNN", static_cast<T>(-0.495)},
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Please provide config file.\n";
-    exit(1);
+    run_utils::cleanup(context, gui);
+    return 1;
   }
   const std::string filename = argv[1];
 
@@ -109,11 +110,13 @@ int main(int argc, char *argv[]) {
       (grainCornerLength * static_cast<T>(std::sqrt(2.0)))) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE too large:" << grainCornerLength
               << std::endl;
+    run_utils::cleanup(context, gui);
     return 1;
   }
   if (grainCornerLength < static_cast<T>(0.0)) {
     std::cout << "ERROR! GRAIN_CORNER_SIZE negative: " << grainCornerLength
               << std::endl;
+    run_utils::cleanup(context, gui);
     return 1;
   }
 
@@ -134,21 +137,13 @@ int main(int argc, char *argv[]) {
       simParams["convergence_criterion"].get<T>());
 
   // Set filename
-  if (simParams["meta_stable"].get<bool>()) {
-    snprintf(dataPath, sizeof(dataPath),
-             "%s/fs%d_mu%2.4f/R%2.3f_r%2.3f_T%2.4f_ms",
-             simParams["data_path"].get<std::string>().c_str(),
-             simParams["fermi_surface_label"].get<int>(),
-             simParams["chemical_potential"].get<T>(), grainCornerLength,
-             grainCornerLength, simParams["temperature"].get<T>());
-  } else {
-    snprintf(dataPath, sizeof(dataPath),
-             "%s/fs%d_mu%2.4f/_R%2.3f_r%2.3f_T%2.4f",
-             simParams["data_path"].get<std::string>().c_str(),
-             simParams["fermi_surface_label"].get<int>(),
-             simParams["chemical_potential"].get<T>(), grainCornerLength,
-             grainCornerLength, simParams["temperature"].get<T>());
-  }
+  snprintf(dataPath, sizeof(dataPath),
+           "%s/fs%d_mu%2.4f_sl%d/R%2.3f_r%2.3f_T%2.4f",
+           simParams["data_path"].get<std::string>().c_str(),
+           simParams["fermi_surface_label"].get<int>(),
+           simParams["chemical_potential"].get<T>(),
+           simParams["start_guess_label"].get<int>(), grainCornerLength,
+           grainCornerLength, simParams["temperature"].get<T>());
 
   // Create data path if it does not exist
   run_utils::createDirectory(dataPath);
@@ -183,11 +178,6 @@ int main(int argc, char *argv[]) {
   // Convert distance to coordinates
   const T pbEdgeCoordinate =
       pbEdgeOffset / (grainSideLength * static_cast<T>(0.5));
-  // Coordinates to the midpoint of the pairbreaking edge
-  const T pbMidPointX = pbEdgeCoordinate;
-  const T pbMidPointY = -pbEdgeCoordinate;
-  // Rotation of pairbreaking edge with respect to the screen
-  const T pbEdgeRotation = -static_cast<T>(0.25 * M_PI);
 
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS
@@ -252,6 +242,10 @@ int main(int argc, char *argv[]) {
   // Add the initialized components to the total order parameter
   const T TcLimit = static_cast<T>(1e-3);
 
+  // Parameters for random initial guess
+  const T startRandomPhaseMix = static_cast<T>(0.02);
+  const T startRandomPhaseShift = static_cast<T>(0.25 * M_PI);
+
   if (dWaveTc > TcLimit) {
     std::cout << "Adding d-wave component:" << std::endl;
     std::cout << "Tc: raw = " << dWaveTcRaw << " : scaled = " << dWaveTc
@@ -261,21 +255,54 @@ int main(int argc, char *argv[]) {
         new OrderParameterComponent<T>(BasisFunctionSymmetry::DWAVE_X2_Y2,
                                        parameters, dWaveTc);
 
-    // Period of phase crystal, converted to coordinate units. In coherence
-    // lengths, it is typically 2*pi coherence lengths in QC simulations (see
-    // the Nat. Comm. and PRR papers).
-    const T startPhasePeriod = static_cast<T>(4.0 * M_PI) / grainSideLength;
-    // Decay length of phase crystal, converted to coordinate units.
-    const T startPhaseDecay = static_cast<T>(1.0) / grainSideLength;
-
-    // Run with or without vortices: Useful when comparing free energy to find
-    // T^*
-    if (simParams["meta_stable"].get<bool>()) {
+    // Different start guesses: useful when comparing free energy to find T^*.
+    // start guess label:
+    // 1 - both real,
+    // 2 - both random phase,
+    // 3 - s-wave real, d-wave phase crystal (from converged file)
+    // 4 - s-wave real, d-wave phase crystal guess
+    switch (simParams["start_guess_label"].get<int>()) {
+    case 1: {
       Initial<T>::bulk(orderParameterComponentD);
-    } else {
+      break;
+    }
+    case 2: {
+      Initial<T>::random(orderParameterComponentD, startRandomPhaseMix,
+                         startRandomPhaseShift);
+      break;
+    }
+    case 3: {
+      // Read orderparameter from file.
+      char orderParameterStartFile[512];
+      snprintf(orderParameterStartFile, sizeof(orderParameterStartFile),
+               "../../research/mu_sweeps/data/op_phase_crystal_fs%d_t0-1.grd",
+               simParams["fermi_surface_label"].get<int>());
+      Initial<T>::read(orderParameterComponentD, orderParameterStartFile);
+      break;
+    }
+    case 4: {
+      // Period of phase crystal, converted to coordinate units. In coherence
+      // lengths, it is typically 2*pi coherence lengths in QC simulations (see
+      // the Nat. Comm. and PRR papers).
+      const T startPhasePeriod = static_cast<T>(4.0 * M_PI) / grainSideLength;
+      // Decay length of phase crystal, converted to coordinate units.
+      const T startPhaseDecay = static_cast<T>(1.0) / grainSideLength;
+      // Coordinates to the midpoint of the pairbreaking edge
+      const T pbMidPointX = pbEdgeCoordinate;
+      const T pbMidPointY = -pbEdgeCoordinate;
+      // Rotation of pairbreaking edge with respect to the screen
+      const T pbEdgeRotation = -static_cast<T>(0.25 * M_PI);
       Initial<T>::edgePhaseCrystal(orderParameterComponentD, startPhasePeriod,
                                    startPhaseDecay, pbMidPointX, pbMidPointY,
                                    pbEdgeRotation);
+      break;
+    }
+    default:
+      std::cout << "Error! Start guess '"
+                << simParams["start_guess_label"].get<int>()
+                << "' not implemented." << std::endl;
+      run_utils::cleanup(context, gui);
+      return 1;
     }
 
     orderParameter->add(orderParameterComponentD);
@@ -288,7 +315,33 @@ int main(int argc, char *argv[]) {
     OrderParameterComponent<T> *orderParameterComponentS =
         new OrderParameterComponent<T>(BasisFunctionSymmetry::SWAVE_EXT,
                                        parameters, sWaveTc);
-    Initial<T>::bulk(orderParameterComponentS);
+
+    switch (simParams["start_guess_label"].get<int>()) {
+    case 1: {
+      Initial<T>::bulk(orderParameterComponentS);
+      break;
+    }
+    case 2: {
+      Initial<T>::random(orderParameterComponentS, startRandomPhaseMix,
+                         startRandomPhaseShift);
+      break;
+    }
+    case 3: {
+      Initial<T>::bulk(orderParameterComponentS);
+      break;
+    }
+    case 4: {
+      Initial<T>::bulk(orderParameterComponentS);
+      break;
+    }
+    default:
+      std::cout << "Error! Start guess '"
+                << simParams["start_guess_label"].get<int>()
+                << "' not implemented." << std::endl;
+      run_utils::cleanup(context, gui);
+      return 1;
+    }
+
     orderParameter->add(orderParameterComponentS);
   }
 
