@@ -232,9 +232,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
 
   if (C::doCompute()) {
     Parameters<T> *param = C::getParameters();
-    const int Na = param->getAngularResolution();
-    int Nc = _delta->getNumOrderParameterComponents();
-    int numEnergies = param->getNumMatsubaraEnergies();
+    const int Nc = _delta->getNumOrderParameterComponents();
 
     for (int i = 0; i < Nc; ++i) {
       // Compute new delta from anomalous greens function
@@ -248,10 +246,20 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     const T previousResidual = C::getResidual();
     _opt->step(_delta, previousResidual);
 
-    // Compute residual.
+    // Fetch the previous order parameter so we can compute the residual.
     OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
-    const T residual = computeResidual(*(deltaOld->getOrderParameterField()),
-                                       *(_delta->getOrderParameterField()));
+
+    // Compute the residual component-wise and pick the maximum one.
+    T residual = static_cast<T>(0.0);
+    for (int i = 0; i < Nc; ++i) {
+      const GridGPU *const componentOld =
+          deltaOld->getOrderParameterComponent(i)->getOrderParameterField();
+      const GridGPU *const componentNew =
+          _delta->getOrderParameterComponent(i)->getOrderParameterField();
+
+      const T residualComponent = computeResidual(*componentOld, *componentNew);
+      residual = std::max(residual, residualComponent);
+    }
     C::setResidual(residual);
 
     // Check convergence.

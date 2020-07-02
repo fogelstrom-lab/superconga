@@ -70,7 +70,8 @@ scg::Visualization<T> *gui;
 int main(int argc, char *argv[]) {
   if (argc < 2) {
     std::cerr << "Please provide config file.\n";
-    exit(1);
+    scg::run_utils::cleanup(context, gui);
+    return 1;
   }
   const std::string filename = argv[1];
 
@@ -121,7 +122,8 @@ int main(int argc, char *argv[]) {
   if (isDisc) {
     geometry->add(new scg::DiscGeometry<T>(grainScale), scg::Type::add);
   } else {
-    geometry->add(new scg::PolygonGeometry<T>(numVertices, grainScale), scg::Type::add);
+    geometry->add(new scg::PolygonGeometry<T>(numVertices, grainScale),
+                  scg::Type::add);
   }
 
   // Remove a portion to create a solenoid.
@@ -145,39 +147,63 @@ int main(int argc, char *argv[]) {
   // d+is).
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
-  // Add a d-wave or an s-wave order-parameter component.
-  const std::string symmetryStr = simParams["symmetry"].get<std::string>();
-
-  // TODO(niclas): Move this to OrderParameterBasis.h?
-  scg::BasisFunctionSymmetry symmetry;
-  if (symmetryStr == "s") {
-    symmetry = scg::BasisFunctionSymmetry::SWAVE;
-  } else if (symmetryStr == "dx2_y2") {
-    symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-  } else if (symmetryStr == "dxy") {
-    symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
-  } else {
-    std::cout << "Order parameter symmetry '" << symmetryStr
-              << "' not understood." << std::endl;
-    scg::run_utils::cleanup(context, gui);
-    return 1;
-  }
-
-  scg::OrderParameterComponent<T> *orderParameterComponent =
-      new scg::OrderParameterComponent<T>(symmetry, parameters);
-
-  // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation =
       static_cast<T>(2.0 * M_PI) * simParams["crystal_axes_rotation"].get<T>();
-  orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
-  // Initialize order parameter with a guess.
-  scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
-                                    simParams["initial_phase_winding"].get<T>(),
-                                    simParams["initial_random_phase"].get<T>());
+  const auto symmetries =
+      simParams["order_parameter"]["symmetry"].get<std::vector<std::string>>();
+  const auto criticalTemperatures =
+      simParams["order_parameter"]["critical_temperature"]
+          .get<std::vector<T>>();
+  const auto phaseShifts =
+      simParams["order_parameter"]["initial_phase_shift"].get<std::vector<T>>();
+  const auto phaseWindings =
+      simParams["order_parameter"]["initial_phase_winding"]
+          .get<std::vector<T>>();
+  const auto randomPhaseMix =
+      simParams["order_parameter"]["initial_random_phase_weight"]
+          .get<std::vector<T>>();
 
-  // Add the initialized component to the total order parameter. This
-  orderParameter->add(orderParameterComponent);
+  // The values should already been sanity checked.
+  const std::size_t numOrderParameterComponents = symmetries.size();
+
+  for (std::size_t i = 0; i < numOrderParameterComponents; ++i) {
+    // Add a d-wave or an s-wave order-parameter component.
+    const std::string symmetryStr = symmetries[i];
+
+    // TODO(niclas): Move this to OrderParameterBasis.h?
+    scg::BasisFunctionSymmetry symmetry;
+    if (symmetryStr == "s") {
+      symmetry = scg::BasisFunctionSymmetry::SWAVE;
+    } else if (symmetryStr == "dx2_y2") {
+      symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+    } else if (symmetryStr == "dxy") {
+      symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+    } else {
+      std::cout << "Order parameter symmetry '" << symmetryStr
+                << "' not understood." << std::endl;
+      scg::run_utils::cleanup(context, gui);
+      return 1;
+    }
+
+    const T Tc = criticalTemperatures[i];
+    scg::OrderParameterComponent<T> *orderParameterComponent =
+        new scg::OrderParameterComponent<T>(symmetry, parameters, Tc);
+
+    // Set rotation of crystal axes with respect to the grain geometry.
+
+    orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
+
+    const T phaseShift = static_cast<T>(2.0 * M_PI) * phaseShifts[i];
+
+    // Initialize order parameter with a guess.
+    scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
+                                           phaseWindings[i], randomPhaseMix[i],
+                                           phaseShift);
+
+    // Add the initialized component to the total order parameter.
+    orderParameter->add(orderParameterComponent);
+  }
 
   //***************************************************
   // CHOOSE FERMI SURFACE

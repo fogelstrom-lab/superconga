@@ -4,18 +4,32 @@
     "data_path": "data",
     "external_flux_quanta": 6.0,
     "grain_side_length": 30.0,
-    "initial_phase_winding": 6.0,
-    "initial_random_phase": 0.0,
     "lattice_side_length": 201,
     "num_fermi_momenta": 55,
     "num_iterations_max": 1000,
     "num_iterations_min": 20,
     "num_ozaki_energies": 20,
     "num_polygon_edges": 4,
+    "order_parameter": {
+        "critical_temperature": [
+            1.0
+        ],
+        "initial_phase_shift": [
+            0.0
+        ],
+        "initial_phase_winding": [
+            6.0
+        ],
+        "initial_random_phase_weight": [
+            0.0
+        ],
+        "symmetry": [
+            "s"
+        ]
+    },
     "save_data": false,
     "save_data_interval": 200,
     "solenoid": true,
-    "symmetry": "s",
     "temperature": 0.5,
     "verbose": true,
     "visualize": true
