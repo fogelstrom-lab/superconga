@@ -5,7 +5,7 @@ import subprocess
 import sys
 from typing import Optional, Union
 
-VALID_SYMMETRIES = ["s", "dx2_y2", "dxy"]
+VALID_SYMMETRIES = ["s", "dx2-y2", "dxy"]
 
 
 def make_default_parser():
@@ -37,7 +37,7 @@ def make_default_parser():
     # Symmetry.
     parser.add_argument(
         "-H",
-        "--symmetry",
+        "--op-sym",
         type=str,
         default=None,
         choices=VALID_SYMMETRIES,
@@ -48,7 +48,7 @@ def make_default_parser():
     # Relative Tc.
     parser.add_argument(
         "-C",
-        "--critical-temperature",
+        "--op-tc",
         type=float,
         default=None,
         nargs="+",
@@ -58,7 +58,7 @@ def make_default_parser():
     # Phase shift.
     parser.add_argument(
         "-J",
-        "--initial-phase-shift",
+        "--op-init-phase-shift",
         type=float,
         default=None,
         nargs="+",
@@ -68,7 +68,7 @@ def make_default_parser():
     # Num phase windings.
     parser.add_argument(
         "-W",
-        "--initial-phase-winding",
+        "--op-init-phase-winding",
         type=float,
         default=None,
         nargs="+",
@@ -78,7 +78,7 @@ def make_default_parser():
     # Random phase weight.
     parser.add_argument(
         "-R",
-        "--initial-random-phase-weight",
+        "--op-init-rand-phase-weight",
         type=float,
         default=None,
         nargs="+",
@@ -95,7 +95,6 @@ def make_default_parser():
     )
 
     # External flux quanta.
-    # TODO(niclas): Rename to "-F"?
     parser.add_argument(
         "-B",
         "--external-flux-quanta",
@@ -255,14 +254,33 @@ def make_default_parser():
 
 
 def set_value(
-    simparams: dict, key: str, value: Union[int, float], group: Optional[str] = None
+    simparams: dict,
+    key: str,
+    value: Union[int, float, list],
+    group: Optional[str] = None,
 ) -> None:
     # If the value is None then it is not set in the command line arguments, so it should not be used.
     if value is not None:
         if group is None:
             simparams[key] = value
         else:
-            simparams[group][key] = value
+            # This should always be true as we get a list from the parser.
+            assert isinstance(value, list)
+
+            if group in simparams:
+                # The group, e.g. 'order_parameter' already exists.
+                # Check that the lengths of the lists agree.
+                assert isinstance(simparams[group], list)
+                assert len(value) == len(simparams[group])
+                for i, elem in enumerate(value):
+                    # TODO(niclas): Add dummy value so one can only specify e.g. the second critical temperature.
+                    simparams[group][i][key] = elem
+            else:
+                # The group, e.g. 'order_parameter' does not exist, so lets create a dict for every element of 'value'.
+                tmp = []
+                for elem in value:
+                    tmp.append({key: elem})
+                simparams[group] = tmp
 
 
 def set_flag(simparams: dict, key: str, on: bool, off: bool) -> None:
@@ -272,35 +290,19 @@ def set_flag(simparams: dict, key: str, on: bool, off: bool) -> None:
         simparams[key] = on
 
 
-def check_value(
-    key: str, value: Union[bool, float, int, list, str], checks: dict
-) -> bool:
+def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> bool:
     # Check that the value is of the expected type.
     expected_type = checks["type"]
     if not isinstance(value, expected_type):
         print(f"--The field '{key}' must be of type {expected_type}.")
         return False
 
-    if isinstance(value, list):
-        # If the expected type is a list, check that the elements are of the expected type.
-        expected_type = checks["elem_type"]
-        for elem in value:
-            if not isinstance(elem, expected_type):
-                print(
-                    f"--The field '{key}' must be a list with elements of type {expected_type}."
-                )
-                return False
-    else:
-        # Convert to list for convenience.
-        value = [value]
-
     # Check that the value is larger than 'low'.
     if "low" in checks:
         low = checks["low"]
-        for elem in value:
-            if not elem > low:
-                print(f"--The field '{key}' must be larger than {low}.")
-                return False
+        if not value > low:
+            print(f"--The field '{key}' must be larger than {low}.")
+            return False
 
     # Check that the value is not in the excluded list.
     if "excluded" in checks:
@@ -312,10 +314,9 @@ def check_value(
     # Check that the value is in some pre-defined set.
     if "one_of" in checks:
         valid_values = checks["one_of"]
-        for elem in value:
-            if not elem in valid_values:
-                print(f"--The field '{key}' must be one of {valid_values}.")
-                return False
+        if not value in valid_values:
+            print(f"--The field '{key}' must be one of {valid_values}.")
+            return False
 
     # No errors.
     return True
@@ -325,18 +326,32 @@ def check_dict(simparams: dict, checks: dict) -> bool:
     success = True
 
     # Loop over the keys in the checks so we can spot if something is missing.
-    for key in checks.keys():
+    for key, value_checks in checks.items():
         if not key in simparams:
             print(f"--The field '{key}' must exist.")
             success = False
             continue
 
-        if isinstance(simparams[key], dict):
-            # If this is a dict on its own call this function recursively.
-            success &= check_dict(simparams=simparams[key], checks=checks[key])
+        value = simparams[key]
+
+        # Check that the value is of the expected type.
+        expected_type = value_checks["type"]
+        if not isinstance(value, expected_type):
+            print(f"--The field '{key}' must be of type {expected_type}.")
+            success = False
+            continue
+
+        if isinstance(value, list):
+            for elem in value:
+                if isinstance(elem, dict):
+                    success &= check_dict(simparams=elem, checks=value_checks["sub"])
+                else:
+                    print(f"--The field '{key}' must be a list of dicts.")
+                    success = False
+                    continue
         else:
             # If not a dict then check the values.
-            success &= check_value(key=key, value=simparams[key], checks=checks[key])
+            success &= check_value(key=key, value=value, checks=value_checks)
 
     return success
 
@@ -356,11 +371,14 @@ def validate(simparams: dict) -> bool:
         "num_ozaki_energies": {"type": int, "low": 1},
         "num_polygon_edges": {"type": int, "excluded": [0, 1, 2]},
         "order_parameter": {
-            "critical_temperature": {"type": list, "elem_type": float, "low": 0.0},
-            "initial_phase_shift": {"type": list, "elem_type": float},
-            "initial_phase_winding": {"type": list, "elem_type": float},
-            "initial_random_phase_weight": {"type": list, "elem_type": float},
-            "symmetry": {"type": list, "elem_type": str, "one_of": VALID_SYMMETRIES},
+            "type": list,
+            "sub": {
+                "critical_temperature": {"type": float, "low": 0.0},
+                "initial_phase_shift": {"type": float},
+                "initial_phase_winding": {"type": float},
+                "initial_random_phase_weight": {"type": float},
+                "symmetry": {"type": str, "one_of": VALID_SYMMETRIES},
+            },
         },
         "save_data": {"type": bool},
         "save_data_interval": {"type": int, "low": 0},
@@ -375,31 +393,14 @@ def validate(simparams: dict) -> bool:
 
     # Special checks.
     if success:
-        # For convenience.
-        op = simparams["order_parameter"]
-
-        # Check that all lists are of the same length.
-        tmp = [
-            len(op["symmetry"]),
-            len(op["critical_temperature"]),
-            len(op["initial_phase_shift"]),
-            len(op["initial_phase_winding"]),
-            len(op["initial_random_phase_weight"]),
-        ]
-
-        if not (tmp.count(tmp[0]) == len(tmp)):
-            print("--The order parameter lists must all be of the same length.")
-            success = False
-
         # Normalize critical temperature so that the maximum is one.
-        Tc_max = max(op["critical_temperature"])
-        for i in range(tmp[0]):
-            op["critical_temperature"][i] /= Tc_max
-        assert max(op["critical_temperature"]) == 1
+        Tc_max = 0
+        for comp in simparams["order_parameter"]:
+            Tc_max = max(Tc_max, comp["critical_temperature"])
+        for i in range(len(simparams["order_parameter"])):
+            simparams["order_parameter"][i]["critical_temperature"] /= Tc_max
 
-        # Set the order parameter.
-        simparams["order_parameter"] = op
-
+        # Check that the minimum number of iterations is smaller than the maximum.
         if not (simparams["num_iterations_max"] > simparams["num_iterations_min"]):
             print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
             success = False
@@ -440,16 +441,13 @@ def main() -> None:
     set_value(simparams, "num_polygon_edges", args.num_polygon_edges)
 
     group = "order_parameter"
-    set_value(simparams, "critical_temperature", args.critical_temperature, group)
-    set_value(simparams, "initial_phase_shift", args.initial_phase_shift, group)
-    set_value(simparams, "initial_phase_winding", args.initial_phase_winding, group)
+    set_value(simparams, "critical_temperature", args.op_tc, group)
+    set_value(simparams, "initial_phase_shift", args.op_init_phase_shift, group)
+    set_value(simparams, "initial_phase_winding", args.op_init_phase_winding, group)
     set_value(
-        simparams,
-        "initial_random_phase_weight",
-        args.initial_random_phase_weight,
-        group,
+        simparams, "initial_random_phase_weight", args.op_init_rand_phase_weight, group,
     )
-    set_value(simparams, "symmetry", args.symmetry, group)
+    set_value(simparams, "symmetry", args.op_sym, group)
 
     set_flag(simparams, "save_data", args.save_data, args.no_save_data)
     set_value(simparams, "save_data_interval", args.save_data_interval)

@@ -95,7 +95,7 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
     break;
   }
   case BasisFunctionSymmetry::DWAVE_X2_Y2: {
-    str = "dx2_y2";
+    str = "dx2-y2";
     break;
   }
   case BasisFunctionSymmetry::DWAVE_XY: {
