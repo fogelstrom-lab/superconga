@@ -58,9 +58,8 @@ void saveInducedFluxDensity(
       inContext->getGeometry()->createDomain(numLatticePoints);
 
   // Create GPU storage for vector potential
-  typename scg::Grid<T>::GPU *vectorPotential =
-      new typename scg::Grid<T>::GPU(numLatticePoints, numLatticePoints, 2,
-                                       scg::Type::real);
+  typename scg::Grid<T>::GPU *vectorPotential = new typename scg::Grid<T>::GPU(
+      numLatticePoints, numLatticePoints, 2, scg::Type::real);
 
   // Convert lattice spacing back to proper coherence lengths:
   // hbar*vF/(2*Pi*kB*Tc)
@@ -103,7 +102,8 @@ template <typename T>
 void saveParamsMetaData(
     const scg::Context<T> *const inContext, const char *const inDataPath,
     const T inGrainSideLength, const T inGrainCornerSize,
-    const T inGrainDiagonal,
+    const T inGrainDiagonal, const T inDWaveTc, const T inSWaveTc,
+    const bool inTcSuccess,
     const char *const inDataFileName = (char *)"parameters") {
   // Fetch simulation parameters
   scg::Parameters<T> *parameters = inContext->getParameters();
@@ -118,7 +118,7 @@ void saveParamsMetaData(
       << "# sideLength cornerSize pairBreakingEdge temperature pairingSymmetry "
          "areaCompute internalLatticePoints latticeRotation gauge "
          "externalFluxQuanta externalFluxDensity numLatticePoints numAngles "
-         "numOzakiPoles energyCutoff grainMargin";
+         "numOzakiPoles energyCutoff grainMargin dWaveTc sWaveTc TcSuccess";
   appendLineToTextFile(metaDataFile, ss_header, std::ios_base::trunc);
 
   // Append line with energy and other information
@@ -140,7 +140,10 @@ void saveParamsMetaData(
   ss << parameters->getAngularResolution() << " ";
   ss << parameters->getNumMatsubaraEnergies() << " ";
   ss << parameters->getCutOff() << " ";
-  ss << scg::constants::GRAIN_SIZE_MARGIN;
+  ss << scg::constants::GRAIN_SIZE_MARGIN << " ";
+  ss << inDWaveTc << " ";
+  ss << inSWaveTc << " ";
+  ss << inTcSuccess;
   appendLineToTextFile(metaDataFile, ss);
 }
 

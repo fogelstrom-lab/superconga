@@ -191,6 +191,11 @@ std::pair<bool, T> computeCriticalTemperature(
     // Form the critical temperature.
     const T Tc = internal::softplus(x);
 
+    // If Tc is not finite, then the routine has failed.
+    if (!std::isfinite(Tc)) {
+      break;
+    }
+
     //  If Tc is very small we consider ourselves done.
     isConverged = Tc < inConvergenceCriterion;
     if (isConverged) {

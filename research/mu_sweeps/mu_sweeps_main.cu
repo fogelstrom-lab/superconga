@@ -56,7 +56,8 @@ typedef double T;
 //*******************************************************
 void display();
 void saveDataWrapper(const T inGrainSideLength, const T inGrainCornerLength,
-                     const T ingrainDiagonalLength);
+                     const T inGrainDiagonalLength, const T inDWaveTc,
+                     const T inSWaveTc, const bool inTcSucces);
 
 //*******************************************************
 // GLOBAL OBJECTS: glut does not accept arguments and relies on global/static
@@ -68,7 +69,7 @@ scg::Context<T> *context = new scg::Context<T>();
 // Visualization object
 scg::Visualization<T> *gui;
 // Used to construct data file path
-char dataPath[512];
+char DATA_PATH[512];
 
 // Fermi surface parameters.
 const std::map<std::string, T> FS1 = {{"hoppingNNN", static_cast<T>(-0.25)},
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
       simParams["convergence_criterion"].get<T>());
 
   // Set filename
-  snprintf(dataPath, sizeof(dataPath),
+  snprintf(DATA_PATH, sizeof(DATA_PATH),
            "%s/fs%d_mu%2.4f_sl%d/R%2.3f_r%2.3f_T%2.4f",
            simParams["data_path"].get<std::string>().c_str(),
            simParams["fermi_surface_label"].get<int>(),
@@ -146,7 +147,7 @@ int main(int argc, char *argv[]) {
            grainCornerLength, simParams["temperature"].get<T>());
 
   // Create data path if it does not exist
-  scg::run_utils::createDirectory(dataPath);
+  scg::run_utils::createDirectory(DATA_PATH);
 
   //***************************************************
   // CREATE GEOMETRY
@@ -236,10 +237,7 @@ int main(int argc, char *argv[]) {
   const T sWaveTc = sWaveTcRaw / std::max(dWaveTcRaw, sWaveTcRaw);
   std::cout << "Tc: d = " << dWaveTc << " : s = " << sWaveTc << std::endl;
 
-  if (!(dWaveSuccess && sWaveSuccess)) {
-    scg::run_utils::cleanup(context, gui);
-    return 1;
-  }
+  const bool TcSuccess = dWaveSuccess && sWaveSuccess;
 
   // Add the initialized components to the total order parameter
   const T TcLimit = static_cast<T>(1e-3);
@@ -312,7 +310,7 @@ int main(int argc, char *argv[]) {
 
   if (sWaveTc > TcLimit) {
     std::cout << "Adding s-wave component:" << std::endl;
-    std::cout << "Tc: raw = " << sWaveTc << " : scaled = " << sWaveTc
+    std::cout << "Tc: raw = " << sWaveTcRaw << " : scaled = " << sWaveTc
               << std::endl;
     scg::OrderParameterComponent<T> *orderParameterComponentS =
         new scg::OrderParameterComponent<T>(
@@ -372,8 +370,13 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // SAVE PARAMETERS TO FILE
   //***************************************************
-  mu_sweeps_utils::saveParamsMetaData(context, dataPath, grainSideLength,
-                                      grainCornerLength, grainCornerLength);
+  mu_sweeps_utils::saveParamsMetaData(context, DATA_PATH, grainSideLength,
+                                      grainCornerLength, grainDiagonalLength,
+                                      dWaveTc, sWaveTc, TcSuccess);
+  if (!TcSuccess) {
+    scg::run_utils::cleanup(context, gui);
+    return 1;
+  }
 
   //***********************************************
   // SET UP OPENGL VISUALIZATION
@@ -403,7 +406,8 @@ int main(int argc, char *argv[]) {
         simParams["save_data_interval"].get<int>());
 
     if (status == scg::run_utils::Status::kSave) {
-      saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength);
+      saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength,
+                      dWaveTc, sWaveTc, TcSuccess);
     }
 
     if (simParams["visualize"].get<bool>()) {
@@ -422,7 +426,8 @@ int main(int argc, char *argv[]) {
   }
 
   // Save at the very end.
-  saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength);
+  saveDataWrapper(grainSideLength, grainCornerLength, grainDiagonalLength,
+                  dWaveTc, sWaveTc, TcSuccess);
 
   scg::run_utils::cleanup(context, gui);
   return 0;
@@ -439,16 +444,17 @@ void display() {
 }
 
 void saveDataWrapper(const T inGrainSideLength, const T inGrainCornerLength,
-                     const T ingrainDiagonalLength) {
+                     const T inGrainDiagonalLength, const T inDWaveTc,
+                     const T inSWaveTc, const bool inTcSuccess) {
   // Save order parameter and current
-  mu_sweeps_utils::saveGridData(context, dataPath);
+  mu_sweeps_utils::saveGridData(context, DATA_PATH);
   // Update meta data file
-  mu_sweeps_utils::saveParamsMetaData(context, dataPath, inGrainSideLength,
-                                      inGrainCornerLength,
-                                      ingrainDiagonalLength);
+  mu_sweeps_utils::saveParamsMetaData(
+      context, DATA_PATH, inGrainSideLength, inGrainCornerLength,
+      inGrainDiagonalLength, inDWaveTc, inSWaveTc, inTcSuccess);
   // Save induced magnetic field
-  mu_sweeps_utils::saveInducedFluxDensity(context, dataPath);
+  mu_sweeps_utils::saveInducedFluxDensity(context, DATA_PATH);
   // Save free energy and iteration status
-  mu_sweeps_utils::saveFreeEnergy(context, dataPath, inGrainSideLength,
-                                  inGrainCornerLength, ingrainDiagonalLength);
+  mu_sweeps_utils::saveFreeEnergy(context, DATA_PATH, inGrainSideLength,
+                                  inGrainCornerLength, inGrainDiagonalLength);
 }

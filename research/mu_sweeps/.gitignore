@@ -1,2 +1,8 @@
 # Data
 data
+
+# Virtualenv
+venv/
+
+# The temporary JSON config file created by the Python wrapper.
+.tmp_config.json
