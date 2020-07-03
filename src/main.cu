@@ -181,6 +181,8 @@ int main(int argc, char *argv[]) {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
     } else if (symmetryStr == "dxy") {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+  } else if (symmetryStr == "g") {
+    symmetry = scg::BasisFunctionSymmetry::GWAVE;
     } else {
       std::cout << "Order parameter symmetry '" << symmetryStr
                 << "' not understood." << std::endl;
