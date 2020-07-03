@@ -62,6 +62,22 @@ namespace {
 scg::Context<T> *context = new scg::Context<T>();
 // Create visualization object.
 scg::Visualization<T> *gui;
+
+struct OrderParameterJSON {
+  std::string symmetry;
+  T criticalTemperature;
+  T initialPhaseShift;
+  T initialPhaseWinding;
+  T initialRandomPhaseWeight;
+};
+
+void from_json(const nlohmann::json &j, OrderParameterJSON &op) {
+  j.at("symmetry").get_to(op.symmetry);
+  j.at("critical_temperature").get_to(op.criticalTemperature);
+  j.at("initial_phase_shift").get_to(op.initialPhaseShift);
+  j.at("initial_phase_winding").get_to(op.initialPhaseWinding);
+  j.at("initial_random_phase_weight").get_to(op.initialRandomPhaseWeight);
+}
 } // namespace
 
 //*******************************************************
@@ -150,32 +166,18 @@ int main(int argc, char *argv[]) {
   const T crystalAxesRotation =
       static_cast<T>(2.0 * M_PI) * simParams["crystal_axes_rotation"].get<T>();
 
-  const auto symmetries =
-      simParams["order_parameter"]["symmetry"].get<std::vector<std::string>>();
-  const auto criticalTemperatures =
-      simParams["order_parameter"]["critical_temperature"]
-          .get<std::vector<T>>();
-  const auto phaseShifts =
-      simParams["order_parameter"]["initial_phase_shift"].get<std::vector<T>>();
-  const auto phaseWindings =
-      simParams["order_parameter"]["initial_phase_winding"]
-          .get<std::vector<T>>();
-  const auto randomPhaseMix =
-      simParams["order_parameter"]["initial_random_phase_weight"]
-          .get<std::vector<T>>();
+  const auto opCompParamsVec =
+      simParams["order_parameter"].get<std::vector<::OrderParameterJSON>>();
 
-  // The values should already been sanity checked.
-  const std::size_t numOrderParameterComponents = symmetries.size();
-
-  for (std::size_t i = 0; i < numOrderParameterComponents; ++i) {
+  for (const auto &opCompParams : opCompParamsVec) {
     // Add a d-wave or an s-wave order-parameter component.
-    const std::string symmetryStr = symmetries[i];
+    const std::string symmetryStr = opCompParams.symmetry;
 
     // TODO(niclas): Move this to OrderParameterBasis.h?
     scg::BasisFunctionSymmetry symmetry;
     if (symmetryStr == "s") {
       symmetry = scg::BasisFunctionSymmetry::SWAVE;
-    } else if (symmetryStr == "dx2_y2") {
+    } else if (symmetryStr == "dx2-y2") {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
     } else if (symmetryStr == "dxy") {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
@@ -186,20 +188,20 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
-    const T Tc = criticalTemperatures[i];
     scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(symmetry, parameters, Tc);
+        new scg::OrderParameterComponent<T>(symmetry, parameters,
+                                            opCompParams.criticalTemperature);
 
     // Set rotation of crystal axes with respect to the grain geometry.
-
     orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
-    const T phaseShift = static_cast<T>(2.0 * M_PI) * phaseShifts[i];
+    const T phaseShift =
+        static_cast<T>(2.0 * M_PI) * opCompParams.initialPhaseShift;
 
     // Initialize order parameter with a guess.
-    scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
-                                           phaseWindings[i], randomPhaseMix[i],
-                                           phaseShift);
+    scg::Initial<T>::perturbedPhaseWinding(
+        orderParameterComponent, opCompParams.initialPhaseWinding,
+        opCompParams.initialRandomPhaseWeight, phaseShift);
 
     // Add the initialized component to the total order parameter.
     orderParameter->add(orderParameterComponent);
