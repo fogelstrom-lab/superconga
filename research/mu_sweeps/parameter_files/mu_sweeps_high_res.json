@@ -1,7 +1,7 @@
 {
     "chemical_potential": 0.0,
     "convergence_criterion": 1e-08,
-    "data_path": "data/qc",
+    "data_path": "data/qc/high_res",
     "fermi_surface_label": 1,
     "grain_corner_length": 4.0,
     "grain_diagonal_length": 60.0,
