@@ -22,8 +22,10 @@
 
 #include "nlohmann_json_wrapper.h"
 #include <boost/filesystem.hpp>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
+#include <thread>
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -581,35 +583,45 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
                    const bool inSaveData = false,
                    const int inSaveDataInterval = 200,
                    const nlohmann::json &inJSON = {}) {
-  run_utils::Status status = run_utils::Status::kContinue;
-  while (status != Status::kQuit) {
-    // Run one iteration,
-    status = runIteration(inOutContext, inPrintStatus, inNumIterationsMin,
-                          inNumIterationsMax, inSaveData, inSaveDataInterval);
+  Status status = Status::kContinue;
+  bool quit = false;
 
-    if (status == Status::kSave) {
-      if (inJSON.empty()) {
-        std::cout
-            << "ERROR! Attempting to save data, but JSON parameter "
-               "object was empty! (call to runSimulation() in run_utils.h)"
-            << std::endl;
-      } else {
-        saveDataWrapper(inOutContext, inJSON, inPrintStatus);
+  while (!quit) {
+    if (status != Status::kQuit) {
+      // Run one iteration.
+      status = runIteration(inOutContext, inPrintStatus, inNumIterationsMin,
+                            inNumIterationsMax, inSaveData, inSaveDataInterval);
+
+      if (status == Status::kSave) {
+        if (inJSON.empty()) {
+          std::cout
+              << "ERROR! Attempting to save data, but JSON parameter "
+                 "object was empty! (call to runSimulation() in run_utils.h)"
+              << std::endl;
+        } else {
+          saveDataWrapper(inOutContext, inJSON, inPrintStatus);
+        }
       }
+    } else {
+      // When no computation is done it is unnecessary to update the window as
+      // fast as possible.
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     if (inVisualize) {
       // Check if the Glut window is open.
       const int windowID = glutGetWindow();
-      const bool openWindow = windowID > 0;
+      const bool noWindow = windowID == 0;
+
+      // Set quit flag.
+      quit = noWindow || internal::guiUserQuit;
 
       // Plot data in OpenGL.
-      if (openWindow) {
+      if (!quit) {
         glutMainLoopEvent();
-      } else {
-        // The user closed the window so lets abort.
-        break;
       }
+    } else {
+      quit = (status == Status::kQuit);
     }
   }
 }
