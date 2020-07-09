@@ -1,0 +1,5 @@
+#### Python dependencies ####
+numpy
+scipy
+matplotlib
+PyQt5>=5.15
