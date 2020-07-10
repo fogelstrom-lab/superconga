@@ -51,7 +51,7 @@ template <typename T>
 void testComputeOrderParameterBulkSWaveIntermediateTemperature(
     const T inTolerance, const T inConvergenceCriteria,
     const T inMinTemperature = static_cast<T>(0.99),
-    const T inMaxTemperature = static_cast<T>(0.999),
+    const T inMaxTemperature = static_cast<T>(0.999999),
     const int inNumTemperatures = 10) {
   // =================== ARRANGE ==================== //
   const std::vector<T> temperatures = scg::utils::linspace(
@@ -175,9 +175,6 @@ TEST_CASE("Test computeOrderParameterBulkSWave<double> - T = 1") {
 // ============== Test computeOrderParameterBulkSWave - T < 1 ============== //
 
 TEST_CASE("Test computeOrderParameterBulkSWave<float> - T < 1") {
-  const float minTemperature = 0.99F;
-  const float maxTemperature = 0.999F;
-
   // Note, that we are testing temperatures quite far from Tc. Hence the large
   // tolerance.
   const float tolerance = 0.002F;
@@ -186,13 +183,10 @@ TEST_CASE("Test computeOrderParameterBulkSWave<float> - T < 1") {
       10.0F * std::numeric_limits<float>::epsilon();
 
   helper::testComputeOrderParameterBulkSWaveIntermediateTemperature(
-      tolerance, convergenceCriteria, minTemperature, maxTemperature);
+      tolerance, convergenceCriteria);
 }
 
 TEST_CASE("Test computeOrderParameterBulkSWave<double> - T < 1") {
-  const double minTemperature = 0.99;
-  const double maxTemperature = 0.999;
-
   // Note, that we are testing temperatures quite far from Tc. Hence the large
   // tolerance.
   const double tolerance = 0.001;
@@ -201,7 +195,7 @@ TEST_CASE("Test computeOrderParameterBulkSWave<double> - T < 1") {
       10.0 * std::numeric_limits<double>::epsilon();
 
   helper::testComputeOrderParameterBulkSWaveIntermediateTemperature(
-      tolerance, convergenceCriteria, minTemperature, maxTemperature);
+      tolerance, convergenceCriteria);
 }
 
 // ============== Test computeFreeEnergyBulkSWave - T = 0 ============== //
