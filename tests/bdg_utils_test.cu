@@ -17,7 +17,7 @@
 #include "dispersion.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <limits>
 #include <vector>
 
@@ -76,8 +76,8 @@ void testComputeCriticalTemperature(
       scg::BasisFunctionSymmetry::SWAVE_EXT;
 
   // =================== ACT ==================== //
-  const std::pair<bool, T> dWaveTmp =
-      scg::bdg::computeCriticalTemperature(dispersion, potential, dWaveSymmetry);
+  const std::pair<bool, T> dWaveTmp = scg::bdg::computeCriticalTemperature(
+      dispersion, potential, dWaveSymmetry);
   const bool dWaveSuccess = std::get<0>(dWaveTmp);
   const T dWaveTc = std::get<1>(dWaveTmp);
 

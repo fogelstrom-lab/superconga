@@ -14,7 +14,7 @@
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "defines.h"
 
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <iostream>
 
 // ========================= Simulation parameters ========================= //

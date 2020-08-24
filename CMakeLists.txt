@@ -5,7 +5,8 @@ project(
   LANGUAGES CUDA CXX)
 
 # Output build messages
-message(STATUS "Building ${CMAKE_PROJECT_NAME} version ${CMAKE_PROJECT_VERSION}.")
+message(
+  STATUS "Building ${CMAKE_PROJECT_NAME} version ${CMAKE_PROJECT_VERSION}.")
 
 # Enable CTest
 include(CTest)

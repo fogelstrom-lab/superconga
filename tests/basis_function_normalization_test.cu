@@ -8,7 +8,7 @@
 #include "utils.h"
 
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -69,7 +69,8 @@ void testBasisFunctionNormaliztation(const T inTolerance,
 
     // Basis functions.
     scg::BasisFunction<T> basisFunctionS(scg::BasisFunctionSymmetry::SWAVE);
-    scg::BasisFunction<T> basisFunctionD(scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
+    scg::BasisFunction<T> basisFunctionD(
+        scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
 
     for (int i = 0; i < inNumNormalizations; ++i) {
       // Normalize basis function. It should not matter whether we have called

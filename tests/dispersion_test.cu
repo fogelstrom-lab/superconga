@@ -16,7 +16,7 @@
 #include "dispersion.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <iostream>
 #include <vector>
 

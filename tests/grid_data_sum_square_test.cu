@@ -5,7 +5,7 @@
 #include "Type.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 
 // Typedefs for Grid objects (wrapper for GridData objects)
 typedef typename scg::Grid<float>::GPU floatGridGPU;

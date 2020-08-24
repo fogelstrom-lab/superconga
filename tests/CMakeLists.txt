@@ -40,6 +40,19 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+# Declare the doctest lib.
+FetchContent_Declare(
+  doctest
+  GIT_REPOSITORY https://github.com/onqtam/doctest.git
+  GIT_TAG 2.4.0)
+
+# Fetch the doctest lib.
+FetchContent_GetProperties(doctest)
+if(NOT doctest_POPULATED)
+  FetchContent_Populate(doctest)
+  add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 # Define the main set of source files
 set(SRC
     basis_function_normalization_test.cu
@@ -72,10 +85,7 @@ foreach(file ${SRC})
 
   # ----------------------------------- # Add extra compile options and flags #
   # ----------------------------------- # Include directories
-  target_include_directories(
-    ${name}
-    PRIVATE ${PROJECT_SOURCE_DIR}/include
-    PRIVATE /usr/include/doctest)
+  target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
   # External libraries
   target_link_libraries(
     ${name}
@@ -87,7 +97,8 @@ foreach(file ${SRC})
             blas
             boost_system
             boost_filesystem
-            nlohmann_json::nlohmann_json)
+            nlohmann_json::nlohmann_json
+            doctest::doctest)
 
   # Use C++14 since it is the lates standard CUDA supports
   message(STATUS "Enable C++ standard: C++14")

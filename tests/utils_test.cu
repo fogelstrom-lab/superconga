@@ -2,7 +2,7 @@
 
 #include "utils.h"
 #include <array>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <limits>
 
 // ====================== Test scg::utils::wrapToRange ======================
