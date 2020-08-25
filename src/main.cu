@@ -94,6 +94,14 @@ int main(int argc, char *argv[]) {
   // Parse JSON.
   nlohmann::json simParams;
   std::ifstream ifile(filename);
+
+  // Check that provided config file actually exists and can be opened.
+  if (!ifile.good()) {
+    std::cerr << "Could not find/open parameter file: " << filename << "\n";
+    scg::run_utils::cleanup(context, gui);
+    return 1;
+  }
+
   ifile >> simParams;
 
   // TODO(niclas): Add sanity check of all parameters here!?
@@ -181,8 +189,8 @@ int main(int argc, char *argv[]) {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
     } else if (symmetryStr == "dxy") {
       symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
-  } else if (symmetryStr == "g") {
-    symmetry = scg::BasisFunctionSymmetry::GWAVE;
+    } else if (symmetryStr == "g") {
+      symmetry = scg::BasisFunctionSymmetry::GWAVE;
     } else {
       std::cout << "Order parameter symmetry '" << symmetryStr
                 << "' not understood." << std::endl;
