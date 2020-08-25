@@ -3,7 +3,7 @@
 #include "OrderParameterBulk.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <limits>
 
 namespace legacy {

@@ -4,7 +4,7 @@
 #include "defines.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <limits>
 #include <vector>
 

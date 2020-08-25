@@ -27,7 +27,7 @@
 #include "cplx.h"
 #include "defines.h"
 #include <complex>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <iostream>
 #include <stdlib.h>
 

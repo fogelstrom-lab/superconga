@@ -3,7 +3,7 @@
 #include "FermiSurfaceCircle.h"
 #include "utils.h"
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 
 namespace helper {
 // A helper function to test the number of angles. Instantiate the

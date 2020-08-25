@@ -3,7 +3,7 @@
 #include "FermiSurface.h"
 #include <array>
 #include <cmath>
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <iostream>
 #include <limits>
 

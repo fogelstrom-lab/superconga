@@ -19,7 +19,7 @@
 #include "defines.h"
 #include "run_utils.h"
 
-#include <doctest.h>
+#include <doctest/doctest.h>
 #include <iostream>
 #include <stdlib.h>
 

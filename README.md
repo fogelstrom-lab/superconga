@@ -27,14 +27,14 @@ Using the AUR helper `yay` the dependencies can be installed with
 
 ```
 sudo pacman -S blas boost cmake cuda freeglut lapack ninja yay
-yay -S doctest clang-format-all-git
+yay -S clang-format-all-git
 ```
 
 Furthermore, add the following at the end of your `.bashrc` file
 
 ```
 export LD_LIBRARY_PATH=/opt/cuda/lib64/:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export CPLUS_INCLUDE_PATH=/opt/cuda/include/:/usr/include/doctest/:$CPLUS_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=/opt/cuda/include/:$CPLUS_INCLUDE_PATH
 ```
 
 ### Ubuntu 18.04LTS
@@ -75,17 +75,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda-11.0/lib64${LD_LIBRARY_PATH:+:${LD_LIBRAR
 
 If the `CUDA` install is unsuccessful please go to the `CUDA` [download page](https://developer.nvidia.com/cuda-downloads) and follow the [official installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html).
 
-Lastly, install `clang-format` version 9 and `doctest` with
+Lastly, install `clang-format` version 9 with
 
 ```
-sudo apt install clang-format-9 doctest-dev
+sudo apt install clang-format-9
 sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
-```
-
-and add the following at the end of your `.bashrc` file
-
-```
-export CPLUS_INCLUDE_PATH=/usr/include/doctest:$CPLUS_INCLUDE_PATH
 ```
 
 ## How to compile
@@ -161,8 +155,7 @@ to get LLVM format.
 
 ## Doctest
 
-Our goal is to test every function/method using Doctest. If `doctest` is to be installed manually (not with a package manager),
-it should be in the `/usr/` prefix directory, i.e. its main header file `doctest.h` should be inside `/usr/include/doctest`.
+Our goal is to test every function/method using Doctest. It is fetched automatically using CMake.
 
 ## CTest
 
