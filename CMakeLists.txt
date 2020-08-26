@@ -14,6 +14,21 @@ include(CTest)
 # So we can download libs at build time.
 include(FetchContent)
 
+# Declare the JSON lib. Note that this is a smaller mirror of the original repo:
+# https://github.com/nlohmann/json
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY
+    https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
+  GIT_TAG v3.8.0)
+
+# Fetch the JSON lib.
+FetchContent_GetProperties(json)
+if(NOT json_POPULATED)
+  FetchContent_Populate(json)
+  add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
 # Check the CUDA compiler
 include(CheckLanguage)
 check_language(CUDA)

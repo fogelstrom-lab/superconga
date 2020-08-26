@@ -25,21 +25,6 @@ set(NVCC_WARN
     -Wdouble-promotion,\
     -Wformat=2")
 
-# Declare the JSON lib. Note that this is a smaller mirror of the original repo:
-# https://github.com/nlohmann/json
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY
-    https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
-  GIT_TAG v3.8.0)
-
-# Fetch the JSON lib.
-FetchContent_GetProperties(json)
-if(NOT json_POPULATED)
-  FetchContent_Populate(json)
-  add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
 # Define the main set of source files
 set(SRC
     bdg_comparison/bdg_comparison_main.cu
