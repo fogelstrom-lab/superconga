@@ -1,8 +1,8 @@
 {
-    "convergence_criterion": 1e-6,
+    "convergence_criterion": 1e-5,
     "crystal_axes_rotation": 0.0,
     "data_path": "data",
-    "external_flux_quanta": 40.0,
+    "external_flux_quanta": 20.0,
     "grain_side_length": 40.0,
     "lattice_side_length": 201,
     "num_fermi_momenta": 55,
@@ -14,7 +14,7 @@
         {
             "critical_temperature": 1.0,
             "initial_phase_shift": 0.0,
-            "initial_phase_winding": 40.0,
+            "initial_phase_winding": 20.0,
             "initial_random_phase_weight": 0.0,
             "symmetry": "s"
         }
