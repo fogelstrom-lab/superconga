@@ -6,7 +6,7 @@ Below follows a summarized usage guide, see [the documentation](https://suprcong
 ## External packages required
 
 SuprConGPU's dependencies are; `CMake` and `Ninja` to build the software,
-`CUDA` for utilizing the (NVIDIA) GPU, `LAPACK` and `BLAS` are used for some linear algebra on the CPU, `boost` to manipulate files and directories,
+`CUDA` for utilizing the (NVIDIA) GPU, `LAPACK` and `BLAS` are used for some linear algebra on the CPU,
 and `FreeGLUT` is used for visualizing the results. The unit tests use `doctest`, and consistent code format is enforced by `clang-format`.
 
 Both `Python2` and `Python3` are used throughout the project, e.g. for post-processing of the data. The Python dependencies are [Matplotlib](https://matplotlib.org/),
@@ -26,7 +26,7 @@ and run the above command with `sudo -H` prefix (the `-H` flag suppresses warnin
 Using the AUR helper `yay` the dependencies can be installed with
 
 ```
-sudo pacman -S blas boost cmake cuda freeglut lapack ninja yay
+sudo pacman -S blas cmake cuda freeglut lapack ninja yay
 yay -S clang-format-all-git
 ```
 
@@ -42,7 +42,7 @@ export CPLUS_INCLUDE_PATH=/opt/cuda/include/:$CPLUS_INCLUDE_PATH
 In Ubuntu it is a bit more complicated to setup all dependencies, but most can be install with
 
 ```
-sudo apt install build-essential freeglut3-dev libblas-dev libboost-dev-all liblapack-dev ninja-build
+sudo apt install build-essential freeglut3-dev libblas-dev liblapack-dev ninja-build
 ```
 
 Note that the `CMake` version must be 3.11 or higher. The version in the apt repository in Ubuntu 18.04LTS is unfortunately too old,

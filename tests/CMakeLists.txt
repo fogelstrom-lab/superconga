@@ -80,8 +80,6 @@ foreach(file ${SRC})
             gfortran
             lapack
             blas
-            boost_system
-            boost_filesystem
             nlohmann_json::nlohmann_json
             doctest::doctest)
 

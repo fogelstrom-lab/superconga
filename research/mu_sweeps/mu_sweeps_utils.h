@@ -23,7 +23,7 @@
 #include "Visualization.h"
 #include "defines.h"
 
-#include <boost/filesystem.hpp>
+#include <cstdlib>
 #include <cuda.h>
 #include <fstream>
 #include <iostream>
@@ -161,8 +161,9 @@ void saveFreeEnergy(const scg::Context<T> *const inContext,
   char freeEnergyFile[512];
   sprintf(freeEnergyFile, "%s/%s.dat", inDataPath, inDataFileName);
 
-  // Add header if file does not exist
-  if (!boost::filesystem::exists(freeEnergyFile)) {
+  // Add header if file does not exist.
+  std::ifstream freeEnergyFileStream(freeEnergyFile);
+  if (!freeEnergyFileStream.good()) {
     std::stringstream ss_header;
     ss_header << "# iterationNumber residual freeEnergyPerUnitArea "
                  "externalMagneticFluxDensity grainSideLength cornerLength "
@@ -208,8 +209,8 @@ void saveGridData(
           inOrderParameterFileName);
 
   if (orderParameterSave->write(orderParameterFile, parameters)) {
-    std::cout << "Could not save Order Parameter to file.\n";
-    exit(0);
+    std::cerr << "ERROR! Could not save Order Parameter to file.\n";
+    std::exit(EXIT_FAILURE);
   }
 
   // Save Current
@@ -223,8 +224,8 @@ void saveGridData(
           inCurrentDensityFileName);
 
   if (currentSave->write(currentDensityFile, parameters)) {
-    std::cout << "Could not save Current to file.\n";
-    exit(0);
+    std::cerr << "ERROR! Could not save Current to file.\n";
+    std::exit(EXIT_FAILURE);
   }
 }
 

@@ -21,11 +21,19 @@
 #include "Visualization.h"
 
 #include "nlohmann_json_wrapper.h"
-#include <boost/filesystem.hpp>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <errno.h> // errno, ENOENT, EEXIST
+#include <fstream>
 #include <iomanip>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <thread>
+
+#if defined(_WIN32)
+#include <direct.h> // _mkdir
+#endif
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -64,24 +72,100 @@ void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
   }
 }
 
-/// \brief Create directory if not existing.
+/// \brief Check if directory exists.
 ///
-/// \param inDirectory - Path to directory.
+/// \param inDirectory - Path to directory to check.
 ///
-/// \return - void
-void createDirectory(const char *const inDirectory) {
-  // TODO(patric): Replace boost with standard functions.
-  const boost::filesystem::path rootPath(inDirectory);
-  boost::filesystem::create_directories(rootPath);
+/// \return - true if directory exists.
+bool doesDirectoryExist(const char *const &inDirectory) {
+#if defined(_WIN32)
+  struct _stat infoBuffer;
+  if (_stat(inDirectory, &infoBuffer) != 0) {
+    return false;
+  }
+  return (infoBuffer.st_mode & _S_IFDIR) != 0;
+#else
+  struct stat infoBuffer;
+  if (stat(inDirectory, &infoBuffer) != 0) {
+    return false;
+  }
+  return (infoBuffer.st_mode & S_IFDIR) != 0;
+#endif
+}
+
+/// \brief Check if directory exists (wrapper).
+///
+/// \param inDirectory - Path to directory to check.
+///
+/// \return - true if directory exists.
+bool doesDirectoryExist(const std::string &inDirectory) {
+  return doesDirectoryExist(inDirectory.c_str());
+}
+
+/// \brief Portable wrapper for mkdir. Internally used by mkdir().
+///
+/// \param inDirectory - Path to directory to create.
+///
+/// \return - zero on success, otherwise -1.
+int _mkdir(const char *inDirectory) {
+#ifdef _WIN32
+  return ::_mkdir(inDirectory);
+#else
+  const int mkdirModeUNIX = 0755;
+  return ::mkdir(inDirectory, mkdirModeUNIX);
+#endif
+}
+
+/// \brief Recursive and portable wrapper for mkdir.
+///
+/// \param inDirectory - Path to directory to create.
+///
+/// \return - zero on success, otherwise -1.
+int mkdir(const char *inDirectory) {
+  std::string currentLevel = "";
+  std::string level;
+  std::stringstream ss(inDirectory);
+
+  // Split path using slash as a separator.
+  while (std::getline(ss, level, '/')) {
+    // Append folder to the current level.
+    currentLevel += level;
+
+    // Create current level.
+    if (!doesDirectoryExist(currentLevel) &&
+        _mkdir(currentLevel.c_str()) != 0) {
+      return -1;
+    }
+
+    // Append a slash.
+    currentLevel += "/";
+  }
+
+  return 0;
 }
 
 /// \brief Create directory if not existing.
 ///
-/// \param inDirectory - Path to directory.
+/// Create directory if not existing, using mkdir in non-windows and _mkdir in
+/// Windows. This is done recursively for a directory tree.
 ///
-/// \return - void
-void createDirectory(const std::string inDirectory) {
-  createDirectory(inDirectory.c_str());
+/// \param inDirectory - Path to directory to create.
+void createDirectory(const std::string &inDirectory) {
+  const int creationStatus = mkdir(inDirectory.c_str());
+
+  // Check for error creating directory.
+  if (creationStatus != 0) {
+    std::cerr << "Could not create directory (creationStatus=" << creationStatus
+              << "): " << inDirectory << std::endl;
+    std::exit(EXIT_FAILURE);
+  }
+}
+
+/// \brief Create directory if not existing (wrapper).
+///
+/// \param inDirectory - Path to directory to create.
+void createDirectory(const char *const &inDirectory) {
+  createDirectory(std::string(inDirectory));
 }
 
 /// \brief Write line to file
@@ -190,8 +274,9 @@ void saveFreeEnergy(const Context<T> *const inContext,
   snprintf(freeEnergyFile, sizeof(freeEnergyFile), "%s/%s.dat", inDataPath,
            inDataFileName);
 
-  // Add header if file does not exist
-  if (!boost::filesystem::exists(freeEnergyFile)) {
+  // Add header if file does not exist.
+  std::ifstream freeEnergyFileStream(freeEnergyFile);
+  if (!freeEnergyFileStream.good()) {
     std::stringstream ss_header;
     ss_header << "# iterationNumber residual freeEnergyPerUnitArea";
     writeLineToFile(freeEnergyFile, ss_header);
@@ -269,7 +354,7 @@ void saveInducedFluxDensity(
   if (magneticFluxDensity.write(gridDataFile, parameters)) {
     std::cout << "ERROR! Could not save induced flux density to file: "
               << gridDataFile << std::endl;
-    exit(1);
+    std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
       std::cout << "Saved induced flux density to file: " << gridDataFile
@@ -313,7 +398,7 @@ void saveGridData(
   if (orderParameterSave->write(orderParameterFile, parameters)) {
     std::cout << "ERROR! Could not save Order Parameter to file: "
               << orderParameterFile << std::endl;
-    exit(1);
+    std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
       std::cout << "Saved order parameter to file: " << orderParameterFile
@@ -338,7 +423,7 @@ void saveGridData(
   if (currentSave->write(currentDensityFile, parameters)) {
     std::cout << "Could not save current density to file: "
               << currentDensityFile << std::endl;
-    exit(1);
+    std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
       std::cout << "Saved current density to file: " << currentDensityFile

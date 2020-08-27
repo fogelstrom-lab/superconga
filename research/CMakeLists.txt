@@ -50,8 +50,6 @@ foreach(file ${SRC})
             gfortran
             lapack
             blas
-            boost_system
-            boost_filesystem
             nlohmann_json::nlohmann_json)
 
   # Use C++14 since it is the lates standard CUDA supports
