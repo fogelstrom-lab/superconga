@@ -55,6 +55,15 @@ sudo apt-get update
 sudo apt-get install cmake
 ```
 
+Note that `apt-add-repository` might produce a `GPG NO_PUBKEY`-error (e.g. `: GPG error: https://apt.kitware.com/ubuntu bionic InRelease: The following signatures couldn't be verified because the public key is not available: NO_PUBKEY <PUBKEY>`). To Fix this, run the following command before attempting to add the kitware repository:
+
+```
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <PUBKEY>
+```
+
+where `<PUBKEY>` is the public key number given in the error message.
+
+
 The following is a summary of how to install `CUDA`
 
 ```
