@@ -140,7 +140,12 @@ python suprcongpu.py -f examples/XXX.json -T 0.5
 ```
 
 will set the temperature to `T=0.5T_c` regardless of the value in the JSON file. If you try to provide invalid parameters,
-the Python wrapper will spot this, print what the error is, and exit.
+the Python wrapper will spot this, print what the error is, and exit. For convenience of use, there is a support to run
+simulations in a GUI, which can be enabled with a `--gui` command-line option,
+
+```
+python suprcongpu.py -f examples/XXX.json --gui
+```
 
 In order to call the C++ executable, navigate to the `build/release/` folder, and execute the following command
 
