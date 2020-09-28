@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QComboBox,
     QSpinBox,
+    QGroupBox,
     QWidget,
     QPushButton,
     QLineEdit,
@@ -276,7 +277,7 @@ def make_default_parser():
         "--save-data-interval",
         type=int,
         default=None,
-        help="How frequently to save data.",
+        help="How frequently to save data (every Nth iteration).",
     )
 
     # Visualize.
@@ -787,7 +788,9 @@ class InputDropdown(Serializable, QWidget, metaclass=QMeta):
 
 class OrderParameterComponent(Serializable, QWidget, metaclass=QMeta):
     def __init__(
-        self, *, parent=None,
+        self,
+        *,
+        parent=None,
     ):
         super().__init__(parent)
 
@@ -837,9 +840,11 @@ class OrderParameterComponent(Serializable, QWidget, metaclass=QMeta):
         layout = QFormLayout(self)
         layout.setLabelAlignment(Qt.AlignLeft)
         layout.addRow(QLabel("Order parameter symmetry"), self._symmetryDropdown)
-        layout.addRow(QLabel("Critical temperature"), self._tc)
-        layout.addRow(QLabel("Initial phase shift"), self._init_phase_shift)
-        layout.addRow(QLabel("Initial phase winding"), self._init_phase_winding)
+        layout.addRow(QLabel("Critical temperature [Tc_max]"), self._tc)
+        layout.addRow(QLabel("Initial phase shift [2\u03C0]"), self._init_phase_shift)
+        layout.addRow(
+            QLabel("Initial phase winding [2\u03C0]"), self._init_phase_winding
+        )
         layout.addRow(
             QLabel("Initial random phase weight"), self._init_rand_phase_weight
         )
@@ -990,12 +995,16 @@ class OrderParameter(Serializable, QScrollArea, metaclass=QMeta):
                 "Input Error: Order parameter should be specified as a list of component dictionaries"
             )
         self.clear()
-        for opComponentDict in opComponentsList:
-            if len(self._opComponents) == 0:
-                opComponent = self.add_component()
-            else:
-                opComponent = self.handle_add()
-            opComponent.setValue(opComponentDict)
+        if len(opComponentsList) == 0:
+            print("Input Warning: Order parameter was not specified")
+            opComponent = self.add_component()
+        else:
+            for opComponentDict in opComponentsList:
+                if len(self._opComponents) == 0:
+                    opComponent = self.add_component()
+                else:
+                    opComponent = self.handle_add()
+                opComponent.setValue(opComponentDict)
 
 
 class MainWindow(QMainWindow):
@@ -1003,7 +1012,7 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.setWindowTitle("SuprConGPU Runner")
         font = QFont()
-        font.setPixelSize(14)
+        font.setPixelSize(13)
         QApplication.setFont(font)
 
         # Widgets registry
@@ -1012,119 +1021,145 @@ class MainWindow(QMainWindow):
         # Create main widget holding all the controls and inputs
         mainWidget = QFrame()
 
-        # Create inputs form layout
-        formLayout = QFormLayout()
-        formLayout.setLabelAlignment(Qt.AlignLeft)
+        # -------------- #
+        # Physics Inputs #
+        # -------------- #
+        physicsBox = QGroupBox("Physics Parameters")
+        physicsBoxLayout = QFormLayout(physicsBox)
+        physicsBoxLayout.setLabelAlignment(Qt.AlignLeft)
 
-        # ------ #
-        # Inputs #
-        # ------ #
-
-        # Convergence criterion
-        self._convergence_criterion = InputFloat(
-            jsonKey="convergence_criterion", minValue=0.0
-        )
-        self.register(self._convergence_criterion)
-        formLayout.addRow(QLabel("Convergence criterion"), self._convergence_criterion)
-
-        # Axes rotation
-        self._crystal_axes_rotation = InputFloat(jsonKey="crystal_axes_rotation")
-        self.register(self._crystal_axes_rotation)
-        formLayout.addRow(
-            QLabel("Crystal axes rotation"), self._crystal_axes_rotation,
-        )
-
-        # Set data path
-        self._data_path = InputStr(jsonKey="data_path")
-        self.register(self._data_path)
-        formLayout.addRow(QLabel("Data path"), self._data_path)
+        # Temperature
+        self._temperature = InputFloat(jsonKey="temperature", onlyPositive=True)
+        self.register(self._temperature)
+        physicsBoxLayout.addRow(QLabel("Temperature [Tc]"), self._temperature)
 
         # External flux quanta
         self._external_flux_quanta = InputFloat(jsonKey="external_flux_quanta")
         self.register(self._external_flux_quanta)
-        formLayout.addRow(QLabel("External flux quanta"), self._external_flux_quanta)
+        physicsBoxLayout.addRow(
+            QLabel("External flux quanta [\u03A6\u2080]"), self._external_flux_quanta
+        )
+
+        # Crystal axes rotation
+        self._crystal_axes_rotation = InputFloat(jsonKey="crystal_axes_rotation")
+        self.register(self._crystal_axes_rotation)
+        physicsBoxLayout.addRow(
+            QLabel("Crystal axes rotation [2\u03C0]"),
+            self._crystal_axes_rotation,
+        )
 
         # Grain side length
         self._grain_side_length = InputFloat(
             jsonKey="grain_side_length", onlyPositive=True
         )
         self.register(self._grain_side_length)
-        formLayout.addRow(QLabel("Grain side length"), self._grain_side_length)
+        physicsBoxLayout.addRow(
+            QLabel("Grain side length [\u03BE\u2080]"), self._grain_side_length
+        )
 
-        # Lattice side length
+        # Number of polygon edges
+        self._num_polygon_edges = Geometry(jsonKey="num_polygon_edges")
+        self.register(self._num_polygon_edges)
+        physicsBoxLayout.addRow(QLabel("System geometry"), self._num_polygon_edges)
+
+        # Solenoid
+        self._solenoid = CheckBox(jsonKey="solenoid")
+        self.register(self._solenoid)
+        physicsBoxLayout.addRow(QLabel("Solenoid"), self._solenoid)
+
+        # Order parameter
+        self._order_parameter = OrderParameter(jsonKey="order_parameter")
+        self.register(self._order_parameter)
+        physicsBoxLayout.addRow(QLabel("Order parameter"), self._order_parameter)
+
+        # --------------------- #
+        # Simulation Parameters #
+        # --------------------- #
+        simulationBox = QGroupBox("Simulation Parameters")
+        simulationBoxLayout = QFormLayout(simulationBox)
+        simulationBoxLayout.setLabelAlignment(Qt.AlignLeft)
+
+        # Lattice grid size
         self._lattice_side_length = InputInt(jsonKey="lattice_side_length", minValue=1)
         self.register(self._lattice_side_length)
-        formLayout.addRow(QLabel("Lattice side length"), self._lattice_side_length)
+        simulationBoxLayout.addRow(
+            QLabel("Lattice side length"), self._lattice_side_length
+        )
 
         # Number of Fermi momenta
         self._num_fermi_momenta = InputInt(jsonKey="num_fermi_momenta", minValue=1)
         self.register(self._num_fermi_momenta)
-        formLayout.addRow(QLabel("Number of Fermi momenta"), self._num_fermi_momenta)
+        simulationBoxLayout.addRow(
+            QLabel("Number of Fermi momenta"), self._num_fermi_momenta
+        )
+
+        # Number of Ozaki energies
+        self._num_ozaki_energies = InputInt(jsonKey="num_ozaki_energies", minValue=1)
+        self.register(self._num_ozaki_energies)
+        simulationBoxLayout.addRow(
+            QLabel("Number of Ozaki energies"), self._num_ozaki_energies
+        )
 
         # Max number of iterations
         self._num_iterations_max = InputInt(jsonKey="num_iterations_max", minValue=1)
         self.register(self._num_iterations_max)
-        formLayout.addRow(
+        simulationBoxLayout.addRow(
             QLabel("Max number of self-consistent iterations"), self._num_iterations_max
         )
 
         # Min number of iterations
         self._num_iterations_min = InputInt(jsonKey="num_iterations_min", minValue=1)
         self.register(self._num_iterations_min)
-        formLayout.addRow(
+        simulationBoxLayout.addRow(
             QLabel("Min number of self-consistent iterations"), self._num_iterations_min
         )
 
-        # Number of Ozaki energies
-        self._num_ozaki_energies = InputInt(jsonKey="num_ozaki_energies", minValue=1)
-        self.register(self._num_ozaki_energies)
-        formLayout.addRow(QLabel("Number of Ozaki energies"), self._num_ozaki_energies)
+        # Convergence criterion
+        self._convergence_criterion = InputFloat(
+            jsonKey="convergence_criterion", minValue=0.0
+        )
+        self.register(self._convergence_criterion)
+        simulationBoxLayout.addRow(
+            QLabel("Convergence criterion"), self._convergence_criterion
+        )
 
-        # Number of polygon edges
-        self._num_polygon_edges = Geometry(jsonKey="num_polygon_edges")
-        self.register(self._num_polygon_edges)
-        formLayout.addRow(QLabel("System geometry"), self._num_polygon_edges)
+        # ------------------------ #
+        # Miscellaneous Parameters #
+        # ------------------------ #
+        miscBox = QGroupBox("Miscellaneous Parameters")
+        miscBoxLayout = QFormLayout(miscBox)
+        miscBoxLayout.setLabelAlignment(Qt.AlignLeft)
 
-        # Order parameter
-        self._order_parameter = OrderParameter(jsonKey="order_parameter")
-        self.register(self._order_parameter)
-        formLayout.addRow(QLabel("Order parameter"), self._order_parameter)
+        # Set data path
+        self._data_path = InputStr(jsonKey="data_path")
+        self.register(self._data_path)
+        miscBoxLayout.addRow(QLabel("Data path"), self._data_path)
 
         # Save data
         self._save_data = CheckBox(jsonKey="save_data")
         self.register(self._save_data)
-        formLayout.addRow(QLabel("Save data"), self._save_data)
+        miscBoxLayout.addRow(QLabel("Save data"), self._save_data)
 
         # Save data interval
         self._save_data_interval = InputInt(jsonKey="save_data_interval")
         self.register(self._save_data_interval)
-        formLayout.addRow(
-            QLabel("Interval to save data with"), self._save_data_interval
+        miscBoxLayout.addRow(
+            QLabel("Save every Nth iteration"), self._save_data_interval
         )
-
-        # Solenoid
-        self._solenoid = CheckBox(jsonKey="solenoid")
-        self.register(self._solenoid)
-        formLayout.addRow(QLabel("Solenoid"), self._solenoid)
-
-        # Temperature
-        self._temperature = InputFloat(jsonKey="temperature", onlyPositive=True)
-        self.register(self._temperature)
-        formLayout.addRow(QLabel("Temperature"), self._temperature)
 
         # Verbose calculation
         self._verbose = CheckBox(jsonKey="verbose")
         self.register(self._verbose)
-        formLayout.addRow(QLabel("Verbose calculation"), self._verbose)
+        miscBoxLayout.addRow(QLabel("Verbose calculation"), self._verbose)
 
         # Visualize
         self._visualize = CheckBox(jsonKey="visualize")
         self.register(self._visualize)
-        formLayout.addRow(QLabel("Visualize"), self._visualize)
+        miscBoxLayout.addRow(QLabel("Visualize"), self._visualize)
 
         # Compiled binary path
         self._binary_path = ChooseFile(defaultPath=cppBinaryPath)
-        formLayout.addRow(QLabel("SuprConGPU binary path"), self._binary_path)
+        miscBoxLayout.addRow(QLabel("SuprConGPU binary path"), self._binary_path)
 
         # -------- #
         # Controls #
@@ -1154,7 +1189,9 @@ class MainWindow(QMainWindow):
 
         # Main widget layout
         layout = QVBoxLayout(mainWidget)
-        layout.addLayout(formLayout)
+        layout.addWidget(physicsBox)
+        layout.addWidget(simulationBox)
+        layout.addWidget(miscBox)
         layout.addLayout(buttonsLayout)
 
         # Set the created form as the central part of the application window
@@ -1163,9 +1200,6 @@ class MainWindow(QMainWindow):
         scrollArea.setWidget(mainWidget)
         self.setCentralWidget(scrollArea)
         self.setFocus()
-
-        # Set startup size
-        self.resize(820, 980)
 
         # Set application styles
         self.setAppStyle()
@@ -1210,7 +1244,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def handle_save_file(self):
         saveFileName = QFileDialog.getSaveFileName(
-            self, caption="Save config file", filter="Config file (*.json)",
+            self,
+            caption="Save config file",
+            filter="Config file (*.json)",
         )[0]
 
         if saveFileName:
@@ -1280,6 +1316,10 @@ def showGui(simparams: dict, cpp_binary: str) -> int:
     # Main part of the application
     mainWindow = MainWindow(cppBinaryPath=cpp_binary)
 
+    # Set startup size depending on the screen geometry
+    screenRect = app.desktop().screenGeometry()
+    mainWindow.resize(screenRect.width() * 2 // 5, screenRect.height() * 4 // 5)
+
     if bool(simparams):
         mainWindow.deserialize(simparams)
     mainWindow.show()
@@ -1340,7 +1380,10 @@ def main() -> None:
     set_value(simparams, "initial_phase_shift", args.op_init_phase_shift, group)
     set_value(simparams, "initial_phase_winding", args.op_init_phase_winding, group)
     set_value(
-        simparams, "initial_random_phase_weight", args.op_init_rand_phase_weight, group,
+        simparams,
+        "initial_random_phase_weight",
+        args.op_init_rand_phase_weight,
+        group,
     )
     set_value(simparams, "symmetry", args.op_sym, group)
 
