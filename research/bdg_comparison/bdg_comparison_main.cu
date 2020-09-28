@@ -33,6 +33,7 @@
 
 #include "bdg_comparison_utils.h" // Common utils for this project
 
+#include <cstdlib>
 #include <cuda.h>
 #include <iostream>
 
@@ -143,22 +144,25 @@ int main(int argc, char *argv[]) {
 
   // Check that fermiSurfaceLabel has a proper value
   if (simParams::fermiSurfaceLabel < 1 || simParams::fermiSurfaceLabel > 3) {
-    std::cout << "ERROR! Illegal value for simParams::fermiSurfaceLabel: "
+    std::cerr << "ERROR! Illegal value for simParams::fermiSurfaceLabel: "
               << simParams::fermiSurfaceLabel << std::endl;
-    return 0;
+    scg::run_utils::cleanup(context, gui);
+    return 1;
   }
 
   // Check that grain sizes are valid
   if (simParams::GRAIN_CORNER_SIZE >
       (simParams::GRAIN_DIAGONAL * static_cast<T>(std::sqrt(2.0)))) {
-    std::cout << "ERROR! GRAIN_CORNER_SIZE too large:"
+    std::cerr << "ERROR! GRAIN_CORNER_SIZE too large:"
               << simParams::GRAIN_CORNER_SIZE << std::endl;
-    return 0;
+    scg::run_utils::cleanup(context, gui);
+    return 1;
   }
   if (simParams::GRAIN_CORNER_SIZE < static_cast<T>(0.0)) {
-    std::cout << "ERROR! GRAIN_CORNER_SIZE negative: "
+    std::cerr << "ERROR! GRAIN_CORNER_SIZE negative: "
               << simParams::GRAIN_CORNER_SIZE << std::endl;
-    return 0;
+    scg::run_utils::cleanup(context, gui);
+    return 1;
   }
 
   // Storage for system simulation parameters (e.g. temperature, lattice size)
@@ -187,7 +191,7 @@ int main(int argc, char *argv[]) {
             simParams::GRAIN_CORNER_SIZE, simParams::TEMPERATURE);
   }
   // Create data path if it does not exist
-  bdg_comp_utils::createProjectDirectory(dataPath);
+  scg::run_utils::createDirectory(dataPath);
 
   //***************************************************
   // CREATE GEOMETRY
@@ -266,10 +270,9 @@ int main(int argc, char *argv[]) {
     char orderParameterFile[512];
     sprintf(orderParameterFile, "%sorder_parameter.grd", dataPath);
     if (orderParameterLoaded.read(orderParameterFile, parameters)) {
-      std::cout << "Error reading file: " << std::endl;
-      std::cout << orderParameterFile << std::endl;
+      std::cerr << "Error reading file: " << orderParameterFile << std::endl;
       scg::run_utils::cleanup(context, gui);
-      exit(0);
+      return 1;
     }
     std::cout << "Initialize the order parameter from file." << std::endl;
     scg::Initial<T>::grid(orderParameterComponent, orderParameterLoaded);
@@ -332,10 +335,10 @@ int main(int argc, char *argv[]) {
     break;
   }
   default:
-    std::cout << "ERROR! Illegal value for simParams::fermiSurfaceLabel:"
+    std::cerr << "ERROR! Illegal value for simParams::fermiSurfaceLabel:"
               << simParams::fermiSurfaceLabel << std::endl;
     scg::run_utils::cleanup(context, gui);
-    return 0;
+    return 1;
   }
   context->set(fermiSurface);
 

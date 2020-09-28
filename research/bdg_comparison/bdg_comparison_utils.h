@@ -22,7 +22,7 @@
 #include "Visualization.h"
 #include "defines.h"
 
-#include <boost/filesystem.hpp>
+#include <cstdlib>
 #include <cuda.h>
 #include <fstream>
 #include <iostream>
@@ -41,7 +41,7 @@ void saveInducedFluxDensity(
 
   // Construct full file name
   char gridDataFile[512];
-  sprintf(gridDataFile, "%s%s.grd", inDataPath, inDataFileName);
+  sprintf(gridDataFile, "%s/%s.grd", inDataPath, inDataFileName);
 
   // Fetch parameters
   scg::Parameters<T> *parameters = inContext->getParameters();
@@ -82,14 +82,6 @@ void saveInducedFluxDensity(
   magneticFluxDensity.write(gridDataFile, parameters);
 }
 
-// Use boost to create directory if not existing
-// TODO(patric): Replace boost with standard functions. Create utils_io.h in lib
-// and move there
-void createProjectDirectory(const char *const inDirectory) {
-  const boost::filesystem::path rootPath(inDirectory);
-  boost::filesystem::create_directories(rootPath);
-}
-
 // Append data to text file
 // TODO(patric): Create utils_io.h and move there.
 void appendLineToTextFile(
@@ -116,7 +108,7 @@ void saveParamsMetaData(
 
   // Construct full file name for meta data file
   char metaDataFile[512];
-  sprintf(metaDataFile, "%s%s.dat", inDataPath, inDataFileName);
+  sprintf(metaDataFile, "%s/%s.dat", inDataPath, inDataFileName);
 
   // Add header
   std::stringstream ss_header;
@@ -168,10 +160,11 @@ void saveFreeEnergy(const scg::Context<T> *const inContext,
 
   // Construct full file name for free energy
   char freeEnergyFile[512];
-  sprintf(freeEnergyFile, "%s%s.dat", inDataPath, inDataFileName);
+  sprintf(freeEnergyFile, "%s/%s.dat", inDataPath, inDataFileName);
 
-  // Add header if file does not exist
-  if (!boost::filesystem::exists(freeEnergyFile)) {
+  // Add header if file does not exist.
+  std::ifstream freeEnergyFileStream(freeEnergyFile);
+  if (!freeEnergyFileStream.good()) {
     std::stringstream ss_header;
     ss_header << "# iterationNumber residual freeEnergyPerUnitArea "
                  "externalMagneticFluxDensity grainSideLength cornerLength "
@@ -213,11 +206,12 @@ void saveGridData(
 
   // Construct full file name for order parameter
   char orderParameterFile[512];
-  sprintf(orderParameterFile, "%s%s.grd", inDataPath, inOrderParameterFileName);
+  sprintf(orderParameterFile, "%s/%s.grd", inDataPath,
+          inOrderParameterFileName);
 
   if (orderParameterSave->write(orderParameterFile, parameters)) {
-    std::cout << "Could not save Order Parameter to file.\n";
-    exit(0);
+    std::cerr << "ERROR! Could not save Order Parameter to file.\n";
+    std::exit(EXIT_FAILURE);
   }
 
   // Save Current
@@ -227,11 +221,12 @@ void saveGridData(
 
   // Construct full file name for current density
   char currentDensityFile[512];
-  sprintf(currentDensityFile, "%s%s.grd", inDataPath, inCurrentDensityFileName);
+  sprintf(currentDensityFile, "%s/%s.grd", inDataPath,
+          inCurrentDensityFileName);
 
   if (currentSave->write(currentDensityFile, parameters)) {
-    std::cout << "Could not save Current to file.\n";
-    exit(0);
+    std::cerr << "Could not save Current to file.\n";
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -279,8 +274,8 @@ void saveDataLDOS(const scg::Context<T> *const inContext,
   inContext->getGeometry()->zeroValuesOutsideDomain(ldosSave);
 
   if (ldosSave->write(fileName, parameters)) {
-    std::cout << "Could not save LDOS to file." << std::endl;
-    exit(0);
+    std::cerr << "ERROR! Could not save LDOS to file." << std::endl;
+    std::exit(EXIT_FAILURE);
   }
 }
 
