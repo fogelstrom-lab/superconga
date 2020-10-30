@@ -156,6 +156,42 @@ In order to call the C++ executable, navigate to the `build/release/` folder, an
 Note that there is no support for overriding parameters from the command line when using the C++ executable directly,
 nor is any validation of the parameters made.
 
+## Parameter files
+
+A simulation is set up by the use of a JSON parameter file. Complete examples of parameter files are found in the directory `examples/`, e.g. `dwave_octagon.json`
+```
+{
+    "convergence_criterion": 1e-6,
+    "crystal_axes_rotation": 0.0,
+    "data_path": "data",
+    "external_flux_quanta": 0.0,
+    "grain_side_length": 30.0,
+    "lattice_side_length": 201,
+    "num_fermi_momenta": 55,
+    "num_iterations_max": 1000,
+    "num_iterations_min": 20,
+    "num_ozaki_energies": 20,
+    "num_polygon_edges": 8,
+    "order_parameter": [
+        {
+            "critical_temperature": 1.0,
+            "initial_phase_shift": 0.0,
+            "initial_phase_winding": 0.0,
+            "initial_random_phase_weight": 0.0,
+            "symmetry": "dx2-y2"
+        }
+    ],
+    "save_data": false,
+    "save_data_interval": 200,
+    "solenoid": false,
+    "temperature": 0.5,
+    "verbose": true,
+    "visualize": true
+}
+```
+All parameters are explained in detail in [the documentation](https://suprcongpu.gitlab.io/suprcongpu/).
+
+
 ## Clang-Format
 
 We enforce consistent LLVM style with clang-format version 9. Our settings are found in the file `.clang-format`.
