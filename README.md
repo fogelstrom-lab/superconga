@@ -1,230 +1,44 @@
 # SuprConGPU
 
-C++/CUDA library for calculation of physical properties of superconducting systems with confinement.
-Below follows a summarized usage guide, see [the documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/) for more information.
+[Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
 
-## External packages required
+SuprConGPU is open-source software for simulating the physics of superconducting and condensed-matter systems. The SuprConGPU library uses C++/CUDA for the numerical computations in the backend, and the packages Numpy, SCiPy, Matplotlib and Qt for the frontend. The goal of SuprConGPU is to ...(user-friendly, efficiency, systems/physics that can be covered) . SuprConGPU is largely based on the quasiclassical theory of superconductivity and ...(eilenberger, riccati, green functions) to ...(trajectories, boundary conditions, Anderson). SuprConGPU is avaiable to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms. This makes SuprConGPU an ideal tool to simulate superconductivity, both for research but also for educational purposes.
 
-SuprConGPU's dependencies are; `CMake` and `Ninja` to build the software,
-`CUDA` for utilizing the (NVIDIA) GPU, `LAPACK` and `BLAS` are used for some linear algebra on the CPU,
-and `FreeGLUT` is used for visualizing the results. The unit tests use `doctest`, and consistent code format is enforced by `clang-format`.
 
-Both `Python2` and `Python3` are used throughout the project, e.g. for post-processing of the data. The Python dependencies are [Matplotlib](https://matplotlib.org/),
-[NumPy](https://numpy.org/), [SciPy](https://www.scipy.org/), and [PyQt5](https://pypi.org/project/PyQt5/).
+## Badges
 
-We recommend to use the included [requirements](requirements.txt) file and Python package installer ([pip](https://pip.pypa.io/en/stable/)) to satisfy the dependencies:
 
-```
-pip install -r requirements.txt
-```
+## Download
+The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#:~:text=Clone%20a%20repository&text=You%20can%20either%20clone%20it,paste%20in%20your%20command%20line.) the repository through the above interface.
 
-Please note, if you would like to install these dependencies globally (rather than in a local Python virtual environment), you need to have superuser privileges
-and run the above command with `sudo -H` prefix (the `-H` flag suppresses warnings from `pip`).
 
-### Arch/Manjaro
+## Installation
+For detailed instructions on installation and compilation, see: [https://suprcongpu.gitlab.io/suprcongpu-doc/install.html](https://suprcongpu.gitlab.io/suprcongpu-doc/install.html)
 
-Using the AUR helper `yay` the dependencies can be installed with
 
-```
-sudo pacman -S blas cmake cuda freeglut lapack ninja yay
-yay -S clang-format-all-git
-```
+## Documentation
+A user manual with tutorials, examples and additional information can be found in the official documentation: [https://suprcongpu.gitlab.io/suprcongpu-doc/](https://suprcongpu.gitlab.io/suprcongpu-doc/)
 
-Furthermore, add the following at the end of your `.bashrc` file
+This documentation is built from the following development repository: [https://gitlab.com/suprcongpu/suprcongpu-doc](https://gitlab.com/suprcongpu/suprcongpu-doc)
 
-```
-export LD_LIBRARY_PATH=/opt/cuda/lib64/:${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-export CPLUS_INCLUDE_PATH=/opt/cuda/include/:$CPLUS_INCLUDE_PATH
-```
 
-### Ubuntu 18.04LTS
+## Contribute
+We encourage any useful contributions to the development of SuprConGPU, by forking this repository and sending merge requests, proposing changes via our SuprConGPU discussion group, questions and discussions, or sharing bug reports via the issues page.
 
-In Ubuntu it is a bit more complicated to setup all dependencies, but most can be install with
+All contributions are acknowledged in the [contributors section](https://suprcongpu.gitlab.io/suprcongpu-doc/contributors.html) in the documentation.
 
-```
-sudo apt install build-essential freeglut3-dev libblas-dev liblapack-dev ninja-build
-```
+Note that all contributions must adhere to the [clang-format style guide](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html#clang-format) for C++/CUDA code, and the [PEP 8 -- Style Guide](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html#pep8) for Python Code.
 
-Note that the `CMake` version must be 3.11 or higher. The version in the apt repository in Ubuntu 18.04LTS is unfortunately too old,
-but [Kitware](https://apt.kitware.com/) supply the latest version
+For more information, including technical advice, please see [Contributing to SuperConGPU development](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html).
 
-```
-sudo apt-get purge --auto-remove cmake
-sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
-sudo apt-get update
-sudo apt-get install cmake
-```
 
-Note that `apt-add-repository` might produce a `GPG NO_PUBKEY`-error (e.g. `: GPG error: https://apt.kitware.com/ubuntu bionic InRelease: The following signatures couldn't be verified because the public key is not available: NO_PUBKEY <PUBKEY>`). To Fix this, run the following command before attempting to add the kitware repository:
+## License
+You are free to use this software, with or without modification, provided that the conditions listed in the LICENSE.txt file are satisfied.
 
-```
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <PUBKEY>
-```
 
-where `<PUBKEY>` is the public key number given in the error message.
+## Support
+SuprConGPU development is supported by the Applied Quantum Physics Laboratory at the Department of Microtechnology and Nanoscience - MC2, Chalmers University of Technology. We acknowledge the Swedish Research Council (VR) for financial support of the doctoral and post-doctoral projects during which a considerable part of the development has been carried out. Computational resources have been provided by Chalmers Centre for Computational Science and Engineering provided by the Swedish National Infrastructure for Computing.
 
 
-The following is a summary of how to install `CUDA`
-
-```
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pinsudo
-mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
-sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
-sudo apt-get update
-sudo apt-get -y install cuda
-```
-
-Furthermore, add the following at the end of your `.bashrc` file
-
-```
-export PATH=/usr/local/cuda-11.0/bin${PATH:+:${PATH}}
-export LD_LIBRARY_PATH=/usr/local/cuda-11.0/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-```
-
-If the `CUDA` install is unsuccessful please go to the `CUDA` [download page](https://developer.nvidia.com/cuda-downloads) and follow the [official installation guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html).
-
-Lastly, install `clang-format` version 9 with
-
-```
-sudo apt install clang-format-9
-sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
-```
-
-## How to compile
-
-Set up the build with the `setup.sh` script (starting from the project root directory):
-
-```
-./setup.sh
-```
-
-Then compile by simply writing
-
-```
-ninja
-```
-
-in e.g. the `build/release/` folder.
-
-### Build manually with custom CUDA architecture
-
-By default, CMake tries to autodetect the appropriate CUDA architecture.
-One can override this by using the command-line option `-DCUDA_ARCH`,
-i.e. go to `build/release/` folder and write
-
-```
-cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ../..
-```
-
-where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.),
-and `build_type` is either `Release` or `Debug`.
-
-## How to run the examples
-
-The folder `examples/` contains a collection of parameter files, one per example,
-demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework.
-
-The examples can be run in two different ways; either call the C++ executable directly, or use the Python wrapper (recommended).
-Simply execute the following command in the project root folder
-
-```
-python suprcongpu.py -f examples/XXX.json
-```
-
-where `XXX.json` should be substituted with any JSON file in the `examples/` folder.
-All parameters in the JSON file can be overridden from the terminal, e.g.
-
-```
-python suprcongpu.py -f examples/XXX.json -T 0.5
-```
-
-will set the temperature to `T=0.5T_c` regardless of the value in the JSON file. If you try to provide invalid parameters,
-the Python wrapper will spot this, print what the error is, and exit. For convenience of use, there is a support to run
-simulations in a GUI, which can be enabled with a `--gui` command-line option,
-
-```
-python suprcongpu.py -f examples/XXX.json --gui
-```
-
-In order to call the C++ executable, navigate to the `build/release/` folder, and execute the following command
-
-```
-./bin/main ../../examples/XXX.json
-```
-
-Note that there is no support for overriding parameters from the command line when using the C++ executable directly,
-nor is any validation of the parameters made.
-
-## Parameter files
-
-A simulation is set up by the use of a JSON parameter file. Complete examples of parameter files are found in the directory `examples/`, e.g. `dwave_octagon.json`
-```
-{
-    "convergence_criterion": 1e-6,
-    "crystal_axes_rotation": 0.0,
-    "data_path": "data",
-    "external_flux_quanta": 0.0,
-    "grain_side_length": 30.0,
-    "lattice_side_length": 201,
-    "num_fermi_momenta": 55,
-    "num_iterations_max": 1000,
-    "num_iterations_min": 20,
-    "num_ozaki_energies": 20,
-    "num_polygon_edges": 8,
-    "order_parameter": [
-        {
-            "critical_temperature": 1.0,
-            "initial_phase_shift": 0.0,
-            "initial_phase_winding": 0.0,
-            "initial_random_phase_weight": 0.0,
-            "symmetry": "dx2-y2"
-        }
-    ],
-    "save_data": false,
-    "save_data_interval": 200,
-    "solenoid": false,
-    "temperature": 0.5,
-    "verbose": true,
-    "visualize": true
-}
-```
-All parameters are explained in detail in [the documentation](https://suprcongpu.gitlab.io/suprcongpu/).
-
-
-## Clang-Format
-
-We enforce consistent LLVM style with clang-format version 9. Our settings are found in the file `.clang-format`.
-If we want to change style, this is done by writing e.g.
-
-```
-clang-format -style=llvm -dump-config > .clang-format
-```
-
-to get LLVM format.
-
-## Doctest
-
-Our goal is to test every function/method using Doctest. It is fetched automatically using CMake.
-
-## CTest
-
-CMake allows to aggregate all tests into a test suite. In order to run all tests use
-
-```
-ctest [-jN]
-```
-
-inside the build folder to run all the tests (`-jN` option allows to run tests in parallel CPU threads).
-
-In order to see the list of tests which can be run use
-
-```
-ctest -N
-```
-
-while to run a specific test ignoring all other use
-
-```
-ctest -R test_name
-```
+## Authors
+The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Oleksii Shevtsov. Previous developers are Mikael Håkansson. The project is supervised by Mikael Fogelström and Tomas Löfwander.
