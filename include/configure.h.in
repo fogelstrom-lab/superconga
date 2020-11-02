@@ -25,9 +25,11 @@ const std::string version = "${CMAKE_PROJECT_VERSION}";
 const std::string projectName = "${CMAKE_PROJECT_NAME}";
 
 // Paths
+const std::string rootPath = "${CMAKE_SOURCE_DIR}";
+const std::string dataPath = "${CMAKE_SOURCE_DIR}/data";
+const std::string sourcePath = "${CMAKE_SOURCE_DIR}/src";
 const std::string buildPath = "${CMAKE_SOURCE_DIR}/build";
 const std::string includePath = "${CMAKE_SOURCE_DIR}/include";
-const std::string sourcePath = "${CMAKE_SOURCE_DIR}/src";
 
 // License statement
 const std::string licenseStatement =
