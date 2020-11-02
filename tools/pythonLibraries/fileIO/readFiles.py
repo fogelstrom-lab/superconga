@@ -197,7 +197,7 @@ def readMetaDataFileDAT(inFile, inVerbose=False):
 
     if os.path.exists(inFile):
         if inVerbose:
-            print('Parsing .dat file: %s' % inFilePath)
+            print('Parsing .dat file: %s' % inFile)
         with open(inFile) as f:
             lines = 0
             rows = []
@@ -212,7 +212,7 @@ def readMetaDataFileDAT(inFile, inVerbose=False):
             try:
                 parametersDict[str(rows[0][i+1])] = float(rows[1][i])
             except ValueError:
-                paramsDparametersDictict[str(rows[0][i+1])] = str(rows[1][i])
+                parametersDict[str(rows[0][i+1])] = str(rows[1][i])
         return parametersDict
     else:
         print('Could not find parameters file: %s' % inFile)
