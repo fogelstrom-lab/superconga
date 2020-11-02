@@ -131,10 +131,14 @@ int mkdir(const char *inDirectory) {
     // Append folder to the current level.
     currentLevel += level;
 
-    // Create current level.
-    if (!doesDirectoryExist(currentLevel) &&
-        _mkdir(currentLevel.c_str()) != 0) {
-      return -1;
+    // If user gives a full absolute path, the first prefix slash will mean that
+    // the first currentLevel will be empty. Skip to the first real folder.
+    if (currentLevel != "") {
+      // Create current level.
+      if (!doesDirectoryExist(currentLevel) &&
+          _mkdir(currentLevel.c_str()) != 0) {
+        return -1;
+      }
     }
 
     // Append a slash.
