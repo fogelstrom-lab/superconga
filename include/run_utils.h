@@ -151,13 +151,15 @@ int mkdir(const char *inDirectory) {
 ///
 /// \param inDirectory - Path to directory to create.
 void createDirectory(const std::string &inDirectory) {
-  const int creationStatus = mkdir(inDirectory.c_str());
+  if (!doesDirectoryExist(inDirectory)) {
+    const int creationStatus = mkdir(inDirectory.c_str());
 
-  // Check for error creating directory.
-  if (creationStatus != 0) {
-    std::cerr << "Could not create directory (creationStatus=" << creationStatus
-              << "): " << inDirectory << std::endl;
-    std::exit(EXIT_FAILURE);
+    // Check for error creating directory.
+    if (creationStatus != 0) {
+      std::cerr << "Could not create directory (creationStatus="
+                << creationStatus << "): " << inDirectory << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
   }
 }
 
