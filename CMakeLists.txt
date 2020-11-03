@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(
   suprcongpu
-  VERSION 0.0.1
+  VERSION 0.2.0
   LANGUAGES CUDA CXX)
 
 # Output build messages
@@ -41,4 +41,5 @@ add_subdirectory(tests)
 # in particular this is e.g. the version number, the project name and build
 # paths. These variables can then be specified in a single place. Generate
 # include/configure.h from include/configure.h.in.
-configure_file(${CMAKE_SOURCE_DIR}/include/templates/configure.h.in ${CMAKE_SOURCE_DIR}/include/configure.h)
+configure_file(${CMAKE_SOURCE_DIR}/include/templates/configure.h.in
+               ${CMAKE_SOURCE_DIR}/include/configure.h)
