@@ -7,37 +7,36 @@
 #include "Disc.h"
 #include "GeometryComponent.h"
 #include "defines.h"
+#include "utils.h"
 #include <cmath>
 #include <cuda.h>
 
 namespace scg {
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
 public:
-  DiscGeometry();
-  virtual ~DiscGeometry();
-
-  DiscGeometry(const DiscGeometry &other);
-
   // Initialize a disc. inDiameter gives the diameter of the
   // disc relative to the available simulation space (to be padded by the grain
   // margin). The center coordinate is (inCenterX, inCenterY).
-  DiscGeometry(const T inDiameter, const T inCenterX = static_cast<T>(0.0),
+  DiscGeometry(const T inDiameter = static_cast<T>(1.0),
+               const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
+  DiscGeometry(const DiscGeometry &inOther);
+  ~DiscGeometry();
 
-  DiscGeometry &operator=(DiscGeometry other);
+  DiscGeometry &operator=(DiscGeometry inOther);
 
-  virtual DiscGeometry *clone() const { return new DiscGeometry(*this); }
+  DiscGeometry *clone() const override { return new DiscGeometry(*this); }
 
-  virtual void create(const T inAngle);
-  virtual Grid<char>::GPU *createDomain(const int N);
+  void create(const T inAngle) override;
+  Grid<char>::GPU *createDomain(const int inLatticeSideLength) override;
 
   Disc<T> *getDisc() const { return m_disc; }
 
 private:
-  friend void swap(DiscGeometry &A, DiscGeometry &B) {
-    swap(static_cast<GeometryComponent<T> &>(A),
-         static_cast<GeometryComponent<T> &>(B));
-    std::swap(A.m_disc, B.m_disc);
+  friend void swap(DiscGeometry &inDiscA, DiscGeometry &inDiscB) {
+    swap(static_cast<GeometryComponent<T> &>(inDiscA),
+         static_cast<GeometryComponent<T> &>(inDiscB));
+    std::swap(inDiscA.m_disc, inDiscB.m_disc);
   }
 
   Disc<T> *m_disc;
@@ -46,63 +45,128 @@ private:
 namespace internal {
 template <typename T>
 __global__ void
-generateDisc_Kernel(char *const outDomainLabels, T *const outNormalsX,
-                    T *const outNormalsY, T *const outBoundaryDistances,
-                    const int Nx, const int Ny, const T inRadius,
-                    const T inRotatedCenterX, const T inRotatedCenterY) {
-  int i;
-
+generateDisc_Kernel(const int inNumX, const int inNumY, const T inRadius,
+                    const T inOffsetX, const T inOffsetY,
+                    char *const outDomainLabels, T *const outNormalsX,
+                    T *const outNormalsY, T *const outBoundaryDistances) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
-  if (tx < Nx && ty < Ny) {
-    const int idx = ty * Nx + tx;
-
-    T coord_x, coord_y[3], distSq[3];
+  if (tx < inNumX && ty < inNumY) {
+    // For convenience.
     const T radiusSquared = inRadius * inRadius;
 
-    coord_x = (T)tx - (Nx - 1) * (T)0.5 - inRotatedCenterX;
+    // Centered coordinates.
+    const T x = static_cast<T>(tx) - inOffsetX;
+    const T y = static_cast<T>(ty) - inOffsetY;
 
-    for (i = 0; i < 3; ++i) {
-      coord_y[i] = (T)(ty - 1 + i) - (Ny - 1) * (T)0.5 - inRotatedCenterY;
-      distSq[i] = coord_x * coord_x + coord_y[i] * coord_y[i];
+    // In order to determine the domain label of a pixel we check, in a 3x3
+    // neighborhood, whether those pixels are within the circle or not, and then
+    // computing the row majority. The row majority is due to the trajectories
+    // going downward along the y-axis, i.e. the columns.
+    //
+    // Example A:
+    //
+    // X 0 0     0
+    // X X 0 ==> X
+    // X X X     X
+    //
+    // where 0 = outside circle, X = inside circle, and the center pixel is the
+    // one we want to label. There are four labels:
+    //
+    // 3: Exit    - (X, X, 0)^T
+    // 2: Entry   - (0, X, X)^T
+    // 1: Inside  - (X, X, X)^T
+    // 0: Outside - All other
+    //
+    // So the center pixel in the example is an entry node.
+    //
+    // Example B:
+    //
+    // 0 0 0     0
+    // 0 X 0 ==> 0
+    // X X X     X
+    //
+    // This gives that the pixel is outside, even though the pixel is within the
+    // circle. This also means that
+    //
+    // 0 X 0     0
+    // X X X ==> X
+    // X X X     X
+    //
+    // gives an entry node. The rational for this is that we want to lonesome
+    // pixels like the top one. If we only looked at the center column in
+    // Example B, we double determine the center pixel to be an entry node.
+    // But consider the same case, but rotated 90 degrees.
+    //
+    // X 0 0     0
+    // X X 0 ==> X
+    // X 0 0     0
+    //
+    // If we only looked at the center column, this same pixel, would be
+    // determined to be outside the domain. Which is an inconsistency.
+    // By looking at a 3x3 neighborhood we can get rid of those pixels in all
+    // directions.
+    const int numExtend = 1;
+    const int numPoints = 2 * numExtend + 1;
+    bool neighbors[numPoints];
+    for (int j = 0; j < numPoints; ++j) {
+      // Neighbour y-coordinate.
+      const T ny = static_cast<T>(ty - 1 + j) - inOffsetY;
+
+      int rowSum = 0;
+      for (int i = 0; i < numPoints; ++i) {
+        // Neighbour x-coordinate.
+        const T nx = static_cast<T>(tx - 1 + i) - inOffsetX;
+
+        // Is the neighbor inside the circle?
+        const bool isInside = nx * nx + ny * ny <= radiusSquared;
+
+        rowSum += isInside ? 1 : 0;
+      }
+      // Check if majority is inside.
+      neighbors[j] = rowSum > numExtend;
     }
 
-    // Compute domain labels
+    // Determine domain label.
     char domainLabel = 0;
-
-    if (distSq[1] <= radiusSquared) {
+    if (neighbors[0] && neighbors[1] && neighbors[2]) {
+      // Inside: (X, X, X)^T
       domainLabel = 1;
-      if (distSq[0] > radiusSquared)
-        domainLabel = 2;
-      else if (distSq[2] > radiusSquared)
-        domainLabel = 3;
-
-      if (distSq[0] > radiusSquared && distSq[2] > radiusSquared)
-        domainLabel = 0;
+    } else if (!neighbors[0] && neighbors[1] && neighbors[2]) {
+      // Entry: (0, X, X)^T
+      domainLabel = 2;
+    } else if (neighbors[0] && neighbors[1] && !neighbors[2]) {
+      // Exit: (X, X, 0)^T
+      domainLabel = 3;
+    } else {
+      // Outside.
+      domainLabel = 0;
     }
 
     // Distance along y (trajectory path direction) to exact boundary location
-    T boundaryDistance = (T)0.0;
-    T normalX = (T)0.0;
-    T normalY = (T)0.0;
+    T boundaryDistance = static_cast<T>(0);
+    T normalX = static_cast<T>(0);
+    T normalY = static_cast<T>(0);
 
+    // If the pixel is entry or exit.
     if (domainLabel > 1) {
       // Determine boundary normal at exact boundary location
-      boundaryDistance =
-          sqrt(radiusSquared - coord_x * coord_x) - abs(coord_y[1]);
-      normalX = -coord_x / inRadius;
+      boundaryDistance = sqrt(radiusSquared - x * x) - abs(y);
+      normalX = -x / inRadius;
 
-      if (coord_y[1] <= (T)0.0)
-        normalY = -(coord_y[1] - boundaryDistance) / inRadius;
-      else
-        normalY = -(coord_y[1] + boundaryDistance) / inRadius;
+      if (y <= static_cast<T>(0)) {
+        normalY = -(y - boundaryDistance) / inRadius;
+      } else {
+        normalY = -(y + boundaryDistance) / inRadius;
+      }
     }
 
     // Store computed data
     //
     // (Boundary intersection is regarded as inside.
     // Maybe implement special case for this, to avoid dividing by zero, etc.)
+    const int idx = ty * inNumX + tx;
     outDomainLabels[idx] = domainLabel;
     outBoundaryDistances[idx] = boundaryDistance;
     outNormalsX[idx] = normalX;
@@ -112,13 +176,10 @@ generateDisc_Kernel(char *const outDomainLabels, T *const outNormalsX,
 } // namespace internal
 
 template <typename T>
-DiscGeometry<T>::DiscGeometry() : GeometryComponent<T>(), m_disc(0) {}
-
-template <typename T>
-DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &other)
-    : GeometryComponent<T>(other), m_disc(0) {
-  if (other.m_disc)
-    m_disc = new Disc<T>(*other.m_disc);
+DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &inOther)
+    : GeometryComponent<T>(inOther), m_disc(nullptr) {
+  if (inOther.m_disc)
+    m_disc = new Disc<T>(*inOther.m_disc);
 }
 
 template <typename T>
@@ -141,13 +202,14 @@ DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
 }
 
 template <typename T> DiscGeometry<T>::~DiscGeometry() {
-  if (m_disc)
+  if (m_disc) {
     delete m_disc;
+  }
 }
 
 template <typename T>
-DiscGeometry<T> &DiscGeometry<T>::operator=(DiscGeometry<T> other) {
-  swap(*this, other);
+DiscGeometry<T> &DiscGeometry<T>::operator=(DiscGeometry<T> inOther) {
+  swap(*this, inOther);
   return *this;
 }
 
@@ -156,10 +218,11 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
 
   G::allocateMem();
 
+  // TODO(niclas): Is this check necessary?
   Parameters<T> *param = G::getParameters();
-
   if (!param) {
-    std::cout << "DiscGeometry::create(): ERROR - No parameters object!\n";
+    // TODO(niclas): Raise exception instead!?
+    std::cerr << "DiscGeometry::create(): ERROR - No parameters object!\n";
     return;
   }
 
@@ -168,31 +231,39 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   const T centerX = m_disc->getPosX();
   const T centerY = m_disc->getPosY();
 
-  const T rotatedCenterX =
-      (std::cos(inAngle) * centerX - std::sin(inAngle) * centerY) * (N - 1);
-  const T rotatedCenterY =
-      (std::sin(inAngle) * centerX + std::cos(inAngle) * centerY) * (N - 1);
+  T rotatedCenterX;
+  T rotatedCenterY;
+  utils::rotate(inAngle, centerX, centerY, rotatedCenterX, rotatedCenterY);
 
-  const T radius = m_disc->getRadius() * T(N - 1);
+  int numX, numY;
+  G::getGridDimensions(numX, numY);
 
-  int Nx, Ny;
+  const T offsetX =
+      static_cast<T>(numX - 1) * (static_cast<T>(0.5) - rotatedCenterX);
+  const T offsetY =
+      static_cast<T>(numY - 1) * (static_cast<T>(0.5) - rotatedCenterY);
+
+  const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
+
   dim3 bpg, tpb;
-  G::getGridDimensions(Nx, Ny);
   G::getKernelDimensions(bpg, tpb);
 
   // Defines discrete boundary domain and properties
   internal::generateDisc_Kernel<T><<<bpg, tpb>>>(
-      G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-      G::getBoundaryDistance(), Nx, Ny, radius, rotatedCenterX, rotatedCenterY);
+      numX, numY, radius, offsetX, offsetY, G::getDomainLabels(),
+      G::getNormals(0), G::getNormals(1), G::getBoundaryDistance());
 }
 
 template <typename T>
-Grid<char>::GPU *DiscGeometry<T>::createDomain(const int N) {
-  Grid<char>::GPU *dom_component = new Grid<char>::GPU(N, N, 1, Type::real);
+Grid<char>::GPU *DiscGeometry<T>::createDomain(const int inLatticeSideLength) {
+  const int numFields = 1;
+  Grid<char>::GPU *dom_component = new Grid<char>::GPU(
+      inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+  Grid<T>::GPU::getKernelDimensions(bpg, tpb, inLatticeSideLength,
+                                    inLatticeSideLength);
 
   return dom_component;
 }
