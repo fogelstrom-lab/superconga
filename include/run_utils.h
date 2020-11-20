@@ -20,13 +20,13 @@
 #include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
 
-#include "nlohmann_json_wrapper.h"
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <errno.h> // errno, ENOENT, EEXIST
 #include <fstream>
 #include <iomanip>
+#include <json/json.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
@@ -200,8 +200,7 @@ void writeLineToFile(
 /// \param inVerbose - Whether or not to print when file is written.
 ///
 /// \return - void
-void saveParameterFileJSON(const nlohmann::json &inJSON,
-                           const char *const inFile,
+void saveParameterFileJSON(const Json::Value &inJSON, const char *const inFile,
                            const bool inVerbose = false) {
 
   std::ofstream ofstreamJSON(inFile);
@@ -223,7 +222,7 @@ void saveParameterFileJSON(const nlohmann::json &inJSON,
 /// \return - void
 template <typename T>
 void saveParametersWrapper(
-    const Context<T> *const inContext, const nlohmann::json &inJSON,
+    const Context<T> *const inContext, const Json::Value &inJSON,
     const char *const inDataPath, const bool inVerbose = true,
     const char *const inDataFileName = (char *)"config") {
   //***************************************************
@@ -246,7 +245,7 @@ void saveParametersWrapper(
            "%s/%s_internal_parameters.json", inDataPath, inDataFileName);
 
   // Add other useful parameters for post-processing.
-  nlohmann::json internalParameters;
+  Json::Value internalParameters;
   internalParameters["area_compute"] = inContext->getGeometry()->area();
   internalParameters["internal_lattice_points"] =
       inContext->getGeometry()->getNumGrainLatticeSites();
@@ -449,12 +448,12 @@ void saveGridData(
 /// \return - void
 template <typename T>
 void saveDataWrapper(const Context<T> *const inContext,
-                     const nlohmann::json &inJSON, const bool inVerbose) {
+                     const Json::Value &inJSON, const bool inVerbose) {
   // Construct full directory path.
   char dataPath[512];
-  const std::string dataBasePath = inJSON["data_path"].get<std::string>();
+  const std::string dataBasePath = inJSON["data_path"].asString();
   snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
-           inJSON["temperature"].get<double>());
+           inJSON["temperature"].asDouble());
 
   // Create directory if not existing.
   createDirectory(dataPath);
@@ -673,7 +672,7 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
                    const int inNumIterationsMax = 1000,
                    const bool inSaveData = false,
                    const int inSaveDataInterval = 200,
-                   const nlohmann::json &inJSON = {}) {
+                   const Json::Value &inJSON = {}) {
   Status status = Status::kContinue;
   bool quit = false;
 

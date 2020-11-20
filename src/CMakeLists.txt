@@ -1,30 +1,6 @@
-# NOTE: FindCUDA is formally deprecated, but no standalone alternative exists as
-# of yet for automatic detection of GPU architecture, so we use it
-set(CUDA_ARCH
-    ""
-    CACHE STRING "User-specified CUDA architecture (autodetected otherwise)")
-if(CUDA_ARCH)
-  message(STATUS "Setting user-defined arch: ${CUDA_ARCH}")
-  set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
-else()
-  find_package(CUDA)
-  cuda_select_nvcc_arch_flags(ARCH_FLAGS Auto)
-endif()
-string(REPLACE ";" " " ARCH_FLAGS_DISPLAY "${ARCH_FLAGS}")
-message(STATUS "Add CUDA architecture flags: ${ARCH_FLAGS_DISPLAY}")
-
-set(NVCC_WARN
-    "-Wall,\
-    -Wextra,\
-    -Wnon-virtual-dtor,\
-    -Wunused,\
-    -Wduplicated-cond,\
-    -Wduplicated-branches,\
-    -Wlogical-op,\
-    -Wnull-dereference,\
-    -Wdouble-promotion,\
-    -Wformat=2")
-
+###############################################################################
+# SOURCE FILES
+###############################################################################
 # Define the main set of source files
 set(SRC main.cu)
 
@@ -50,13 +26,13 @@ target_link_libraries(
           gfortran
           lapack
           blas
-          nlohmann_json::nlohmann_json)
+          jsoncpp_lib)
 
-# Use C++14 since it is the latest standard CUDA supports
-message(STATUS "Enable C++ standard: C++14")
-set_target_properties(${name} PROPERTIES CUDA_STANDARD 14 CUDA_STANDARD_REQUIRED
+# Use C++17 since it is the latest standard CUDA supports
+message(STATUS "Enable C++ standard: C++17")
+set_target_properties(${name} PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED
                                                           ON)
-set_target_properties(${name} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED
+set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
                                                          ON)
 
 # Set DEBUG compile flags

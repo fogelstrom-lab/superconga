@@ -34,11 +34,10 @@
 #include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
 #include "run_utils.h" // Commonly used functions in run files
 
-#include "nlohmann_json_wrapper.h"
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <limits>
+#include <json/json.h>
 #include <memory>
 #include <string>
 
@@ -63,22 +62,6 @@ namespace {
 scg::Context<T> *context = new scg::Context<T>();
 // Create visualization object.
 scg::Visualization<T> *gui;
-
-struct OrderParameterJSON {
-  std::string symmetry;
-  T criticalTemperature;
-  T initialPhaseShift;
-  T initialPhaseWinding;
-  T initialRandomPhaseWeight;
-};
-
-void from_json(const nlohmann::json &j, OrderParameterJSON &op) {
-  j.at("symmetry").get_to(op.symmetry);
-  j.at("critical_temperature").get_to(op.criticalTemperature);
-  j.at("initial_phase_shift").get_to(op.initialPhaseShift);
-  j.at("initial_phase_winding").get_to(op.initialPhaseWinding);
-  j.at("initial_random_phase_weight").get_to(op.initialRandomPhaseWeight);
-}
 } // namespace
 
 //*******************************************************
@@ -92,18 +75,23 @@ int main(int argc, char *argv[]) {
   }
   const std::string filename = argv[1];
 
-  // Parse JSON.
-  nlohmann::json simParams;
-  std::ifstream ifile(filename);
-
   // Check that provided config file actually exists and can be opened.
+  std::ifstream ifile(filename);
   if (!ifile.good()) {
     std::cerr << "Could not find/open parameter file: " << filename << "\n";
     scg::run_utils::cleanup(context, gui);
     return 1;
   }
 
-  ifile >> simParams;
+  // Parse JSON.
+  Json::Value simParams;
+  Json::CharReaderBuilder builder;
+  JSONCPP_STRING errs;
+  if (!parseFromStream(builder, ifile, &simParams, &errs)) {
+    std::cout << errs << std::endl;
+    return 1;
+  }
+  std::cout << simParams << std::endl;
 
   // TODO(niclas): Add sanity check of all parameters here!?
 
@@ -113,20 +101,25 @@ int main(int argc, char *argv[]) {
   // Storage for system simulation parameters (e.g. temperature, lattice size).
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set temperature.
-  parameters->setTemperature(simParams["temperature"].get<T>());
+  const T temperature = static_cast<T>(simParams["temperature"].asDouble());
+  parameters->setTemperature(temperature);
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
-  parameters->setGrainWidthCoherenceLengths(
-      simParams["grain_side_length"].get<T>());
+  const T grainSideLength =
+      static_cast<T>(simParams["grain_side_length"].asDouble());
+  parameters->setGrainWidthCoherenceLengths(grainSideLength);
   // Set grain resolution in number of lattice sites.
-  parameters->setGridResolution(simParams["lattice_side_length"].get<int>());
+  const int latticeSideLength = simParams["lattice_side_length"].asInt();
+  parameters->setGridResolution(latticeSideLength);
   // Set number of Ozaki energies.
-  parameters->setNumMatsubaraEnergies(
-      simParams["num_ozaki_energies"].get<int>());
+  const int numOzakiEnergies = simParams["num_ozaki_energies"].asInt();
+  parameters->setNumMatsubaraEnergies(numOzakiEnergies);
   // Number of discrete steps in momentum angle.
-  parameters->setAngularResolution(simParams["num_fermi_momenta"].get<int>());
+  const int numFermiMomenta = simParams["num_fermi_momenta"].asInt();
+  parameters->setAngularResolution(numFermiMomenta);
   // Set convergence criterion.
-  parameters->setConvergenceCriterion(
-      simParams["convergence_criterion"].get<T>());
+  const T convergenceCriterion =
+      static_cast<T>(simParams["convergence_criterion"].asDouble());
+  parameters->setConvergenceCriterion(convergenceCriterion);
 
   //***************************************************
   // CREATE GEOMETRY
@@ -140,7 +133,7 @@ int main(int argc, char *argv[]) {
   const T grainScale = static_cast<T>(1.0);
 
   // Check if to set up a disc or polygon.
-  const int numVertices = simParams["num_polygon_edges"].get<int>();
+  const int numVertices = simParams["num_polygon_edges"].asInt();
   const bool isDisc = numVertices < 0;
 
   // Make the grain a disc or a square.
@@ -152,7 +145,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Remove a portion to create a solenoid.
-  if (simParams["solenoid"].get<bool>()) {
+  if (simParams["solenoid"].asBool()) {
     // Relative size of grain hole for solenoid.
     const T holeScale = static_cast<T>(0.2);
 
@@ -172,15 +165,16 @@ int main(int argc, char *argv[]) {
   // d+is).
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
-  const T crystalAxesRotation =
-      static_cast<T>(2.0 * M_PI) * simParams["crystal_axes_rotation"].get<T>();
+  const T crystalAxesRotation = static_cast<T>(
+      2.0 * M_PI * simParams["crystal_axes_rotation"].asDouble());
 
-  const auto opCompParamsVec =
-      simParams["order_parameter"].get<std::vector<::OrderParameterJSON>>();
+  const Json::Value opCompParamsVec = simParams["order_parameter"];
 
-  for (const auto &opCompParams : opCompParamsVec) {
+  for (int i = 0; i < opCompParamsVec.size(); ++i) {
+    const Json::Value opCompParams = opCompParamsVec[i];
+
     // Add a d-wave or an s-wave order-parameter component.
-    const std::string symmetryStr = opCompParams.symmetry;
+    const std::string symmetryStr = opCompParams["symmetry"].asString();
 
     // TODO(niclas): Move this to OrderParameterBasis.h?
     scg::BasisFunctionSymmetry symmetry;
@@ -199,18 +193,22 @@ int main(int argc, char *argv[]) {
       return 1;
     }
 
+    const T criticalTemperature =
+        static_cast<T>(opCompParams["critical_temperature"].asDouble());
     scg::OrderParameterComponent<T> *orderParameterComponent =
         new scg::OrderParameterComponent<T>(symmetry, parameters,
-                                            opCompParams.criticalTemperature);
+                                            criticalTemperature);
 
     // Set rotation of crystal axes with respect to the grain geometry.
     orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
-    // Parameters for the initial order parameter guess.
-    const T phaseWinding = opCompParams.initialPhaseWinding;
-    const T randomPhaseWeight = opCompParams.initialRandomPhaseWeight;
-    const T phaseShift =
-        static_cast<T>(2.0 * M_PI) * opCompParams.initialPhaseShift;
+    // Get initial phase parameters.
+    const T phaseWinding =
+        static_cast<T>(opCompParams["initial_phase_winding"].asDouble());
+    const T randomPhaseWeight =
+        static_cast<T>(opCompParams["initial_random_phase_weight"].asDouble());
+    const T phaseShift = static_cast<T>(
+        2.0 * M_PI * opCompParams["initial_phase_shift"].asDouble());
 
     // Check if we should initialize to bulk.
     const T eps = std::numeric_limits<T>::epsilon();
@@ -256,7 +254,8 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gague.
-  if (simParams["solenoid"].get<bool>()) {
+  const bool solenoid = simParams["solenoid"].asBool();
+  if (solenoid) {
     riccatiSolver =
         new scg::RiccatiSolverConfined<T, scg::Gamma::General,
                                        scg::VectorPotential::Solenoid>(context);
@@ -281,14 +280,14 @@ int main(int argc, char *argv[]) {
   context->initialize();
 
   // Set external magnetic field strength.
-  if (simParams["solenoid"].get<bool>()) {
+  const T externalFluxQuanta =
+      static_cast<T>(simParams["external_flux_quanta"].asDouble());
+  if (solenoid) {
     // External field in flux quanta.
-    parameters->setMagneticFieldStrength(
-        simParams["external_flux_quanta"].get<T>());
+    parameters->setMagneticFieldStrength(externalFluxQuanta);
   } else {
     // External field in fux quanta per unit area.
-    const T externalMagneticFluxDensity =
-        simParams["external_flux_quanta"].get<T>() / geometry->area();
+    const T externalMagneticFluxDensity = externalFluxQuanta / geometry->area();
 
     parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
   }
@@ -302,7 +301,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  if (simParams["visualize"].get<bool>()) {
+  if (simParams["visualize"].asBool()) {
     gui = scg::run_utils::createVisualization(context);
     scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
                 gui->getNumPixelsWindowY());
@@ -313,21 +312,19 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  scg::run_utils::runSimulation(context, simParams["visualize"].get<bool>(),
-                                simParams["verbose"].get<bool>(),
-                                simParams["num_iterations_min"].get<int>(),
-                                simParams["num_iterations_max"].get<int>(),
-                                simParams["save_data"].get<bool>(),
-                                simParams["save_data_interval"].get<int>(),
-                                simParams);
+  scg::run_utils::runSimulation(
+      context, simParams["visualize"].asBool(), simParams["verbose"].asBool(),
+      simParams["num_iterations_min"].asInt(),
+      simParams["num_iterations_max"].asInt(), simParams["save_data"].asBool(),
+      simParams["save_data_interval"].asInt(), simParams);
 
   //***********************************************
   // POST-PROCESSING
   //***********************************************
   // Save at the very end.
-  if (simParams["save_data"].get<bool>()) {
+  if (simParams["save_data"].asBool()) {
     scg::run_utils::saveDataWrapper(context, simParams,
-                                    simParams["verbose"].get<bool>());
+                                    simParams["verbose"].asBool());
   }
 
   // Cleanup dynamically allocated memory.
