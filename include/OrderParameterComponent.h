@@ -25,7 +25,7 @@ public:
   OrderParameterComponent<T> *clone() const;
 
   // Functions
-  void initialize(FermiSurface<T> *fermiSurface);
+  void initialize(const FermiSurface<T> *const fermiSurface);
 
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
@@ -139,7 +139,8 @@ OrderParameterComponent<T> *OrderParameterComponent<T>::clone() const {
 }
 
 template <typename T>
-void OrderParameterComponent<T>::initialize(FermiSurface<T> *inFermiSurface) {
+void OrderParameterComponent<T>::initialize(
+    const FermiSurface<T> *const inFermiSurface) {
   int N = _param->getGridResolutionBase();
 
   if (_deltaComp && _deltaComp->dimX() != N) {

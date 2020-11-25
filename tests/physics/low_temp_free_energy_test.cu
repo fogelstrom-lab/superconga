@@ -21,6 +21,7 @@
 
 #include <doctest/doctest.h>
 #include <iostream>
+#include <limits>
 #include <stdlib.h>
 
 //*******************************************************
@@ -31,36 +32,25 @@ namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.005;
 // Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
-const double GRAIN_SIDE_LENGTH = 5.0;
+const double GRAIN_SIDE_LENGTH = 10.0;
 // Number of lattice points per grain side length
-const int GRID_RESOLUTION = 128;
+const int GRID_RESOLUTION = 301;
 // Number of discrete trajectory angles (on the Fermi-surface)
-const int NUM_ANGLES = 64;
+const int NUM_ANGLES = 100;
 // Number of discrete energies (poles)
-const int NUM_ENERGIES = 64;
+const int NUM_ENERGIES = 128;
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
 // Maximum number of iterations
-const int NUM_ITERATIONS_MAX = 100;
+const int NUM_ITERATIONS_MAX = 50;
 // Minimum number of iterations
-const int NUM_ITERATIONS_MIN = 10;
+const int NUM_ITERATIONS_MIN = 1;
 } // namespace simParams
 
 namespace helper {
 // ========================= Test helper objects ========================= //
-const int NUM_VERTICES_SQUARE = 4;
-const int NUM_START_VALUES = 2;
-const std::array<double, NUM_START_VALUES> START_VALUES = {1.0, std::sqrt(2.0)};
-
-// ========================= Test helper functions ========================= //
-// Compute tolerance for GridData testing, given the number of elements in a
-// GridData object. Note: inToleranceBaseFactor has to be > 1.
-template <typename T>
-T computeTolerance(const T inToleranceBaseFactor = static_cast<T>(5.0)) {
-  return inToleranceBaseFactor * std::numeric_limits<T>::epsilon();
-}
 
 // Helper class for setting up simulation parameters
 template <typename T>
@@ -68,7 +58,7 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
   // Set grain resolution in number of lattice sites
-  parameters->setGridResolution(simParams::GRID_RESOLUTION);
+  parameters->setGridResolution(static_cast<T>(simParams::GRID_RESOLUTION));
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
   parameters->setGrainWidthCoherenceLengths(
       static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
@@ -84,89 +74,10 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   return parameters;
 }
 
-// ======================== Wrappers for test cases ======================== //
-// **** Test that order parameter grid is normalized properly **** /
-template <typename T>
-void testGridNormalization(const T inTolerance, const T inStartRealPart,
-                           const T inStartImaginaryPart) {
-  // Loop over s-wave and d-wave. This is an outer for loop that will create and
-  // destroy a whole context. The inner loops only loop over values and call
-  // context->intialize().
-  for (const bool useSwave : {true, false}) {
-    // =================== ARRANGE ==================== //
-    // Create Context
-    scg::Context<T> *context = new scg::Context<T>();
-
-    // Set parameters to the values specified in simParams struct
-    scg::Parameters<T> *parameters = applySimParams<T>(context);
-
-    // Create geometry group: add/remove geometry objects (e.g. discs,
-    // polygons) from the geometry group
-    scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
-    geometry->add(new scg::PolygonGeometry<T>(NUM_VERTICES_SQUARE),
-                  scg::Type::add);
-
-    // Choose a Riccati solver for a confined geometry, without magnetic
-    // fields
-    scg::RiccatiSolver<T> *riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                       scg::VectorPotential::None>(context);
-
-    // Choose FermiSurface
-    scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-    context->set(fermiSurface);
-
-    // Set up order parameter
-    scg::OrderParameter<T> *orderParameter =
-        new scg::OrderParameter<T>(context);
-
-    // Add a d-wave or an s-wave order-parameter component.
-    const scg::BasisFunctionSymmetry symmetry =
-        useSwave ? scg::BasisFunctionSymmetry::SWAVE
-                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-    scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(symmetry, parameters);
-
-    scg::Initial<T>::constant(orderParameterComponent, inStartRealPart,
-                              inStartImaginaryPart);
-    // Add the initialized s-wave component to the total order parameter
-    orderParameter->add(orderParameterComponent);
-
-    // Create compute objects
-    scg::ComputeOrderParameter<T> *computeOrderParameter =
-        new scg::ComputeOrderParameter<T>(context);
-
-    // =================== ACT ==================== //
-    // Initialize simulation
-    context->initialize();
-
-    // Remove all spurious values outside actual grain
-    context->getGeometry()->zeroValuesOutsideDomain(
-        orderParameterComponent->getOrderParameterField());
-
-    // Fetch the grain-summed order-parameter magnitude
-    const T testSumOrderParameter =
-        orderParameterComponent->getOrderParameterField()->sumMagnitude();
-    // Fetch the number of elements in the grain
-    const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
-
-    // =================== ASSERT ==================== //
-    const T expectedSumOrderParameter =
-        static_cast<T>(numGrainLatticeSites) *
-        std::hypot(inStartRealPart, inStartImaginaryPart);
-
-    REQUIRE(testSumOrderParameter ==
-            doctest::Approx(expectedSumOrderParameter).epsilon(inTolerance));
-
-    // Clean up context
-    scg::run_utils::cleanup(context);
-  }
-}
-
 // *** Test bulk free energy and order-parameter value at low temperature *** //
 template <typename T>
-void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
-                           const T inStartValue) {
+void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
+                           const bool inUseSwave, const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context
   scg::Context<T> *context = new scg::Context<T>();
@@ -177,16 +88,13 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
   scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
-
-  // Maximum side-length of a non-rotated square, i.e. with corners in the
-  // maximum coordinates.
-  const double maximumSideLength = 2.0 * scg::constants::MAXIMUM_COORDINATE;
-  const T maximumSideLengthSquare =
-      static_cast<T>(std::sqrt(2.0) * maximumSideLength);
-  // Add a square to the simulation geometry.
-  geometry->add(
-      new scg::PolygonGeometry<T>(NUM_VERTICES_SQUARE, maximumSideLengthSquare),
-      scg::Type::add);
+  if (inIsDisc) {
+    geometry->add(new scg::DiscGeometry<T>(), scg::Type::add);
+  } else {
+    const int numVerticesSquare = 4;
+    geometry->add(new scg::PolygonGeometry<T>(numVerticesSquare),
+                  scg::Type::add);
+  }
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   scg::RiccatiSolver<T> *riccatiSolver =
@@ -205,9 +113,12 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
   scg::OrderParameterComponent<T> *orderParameterComponent =
       new scg::OrderParameterComponent<T>(symmetry, parameters);
 
-  // Initialize order-parameter component to a constant
-  scg::Initial<T>::constant(orderParameterComponent, inStartValue,
-                            inStartValue);
+  // Initialize order-parameter component to the bulk value.
+  // It is interesting to have a test with non-bulk initialization. It passes
+  // either way but it takes shorter time with bulk initialization. Also, if
+  // everything is correct it should converge after one iteration, something
+  // which we cannot see if we don't use bulk.
+  scg::Initial<T>::bulk(orderParameterComponent);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
@@ -268,13 +179,18 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
                                       expectedAverageOrderParameter;
   const T currentDensityTolerance = std::numeric_limits<T>::epsilon();
 
+  // TODO(niclas): We are computing everything at a low temperature, but it is
+  // not exactly zero. Wouldn't it be better to compare with bulk values at that
+  // specific temperature? And test the bulk solver at ridiculously low
+  // temperature instead? Because then we can really test that it yields exactly
+  // what we expect.
   CHECK(testAverageOrderParameter ==
         doctest::Approx(expectedAverageOrderParameter).epsilon(inTolerance));
   CHECK(
       testAverageCurrentDensity ==
       doctest::Approx(expectedAverageCurrent).epsilon(currentDensityTolerance));
-  CHECK(testAverageFreeEnergy ==
-        doctest::Approx(expectedAverageFreeEnergy).epsilon(inTolerance));
+  CHECK(testAverageFreeEnergy == doctest::Approx(expectedAverageFreeEnergy)
+                                     .epsilon(inToleranceFreeEnergy));
   CHECK(context->isConverged());
 
   // Clean up context
@@ -282,63 +198,67 @@ void testLowTempBulkValues(const T inTolerance, const bool inUseSwave,
 }
 } // namespace helper
 
-// ================= Test grid normalization ================= //
-TEST_CASE("Test Initial<float>::Constant order parameter value") {
-  const float toleranceMultFactor = 10.0F;
-  const float tolerance = helper::computeTolerance<float>(toleranceMultFactor);
-  const float startRealPart = 1.0;
-  const float startImaginaryPart = 1.0;
-
-  helper::testGridNormalization<float>(tolerance, startRealPart,
-                                       startImaginaryPart);
-}
-
-TEST_CASE("Test Initial<double>::Constant order parameter value") {
-  const double toleranceMultFactor = 10.0;
-  const double tolerance =
-      helper::computeTolerance<double>(toleranceMultFactor);
-  const double startRealPart = 1.0;
-  const double startImaginaryPart = 1.0;
-
-  helper::testGridNormalization<double>(tolerance, startRealPart,
-                                        startImaginaryPart);
-}
-
 // ================= Test thermodynamics, low temp ================= //
-TEST_CASE("Test low temperature thermodynamics - d-wave (double)") {
-  const double tolerance = 1e-3;
-  const bool useSwave = false;
-
-  for (const double &startValue : helper::START_VALUES) {
-    helper::testLowTempBulkValues<double>(tolerance, useSwave, startValue);
-  }
-}
-
-TEST_CASE("Test low temperature thermodynamics - s-wave (double)") {
-  const double tolerance = 1e-3;
+// A disc does not have any corners, where we get weird artifacts, so we should
+// be able to have lower tolerance.
+TEST_CASE("Test low temperature thermodynamics - s-wave disc (float)") {
+  const float tolerance = 1e-5f;
+  const float toleranceFreeEnergy = 1e-4f;
   const bool useSwave = true;
+  const bool isDisc = true;
 
-  for (const double &startValue : helper::START_VALUES) {
-    helper::testLowTempBulkValues<double>(tolerance, useSwave, startValue);
-  }
+  helper::testLowTempBulkValues<float>(tolerance, toleranceFreeEnergy, useSwave,
+                                       isDisc);
 }
 
-TEST_CASE("Test low temperature thermodynamics - d-wave (float)") {
-  const float tolerance = 1e-3F;
-  const bool useSwave = false;
-
-  for (const double &startValue : helper::START_VALUES) {
-    helper::testLowTempBulkValues<float>(tolerance, useSwave,
-                                         static_cast<float>(startValue));
-  }
-}
-
-TEST_CASE("Test low temperature thermodynamics - s-wave (float)") {
-  const float tolerance = 1e-3F;
+TEST_CASE("Test low temperature thermodynamics - s-wave square (float)") {
+  const float tolerance = 1e-4f;
+  const float toleranceFreeEnergy = 1e-3f;
   const bool useSwave = true;
+  const bool isDisc = false;
 
-  for (const double &startValue : helper::START_VALUES) {
-    helper::testLowTempBulkValues<float>(tolerance, useSwave,
-                                         static_cast<float>(startValue));
-  }
+  helper::testLowTempBulkValues<float>(tolerance, toleranceFreeEnergy, useSwave,
+                                       isDisc);
+}
+
+TEST_CASE("Test low temperature thermodynamics - d-wave square (float)") {
+  const float tolerance = 1e-4f;
+  const float toleranceFreeEnergy = 1e-3f;
+  const bool useSwave = false;
+  const bool isDisc = false;
+
+  helper::testLowTempBulkValues<float>(tolerance, toleranceFreeEnergy, useSwave,
+                                       isDisc);
+}
+
+// A disc does not have any corners, where we get weird artifacts, so we should
+// be able to have lower tolerance.
+TEST_CASE("Test low temperature thermodynamics - s-wave disc (double)") {
+  const double tolerance = 1e-5;
+  const double toleranceFreeEnergy = 1e-4;
+  const bool useSwave = true;
+  const bool isDisc = true;
+
+  helper::testLowTempBulkValues<double>(tolerance, toleranceFreeEnergy,
+                                        useSwave, isDisc);
+}
+
+TEST_CASE("Test low temperature thermodynamics - s-wave square (double)") {
+  const double tolerance = 1e-4;
+  const double toleranceFreeEnergy = 1e-3;
+  const bool useSwave = true;
+  const bool isDisc = false;
+
+  helper::testLowTempBulkValues<double>(tolerance, toleranceFreeEnergy,
+                                        useSwave, isDisc);
+}
+
+TEST_CASE("Test low temperature thermodynamics - d-wave square (double)") {
+  const double tolerance = 1e-4;
+  const double toleranceFreeEnergy = 1e-3;
+  const bool useSwave = false;
+  const bool isDisc = false;
+
+  helper::testLowTempBulkValues<double>(tolerance, toleranceFreeEnergy,
+                                        useSwave, isDisc);
 }

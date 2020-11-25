@@ -38,7 +38,7 @@ public:
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
   virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar, GeometryGroup<T> *geom);
+                                  GridGPU *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -139,12 +139,10 @@ template <typename T> void ComputeLDOS<T>::initializeGreensAngle() {
 
 template <typename T>
 void ComputeLDOS<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                        GridGPU *gamma, GridGPU *gammabar,
-                                        GeometryGroup<T> *geom) {
+                                        GridGPU *gamma, GridGPU *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     GreensFunctionStatic<T, Greens>::computeGreens(
-        ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar,
-        geom);
+        ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar);
   }
 }
 
@@ -155,7 +153,7 @@ void ComputeLDOS<T>::integrateGreensAngle(GeometryGroup<T> *geom,
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
-    geom->extendValuesAtBoundary(greens, 1);
+    geom->extendValuesAtBoundary(greens);
 
     const T integrandFactor =
         ContextModule<T>::getFermiSurface()->getIntegrandFactor(angleIdx);

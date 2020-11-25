@@ -346,21 +346,14 @@ int Parameters<T>::write(const std::string &inFileName) const {
 
 template <typename T>
 int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) {
-  // Check if odd.
-  const int baseIsOdd = inNumGridBase % 2;
-
-  // Compute the minimum size when rotated 45 degrees.
-  // Note, use ceil because casting to int will floor.
-  const int minNumGridRotated = static_cast<int>(std::ceil(
-      std::sqrt(static_cast<T>(2.0)) * static_cast<T>(inNumGridBase)));
-
-  // Check if odd.
-  const int rotatedIsOdd = minNumGridRotated % 2;
-
-  // If both are not odd/equal add one.
-  const int numGridRotated =
-      (baseIsOdd == rotatedIsOdd) ? minNumGridRotated : minNumGridRotated + 1;
-
+  // The rotated size is given by:
+  // N + 2x >= sqrt(2)N
+  // ==>
+  // x >= 0.5 * (sqrt(2) - 1) * N
+  const double marginFractional =
+      0.5 * (std::sqrt(2.0) - 1.0) * static_cast<double>(inNumGridBase);
+  const int margin = static_cast<int>(std::ceil(marginFractional));
+  const int numGridRotated = inNumGridBase + 2 * margin;
   return numGridRotated;
 }
 

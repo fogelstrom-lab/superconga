@@ -47,13 +47,13 @@ public:
   // labels only. Does not store data in any member variables.
   Grid<char>::GPU *createDomain(const int N);
 
-  // Extrapolates values outwards from boundary, with numExtend lattice sites.
+  // Extrapolates values outwards from boundary.
   // This is used prior to rotating e.g. the order parameter lattice into a
   // rotational frame in the momentum integral. The reason is that the rotation
   // together with the linear interpolation will cause the boundary lattice
   // sites to (wrongly) have fractional values, i.e. less than they should be.
   // By extrapolating the boundary values, this artifact is eliminated.
-  void extendValuesAtBoundary(GridGPU *target, const int numExtend) const;
+  void extendValuesAtBoundary(GridGPU *target) const;
 
   // Because of the extrapolation in extendValuesAtBoundary(), the computed
   // quantities will have some non-zero values slightly outside of the actual
@@ -514,6 +514,10 @@ template <typename T> int GeometryGroup<T>::initialize() {
     delete _domain_ref;
   }
 
+  // So that we have a geometry to work with straight away.
+  const T angle = static_cast<T>(0);
+  create(angle);
+
   _domain_ref = createDomain(N);
 
   return 0;
@@ -558,6 +562,8 @@ template <typename T> void GeometryGroup<T>::create(const T angle) {
 
 template <typename T>
 Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) {
+  // TODO(niclas): N is already "gridResolutionRotated". I.e. sqrt(2)*N. Why
+  // enlarge it even more?
   const int N_r =
       ContextModule<T>::getParameters()->computeGridResolutionRotated(N);
 
@@ -733,7 +739,8 @@ template <typename T> T GeometryGroup<T>::area() {
 // Compute field aveage, only accounting for nodes inside geometry
 template <typename T>
 cplx<T> GeometryGroup<T>::fieldAverage(GridGPU *data, const int field) {
-  create(0.0);
+  const T angle = static_cast<T>(0);
+  create(angle);
 
   typename Vector<T>::CPU vec_cpu = *(_domainLabels->getVector());
   typename Grid<T>::CPU data_cpu = *data;
@@ -925,8 +932,7 @@ void GeometryGroup<T>::findBoundaryCrossingsAlongNegativeTrajectory(
 }
 
 template <typename T>
-void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid,
-                                              const int numExtend) const {
+void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
   char *dom_ptr = getDomainLabels();
 
   int Nx_geom, Ny_geom, Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset;
@@ -946,6 +952,10 @@ void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid,
 
   grid->getKernelDimensionsFields(bpg, tpb);
 
+  // This is a sensible value. It probably does not need to be exposed to the
+  // user.
+  const int numExtend = 1;
+
   if (grid->isComplex()) {
     internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
         dom_ptr, grid->getDataPointer(0, Type::real),
@@ -960,21 +970,21 @@ void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid,
 
 template <typename T>
 void GeometryGroup<T>::zeroValuesOutsideDomain(GridGPU *target) {
-  if (getCurrentAngle() > static_cast<T>(0.0) ||
-      getCurrentAngle() < static_cast<T>(0.0)) {
-    create(0.0);
+  // TODO(niclas): If we always use the unrotated domain, why not use
+  // _domain_ref? It should be the domain unrotated.
+  const T angle = static_cast<T>(0);
+  if (getCurrentAngle() > angle || getCurrentAngle() < angle) {
+    create(angle);
   }
 
-  char *data_dom = _domainLabels->getDataPointer(0, Type::real);
+  const int Nx_dom = _domainLabels->dimX();
+  const int Ny_dom = _domainLabels->dimY();
 
-  int Nx_dom = _domainLabels->dimX();
-  int Ny_dom = _domainLabels->dimY();
+  const int Nx_img = target->dimX();
+  const int Ny_img = target->dimY();
 
-  int Nx_img = target->dimX();
-  int Ny_img = target->dimY();
-
-  int Nx_diff = (Nx_dom - Nx_img) / 2;
-  int Ny_diff = (Ny_dom - Ny_img) / 2;
+  const int Nx_diff = (Nx_dom - Nx_img) / 2;
+  const int Ny_diff = (Ny_dom - Ny_img) / 2;
 
   dim3 grid, block;
   target->getKernelDimensionsFields(grid, block);

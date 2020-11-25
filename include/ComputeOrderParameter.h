@@ -40,7 +40,7 @@ public:
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
   virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar, GeometryGroup<T> *geom);
+                                  GridGPU *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -176,15 +176,14 @@ template <typename T> void ComputeOrderParameter<T>::initializeGreensAngle() {
 template <typename T>
 void ComputeOrderParameter<T>::computeGreensAngle(ParameterIterator<int> *iter,
                                                   GridGPU *gamma,
-                                                  GridGPU *gammabar,
-                                                  GeometryGroup<T> *geom) {
+                                                  GridGPU *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     typedef ComputeProperty<T> C;
     IntegrationIterator<T> *ii = ContextModule<T>::getIntegrationIterator();
     GridGPU *residues = ii->getResidues();
 
     GreensFunctionStatic<T, Greens_Delta>::computeGreensSumEnergy(
-        C::getGreensCurrentAngle(), iter, residues, gamma, gammabar, geom);
+        C::getGreensCurrentAngle(), iter, residues, gamma, gammabar);
   }
 }
 
@@ -195,6 +194,9 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = C::getGreensCurrentAngle();
+
+    // Compensate for numerical diffusion from interpolation during rotation
+    geom->extendValuesAtBoundary(greens);
 
     FermiSurface<T> *fermiSurface = C::getFermiSurface();
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
@@ -207,9 +209,6 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 
     for (int i = 0; i < _delta->getNumOrderParameterComponents(); ++i) {
       _deltaTmp->setZero();
-
-      // Compensate for numerical diffusion from interpolation during rotation
-      geom->extendValuesAtBoundary(greens, 1);
 
       // Rotate back to reference frame and add momentum dependence.
       _deltaTmp->insertRotatedGrid(greens, systemAngle);
@@ -239,6 +238,15 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
       OrderParameterComponent<T> *component =
           _delta->getOrderParameterComponent(i);
       component->applyCouplingConstant();
+    }
+
+    // Set the order parameter to zero outside of the grain, so that we only
+    // compute the residual with values that actually matter.
+    const Context<T> *const ctx = ContextModule<T>::getContext();
+    for (int i = 0; i < Nc; ++i) {
+      GridGPU *const component =
+          _delta->getOrderParameterComponent(i)->getOrderParameterField();
+      ctx->getGeometry()->zeroValuesOutsideDomain(component);
     }
 
     // Take step with the optimizer. Note, OptimizerLargePush requires the
