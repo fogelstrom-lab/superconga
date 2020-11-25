@@ -1,8 +1,8 @@
 #ifndef ORDER_PARAMETER_BULK_H_
 #define ORDER_PARAMETER_BULK_H_
 
-#include "ComputeResidual.h"
 #include "defines.h"
+#include "utils.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -10,26 +10,61 @@
 
 namespace scg {
 namespace bulk_internal {
-/// \brief A helper function for updating the order parameter with a fixed-point
-/// step
+/// \brief A helper function for computing the residual of the self-consistency
+/// equation
 ///
-/// \param inOrderParameter - The current order parameter
-/// \param inMatsubaraEnergies - An array of Matsubara energies
-/// \param inNormalization - The normalization factor
+/// \param inOrderParameter - The order parameter
+/// \param inTemperature - The relative temperature T / Tc
+/// \param inNumEnergies - The number of Matsubara energies
+/// \param inCouplingConstant - The coupling constant
 ///
-/// \return - The new order parameter
+/// \return - The residual
 template <typename T>
-T updateOrderParameter(const T inOrderParameter,
-                       const std::vector<T> &inMatsubaraEnergies,
-                       const T inNormalization) {
+T computeResidual(const T inOrderParameter, const T inTemperature,
+                  const int inNumEnergies, const T inCouplingConstant) {
+  // For convenience.
+  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
+
   // Compute sum(1 / sqrt(en^2 + delta^2)).
   T integrand = static_cast<T>(0.0);
-  for (const T &matsubaraEnergy : inMatsubaraEnergies) {
-    // Note that hypot(x, y) = sqrt(x^2 + y^2) but numerically more stable.
+  for (int n = inNumEnergies - 1; n >= 0; --n) {
+    const T matsubaraEnergy =
+        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
     integrand +=
         static_cast<T>(1.0) / std::hypot(inOrderParameter, matsubaraEnergy);
   }
-  return inOrderParameter * integrand * inNormalization;
+  return inOrderParameter *
+         (integrand * inCouplingConstant - static_cast<T>(1.0));
+}
+
+/// \brief A helper function for computing the coupling constant of the
+/// self-consistency equation
+///
+/// \param inTemperature - The relative temperature T / Tc
+/// \param inNumEnergies - The number of Matsubara energies
+///
+/// \return - The coupling constant
+template <typename T>
+T computeCouplingConstant(const T inTemperature, const int inNumEnergies) {
+  // For convenience.
+  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
+
+  // Note, we are iterating from the largest energy to the smallest.
+  // This way we are adding larger values as the partial sum increases,
+  // which should be numerically preferable. Doing it the other way we would
+  // be adding smaller values as the partial sum increases.
+  // TODO(niclas): Use Ozaki energies.
+  T energySum = static_cast<T>(0.0);
+  for (int n = inNumEnergies - 1; n >= 0; --n) {
+    const T matsubaraEnergy =
+        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
+    energySum += static_cast<T>(1.0) / matsubaraEnergy;
+  }
+
+  const T couplingConstant =
+      static_cast<T>(1.0) / (std::log(inTemperature) / twoPiTemp + energySum);
+
+  return couplingConstant;
 }
 } // namespace bulk_internal
 
@@ -47,105 +82,132 @@ T computeOrderParameterBulkSWave(
     const T inTemperature,
     const T inConvergenceCriterion = static_cast<T>(10.0) *
                                      std::numeric_limits<T>::epsilon(),
-    const int inMaxIterations = static_cast<int>(1e5),
+    const int inMaxIterations = 10,
     const T inEnergyCutoff = static_cast<T>(1e3)) {
-  // If the temperature is above Tc then the sample is not superconducting, and
-  // the order parameter is zero.
-  if (inTemperature > static_cast<T>(1.0)) {
+  // Check if the temperature is outside of the (0, 1), and return known values
+  // in that case.
+  if (inTemperature >= static_cast<T>(1.0)) {
+    // If the temperature is above Tc then the sample is not superconducting,
+    // and the order parameter is zero.
     return static_cast<T>(0.0);
+  } else if (inTemperature < std::numeric_limits<T>::epsilon()) {
+    // If the temperature is approximately zero then return the known
+    // zero-temperature order-parameter value.
+    return static_cast<T>(constants::S_WAVE_BULK);
   }
-
-  // For some reason the Aitken method is not very good close to the critical
-  // temperature.
-  const bool useAitken = inTemperature < static_cast<T>(0.995);
 
   // For convenience.
   const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
 
-  // How many energies do we need, given this cutoff and temperature?
+  // Comes from: cutoff = 2 * pi * T * (n + 0.5).
+  // But the n is the largest n we need to include, so the number of energies is
+  // one more, hence the plus one.
   const int numEnergies =
-      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5));
+      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5)) + 1;
 
-  // A vector of Matsubara energies.
-  std::vector<T> energies;
-
-  // Pre-compute the energies and the normalization factor.
-  T energySum = static_cast<T>(0.0);
-
-  // Note, we are iterating from the largest energy to the smallest.
-  // This way we are adding larger values as the partial sum increases,
-  // which should be numerically preferable. Doing it the other way we would
-  // be adding smaller values as the partial sum increases.
-  // TODO(niclas): Use Ozaki energies.
-  for (int n = numEnergies; n >= 0; --n) {
-    const T matsubaraEnergy =
-        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
-
-    // Add the energy to the vector of energies.
-    energies.push_back(matsubaraEnergy);
-
-    // Update the sum.
-    energySum += static_cast<T>(1.0) / matsubaraEnergy;
-  }
-  const T normalization =
-      static_cast<T>(1.0) / (std::log(inTemperature) / twoPiTemp + energySum);
+  const T couplingConstant =
+      bulk_internal::computeCouplingConstant(inTemperature, numEnergies);
 
   // Initial guess of the order parameter.
-  // It converges faster starting with sqrt(1 - T^3).
   T orderParameter = static_cast<T>(constants::S_WAVE_BULK) *
                      std::sqrt(static_cast<T>(1.0) -
                                inTemperature * inTemperature * inTemperature);
 
+  // The algorithm requires two evaluated order-parameter guesses.
+  vector2d<T> opVec{orderParameter, std::sqrt(orderParameter)};
+
+  // Compute the residuals for the initial guesses.
+  vector2d<T> resVec;
+  for (std::size_t i = 0; i < opVec.size(); ++i) {
+    resVec[i] = bulk_internal::computeResidual(opVec[i], inTemperature,
+                                               numEnergies, couplingConstant);
+  }
+
   bool isConverged = false;
   for (int iterationIdx = 0; iterationIdx < inMaxIterations; ++iterationIdx) {
-    // First step.
-    const T orderParameterKPlusOne = bulk_internal::updateOrderParameter(
-        orderParameter, energies, normalization);
-    const T residualKPlusOne =
-        computeResidual(orderParameter, orderParameterKPlusOne);
-    isConverged = residualKPlusOne < inConvergenceCriterion;
+    // We want to solve the self-consistency equation
+    //
+    // 0 = x - f(x)
+    //
+    // where x is the order parameter, and f(x) is RHS of the gap equation. Lets
+    // call the quantity
+    //
+    // r = x - f(x)
+    //
+    // the residual. The residual will be (close to) zero at self-concistency.
+    //
+    // The algorithm works by fitting a second-degree polynomial through two
+    // points of the residual r0 = r(x0) and r1 = r(x1). I.e. the polynomial
+    //
+    // a * x^2 + b * x + c
+    //
+    // Only two points? Yes, because the zeroth order term, c, in the polynomial
+    // is set to zero. The reason for this is because the solution, when letting
+    // it vary, is close to zero anyway. So by setting it to zero we can get
+    // away with only two points instead of three. And solving a system of
+    // equation with two variables is really easy. We thus get a matrix equation
+    //
+    // | (x0)^2 , x0 | a | = | r0 |
+    // | (x1)^2 , x1 | b |   | r1 |
+    //
+    // which has the analytical solution
+    //
+    // a = (r0 * x1 - r1 * x0) / (x0 * x1 * (x0 - x1))
+    // b = (-r0 * (x1)^2 + r1 * (x0)^2) / (x0 * x1 * (x0 - x1))
+    //
+    // With a and b known, we can set the polynomial to zero and solve for x.
+    // Because c = 0 the non-zero solution is
+    //
+    // x = - b / a
+    //
+    // The denominators of a and b cancel, leaving
+    //
+    // x = (r0 * (x1)^2 - r1 * (x0)^2) / (r0 * x1 - r1 * x0)
+    //   = (1 - w) * x0 + w * x1
+    //
+    // where
+    //
+    // w = 1 / (1 - r1 * x0 / (r0 * x1))
+    //
+    // and x is the new order parameter value.
+    // TODO(niclas): Perhaps do not set c = 0. I think this would be Muller's
+    // method.
+
+    // Update the order parameter.
+    const T opRatio = opVec[0] / opVec[1];
+    const T resRatio = resVec[0] / resVec[1];
+    const T weight =
+        static_cast<T>(1.0) / (static_cast<T>(1.0) - opRatio / resRatio);
+    orderParameter =
+        (static_cast<T>(1.0) - weight) * opVec[0] + weight * opVec[1];
+
+    // Compute residual.
+    const T residual = bulk_internal::computeResidual(
+        orderParameter, inTemperature, numEnergies, couplingConstant);
+
+    // Check convergence. If the order parameter is very small it makes more
+    // sense to check the residual directly, instead of dividing by the order
+    // parameter.
+    const bool isSmall =
+        orderParameter < static_cast<T>(10) * std::numeric_limits<T>::epsilon();
+    const T relativeResidual =
+        isSmall ? residual : std::abs(residual / orderParameter);
+    isConverged = relativeResidual < inConvergenceCriterion;
     if (isConverged) {
-      orderParameter = orderParameterKPlusOne;
       break;
     }
 
-    // Second step.
-    const T orderParameterKPlusTwo = bulk_internal::updateOrderParameter(
-        orderParameterKPlusOne, energies, normalization);
-    const T residualKPlusTwo =
-        computeResidual(orderParameterKPlusOne, orderParameterKPlusTwo);
-    isConverged = residualKPlusTwo < inConvergenceCriterion;
-    if (isConverged) {
-      orderParameter = orderParameterKPlusTwo;
-      break;
-    }
+    // Get the index of the order parameter with the largest residual.
+    const int idx = std::abs(resVec[0]) > std::abs(resVec[1]) ? 0 : 1;
 
-    // Update order parameter.
-    if (useAitken) {
-      const T diff10 = orderParameterKPlusOne - orderParameter;
-      const T diff21 = orderParameterKPlusTwo - orderParameterKPlusOne;
-      const T denom = diff21 - diff10;
-      if (std::abs(denom) > std::numeric_limits<T>::epsilon()) {
-        // Take an Aitken step.
-        // https://en.wikipedia.org/wiki/Aitken%27s_delta-squared_process
-        orderParameter = orderParameterKPlusTwo - diff21 * diff21 / denom;
-      } else {
-        // Take a normal fixed-point step.
-        orderParameter = orderParameterKPlusTwo;
-      }
-    } else {
-      // Take a rolling ball step.
-      // Note, this is only used very close to the critical temperature. Hence,
-      // the large weight = temperature.
-      orderParameter =
-          orderParameterKPlusTwo +
-          inTemperature * (orderParameterKPlusOne - orderParameter);
-    }
+    // Replace the element with the new order parameter and residual.
+    opVec[idx] = orderParameter;
+    resVec[idx] = residual;
   }
 
   // TODO(niclas): Raise exception instead!?
   if (!isConverged) {
-    std::cout << "WARNING! The bulk order parameter did NOT converge!"
+    std::cerr << "ERROR! The bulk order parameter did NOT converge!"
               << std::endl;
   }
 
@@ -158,12 +220,14 @@ T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
   // For convenience.
   const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
 
-  // How many energies do we need, given this cutoff and temperature?
+  // Comes from: cutoff = 2 * pi * T * (n + 0.5).
+  // But the n is the largest n we need to include, so the number of energies is
+  // one more, hence the plus one.
   const int numEnergies =
-      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5));
+      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5)) + 1;
 
   T energySum = static_cast<T>(0.0);
-  for (int n = numEnergies; n >= 0; --n) {
+  for (int n = numEnergies - 1; n >= 0; --n) {
     const T matsubaraEnergy =
         twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
     const T Omega = std::hypot(inOrderParameter, matsubaraEnergy);
