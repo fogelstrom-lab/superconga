@@ -9,3 +9,6 @@ build/
 
 # The temporary JSON config file created by the Python wrapper.
 .tmp_config.json
+
+# If passing --save-data to the Python wrapper it is saved here.
+data/
