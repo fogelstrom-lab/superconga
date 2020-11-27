@@ -8,6 +8,7 @@ SuprConGPU is open-source software for simulating the physics of superconducting
 ## Badges
 
 
+
 ## Download
 The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#:~:text=Clone%20a%20repository&text=You%20can%20either%20clone%20it,paste%20in%20your%20command%20line.) the repository through the above interface.
 
@@ -33,6 +34,8 @@ For more information, including technical advice, please see [Contributing to Su
 
 
 ## License
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+
 You are free to use this software, with or without modification, provided that the conditions listed in the LICENSE.txt file are satisfied.
 
 
