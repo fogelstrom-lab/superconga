@@ -106,16 +106,24 @@ template <typename T> void swap(OrderParameter<T> &A, OrderParameter<T> &B) {
 }
 
 template <typename T> int OrderParameter<T>::initialize() {
-  int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
-  int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+  const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+  const int N1 =
+      ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
   GridGPU::initializeGrid(_orderParameterCompound, N0, N0);
   GridGPU::initializeGrid(_orderParameterCompoundRotated, N1, N1);
 
-  FermiSurface<T> *fermiSurface = ContextModule<T>::getFermiSurface();
+  const FermiSurface<T> *const fermiSurface =
+      ContextModule<T>::getFermiSurface();
 
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
+    // Initialize the component.
     _orderParameterComponentList[i]->initialize(fermiSurface);
+
+    // Zero the values outside of the grain, so that we only compute residuals
+    // of values that actually matter.
+    GridGPU *const component = getOrderParameterComponentField(i);
+    ContextModule<T>::getGeometry()->zeroValuesOutsideDomain(component);
   }
   return 0;
 }
@@ -169,11 +177,11 @@ template <typename T>
 typename Grid<T>::GPU *
 OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   // Get global model parameters
-  int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
-  int N1 = ContextModule<T>::getParameters()->getGridResolutionCoherence();
+  const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
+  const int N1 =
+      ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
   FermiSurface<T> *const fermiSurface = ContextModule<T>::getFermiSurface();
-  const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
 
   // Rotating the order parameter field PHI degrees is equivalent to solving
   // the trajectories along -PHI, hence the minus sign in the function call
@@ -182,23 +190,48 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   T momentumY;
   fermiSurface->getFermiMomentum(-angleIdx, momentumX, momentumY);
 
-  // Add delta components together in rotated frame
-  OrderParameterComponent<T> *delta_tmp;
-
-  _orderParameterCompoundRotated->setZero();
-
-  GridGPU delta_comp_tmp(N0, N0);
-
+  // We need to sum all components with their basis function function
+  // multiplied.
+  GridGPU opSummed(N0, N0);
+  opSummed.setZero();
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
-    delta_tmp = getOrderParameterComponent(i);
-    delta_comp_tmp = *(delta_tmp->getOrderParameterField());
-
-    delta_tmp->computeMomentumDependence(&delta_comp_tmp, momentumX, momentumY);
-
-    _orderParameterCompoundRotated->insertRotatedGridAdditive(&delta_comp_tmp,
-                                                              systemAngle, 0);
+    OrderParameterComponent<T> *component = getOrderParameterComponent(i);
+    GridGPU grid = *(component->getOrderParameterField());
+    component->computeMomentumDependence(&grid, momentumX, momentumY);
+    opSummed += grid;
   }
 
+  // The following is bit of a horrible hack to get this to work properly.
+  // After having summed the components we need to extend values at the boundary
+  // so that values outside of the domain do not creep into the sample when
+  // rotation. But the geometry has an internal state; the rotation angle. So we
+  // must set the internal angle to zero before extending the values, and then
+  // reset it (so that we don't screw up something downstream). Every state
+  // change causes the geometry to be re-computed.
+  // TODO(niclas): Somehow fix this, so one can use methods without worrying
+  // about changing internal states. I guess this would be a part of making
+  // everything const correct!?
+  GeometryGroup<T> *const geometry = ContextModule<T>::getGeometry();
+
+  // Get the internal rotation of the geometry, so we can reset it afterwards.
+  const T currentAngle = geometry->getCurrentAngle();
+
+  // Set the geometry to zero rotation.
+  const T zeroAngle = static_cast<T>(0);
+  geometry->create(zeroAngle);
+
+  // Compensate for numerical diffusion from interpolation during rotation.
+  geometry->extendValuesAtBoundary(&opSummed);
+
+  // Reset the geometry.
+  geometry->create(currentAngle);
+
+  // Rotate the order parameter and insert it in the larger grid
+  // _orderParameterCompoundRotated.
+  const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+  _orderParameterCompoundRotated->setZero();
+  _orderParameterCompoundRotated->insertRotatedGridAdditive(&opSummed,
+                                                            systemAngle, 0);
   return _orderParameterCompoundRotated;
 }
 

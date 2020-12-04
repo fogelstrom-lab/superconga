@@ -36,7 +36,7 @@ public:
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
   virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar, GeometryGroup<T> *geom);
+                                  GridGPU *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -118,8 +118,7 @@ template <typename T> void ComputeCurrent<T>::initializeGreensAngle() {
 
 template <typename T>
 void ComputeCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                           GridGPU *gamma, GridGPU *gammabar,
-                                           GeometryGroup<T> *geom) {
+                                           GridGPU *gamma, GridGPU *gammabar) {
 
   if (ComputeProperty<T>::doCompute()) {
     typedef ContextModule<T> C;
@@ -128,7 +127,7 @@ void ComputeCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
 
     GreensFunctionStatic<T, Greens_Current>::computeGreensSumEnergy(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, residues, gamma,
-        gammabar, geom);
+        gammabar);
   }
 }
 
@@ -138,8 +137,8 @@ void ComputeCurrent<T>::integrateGreensAngle(GeometryGroup<T> *geom,
   if (ComputeProperty<T>::doCompute()) {
     GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
-    // Compensate for numerical diffusion from interpolation during rotation
-    geom->extendValuesAtBoundary(greens, 1);
+    // Compensate for numerical diffusion from interpolation during rotation.
+    geom->extendValuesAtBoundary(greens);
 
     const int numAngles =
         ComputeProperty<T>::getParameters()->getAngularResolution();

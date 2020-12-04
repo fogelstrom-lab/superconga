@@ -50,7 +50,7 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
   // Compute curl
   void curl(GridGPU *result, const T h) const;
 
-  // Compute curl
+  // Compute Laplacian
   void del2(GridGPU *result, const T h) const;
 
   // Sum all fields.

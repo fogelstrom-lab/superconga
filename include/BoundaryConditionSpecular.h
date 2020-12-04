@@ -237,6 +237,11 @@ __global__ void boundaryConditionSpecularKernel(
           boundaryInCoherenceImag[idx_sparse_in] =
               val_bnd_interp_imag / totalWeight;
         } else {
+          // This happens when a trajectory hits a corner more or less dead on.
+
+          // TODO(niclas): This is a terrible value to choose! A more sensible
+          // solution is to retro-reflect the trajectory. For a 90 degree corner
+          // at least I think that is exactly correct.
           boundaryInCoherenceReal[idx_sparse_in] = static_cast<T>(0.0);
           boundaryInCoherenceImag[idx_sparse_in] = static_cast<T>(0.0);
         }

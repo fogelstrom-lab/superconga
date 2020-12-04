@@ -66,8 +66,7 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies.
   virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar,
-                                  GeometryGroup<T> *geom) = 0;
+                                  GridGPU *gammabar) = 0;
 
   // Gets called once for each angle, after all calls (per angle) to
   // computeGreensAngle() are finished. Adds the result from

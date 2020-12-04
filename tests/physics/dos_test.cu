@@ -215,19 +215,15 @@ TEST_CASE("Test DOS - s-wave (double)") {
 // ================= Test DOS d-wave ================= //
 
 TEST_CASE("Test DOS - d-wave (float)") {
-  // TODO(niclas): Investigate why the tolerance must be so high. Is because of
-  // artifacts from corners?
-  const float tolerance = 1e-2f;
+  const float tolerance = 1e-4f;
   const float convergenceCriterion = 1e-6f;
   const bool useSwave = false;
   helper::testDensityOfStates<float>(tolerance, useSwave, convergenceCriterion);
 }
 
 TEST_CASE("Test DOS - d-wave (double)") {
-  // TODO(niclas): Investigate why the tolerance must be so high. Is because of
-  // artifacts from corners?
-  const double tolerance = 1e-2;
-  const double convergenceCriterion = 1e-6;
+  const double tolerance = 1e-8;
+  const double convergenceCriterion = 0.1 * tolerance;
   const bool useSwave = false;
   helper::testDensityOfStates<double>(tolerance, useSwave,
                                       convergenceCriterion);

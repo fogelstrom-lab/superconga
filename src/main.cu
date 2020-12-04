@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -205,13 +206,25 @@ int main(int argc, char *argv[]) {
     // Set rotation of crystal axes with respect to the grain geometry.
     orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
+    // Parameters for the initial order parameter guess.
+    const T phaseWinding = opCompParams.initialPhaseWinding;
+    const T randomPhaseWeight = opCompParams.initialRandomPhaseWeight;
     const T phaseShift =
         static_cast<T>(2.0 * M_PI) * opCompParams.initialPhaseShift;
 
+    // Check if we should initialize to bulk.
+    const T eps = std::numeric_limits<T>::epsilon();
+    const bool useBulk = (std::abs(phaseWinding) < eps) &&
+                         (std::abs(randomPhaseWeight) < eps) &&
+                         (std::abs(phaseShift) < eps);
+
     // Initialize order parameter with a guess.
-    scg::Initial<T>::perturbedPhaseWinding(
-        orderParameterComponent, opCompParams.initialPhaseWinding,
-        opCompParams.initialRandomPhaseWeight, phaseShift);
+    if (useBulk) {
+      scg::Initial<T>::bulk(orderParameterComponent);
+    } else {
+      scg::Initial<T>::perturbedPhaseWinding(
+          orderParameterComponent, phaseWinding, randomPhaseWeight, phaseShift);
+    }
 
     // Add the initialized component to the total order parameter.
     orderParameter->add(orderParameterComponent);

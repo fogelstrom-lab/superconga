@@ -43,8 +43,7 @@ public:
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
   virtual void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
-                                  GridGPU *inGamma, GridGPU *inGammabar,
-                                  GeometryGroup<T> *inGeometryGroup);
+                                  GridGPU *inGamma, GridGPU *inGammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -88,8 +87,8 @@ __global__ void computeFreeEnergy_Kernel(
     const int inNumLatticePoints, const int inNumEnergies, T *outFreeEnergy_re,
     T *outFreeEnergy_im, const T *const inGamma_re, const T *const inGamma_im,
     const T *const inGammabar_re, const T *const inGammabar_im,
-    const char *const inDomainLabels, const T *const inOrderParameter_re,
-    const T *const inOrderParameter_im, const T *const inOzakiResidues) {
+    const T *const inOrderParameter_re, const T *const inOrderParameter_im,
+    const T *const inOzakiResidues) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
@@ -105,33 +104,30 @@ __global__ void computeFreeEnergy_Kernel(
     const cplx<T> orderParameter(inOrderParameter_re[grainCoordinateIdx],
                                  inOrderParameter_im[grainCoordinateIdx]);
 
-    // Check that coordinate is part of the grain
-    if (inDomainLabels[grainCoordinateIdx] > 0) {
-      // Loop over Ozaki poles: the energy sum in the free-energy kernel I
-      for (int energyIdx = 0; energyIdx < inNumEnergies; ++energyIdx) {
-        // TODO(patric): This is dangerous! We should not manually calculate
-        // index like this! Imagine that you want to calculate more coherence
-        // functions (like gamma plus/minus instead), then you have to change
-        // all these places manually?
-        const int coherenceFunctionIdx =
-            energyIdx * 2 * inNumLatticePoints * inNumLatticePoints +
-            grainCoordinateIdx;
+    // Loop over Ozaki poles: the energy sum in the free-energy kernel I
+    for (int energyIdx = 0; energyIdx < inNumEnergies; ++energyIdx) {
+      // TODO(patric): This is dangerous! We should not manually calculate
+      // index like this! Imagine that you want to calculate more coherence
+      // functions (like gamma plus/minus instead), then you have to change
+      // all these places manually?
+      const int coherenceFunctionIdx =
+          energyIdx * 2 * inNumLatticePoints * inNumLatticePoints +
+          grainCoordinateIdx;
 
-        // Coherence functions in the current coordinate, angle and energy
-        const cplx<T> gamma(inGamma_re[coherenceFunctionIdx],
-                            inGamma_im[coherenceFunctionIdx]);
-        const cplx<T> gammabar(inGammabar_re[coherenceFunctionIdx],
-                               inGammabar_im[coherenceFunctionIdx]);
-        cplx<T> freeEnergyKernelI;
+      // Coherence functions in the current coordinate, angle and energy
+      const cplx<T> gamma(inGamma_re[coherenceFunctionIdx],
+                          inGamma_im[coherenceFunctionIdx]);
+      const cplx<T> gammabar(inGammabar_re[coherenceFunctionIdx],
+                             inGammabar_im[coherenceFunctionIdx]);
+      cplx<T> freeEnergyKernelI;
 
-        // Calculate I(x, y, energy, angle)
-        computeFreeEnergyKernelI<T>(orderParameter, gamma, gammabar,
-                                    freeEnergyKernelI);
+      // Calculate I(x, y, energy, angle)
+      computeFreeEnergyKernelI<T>(orderParameter, gamma, gammabar,
+                                  freeEnergyKernelI);
 
-        // Multiply by Ozaki residue and sum the contribution
-        freeEnergyKernelSum +=
-            inOzakiResidues[energyIdx] * cplx<T>::i() * freeEnergyKernelI;
-      }
+      // Multiply by Ozaki residue and sum the contribution
+      freeEnergyKernelSum +=
+          inOzakiResidues[energyIdx] * cplx<T>::i() * freeEnergyKernelI;
     }
 
     // Add contribution to the free energy in this coordinate
@@ -200,7 +196,7 @@ template <typename T> void ComputeFreeEnergy<T>::initializeGreensAngle() {
 template <typename T>
 void ComputeFreeEnergy<T>::computeGreensAngle(
     ParameterIterator<int> *inParameterIterator, GridGPU *inGamma,
-    GridGPU *inGammabar, GeometryGroup<T> *inGeometryGroup) {
+    GridGPU *inGammabar) {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
@@ -227,7 +223,6 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
         inGamma->getDataPointer(0, Type::imag),
         inGammabar->getDataPointer(0, Type::real),
         inGammabar->getDataPointer(0, Type::imag),
-        inGeometryGroup->getDomainLabelsGrid()->getDataPointer(0, Type::real),
         deltaRot->getDataPointer(0, Type::real),
         deltaRot->getDataPointer(0, Type::imag),
         ozakiResidues->getDataPointer(0, Type::real) + energyIdxStart);
@@ -243,7 +238,7 @@ void ComputeFreeEnergy<T>::integrateGreensAngle(
     GridGPU *freeEnergyKernelIntegrand =
         ComputeProperty<T>::getGreensCurrentAngle();
 
-    inGeometryGroup->extendValuesAtBoundary(freeEnergyKernelIntegrand, 2);
+    inGeometryGroup->extendValuesAtBoundary(freeEnergyKernelIntegrand);
 
     const T systemAngle =
         ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
@@ -321,8 +316,11 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       // Note, by setting values outside of the grain to zero, we are only
       // including the contribution of the induced magnetic field within the
       // grain to the free energy.
-      // TODO(niclas): Should we include the field outside of the grain? Also,
-      // should we include the field in 3D?
+      // Note that for proper treatment, this might have to be done in 3D
+      // (depending on assumptions/model). For a layered superconductor, taking
+      // into account only 2D means the free energy per sheet/plane. Taking into
+      // account 3D, on the other hand, captures e.g. a truly 2D SC or SC at a
+      // surface of a 3D superconductor.
       C::getGeometry()->zeroValuesOutsideDomain(&magneticField);
 
       // The Ginzburg-Landau parameter.

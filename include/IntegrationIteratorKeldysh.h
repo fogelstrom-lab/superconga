@@ -274,9 +274,9 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
     // Compute the integrand for the current angle for every compute object.
     for (int i = 0; i < numComputeObjects; ++i) {
-      C::getComputeObject(i)->computeGreensAngle(
-          energyIterator, riccatiSolver->getGamma(),
-          riccatiSolver->getGammabar(), geometry);
+      C::getComputeObject(i)->computeGreensAngle(energyIterator,
+                                                 riccatiSolver->getGamma(),
+                                                 riccatiSolver->getGammabar());
     }
 
     // Add integration contribution of greens function from current angle.
