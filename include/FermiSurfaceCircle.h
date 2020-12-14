@@ -22,6 +22,9 @@ public:
   // Initialize the Fermi surface.
   void initialize(const int inNumAngles);
 
+  // Get the type.
+  FermiSurfaceType getType() const override { return FermiSurfaceType::CIRCLE; }
+
   // Get the Fermi momentum.
   vector2d<T> getFermiMomentum(const int inAngleIdx) const;
   void getFermiMomentum(const int inAngleIdx, T &outMomentumX,

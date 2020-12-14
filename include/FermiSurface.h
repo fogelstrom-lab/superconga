@@ -18,6 +18,14 @@
 #include <iostream>
 
 namespace scg {
+/// \brief Enum class with the implemented Fermi-surface types.
+///
+/// The following values are supported:
+///
+/// CIRCLE
+/// TIGHT_BINDING
+enum class FermiSurfaceType { CIRCLE, TIGHT_BINDING };
+
 template <typename T> class FermiSurface {
 public:
   // Constructor.
@@ -28,6 +36,9 @@ public:
 
   // Initialize Fermi surface.
   virtual void initialize(const int inNumAngles);
+
+  // Get the type, i.e. "circle" or "tight-binding".
+  virtual FermiSurfaceType getType() const = 0;
 
   // Get the polar angle.
   T getPolarAngle(const int inAngleIdx) const;

@@ -73,7 +73,7 @@ void testComputeCriticalTemperature(
   const scg::BasisFunctionSymmetry dWaveSymmetry =
       scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
   const scg::BasisFunctionSymmetry sExtSymmetry =
-      scg::BasisFunctionSymmetry::SWAVE_EXT;
+      scg::BasisFunctionSymmetry::SWAVE;
 
   // =================== ACT ==================== //
   const std::pair<bool, T> dWaveTmp = scg::bdg::computeCriticalTemperature(
