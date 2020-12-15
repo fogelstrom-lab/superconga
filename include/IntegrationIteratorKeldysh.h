@@ -222,6 +222,9 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   if (m_lastEnergyIndex != currentEnergyIndex) {
     // This is a new energy interval, so everything needs to be initialized.
 
+    // Intialize the Riccati solver.
+    riccatiSolver->initialize();
+
     // Initialize boundary.
     setBoundaryInitialCondition();
 
@@ -229,9 +232,6 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
     for (int i = 0; i < numComputeObjects; ++i) {
       C::getComputeObject(i)->setPartiallyConverged(false);
     }
-
-    // Intialize the Riccati solver.
-    riccatiSolver->initialize();
 
     // Update the internal energy index.
     m_lastEnergyIndex = currentEnergyIndex;
