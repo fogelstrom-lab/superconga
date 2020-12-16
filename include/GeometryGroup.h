@@ -953,8 +953,10 @@ void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
   grid->getKernelDimensionsFields(bpg, tpb);
 
   // This is a sensible value. It probably does not need to be exposed to the
-  // user.
-  const int numExtend = 1;
+  // user. Note that 2 is chosen due to corner artifacts otherwise.
+  // TODO(niclas): Have a separate domain label for corners, and handle them
+  // separately.
+  const int numExtend = 2;
 
   if (grid->isComplex()) {
     internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(

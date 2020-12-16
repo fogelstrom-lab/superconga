@@ -30,21 +30,31 @@
 
 namespace simParams {
 // Temperature in units of T_c
-const double TEMPERATURE = 0.005;
+const double TEMPERATURE = 0.001;
+
 // Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
 const double GRAIN_SIDE_LENGTH = 10.0;
-// Number of lattice points per grain side length
-const int GRID_RESOLUTION = 301;
-// Number of discrete trajectory angles (on the Fermi-surface)
-const int NUM_ANGLES = 100;
+
+// Number of lattice points per grain side length.
+const int GRID_RESOLUTION = 32;
+
+// Number of discrete trajectory angles (on the Fermi-surface). S-wave behaves
+// much nicer.
+const int NUM_ANGLES_SWAVE = 32;
+const int NUM_ANGLES_DWAVE = 360;
+
 // Number of discrete energies (poles)
-const int NUM_ENERGIES = 128;
+const int NUM_ENERGIES = 256;
+
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
+
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
+
 // Maximum number of iterations
 const int NUM_ITERATIONS_MAX = 50;
+
 // Minimum number of iterations
 const int NUM_ITERATIONS_MIN = 1;
 } // namespace simParams
@@ -54,23 +64,33 @@ namespace helper {
 
 // Helper class for setting up simulation parameters
 template <typename T>
-scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
+scg::Parameters<T> *applySimParams(const bool inUseSwave,
+                                   scg::Context<T> *inOutContext) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(inOutContext);
+
   // Set grain resolution in number of lattice sites
-  parameters->setGridResolution(static_cast<T>(simParams::GRID_RESOLUTION));
+  parameters->setGridResolution(simParams::GRID_RESOLUTION);
+
+  // Number of discrete steps in momentum angle
+  const int numAngles =
+      inUseSwave ? simParams::NUM_ANGLES_SWAVE : simParams::NUM_ANGLES_DWAVE;
+  parameters->setAngularResolution(numAngles);
+
   // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
   parameters->setGrainWidthCoherenceLengths(
       static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
-  // Number of discrete steps in momentum angle
-  parameters->setAngularResolution(simParams::NUM_ANGLES);
+
   // Set convergence criterion
   parameters->setConvergenceCriterion(
       static_cast<T>(simParams::CONVERGENCE_CRITERION));
+
   // Set number of Ozaki poles
   parameters->setNumMatsubaraEnergies(simParams::NUM_ENERGIES);
+
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
+
   return parameters;
 }
 
@@ -83,7 +103,7 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   scg::Context<T> *context = new scg::Context<T>();
 
   // Set parameters to the values specified in simParams struct
-  scg::Parameters<T> *parameters = applySimParams<T>(context);
+  scg::Parameters<T> *parameters = applySimParams<T>(inUseSwave, context);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
@@ -212,8 +232,8 @@ TEST_CASE("Test low temperature thermodynamics - s-wave disc (float)") {
 }
 
 TEST_CASE("Test low temperature thermodynamics - s-wave square (float)") {
-  const float tolerance = 1e-4f;
-  const float toleranceFreeEnergy = 1e-3f;
+  const float tolerance = 1e-5f;
+  const float toleranceFreeEnergy = 1e-4f;
   const bool useSwave = true;
   const bool isDisc = false;
 
@@ -222,8 +242,8 @@ TEST_CASE("Test low temperature thermodynamics - s-wave square (float)") {
 }
 
 TEST_CASE("Test low temperature thermodynamics - d-wave square (float)") {
-  const float tolerance = 1e-4f;
-  const float toleranceFreeEnergy = 1e-3f;
+  const float tolerance = 1e-5f;
+  const float toleranceFreeEnergy = 1e-4f;
   const bool useSwave = false;
   const bool isDisc = false;
 
@@ -244,8 +264,8 @@ TEST_CASE("Test low temperature thermodynamics - s-wave disc (double)") {
 }
 
 TEST_CASE("Test low temperature thermodynamics - s-wave square (double)") {
-  const double tolerance = 1e-4;
-  const double toleranceFreeEnergy = 1e-3;
+  const double tolerance = 1e-5;
+  const double toleranceFreeEnergy = 1e-4;
   const bool useSwave = true;
   const bool isDisc = false;
 
@@ -254,8 +274,8 @@ TEST_CASE("Test low temperature thermodynamics - s-wave square (double)") {
 }
 
 TEST_CASE("Test low temperature thermodynamics - d-wave square (double)") {
-  const double tolerance = 1e-4;
-  const double toleranceFreeEnergy = 1e-3;
+  const double tolerance = 1e-5;
+  const double toleranceFreeEnergy = 1e-4;
   const bool useSwave = false;
   const bool isDisc = false;
 
