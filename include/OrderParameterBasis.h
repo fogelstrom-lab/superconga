@@ -2,6 +2,8 @@
 #define ORDER_PARAMETER_BASIS_H_
 
 #include "FermiSurface.h"
+#include "FermiSurfaceCircle.h"
+#include "FermiSurfaceTightBinding.h"
 #include "cplx.h"
 #include "defines.h"
 #include <cmath>
@@ -12,15 +14,12 @@ namespace scg {
 /// \brief Enum class with the supported basis-function symmetries.
 ///
 /// The following values are supported:
-/// SWAVE, SWAVE_EXT, PWAVE, DWAVE_X2_Y2, DWAVE_XY, GWAVE
-enum class BasisFunctionSymmetry {
-  SWAVE,
-  SWAVE_EXT,
-  PWAVE,
-  DWAVE_X2_Y2,
-  DWAVE_XY,
-  GWAVE
-};
+///
+/// SWAVE
+/// DWAVE_X2_Y2
+/// DWAVE_XY
+/// GWAVE
+enum class BasisFunctionSymmetry { SWAVE, DWAVE_X2_Y2, DWAVE_XY, GWAVE };
 
 /// \brief Basis-function class.
 template <typename T> class BasisFunction {
@@ -31,6 +30,9 @@ private:
   /// Factor to ensure that the Fermi-surface average of the squared basis
   /// function is one.
   T m_normalizationFactor;
+
+  // Whether we should use the circular basis-function representation.
+  bool m_circularFermiSurface;
 
 public:
   /// \brief Constructor.
@@ -65,6 +67,10 @@ public:
 
   /// \brief Normalize the basis function on the Fermi surface.
   ///
+  /// The appropriate basis-function representation will be deduced from the
+  /// Fermi surface.  E.g. d_xy = x * y, will be used for a circular Fermi
+  /// surface.
+  ///
   /// \param inFermiSurface - The Fermi surface to normalize the basis function
   ///                         over
   ///
@@ -72,6 +78,8 @@ public:
   void normalize(const FermiSurface<T> *const inFermiSurface);
 
   /// \brief Normalize the basis function in the first Brillouin zone.
+  ///
+  /// The general basis-function representation will be used.
   ///
   /// \param inMomentum - All momenta in the first Brillouin zone.
   ///
@@ -81,7 +89,8 @@ public:
 
 template <typename T>
 BasisFunction<T>::BasisFunction(const BasisFunctionSymmetry inSymmetry)
-    : m_symmetry(inSymmetry), m_normalizationFactor(static_cast<T>(1.0)) {}
+    : m_symmetry(inSymmetry), m_normalizationFactor(static_cast<T>(1.0)),
+      m_circularFermiSurface(true) {}
 
 template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
   std::string str;
@@ -89,14 +98,6 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
   switch (m_symmetry) {
   case BasisFunctionSymmetry::SWAVE: {
     str = "s";
-    break;
-  }
-  case BasisFunctionSymmetry::SWAVE_EXT: {
-    str = "s_ext";
-    break;
-  }
-  case BasisFunctionSymmetry::PWAVE: {
-    str = "p";
     break;
   }
   case BasisFunctionSymmetry::DWAVE_X2_Y2: {
@@ -129,41 +130,67 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
                                    const T inMomentumY) const {
   cplx<T> basisFunction;
 
-  switch (m_symmetry) {
-  case BasisFunctionSymmetry::SWAVE: {
-    basisFunction = cplx<T>(static_cast<T>(1.0), static_cast<T>(0.0));
-    break;
-  }
-  case BasisFunctionSymmetry::SWAVE_EXT: {
-    basisFunction = cplx<T>(std::cos(inMomentumX) + std::cos(inMomentumY),
-                            static_cast<T>(0.0));
-    break;
-  }
-  case BasisFunctionSymmetry::PWAVE: {
-    basisFunction = cplx<T>(std::sin(inMomentumX), std::sin(inMomentumY));
-    break;
-  }
-  case BasisFunctionSymmetry::DWAVE_X2_Y2: {
-    basisFunction = cplx<T>(std::cos(inMomentumX) - std::cos(inMomentumY),
-                            static_cast<T>(0.0));
-    break;
-  }
-  case BasisFunctionSymmetry::DWAVE_XY: {
-    basisFunction = cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY),
-                            static_cast<T>(0.0));
-    break;
-  }
-  case BasisFunctionSymmetry::GWAVE: {
-    basisFunction = cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY) *
-                                (std::cos(inMomentumX) - std::cos(inMomentumY)),
-                            static_cast<T>(0.0));
-    break;
-  }
-  default: {
-    // TODO(niclas): Raise exception instead!?
-    std::cout << "ERROR! Basis-function symmetry not implemented!" << std::endl;
-    basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
-  }
+  if (m_circularFermiSurface) {
+    switch (m_symmetry) {
+    case BasisFunctionSymmetry::SWAVE: {
+      basisFunction = cplx<T>(static_cast<T>(1.0), static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::DWAVE_X2_Y2: {
+      basisFunction =
+          cplx<T>(inMomentumX * inMomentumX - inMomentumY * inMomentumY,
+                  static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::DWAVE_XY: {
+      basisFunction = cplx<T>(inMomentumX * inMomentumY, static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::GWAVE: {
+      basisFunction =
+          cplx<T>(inMomentumX * inMomentumY *
+                      (inMomentumX * inMomentumX - inMomentumY * inMomentumY),
+                  static_cast<T>(0.0));
+      break;
+    }
+    default: {
+      // TODO(niclas): Raise exception instead!?
+      std::cout << "ERROR! Basis-function symmetry not implemented!"
+                << std::endl;
+      basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
+    }
+    }
+  } else {
+    switch (m_symmetry) {
+    case BasisFunctionSymmetry::SWAVE: {
+      basisFunction = cplx<T>(std::cos(inMomentumX) + std::cos(inMomentumY),
+                              static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::DWAVE_X2_Y2: {
+      basisFunction = cplx<T>(std::cos(inMomentumX) - std::cos(inMomentumY),
+                              static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::DWAVE_XY: {
+      basisFunction = cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY),
+                              static_cast<T>(0.0));
+      break;
+    }
+    case BasisFunctionSymmetry::GWAVE: {
+      basisFunction =
+          cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY) *
+                      (std::cos(inMomentumX) - std::cos(inMomentumY)),
+                  static_cast<T>(0.0));
+      break;
+    }
+    default: {
+      // TODO(niclas): Raise exception instead!?
+      std::cout << "ERROR! Basis-function symmetry not implemented!"
+                << std::endl;
+      basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
+    }
+    }
   }
 
   return basisFunction * m_normalizationFactor;
@@ -171,6 +198,10 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
 
 template <typename T>
 void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
+  // Check if this is a circular Fermi surface.
+  m_circularFermiSurface =
+      inFermiSurface->getType() == FermiSurfaceType::CIRCLE;
+
   const int numAngles = inFermiSurface->getNumAngles();
 
   T avgBasisFunctionSquared = static_cast<T>(0.0);
@@ -196,6 +227,10 @@ void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
 
 template <typename T>
 void BasisFunction<T>::normalize(const std::vector<vector2d<T>> &inMomenta) {
+  // This method is only used for BdG computations, i.e. the circular
+  // basis-function representation is not appropriate.
+  m_circularFermiSurface = false;
+
   T avgBasisFunctionSquared = static_cast<T>(0.0);
   for (const auto &momentum : inMomenta) {
     // Evaluate the basis function.
