@@ -196,7 +196,7 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
           numEnergiesCurrentBlock, m_ldosInterval->dimX());
     }
 
-    C::getGeometry()->zeroValuesOutsideDomain(m_ldosInterval);
+    C::getGeometry()->zeroValuesOutsideDomainRef(m_ldosInterval);
 
     // Copy temp LDOS to full grid.
     for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
@@ -216,33 +216,25 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     const T invNumGrainLatticeSites =
         static_cast<T>(1.0) / numGrainLatticeSites;
 
-    T diffSquaredSum = static_cast<T>(0.0);
-    T oldSquaredSum = static_cast<T>(0.0);
+    T maxResidual = static_cast<T>(0.0);
+    const T epsilon = std::numeric_limits<T>::epsilon();
     for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
       const T sumLDOS = m_ldosInterval->sumField(i);
       const T newDOS = sumLDOS * invNumGrainLatticeSites;
       const T oldDOS = DOS_ptr[i];
 
-      const T diff = newDOS - oldDOS;
-      diffSquaredSum += diff * diff;
-      oldSquaredSum += oldDOS * oldDOS;
+      const T residual = std::abs(newDOS - oldDOS) / std::max(oldDOS, epsilon);
+      maxResidual = residual > maxResidual ? residual : maxResidual;
 
       // Store energy and DOS values.
       E_ptr[i] = energies_ptr[i];
       DOS_ptr[i] = newDOS;
     }
 
-    // TODO(niclas): Use computeResidual.
-    const T epsilon =
-        compute_residual_internal::getGoodEpsilon<T>(numEnergiesCurrentBlock);
-    const T diffL2Norm = std::sqrt(diffSquaredSum);
-    const T oldL2Norm = std::sqrt(oldSquaredSum);
-    const T residual = diffL2Norm / std::max(oldL2Norm, epsilon);
-
-    ComputeProperty<T>::setResidual(residual);
+    ComputeProperty<T>::setResidual(maxResidual);
 
     const bool isPartiallyConverged =
-        residual < C::getParameters()->getConvergenceCriterion();
+        maxResidual < C::getParameters()->getConvergenceCriterion();
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }

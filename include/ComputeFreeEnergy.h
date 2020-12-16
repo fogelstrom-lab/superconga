@@ -279,7 +279,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
 
     // Compute free energy new way
     T energySummedKernelI_re = 0.0, energySummedKernelI_im = 0.0;
-    C::getGeometry()->zeroValuesOutsideDomain(m_freeEnergyGrid);
+    C::getGeometry()->zeroValuesOutsideDomainRef(m_freeEnergyGrid);
     m_freeEnergyGrid->sumField(energySummedKernelI_re, energySummedKernelI_im);
 
     // Compute total free energy
@@ -287,7 +287,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
 
     OrderParameter<T> *orderParameter = C::getOrderParameter();
     GridGPU deltaField(*(orderParameter->getOrderParameterField()));
-    C::getGeometry()->zeroValuesOutsideDomain(&deltaField);
+    C::getGeometry()->zeroValuesOutsideDomainRef(&deltaField);
 
     m_freeEnergyPerUnitArea =
         static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
@@ -321,7 +321,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       // into account only 2D means the free energy per sheet/plane. Taking into
       // account 3D, on the other hand, captures e.g. a truly 2D SC or SC at a
       // surface of a 3D superconductor.
-      C::getGeometry()->zeroValuesOutsideDomain(&magneticField);
+      C::getGeometry()->zeroValuesOutsideDomainRef(&magneticField);
 
       // The Ginzburg-Landau parameter.
       const T kappa = C::getParameters()->getPenetrationDepth();

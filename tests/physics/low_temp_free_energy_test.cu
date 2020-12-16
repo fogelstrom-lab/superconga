@@ -167,7 +167,7 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
       simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
 
   // Remove all spurious values outside actual grain
-  context->getGeometry()->zeroValuesOutsideDomain(
+  context->getGeometry()->zeroValuesOutsideDomainRef(
       computeOrderParameter->getResult());
 
   // Fetch the grain-averaged free energy

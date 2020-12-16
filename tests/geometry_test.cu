@@ -51,28 +51,25 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   }
 
   // Initialize the geometry group, i.e. compute domain labels.
-  geometryGroup->initialize();
+  context->initialize();
 
   // Get and set the dimensions of our grids.
-  int numX;
-  int numY;
-  geometryGroup->getGridDimensions(numX, numY);
   const int numFields = 1;
   const scg::Type::type representation = scg::Type::real;
 
   // Create the test grid (on the CPU).
-  scg::GridData<T, thrust::host_vector<T>> testGridCPU(numX, numY, numFields,
-                                                       representation);
+  scg::GridData<T, thrust::host_vector<T>> testGridCPU(
+      gridResolution, gridResolution, numFields, representation);
 
   // Create the expected grid (on the CPU).
   scg::GridData<T, thrust::host_vector<T>> expectedGridCPU(
-      numX, numY, numFields, representation);
+      gridResolution, gridResolution, numFields, representation);
 
   // An extra scope so we can reuse variable names.
   {
     // Copy the domain labels to the CPU.
     const scg::GridData<char, thrust::host_vector<char>> domainLabels =
-        *(geometryGroup->getDomainLabelsGrid());
+        *(geometryGroup->getDomainGrid());
 
     // Get the pointers to the test grid, expected grid, and the domain labels.
     T *const testPtrCPU = testGridCPU.getDataPointer();
@@ -80,9 +77,9 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
     const char *const domainLabelsPtr = domainLabels.getDataPointer();
 
     // Set the test and expected grids.
-    for (int y = 0; y < numY; ++y) {
-      for (int x = 0; x < numX; ++x) {
-        const int idx = y * numX + x;
+    for (int y = 0; y < gridResolution; ++y) {
+      for (int x = 0; x < gridResolution; ++x) {
+        const int idx = y * gridResolution + x;
         const T val = static_cast<T>(x * y);
         testPtrCPU[idx] = val;
         const char nodeType = domainLabelsPtr[idx];
@@ -96,7 +93,7 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   scg::GridData<T, thrust::device_vector<T>> gridGPU = testGridCPU;
 
   // Zero values outside of the grain.
-  geometryGroup->zeroValuesOutsideDomain(&gridGPU);
+  geometryGroup->zeroValuesOutsideDomainRef(&gridGPU);
 
   // Copy back to the CPU.
   testGridCPU = gridGPU;
@@ -107,9 +104,9 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
     T *const testPtrCPU = testGridCPU.getDataPointer();
     T *const expPtrCPU = expectedGridCPU.getDataPointer();
     const T tolerance = std::numeric_limits<T>::epsilon();
-    for (int y = 0; y < numY; ++y) {
-      for (int x = 0; x < numX; ++x) {
-        const int idx = y * numX + x;
+    for (int y = 0; y < gridResolution; ++y) {
+      for (int x = 0; x < gridResolution; ++x) {
+        const int idx = y * gridResolution + x;
         const T expectedValue = expPtrCPU[idx];
         const T testValue = testPtrCPU[idx];
 
@@ -123,24 +120,24 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 }
 } // namespace helper
 
-// ================= Test zeroValuesOutsideDomain disc ================= //
-TEST_CASE("Test zeroValuesOutsideDomain disc (float)") {
+// ================= Test zeroValuesOutsideDomainRef disc ================= //
+TEST_CASE("Test zeroValuesOutsideDomainRef disc (float)") {
   const bool isDisc = true;
   helper::testZeroValuesOutsideDomain<float>(isDisc);
 }
 
-TEST_CASE("Test zeroValuesOutsideDomain disc (double)") {
+TEST_CASE("Test zeroValuesOutsideDomainRef disc (double)") {
   const bool isDisc = true;
   helper::testZeroValuesOutsideDomain<double>(isDisc);
 }
 
-// ================= Test zeroValuesOutsideDomain square ================= //
-TEST_CASE("Test zeroValuesOutsideDomain square (float)") {
+// ================= Test zeroValuesOutsideDomainRef square ================= //
+TEST_CASE("Test zeroValuesOutsideDomainRef square (float)") {
   const bool isDisc = false;
   helper::testZeroValuesOutsideDomain<float>(isDisc);
 }
 
-TEST_CASE("Test zeroValuesOutsideDomain square (double)") {
+TEST_CASE("Test zeroValuesOutsideDomainRef square (double)") {
   const bool isDisc = false;
   helper::testZeroValuesOutsideDomain<double>(isDisc);
 }

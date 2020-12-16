@@ -246,7 +246,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     for (int i = 0; i < Nc; ++i) {
       GridGPU *const component =
           _delta->getOrderParameterComponent(i)->getOrderParameterField();
-      ctx->getGeometry()->zeroValuesOutsideDomain(component);
+      ctx->getGeometry()->zeroValuesOutsideDomainRef(component);
     }
 
     // Take step with the optimizer. Note, OptimizerLargePush requires the

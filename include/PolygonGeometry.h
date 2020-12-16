@@ -36,10 +36,10 @@ public:
 
   PolygonGeometry &operator=(PolygonGeometry other);
 
-  virtual PolygonGeometry *clone() const { return new PolygonGeometry(*this); }
+  PolygonGeometry *clone() const override { return new PolygonGeometry(*this); }
 
-  virtual void create(const T inAngle);
-  virtual Grid<char>::GPU *createDomain(const int N);
+  void create(const T inAngle) override;
+  Grid<char>::GPU *createDomain(const int N) const override;
 
   Polygon<T> *getPolygon() const { return m_polygon; }
 
@@ -59,7 +59,7 @@ template <typename T, int NV>
 __global__ void generatePolygonGeometry_Kernel(
     char *const outDomainLabels, T *const outNormalsX, T *const outNormalsY,
     T *const outBoundaryDistances, const int Nx, const int Ny, const T inAngle,
-    const int inNumVertices, const T *const inVerticesX,
+    const T inScale, const int inNumVertices, const T *const inVerticesX,
     const T *const inVerticesY) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -86,9 +86,9 @@ __global__ void generatePolygonGeometry_Kernel(
 
     for (i = 0; i < inNumVertices; ++i) {
       ptX_R[i] =
-          (cosAngle * inVerticesX[i] - sinAngle * inVerticesY[i]) * (Nx - 1);
+          (cosAngle * inVerticesX[i] - sinAngle * inVerticesY[i]) * inScale;
       ptY_R[i] =
-          (sinAngle * inVerticesX[i] + cosAngle * inVerticesY[i]) * (Nx - 1);
+          (sinAngle * inVerticesX[i] + cosAngle * inVerticesY[i]) * inScale;
     }
 
     // Compute stuff
@@ -152,41 +152,35 @@ __global__ void generatePolygonGeometry_Kernel(char *const outDomainLabels,
                                                const int inNumVertices,
                                                const T *const inVerticesX,
                                                const T *const inVerticesY,
-                                               const int Nx) {
+                                               const int inNumX,
+                                               const int inNumY) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
-  T ptX_R[NV], ptY_R[NV], lineVectX, lineVectY, crossZ;
+  if (tx < inNumX && ty < inNumY) {
+    const int idx = ty * inNumX + tx;
 
-  if (tx < Nx && ty < Nx) {
-    const int idx = ty * Nx + tx;
-
-    const T coordX = (T)tx - (T)(Nx - 1) * (T)0.5;
-    const T coordY = (T)ty - (T)(Nx - 1) * (T)0.5;
-
-    for (int i = 0; i < inNumVertices; ++i) {
-      ptX_R[i] = inVerticesX[i] * (Nx - 1);
-      ptY_R[i] = inVerticesY[i] * (Nx - 1);
-    }
+    const T coordX =
+        static_cast<T>(tx) / static_cast<T>(inNumX - 1) - static_cast<T>(0.5);
+    const T coordY =
+        static_cast<T>(ty) / static_cast<T>(inNumY - 1) - static_cast<T>(0.5);
 
     // Compute stuff
-    int ip, sum_cross = 0;
-
+    int sum_cross = 0;
     for (int i = 0; i < inNumVertices; ++i) {
-      ip = i + 1;
-      if (ip == inNumVertices)
-        ip = 0;
+      const int ip = (i == inNumVertices - 1) ? 0 : i + 1;
 
       // Vector for polygon line segment
-      lineVectX = ptX_R[ip] - ptX_R[i];
-      lineVectY = ptY_R[ip] - ptY_R[i];
+      const T lineVectX = inVerticesX[ip] - inVerticesX[i];
+      const T lineVectY = inVerticesY[ip] - inVerticesY[i];
 
       // z-component of cross product (used to determine inside/outside)
-      crossZ =
-          lineVectX * (coordY - ptY_R[i]) - lineVectY * (coordX - ptX_R[i]);
+      const T crossZ = lineVectX * (coordY - inVerticesY[i]) -
+                       lineVectY * (coordX - inVerticesX[i]);
 
-      if (crossZ >= (T)0.0)
+      if (crossZ >= static_cast<T>(0)) {
         sum_cross++;
+      }
     }
 
     // Store computed data
@@ -236,15 +230,16 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
     : GeometryComponent<T>() {
   // Scale to internal coordinate system and apply the margin (grain size frac).
   const T coordinateScaleFactor =
-      static_cast<T>(constants::GRAIN_SIZE_FRACTION *
-                     constants::INTERNAL_MAXIMUM_COORDINATE_POLY /
-                     constants::MAXIMUM_COORDINATE);
+      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
+
   // Calculate radius from diameter and apply margin/scaling.
   const T polygonRadiusPadded =
       static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
+
   // Apply scaling and margin to center coordinates.
   const T centerPaddedX = inCenterX * coordinateScaleFactor;
   const T centerPaddedY = inCenterY * coordinateScaleFactor;
+
   m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
                              centerPaddedX, centerPaddedY);
 }
@@ -260,36 +255,37 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
 
   if (inNumVertices < 3) {
     // Todo(patric): Raise exception
-    std::cout << "ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
+    std::cerr << "ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
                  "inNumVertices = "
               << inNumVertices << std::endl;
   }
+
+  // Scale to internal coordinate system and apply the margin (through grain
+  // size fraction).
+  const T coordinateScaleFactor =
+      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
 
   T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
   T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
 
   // Loop over vertex coordinates and check that all lie within allowed domain.
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
+    // For convenience.
+    const T vertexX = inVerticesX[vertexIdx];
+    const T vertexY = inVerticesY[vertexIdx];
+
     // Check that vertex coordinates are reasonable
-    if ((std::abs(inVerticesX[vertexIdx]) >
-         static_cast<T>(constants::MAXIMUM_COORDINATE)) ||
-        (std::abs(inVerticesY[vertexIdx]) >
-         static_cast<T>(constants::MAXIMUM_COORDINATE))) {
+    if ((std::abs(vertexX) > static_cast<T>(constants::MAXIMUM_COORDINATE)) ||
+        (std::abs(vertexY) > static_cast<T>(constants::MAXIMUM_COORDINATE))) {
       // Todo(patric): Raise exception
-      std::cout << "ERROR! PolygonGeometry: Vertex coordinates must be within "
+      std::cerr << "ERROR! PolygonGeometry: Vertex coordinates must be within "
                    "[-"
                 << constants::MAXIMUM_COORDINATE << ", "
                 << constants::MAXIMUM_COORDINATE << "]." << std::endl;
     }
 
-    // Scale to internal coordinate system and apply the margin (through grain
-    // size fraction).
-    const T coordinateScaleFactor =
-        static_cast<T>(constants::GRAIN_SIZE_FRACTION *
-                       constants::INTERNAL_MAXIMUM_COORDINATE_POLY /
-                       constants::MAXIMUM_COORDINATE);
-    scaledVerticesX[vertexIdx] = inVerticesX[vertexIdx] * coordinateScaleFactor;
-    scaledVerticesY[vertexIdx] = inVerticesY[vertexIdx] * coordinateScaleFactor;
+    scaledVerticesX[vertexIdx] = vertexX * coordinateScaleFactor;
+    scaledVerticesY[vertexIdx] = vertexY * coordinateScaleFactor;
   }
 
   m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);
@@ -317,11 +313,16 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
   G::getGridDimensions(Nx, Ny);
   G::getKernelDimensions(bpg, tpb);
 
-  // Calc inside/outside, distance, normals
+  // We the size of the unrotated simulation domain, so that the size of the
+  // polygon, measured in pixels, is the same.
+  const int N = GeometryComponent<T>::getParameters()->getGridResolutionBase();
+  const T scale = static_cast<T>(N - 1);
+
+  // Calc inside/outside, distance, normals.
   internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
       G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-      G::getBoundaryDistance(), Nx, Ny, inAngle, m_polygon->getNumVertices(),
-      m_polygon->getVertices()->getDataPointer(0),
+      G::getBoundaryDistance(), Nx, Ny, inAngle, scale,
+      m_polygon->getNumVertices(), m_polygon->getVertices()->getDataPointer(0),
       m_polygon->getVertices()->getDataPointer(1));
 
   G::labelBoundaryNodes();
@@ -332,18 +333,23 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
 }
 
 template <typename T>
-Grid<char>::GPU *PolygonGeometry<T>::createDomain(const int N) {
-  Grid<char>::GPU *dom_component = new Grid<char>::GPU(N, N, 1, Type::real);
+Grid<char>::GPU *
+PolygonGeometry<T>::createDomain(const int inLatticeSideLength) const {
+  const int numFields = 1;
+  Grid<char>::GPU *dom_component = new Grid<char>::GPU(
+      inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+  Grid<T>::GPU::getKernelDimensions(bpg, tpb, inLatticeSideLength,
+                                    inLatticeSideLength);
 
-  // Calc inside/outside, distance, normals
+  // Calc inside/outside.
   internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
       dom_component->getDataPointer(), m_polygon->getNumVertices(),
       m_polygon->getVertices()->getDataPointer(0),
-      m_polygon->getVertices()->getDataPointer(1), N);
+      m_polygon->getVertices()->getDataPointer(1), inLatticeSideLength,
+      inLatticeSideLength);
 
   return dom_component;
 }

@@ -45,21 +45,42 @@ public:
 
   // Create discrete representation with resolution NxN, and return domain
   // labels only. Does not store data in any member variables.
-  Grid<char>::GPU *createDomain(const int N);
+  Grid<char>::GPU *createDomain(const int N) const;
 
-  // Extrapolates values outwards from boundary.
-  // This is used prior to rotating e.g. the order parameter lattice into a
-  // rotational frame in the momentum integral. The reason is that the rotation
-  // together with the linear interpolation will cause the boundary lattice
-  // sites to (wrongly) have fractional values, i.e. less than they should be.
-  // By extrapolating the boundary values, this artifact is eliminated.
+  /// \brief Extrapolates values outwards from boundary, using the rotated
+  /// geometry.
+  ///
+  /// This is used prior to rotating e.g. the order parameter lattice into a
+  /// rotational frame in the momentum integral. The reason is that the rotation
+  /// together with the linear interpolation will cause the boundary lattice
+  /// sites to (wrongly) have fractional values, i.e. less than they should be.
+  /// By extrapolating the boundary values, this artifact is eliminated.
+  ///
+  /// \param target The grid to be extended.
   void extendValuesAtBoundary(GridGPU *target) const;
 
-  // Because of the extrapolation in extendValuesAtBoundary(), the computed
-  // quantities will have some non-zero values slightly outside of the actual
-  // simulation domain. These do not belong to the solution, and can be removed
-  // with the zeroValuesOutsideDomain() function.
-  void zeroValuesOutsideDomain(GridGPU *target);
+  /// \brief Extrapolates values outwards from boundary, using the non-rotated
+  /// reference geometry.
+  ///
+  /// This is used prior to rotating e.g. the order parameter lattice into a
+  /// rotational frame in the momentum integral. The reason is that the rotation
+  /// together with the linear interpolation will cause the boundary lattice
+  /// sites to (wrongly) have fractional values, i.e. less than they should be.
+  /// By extrapolating the boundary values, this artifact is eliminated.
+  ///
+  /// \param target The grid to be extended.
+  void extendValuesAtBoundaryRef(GridGPU *target) const;
+
+  /// \brief Set values outside of the domain to zero, using the non-rotated
+  /// reference geometry.
+  ///
+  /// Because of the extrapolation in extendValuesAtBoundary(), the computed
+  /// quantities will have some non-zero values slightly outside of the actual
+  /// simulation domain. These do not belong to the solution, and can be removed
+  /// with the zeroValuesOutsideDomainRef() function.
+  ///
+  /// \param target The grid to be zeroed.
+  void zeroValuesOutsideDomainRef(GridGPU *target) const;
 
   int getNumGrainLatticeSites();
   // Computes the physical area of the geometry.
@@ -118,6 +139,11 @@ private:
   void geomOpAdd(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
   void geomOpRemove(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
 
+  int computeNumGrainLatticeSites(const Grid<char>::GPU &inDomainLabels);
+
+  void extendValuesAtBoundary(const Grid<char>::GPU &inDomainLabels,
+                              GridGPU &inOutTarget) const;
+
   std::vector<GeometryComponent<T> *> _geomComponentList;
 
   std::vector<int> _geomOpList;
@@ -160,6 +186,9 @@ private:
 
   // Geometry domain labels grid in reference/unrotated frame (theta=0)
   Grid<char>::GPU *_domain_ref;
+
+  // The number of lattice sites in the grain.
+  int m_numGrainLatticeSites;
 };
 
 namespace internal {
@@ -281,13 +310,13 @@ __global__ void geomOpRemove_kernel(char *dom0, char *dom1, const int Nx) {
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
-  if (tx < Nx && ty > 0 && ty < Nx - 1) {
+  if (tx < Nx && ty < Nx) {
     const int idx = ty * Nx + tx;
 
-    const int dom0_val = int(dom0[idx]);
-    const int dom1_val = int(dom1[idx]);
+    const bool val0 = dom0[idx] > 0;
+    const bool val1 = dom1[idx] > 0;
 
-    dom0[idx] = char(dom0_val * (1 - dom1_val));
+    dom0[idx] = (!val0 || val1) ? 0 : 1;
   }
 }
 
@@ -392,17 +421,25 @@ template <typename T>
 __global__ void zeroValuesOutsideDomain_kernel(
     char *dom_ptr, T *target_ptr, int Nx_geom, int Ny_geom, int Nx_target,
     int Ny_target, int Nx_geom_offset, int Ny_geom_offset, int isComplex) {
-  int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  int tf = blockIdx.z;
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+  const int tf = blockIdx.z;
 
   if (tx < Nx_target && ty < Ny_target) {
-    int idx =
+    const int idx =
         tf * (Nx_target * Ny_target * (1 + isComplex)) + ty * Nx_target + tx;
 
-    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
+    const int domainX = tx + Nx_geom_offset;
+    const int domainY = ty + Ny_geom_offset;
 
-    if (dom_ptr[idx_geom] == 0) {
+    if ((0 <= domainX) && (domainX < Nx_geom) && (0 <= domainY) &&
+        (domainY < Ny_geom)) {
+      const int domainIdx = domainY * Nx_geom + domainX;
+      const char domainLabel = dom_ptr[domainIdx];
+      if (domainLabel == 0) {
+        target_ptr[idx] = static_cast<T>(0.0);
+      }
+    } else {
       target_ptr[idx] = static_cast<T>(0.0);
     }
   }
@@ -411,7 +448,8 @@ __global__ void zeroValuesOutsideDomain_kernel(
 
 template <typename T>
 GeometryGroup<T>::GeometryGroup()
-    : _domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0) {
+    : _domainLabels(0), _normals(0), _boundaryDistance(0), _domain_ref(0),
+      m_numGrainLatticeSites(0) {
   setGeomOpMatrix();
 }
 
@@ -503,7 +541,8 @@ template <typename T> void swap(GeometryGroup<T> &A, GeometryGroup<T> &B) {
 
 template <typename T> int GeometryGroup<T>::initialize() {
   std::cout << "GeometryGroup<T>::initialize()\n";
-  int N = ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
+  const int N =
+      ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
 
   // Initialize grids with data for ONE angle
   GridGPU::initializeGrid(_normals, N, N, 2, Type::real);
@@ -518,14 +557,21 @@ template <typename T> int GeometryGroup<T>::initialize() {
   const T angle = static_cast<T>(0);
   create(angle);
 
-  _domain_ref = createDomain(N);
+  // Create the "reference" domain labels. They are fixed and will never be
+  // rotated.
+  const int gridResolutionBase =
+      ContextModule<T>::getParameters()->getGridResolutionBase();
+  _domain_ref = createDomain(gridResolutionBase);
+
+  // Compute the number of lattice sites.
+  m_numGrainLatticeSites = computeNumGrainLatticeSites(*_domain_ref);
 
   return 0;
 }
 
 template <typename T> void GeometryGroup<T>::setGeomOpMatrix() {
+  // TODO(niclas): WTF is this!?!
   char op_add[16] = {0, 1, 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 3};
-
   char op_remove[16] = {0, 0, 0, 0, 1, 0, 3, 2, 2, 0, 0, 2, 3, 0, 3, 0};
 
   _geomOpAdd = new Grid<char>::GPU(16, 1, 1, Type::real);
@@ -561,36 +607,25 @@ template <typename T> void GeometryGroup<T>::create(const T angle) {
 }
 
 template <typename T>
-Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) {
-  // TODO(niclas): N is already "gridResolutionRotated". I.e. sqrt(2)*N. Why
-  // enlarge it even more?
-  const int N_r =
-      ContextModule<T>::getParameters()->computeGridResolutionRotated(N);
-
+Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) const {
   // Initialize compound geom grids
-  Grid<char>::GPU *dom_r = new Grid<char>::GPU(N_r, N_r, 1, Type::real);
-  dom_r->setZero();
+  Grid<char>::GPU *dom = new Grid<char>::GPU(N, N, 1, Type::real);
+  dom->setZero();
 
   // Perform operations for each element
   for (int i = 0; i < getNumGeometryComponents(); ++i) {
-    Grid<char>::GPU *dom_local = _geomComponentList[i]->createDomain(N_r);
+    Grid<char>::GPU *dom_local = _geomComponentList[i]->createDomain(N);
 
     if (_geomOpList[i] == Type::add) {
-      geomOpAdd(dom_r, dom_local);
+      geomOpAdd(dom, dom_local);
     }
 
     if (_geomOpList[i] == Type::remove) {
-      geomOpRemove(dom_r, dom_local);
+      geomOpRemove(dom, dom_local);
     }
 
     delete dom_local;
   }
-
-  Grid<char>::GPU *dom = new Grid<char>::GPU(N, N, 1, Type::real);
-  dom->setZero();
-  dom->insertGrid(dom_r);
-
-  delete dom_r;
 
   return dom;
 }
@@ -704,36 +739,49 @@ void GeometryGroup<T>::geomOpRemove(Grid<char>::GPU *dom,
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
 }
 
-template <typename T> int GeometryGroup<T>::getNumGrainLatticeSites() {
-  const T angle = static_cast<T>(0.0);
-  create(angle);
+template <typename T>
+int GeometryGroup<T>::computeNumGrainLatticeSites(
+    const Grid<char>::GPU &inDomainLabels) {
+  // Get size.
+  const int numX = inDomainLabels.dimX();
+  const int numY = inDomainLabels.dimY();
 
-  // TODO(niclas): Rewrite this.
-  typename Vector<char>::CPU data_cpu = *(_domainLabels->getVector());
-  const char *const data_ptr = thrust::raw_pointer_cast(data_cpu.data());
+  // Copy the domain to the CPU.
+  const thrust::host_vector<char> domainCPU = *(inDomainLabels.getVector());
 
+  // Get the Pointer.
+  const char *const domainPtr = thrust::raw_pointer_cast(domainCPU.data());
+
+  // Count the number of lattice sites in the grain.
   int numGrainLatticeSites = 0;
-  for (size_t i = 0; i < data_cpu.size(); ++i) {
-    const char node = data_ptr[i];
-    if (node < 0 || node > m_maxValidLabel) {
-      // TODO(niclas): Raise exception instead?
-      std::cout << "WARNING: Domain label, " << node << ", not understood!"
-                << std::endl;
-    }
+  for (int y = 0; y < numY; ++y) {
+    for (int x = 0; x < numX; ++x) {
+      const int idx = y * numX + x;
+      const char node = domainPtr[idx];
+      if (node < 0 || node > m_maxValidLabel) {
+        // TODO(niclas): Raise exception instead?
+        std::cerr << "WARNING: Domain label, " << static_cast<int>(node)
+                  << ", not understood!" << std::endl;
+      }
 
-    if (node > 0) {
-      numGrainLatticeSites++;
+      if (node > 0) {
+        numGrainLatticeSites++;
+      }
     }
   }
+
   return numGrainLatticeSites;
 }
 
+template <typename T> int GeometryGroup<T>::getNumGrainLatticeSites() {
+  return m_numGrainLatticeSites;
+}
+
 template <typename T> T GeometryGroup<T>::area() {
-  const int numGrainLatticeSites = getNumGrainLatticeSites();
   const T gridElementSize =
       ContextModule<T>::getParameters()->getGridElementSize();
   const T areaPerLatticeSite = gridElementSize * gridElementSize;
-  return areaPerLatticeSite * static_cast<T>(numGrainLatticeSites);
+  return areaPerLatticeSite * static_cast<T>(m_numGrainLatticeSites);
 }
 
 // Compute field aveage, only accounting for nodes inside geometry
@@ -932,25 +980,22 @@ void GeometryGroup<T>::findBoundaryCrossingsAlongNegativeTrajectory(
 }
 
 template <typename T>
-void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
-  char *dom_ptr = getDomainLabels();
+void GeometryGroup<T>::extendValuesAtBoundary(
+    const Grid<char>::GPU &inDomainLabels, GridGPU &inOutTarget) const {
+  const int Nx_geom = inDomainLabels.dimX();
+  const int Ny_geom = inDomainLabels.dimY();
 
-  int Nx_geom, Ny_geom, Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset;
+  const int Nx_target = inOutTarget.dimX();
+  const int Ny_target = inOutTarget.dimY();
 
-  getGridDimensions(Nx_geom, Ny_geom);
+  const int Nx_geom_offset = (Nx_geom - Nx_target) / 2;
+  const int Ny_geom_offset = (Ny_geom - Ny_target) / 2;
 
-  Nx_target = grid->dimX();
-  Ny_target = grid->dimY();
-
-  Nx_geom_offset = (Nx_geom - Nx_target) / 2;
-  Ny_geom_offset = (Ny_geom - Ny_target) / 2;
-
-  int Nf = grid->numFields();
+  const int Nf = inOutTarget.numFields();
 
   // Set kernel dimensions
   dim3 bpg, tpb;
-
-  grid->getKernelDimensionsFields(bpg, tpb);
+  inOutTarget.getKernelDimensionsFields(bpg, tpb);
 
   // This is a sensible value. It probably does not need to be exposed to the
   // user. Note that 2 is chosen due to corner artifacts otherwise.
@@ -958,29 +1003,34 @@ void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
   // separately.
   const int numExtend = 2;
 
-  if (grid->isComplex()) {
+  if (inOutTarget.isComplex()) {
     internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
-        dom_ptr, grid->getDataPointer(0, Type::real),
-        grid->getDataPointer(0, Type::imag), Nx_geom, Ny_geom, Nx_target,
+        inDomainLabels.getDataPointer(),
+        inOutTarget.getDataPointer(0, Type::real),
+        inOutTarget.getDataPointer(0, Type::imag), Nx_geom, Ny_geom, Nx_target,
         Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
   } else {
     internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
-        dom_ptr, grid->getDataPointer(0, Type::real), Nx_geom, Ny_geom,
-        Nx_target, Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
+        inDomainLabels.getDataPointer(),
+        inOutTarget.getDataPointer(0, Type::real), Nx_geom, Ny_geom, Nx_target,
+        Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
   }
 }
 
 template <typename T>
-void GeometryGroup<T>::zeroValuesOutsideDomain(GridGPU *target) {
-  // TODO(niclas): If we always use the unrotated domain, why not use
-  // _domain_ref? It should be the domain unrotated.
-  const T angle = static_cast<T>(0);
-  if (getCurrentAngle() > angle || getCurrentAngle() < angle) {
-    create(angle);
-  }
+void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
+  extendValuesAtBoundary(*_domainLabels, *grid);
+}
 
-  const int Nx_dom = _domainLabels->dimX();
-  const int Ny_dom = _domainLabels->dimY();
+template <typename T>
+void GeometryGroup<T>::extendValuesAtBoundaryRef(GridGPU *grid) const {
+  extendValuesAtBoundary(*_domain_ref, *grid);
+}
+
+template <typename T>
+void GeometryGroup<T>::zeroValuesOutsideDomainRef(GridGPU *target) const {
+  const int Nx_dom = _domain_ref->dimX();
+  const int Ny_dom = _domain_ref->dimY();
 
   const int Nx_img = target->dimX();
   const int Ny_img = target->dimY();
@@ -988,19 +1038,20 @@ void GeometryGroup<T>::zeroValuesOutsideDomain(GridGPU *target) {
   const int Nx_diff = (Nx_dom - Nx_img) / 2;
   const int Ny_diff = (Ny_dom - Ny_img) / 2;
 
-  dim3 grid, block;
-  target->getKernelDimensionsFields(grid, block);
+  dim3 blocksPerGrid, threadsPerBlock;
+  target->getKernelDimensionsFields(blocksPerGrid, threadsPerBlock);
 
-  internal::zeroValuesOutsideDomain_kernel<<<grid, block>>>(
-      _domainLabels->getDataPointer(0, Type::real),
+  internal::zeroValuesOutsideDomain_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      _domain_ref->getDataPointer(0, Type::real),
       target->getDataPointer(0, Type::real), Nx_dom, Ny_dom, Nx_img, Ny_img,
       Nx_diff, Ny_diff, int(target->isComplex()));
 
   if (target->isComplex()) {
-    internal::zeroValuesOutsideDomain_kernel<<<grid, block>>>(
-        _domainLabels->getDataPointer(0, Type::real),
-        target->getDataPointer(0, Type::imag), Nx_dom, Ny_dom, Nx_img, Ny_img,
-        Nx_diff, Ny_diff, int(target->isComplex()));
+    internal::
+        zeroValuesOutsideDomain_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+            _domain_ref->getDataPointer(0, Type::real),
+            target->getDataPointer(0, Type::imag), Nx_dom, Ny_dom, Nx_img,
+            Ny_img, Nx_diff, Ny_diff, int(target->isComplex()));
   }
 }
 

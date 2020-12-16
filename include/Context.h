@@ -119,9 +119,12 @@ private:
 
 template <typename T>
 Context<T>::Context()
-    : m_parameters(0), m_geometry(0), m_orderParameter(0), m_riccatiSolver(0),
-      m_integrationIterator(0), m_computeCurrent(0), m_computeOrderParameter(0),
-      m_computeTime(0.0), m_numIterations(0) {}
+    : m_parameters(nullptr), m_geometry(nullptr), m_orderParameter(nullptr),
+      m_riccatiSolver(nullptr), m_integrationIterator(nullptr),
+      m_fermiSurface(nullptr), m_computeCurrent(nullptr),
+      m_computeCurrentDensity(nullptr), m_computeFreeEnergy(nullptr),
+      m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
+      m_computeTime(static_cast<T>(0.0)), m_numIterations(0) {}
 
 template <typename T> Context<T>::~Context() {
   std::cout << "~Context()\n";

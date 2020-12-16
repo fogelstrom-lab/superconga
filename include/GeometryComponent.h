@@ -49,7 +49,7 @@ public:
 
   // Create discrete representation with resolution NxN, and return domain
   // labels only. Does not store data in any member variables.
-  virtual Grid<char>::GPU *createDomain(const int N) = 0;
+  virtual Grid<char>::GPU *createDomain(const int N) const = 0;
 
   // Label domain nodes which are close to boundary.
   void labelBoundaryNodes();
