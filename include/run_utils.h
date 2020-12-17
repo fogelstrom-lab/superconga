@@ -24,16 +24,13 @@
 #include <cmath>
 #include <cstdlib>
 #include <errno.h> // errno, ENOENT, EEXIST
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <json/json.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
-
-#if defined(_WIN32)
-#include <direct.h> // _mkdir
-#endif
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -72,108 +69,6 @@ void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
   }
 }
 
-/// \brief Check if directory exists.
-///
-/// \param inDirectory - Path to directory to check.
-///
-/// \return - true if directory exists.
-bool doesDirectoryExist(const char *const &inDirectory) {
-#if defined(_WIN32)
-  struct _stat infoBuffer;
-  if (_stat(inDirectory, &infoBuffer) != 0) {
-    return false;
-  }
-  return (infoBuffer.st_mode & _S_IFDIR) != 0;
-#else
-  struct stat infoBuffer;
-  if (stat(inDirectory, &infoBuffer) != 0) {
-    return false;
-  }
-  return (infoBuffer.st_mode & S_IFDIR) != 0;
-#endif
-}
-
-/// \brief Check if directory exists (wrapper).
-///
-/// \param inDirectory - Path to directory to check.
-///
-/// \return - true if directory exists.
-bool doesDirectoryExist(const std::string &inDirectory) {
-  return doesDirectoryExist(inDirectory.c_str());
-}
-
-/// \brief Portable wrapper for mkdir. Internally used by mkdir().
-///
-/// \param inDirectory - Path to directory to create.
-///
-/// \return - zero on success, otherwise -1.
-int _mkdir(const char *inDirectory) {
-#ifdef _WIN32
-  return ::_mkdir(inDirectory);
-#else
-  const int mkdirModeUNIX = 0755;
-  return ::mkdir(inDirectory, mkdirModeUNIX);
-#endif
-}
-
-/// \brief Recursive and portable wrapper for mkdir.
-///
-/// \param inDirectory - Path to directory to create.
-///
-/// \return - zero on success, otherwise -1.
-int mkdir(const char *inDirectory) {
-  std::string currentLevel = "";
-  std::string level;
-  std::stringstream ss(inDirectory);
-
-  // Split path using slash as a separator.
-  while (std::getline(ss, level, '/')) {
-    // Append folder to the current level.
-    currentLevel += level;
-
-    // If user gives a full absolute path, the first prefix slash will mean that
-    // the first currentLevel will be empty. Skip to the first real folder.
-    if (currentLevel != "") {
-      // Create current level.
-      if (!doesDirectoryExist(currentLevel) &&
-          _mkdir(currentLevel.c_str()) != 0) {
-        return -1;
-      }
-    }
-
-    // Append a slash.
-    currentLevel += "/";
-  }
-
-  return 0;
-}
-
-/// \brief Create directory if not existing.
-///
-/// Create directory if not existing, using mkdir in non-windows and _mkdir in
-/// Windows. This is done recursively for a directory tree.
-///
-/// \param inDirectory - Path to directory to create.
-void createDirectory(const std::string &inDirectory) {
-  if (!doesDirectoryExist(inDirectory)) {
-    const int creationStatus = mkdir(inDirectory.c_str());
-
-    // Check for error creating directory.
-    if (creationStatus != 0) {
-      std::cerr << "Could not create directory (creationStatus="
-                << creationStatus << "): " << inDirectory << std::endl;
-      std::exit(EXIT_FAILURE);
-    }
-  }
-}
-
-/// \brief Create directory if not existing (wrapper).
-///
-/// \param inDirectory - Path to directory to create.
-void createDirectory(const char *const &inDirectory) {
-  createDirectory(std::string(inDirectory));
-}
-
 /// \brief Write line to file
 ///
 /// \param inFile - File to write to.
@@ -182,7 +77,7 @@ void createDirectory(const char *const &inDirectory) {
 ///
 /// \return - void
 void writeLineToFile(
-    const char *const inFile, const std::ostream &inOStream,
+    const std::filesystem::path &inFile, const std::ostream &inOStream,
     const std::ios_base::openmode inFileMode = std::ios_base::app) {
   std::ofstream outfile;
 
@@ -200,7 +95,8 @@ void writeLineToFile(
 /// \param inVerbose - Whether or not to print when file is written.
 ///
 /// \return - void
-void saveParameterFileJSON(const Json::Value &inJSON, const char *const inFile,
+void saveParameterFileJSON(const Json::Value &inJSON,
+                           const std::filesystem::path &inFile,
                            const bool inVerbose = false) {
 
   std::ofstream ofstreamJSON(inFile);
@@ -221,17 +117,17 @@ void saveParameterFileJSON(const Json::Value &inJSON, const char *const inFile,
 ///
 /// \return - void
 template <typename T>
-void saveParametersWrapper(
-    const Context<T> *const inContext, const Json::Value &inJSON,
-    const char *const inDataPath, const bool inVerbose = true,
-    const char *const inDataFileName = (char *)"config") {
+void saveParametersWrapper(const Context<T> *const inContext,
+                           const Json::Value &inJSON,
+                           const std::filesystem::path &inDataPath,
+                           const bool inVerbose = true,
+                           const std::string &inDataFileName = "config") {
   //***************************************************
   // CONFIG PARAMETERS
   //***************************************************
   // Construct full filepath to JSON-file.
-  char fullPathJSON[512];
-  snprintf(fullPathJSON, sizeof(fullPathJSON), "%s/%s.json", inDataPath,
-           inDataFileName);
+  const std::filesystem::path fullPathJSON =
+      inDataPath / (inDataFileName + ".json");
 
   // Save JSON parameters (if not already saved or updated)
   saveParameterFileJSON(inJSON, fullPathJSON, inVerbose);
@@ -240,9 +136,8 @@ void saveParametersWrapper(
   // ADDITIONAL USEFUL INTERNAL PARAMETERS
   //***************************************************
   // Construct full filepath for extra internal parameters.
-  char fullPathInternalParameters[512];
-  snprintf(fullPathInternalParameters, sizeof(fullPathInternalParameters),
-           "%s/%s_internal_parameters.json", inDataPath, inDataFileName);
+  const std::filesystem::path fullPathInternalParameters =
+      inDataPath / (inDataFileName + "_internal_parameters.json");
 
   // Add other useful parameters for post-processing.
   Json::Value internalParameters;
@@ -271,13 +166,13 @@ void saveParametersWrapper(
 /// \return - void
 template <typename T>
 void saveFreeEnergy(const Context<T> *const inContext,
-                    const char *const inDataPath, const bool inVerbose = true,
-                    const char *const inDataFileName = (char *)"free_energy",
+                    const std::filesystem::path &inDataPath,
+                    const bool inVerbose = true,
+                    const std::string &inDataFileName = "free_energy",
                     const int dataFloatDecimals = 10) {
   // Construct full file name for free energy
-  char freeEnergyFile[512];
-  snprintf(freeEnergyFile, sizeof(freeEnergyFile), "%s/%s.dat", inDataPath,
-           inDataFileName);
+  const std::filesystem::path freeEnergyFile =
+      inDataPath / (inDataFileName + ".dat");
 
   // Add header if file does not exist.
   std::ifstream freeEnergyFileStream(freeEnergyFile);
@@ -309,14 +204,13 @@ void saveFreeEnergy(const Context<T> *const inContext,
 // Todo(patric): Create utils_io.h and move there.
 template <typename T>
 void saveInducedFluxDensity(
-    const Context<T> *const inContext, const char *const inDataPath,
+    const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
-    const char *const inDataFileName = (char *)"magnetic_flux_density") {
+    const std::string &inDataFileName = "magnetic_flux_density") {
 
   // Construct full file name.
-  char gridDataFile[512];
-  snprintf(gridDataFile, sizeof(gridDataFile), "%s/%s.grd", inDataPath,
-           inDataFileName);
+  const std::filesystem::path gridDataFile =
+      inDataPath / (inDataFileName + ".grd");
 
   // Fetch parameters from context.
   Parameters<T> *parameters = inContext->getParameters();
@@ -379,10 +273,10 @@ void saveInducedFluxDensity(
 /// \return - void
 template <typename T>
 void saveGridData(
-    const Context<T> *const inContext, const char *const inDataPath,
+    const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
-    const char *const inOrderParameterFileName = (char *)"order_parameter",
-    const char *const inCurrentDensityFileName = (char *)"current_density") {
+    const std::string &inOrderParameterFileName = "order_parameter",
+    const std::string &inCurrentDensityFileName = "current_density") {
   // Fetch run parameters from context.
   Parameters<T> *parameters = inContext->getParameters();
 
@@ -395,9 +289,8 @@ void saveGridData(
   inContext->getGeometry()->zeroValuesOutsideDomainRef(orderParameterSave);
 
   // Construct full file name for order-parameter file.
-  char orderParameterFile[512];
-  snprintf(orderParameterFile, sizeof(orderParameterFile), "%s/%s.grd",
-           inDataPath, inOrderParameterFileName);
+  const std::filesystem::path orderParameterFile =
+      inDataPath / (inOrderParameterFileName + ".grd");
 
   // Try to save order parameter to file. Exit program if fail.
   if (orderParameterSave->write(orderParameterFile, parameters)) {
@@ -420,9 +313,8 @@ void saveGridData(
   inContext->getGeometry()->zeroValuesOutsideDomainRef(currentSave);
 
   // Construct full file name for current density.
-  char currentDensityFile[512];
-  snprintf(currentDensityFile, sizeof(currentDensityFile), "%s/%s.grd",
-           inDataPath, inCurrentDensityFileName);
+  const std::filesystem::path currentDensityFile =
+      inDataPath / (inCurrentDensityFileName + ".grd");
 
   // Try to save order parameter to file. Exit program if fail.
   if (currentSave->write(currentDensityFile, parameters)) {
@@ -450,13 +342,12 @@ template <typename T>
 void saveDataWrapper(const Context<T> *const inContext,
                      const Json::Value &inJSON, const bool inVerbose) {
   // Construct full directory path.
-  char dataPath[512];
-  const std::string dataBasePath = inJSON["data_path"].asString();
-  snprintf(dataPath, sizeof(dataPath), "%s/T%2.4f", dataBasePath.c_str(),
-           inJSON["temperature"].asDouble());
+  const std::filesystem::path dataBasePath(inJSON["data_path"].asString());
+  const std::filesystem::path dataPath =
+      dataBasePath / ("T" + std::to_string(inJSON["temperature"].asDouble()));
 
-  // Create directory if not existing.
-  createDirectory(dataPath);
+  // Create directories.
+  std::filesystem::create_directories(dataPath);
 
   // Save parameters to JSON file.
   saveParametersWrapper(inContext, inJSON, dataPath, inVerbose);
