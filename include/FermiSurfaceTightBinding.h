@@ -23,13 +23,14 @@ public:
   FermiSurfaceTightBinding(const T inHoppingNNN = static_cast<T>(0.0),
                            const T inHoppingNNNN = static_cast<T>(0.0),
                            const T inChemicalPotential = static_cast<T>(1.0));
-  FermiSurfaceTightBinding(const DispersionTightBinding<T> &inDispersion);
+  explicit FermiSurfaceTightBinding(
+      const DispersionTightBinding<T> &inDispersion);
 
   // Destructor.
   ~FermiSurfaceTightBinding();
 
   // Initialize the Fermi surface.
-  void initialize(const int inNumAngles);
+  void initialize(const int inNumAngles) override;
 
   // Get the type.
   FermiSurfaceType getType() const override {
@@ -37,28 +38,28 @@ public:
   }
 
   // Get the Fermi momentum.
-  vector2d<T> getFermiMomentum(const int inAngleIdx) const;
+  vector2d<T> getFermiMomentum(const int inAngleIdx) const override;
   void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
-                        T &outMomentumY) const;
+                        T &outMomentumY) const override;
 
   // Get the Fermi velocity.
-  vector2d<T> getFermiVelocity(const int inAngleIdx) const;
+  vector2d<T> getFermiVelocity(const int inAngleIdx) const override;
   void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
-                        T &outVelocityY) const;
+                        T &outVelocityY) const override;
 
   // Get the Fermi speed.
-  T getFermiSpeed(const int inAngleIdx) const;
+  T getFermiSpeed(const int inAngleIdx) const override;
 
   // Get the integrand factor.
-  T getIntegrandFactor(const int inAngleIdx) const;
+  T getIntegrandFactor(const int inAngleIdx) const override;
 
   // Get system angle.
-  T getSystemAngle(const int inAngleIdx) const;
-  const T *getSystemAnglePointer() const;
+  T getSystemAngle(const int inAngleIdx) const override;
+  const T *getSystemAnglePointer() const override;
 
   // Get momentum offset.
-  vector2d<T> getMomentumOffset() const;
-  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
+  vector2d<T> getMomentumOffset() const override;
+  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const override;
 
   // Only used for tests.
   T getAvgFermiMomentum() const { return m_avgFermiMomentum; }
@@ -212,6 +213,12 @@ vector2d<T> computeFermiMomentum(
       } else {
         eB = dispersion;
         kB = k;
+      }
+
+      // Make sure that the signs of eA and eB differ.
+      if (utils::sign(eA) == utils::sign(eB)) {
+        std::cout << "ERROR! Failure of the bisection method." << std::endl;
+        break;
       }
 
       // Update the momentum.

@@ -20,35 +20,35 @@ public:
   ~FermiSurfaceCircle();
 
   // Initialize the Fermi surface.
-  void initialize(const int inNumAngles);
+  void initialize(const int inNumAngles) override;
 
   // Get the type.
   FermiSurfaceType getType() const override { return FermiSurfaceType::CIRCLE; }
 
   // Get the Fermi momentum.
-  vector2d<T> getFermiMomentum(const int inAngleIdx) const;
+  vector2d<T> getFermiMomentum(const int inAngleIdx) const override;
   void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
-                        T &outMomentumY) const;
+                        T &outMomentumY) const override;
 
   // Get the Fermi velocity.
-  vector2d<T> getFermiVelocity(const int inAngleIdx) const;
+  vector2d<T> getFermiVelocity(const int inAngleIdx) const override;
   void getFermiVelocity(const int inAngleIdx, T &outVelocityX,
-                        T &outVelocityY) const;
+                        T &outVelocityY) const override;
 
   // Get the Fermi speed.
   // This is a circle so it is a constant.
-  T getFermiSpeed(const int inAngleIdx) const;
+  T getFermiSpeed(const int inAngleIdx) const override;
 
   // Get the integrand factor.
-  T getIntegrandFactor(const int inAngleIdx) const;
+  T getIntegrandFactor(const int inAngleIdx) const override;
 
   // Get system angle.
-  T getSystemAngle(const int inAngleIdx) const;
-  const T *getSystemAnglePointer() const;
+  T getSystemAngle(const int inAngleIdx) const override;
+  const T *getSystemAnglePointer() const override;
 
   // Get momentum offset.
-  vector2d<T> getMomentumOffset() const;
-  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const;
+  vector2d<T> getMomentumOffset() const override;
+  void getMomentumOffset(T &outOffsetX, T &outOffsetY) const override;
 
 private:
   // The system angles, basically angle(vF) - pi/2.
