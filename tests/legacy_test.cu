@@ -1,11 +1,16 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
+#include "ComputeResidual.h"
+#include "ComputeVectorPotential.h"
+#include "Grid.h"
 #include "OrderParameterBulk.h"
 #include "utils.h"
 #include <cmath>
 #include <doctest/doctest.h>
 #include <limits>
+#include <thrust/host_vector.h>
 
+namespace helper {
 namespace legacy {
 // This legacy code generates a lot of warnings from promition to double. So,
 // lets turn it off.
@@ -80,9 +85,87 @@ T computeOrderParameterBulkSWave(
 
 // Turn warnings back on again.
 #pragma GCC diagnostic pop
+
+namespace internal {
+// Compute vector potential by integrating greens function kernel
+template <typename T>
+__global__ void computeVectorPotential2d_kernel(
+    T *const inOutVectorPotentialX, T *const inOutVectorPotentialY,
+    const T *const inCurrentDensityX, const T *const inCurrentDensityY,
+    const int px, const int py, const T inLatticeSpacing, const int Nx) {
+  // Coordinates to grid
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (x < Nx && y < Nx) {
+    // For convenience.
+    const T latticeArea = inLatticeSpacing * inLatticeSpacing;
+
+    T factor;
+    if (x == px && y == py) {
+      factor = static_cast<T>(0.25) * latticeArea *
+               (static_cast<T>(M_PI - 6.0) +
+                static_cast<T>(2.0) * log(latticeArea * static_cast<T>(0.5)));
+    } else {
+      const T dx = static_cast<T>(px - x);
+      const T dy = static_cast<T>(py - y);
+      factor = latticeArea * log(inLatticeSpacing * sqrt(dx * dx + dy * dy));
+    }
+
+    // Vector-potential index.
+    const int idx = y * Nx + x;
+
+    // Current-density index.
+    const int idxp = py * Nx + px;
+
+    inOutVectorPotentialX[idx] += factor * inCurrentDensityX[idxp];
+    inOutVectorPotentialY[idx] += factor * inCurrentDensityY[idxp];
+  }
+}
+} // namespace internal
+
+template <typename T>
+void computeVectorPotential(scg::GridGPU<T> &inOutVectorPotential,
+                            const scg::GridGPU<T> &inCurrentDensity,
+                            const scg::GridGPU<char> &inDomainLabels,
+                            const T inLatticeSpacing, const T inKappa) {
+  // Set to zero because we'll add stuff to it.
+  inOutVectorPotential.setZero();
+
+  // Get the required kernel dimensions.
+  dim3 bpg, tpb;
+  inOutVectorPotential.getKernelDimensions(bpg, tpb);
+
+  const int N = inOutVectorPotential.dimX();
+
+  // Get the thrust-vector from the domain labels, and copy to the CPU.
+  const thrust::host_vector<char> domainLabelsCPU = *inDomainLabels.getVector();
+  const char *const domainLabelsPtr =
+      thrust::raw_pointer_cast(domainLabelsCPU.data());
+
+  for (int y = 0; y < N; ++y) {
+    for (int x = 0; x < N; ++x) {
+      if (domainLabelsPtr[y * N + x] > 0) {
+        internal::computeVectorPotential2d_kernel<<<bpg, tpb>>>(
+            inOutVectorPotential.getDataPointer(0),
+            inOutVectorPotential.getDataPointer(1),
+            inCurrentDensity.getDataPointer(0),
+            inCurrentDensity.getDataPointer(1), x, y, inLatticeSpacing, N);
+      }
+    }
+  }
+
+  // Factor from the equation itself.
+  const T equationFactor = -static_cast<T>(4.0) / (inKappa * inKappa);
+
+  // Factor from the Green function.
+  const T greenFactor = static_cast<T>(1) / static_cast<T>(2.0 * M_PI);
+
+  // Scale the result appropriately.
+  inOutVectorPotential *= equationFactor * greenFactor;
+}
 } // namespace legacy
 
-namespace helper {
 // A helper function to test legacy::atan2.
 template <typename T>
 void testLegacyAtan2(const T inTolerance, const int inNumAngles = 32,
@@ -134,7 +217,78 @@ void testComputeOrderParameterBulkSWave(const T inTolerance) {
           doctest::Approx(newOrderParameter).epsilon(inTolerance));
   }
 }
+
+// A helper function to test legacy::computeVectorPotential.
+template <typename T> void testComputeVectorPotential(const T inTolerance) {
+  // =================== ARRANGE ==================== //
+  // The number of lattice sites per side.
+  const int N = 32;
+
+  // Physical side length of a lattice cell.
+  const T latticeSpacing = static_cast<T>(0.1);
+
+  // The London penetration depth.
+  const T penetrationDepth = static_cast<T>(1);
+
+  // The number of "fields" for the domain labels and the current density.
+  const int domainDimension = 1;
+  const int currentDimension = 2;
+
+  // Set the domain labels to "1" everywhere.
+  scg::GridGPU<char> domainLabels(N, N, domainDimension, scg::Type::real);
+  domainLabels.setValue('1', scg::Type::real);
+
+  // Construct the current density.
+  scg::GridGPU<T> currenDensity(N, N, currentDimension, scg::Type::real);
+  currenDensity.setValue(static_cast<T>(1), scg::Type::real);
+
+  // =================== ACT ==================== //
+  // Construct a vector-potential grid on the GPU.
+  scg::GridGPU<T> vectorPotential(N, N, currentDimension, scg::Type::real);
+
+  legacy::computeVectorPotential(vectorPotential, currenDensity, domainLabels,
+                                 latticeSpacing, penetrationDepth);
+
+  // =================== ASSERT ==================== //
+  scg::GridGPU<T> expVectorPotential(N, N, currentDimension, scg::Type::real);
+
+  // The maximum error, in terms of relative Frobenius norm, of the
+  // eigen-decomposition approximation.
+  const T maxError = static_cast<T>(1e-6);
+
+  // Whether to use the analytical expression for the matrix elements of the
+  // Green function. This must be false, because we didn't have an analytical
+  // implementation before.
+  const T analytical = false;
+
+  // Compute the induced vector potential.
+  scg::ComputeVectorPotential<T> computeVectorPotential(maxError, analytical);
+  computeVectorPotential.compute(currenDensity, latticeSpacing,
+                                 penetrationDepth, expVectorPotential);
+
+  const T residual = scg::computeResidual(vectorPotential, expVectorPotential);
+
+  // Compare results.
+  const T expResidual = static_cast<T>(0);
+  CHECK(residual == doctest::Approx(expResidual).epsilon(inTolerance));
+}
 } // namespace helper
+
+// =============================== Test atan2 =============================== //
+
+TEST_CASE("Test legacy::atan2<float>") {
+  // Relative tolerance.
+  // Note, machine precision is too harsh.
+  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
+  helper::testLegacyAtan2(tolerance);
+}
+
+TEST_CASE("Test legacy::atan2<double>") {
+  // Relative tolerance.
+  // Note, machine precision is too harsh.
+  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
+  helper::testLegacyAtan2(tolerance);
+}
 
 // ================== Test computeOrderParameterBulkSWave ================== //
 
@@ -158,18 +312,14 @@ TEST_CASE("Test legacy::computeOrderParameterBulkSWave<double>") {
   helper::testComputeOrderParameterBulkSWave(tolerance);
 }
 
-// =============================== Test atan2 =============================== //
+// ================== Test computeVectorPotential ================== //
 
-TEST_CASE("Test legacy::atan2<float>") {
-  // Relative tolerance.
-  // Note, machine precision is too harsh.
-  const float tolerance = 10.0F * std::numeric_limits<float>::epsilon();
-  helper::testLegacyAtan2(tolerance);
+TEST_CASE("Test legacy::testComputeVectorPotential<float>") {
+  const float tolerance = 1e-6F;
+  helper::testComputeVectorPotential(tolerance);
 }
 
-TEST_CASE("Test legacy::atan2<double>") {
-  // Relative tolerance.
-  // Note, machine precision is too harsh.
-  const double tolerance = 10.0 * std::numeric_limits<double>::epsilon();
-  helper::testLegacyAtan2(tolerance);
+TEST_CASE("Test legacy::testComputeVectorPotential<double>") {
+  const double tolerance = 1e-8;
+  helper::testComputeVectorPotential(tolerance);
 }

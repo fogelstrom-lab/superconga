@@ -258,14 +258,15 @@ public:
   int read(const std::filesystem::path &filename, int num,
            Parameters<T> *param = 0);
 
-  int write(const std::filesystem::path &filename, Parameters<T> *param = 0);
+  int write(const std::filesystem::path &filename,
+            Parameters<T> *param = 0) const;
   int write(const std::filesystem::path &filename, int num,
-            Parameters<T> *param = 0);
+            Parameters<T> *param = 0) const;
 
   int readNumpyArray(const std::filesystem::path &filename,
                      int numFields = 1); // Can only read real valued data
   int writeNumpyArray(const std::filesystem::path &filename,
-                      Type::type representation = Type::complex);
+                      Type::type representation = Type::complex) const;
 
   // Print data to terminal
   void print(int field, Type::type representation) const;
@@ -1347,7 +1348,7 @@ int GridData<T, DEV>::read(const std::filesystem::path &filename, int num,
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::write(const std::filesystem::path &filename, int num,
-                            Parameters<T> *param) {
+                            Parameters<T> *param) const {
   char buf[256];
   sprintf(buf, "%s.%d.grd", filename, num);
 
@@ -1439,7 +1440,7 @@ int GridData<T, DEV>::read(const std::filesystem::path &filename,
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::write(const std::filesystem::path &filename,
-                            Parameters<T> *param) {
+                            Parameters<T> *param) const {
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1619,7 +1620,7 @@ int GridData<T, DEV>::readNumpyArray(const std::filesystem::path &filename,
 
 template <typename T, typename DEV>
 int GridData<T, DEV>::writeNumpyArray(const std::filesystem::path &filename,
-                                      Type::type representation) {
+                                      Type::type representation) const {
   // Open file for writing
   std::ofstream file(filename,
                      std::ios::out | std::ios::binary | std::ios::trunc);

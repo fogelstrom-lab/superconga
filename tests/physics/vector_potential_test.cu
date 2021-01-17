@@ -10,7 +10,6 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-namespace scg {
 namespace helper {
 /// \brief Compute the relative Frobenius norm given two grids.
 ///
@@ -19,8 +18,8 @@ namespace helper {
 ///
 /// \return The relative Frobenius norm.
 template <typename T>
-T computeRelativeFrobeniusNorm(const GridCPU<T> &inTest,
-                               const GridCPU<T> &inRef) {
+T computeRelativeFrobeniusNorm(const scg::GridCPU<T> &inTest,
+                               const scg::GridCPU<T> &inRef) {
 
   T *const testPtr = inTest.getDataPointer();
   T *const refPtr = inRef.getDataPointer();
@@ -52,7 +51,8 @@ T computeRelativeFrobeniusNorm(const GridCPU<T> &inTest,
 ///
 /// \return Void.
 template <typename T>
-void testSymmetry(const GridCPU<T> &inVectorPotential, const T inTolerance) {
+void testSymmetry(const scg::GridCPU<T> &inVectorPotential,
+                  const T inTolerance) {
   // Get pointers.
   const T *const ptrX = inVectorPotential.getDataPointer(0);
   const T *const ptrY = inVectorPotential.getDataPointer(1);
@@ -106,7 +106,7 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   const int N = 555;
 
   // Physical side length of a lattice cell.
-  const T latticeLength = static_cast<T>(0.1);
+  const T latticeSpacing = static_cast<T>(0.1);
 
   // The London penetration depth. It is chosen so that the factor "4/k^2" in
   // "ComputeVectorPotential" is one.
@@ -117,19 +117,18 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   const int currentDimension = 2;
 
   // The radius and center coordinate of a disk.
-  const T R = latticeLength * static_cast<T>(N - 1) * static_cast<T>(0.4);
+  const T R = latticeSpacing * static_cast<T>(N - 1) * static_cast<T>(0.4);
   const T center = static_cast<T>(N - 1) * static_cast<T>(0.5);
 
   // Set the domain labels to "1" everywhere, i.e. compute the vector potential
   // everywhere. We do this because the analytical solution extends beyond the
   // grain.
-  GridData<char, thrust::device_vector<char>> domainGPU(N, N, domainDimension,
-                                                        Type::real);
+  scg::GridGPU<char> domainGPU(N, N, domainDimension, scg::Type::real);
   domainGPU.setValue('1', scg::Type::real);
 
   // Construct the current density, and the expected potential, on the CPU.
-  GridCPU<T> currenDensityCPU(N, N, currentDimension, Type::real);
-  GridCPU<T> expectedPotential(N, N, currentDimension, Type::real);
+  scg::GridCPU<T> currenDensityCPU(N, N, currentDimension, scg::Type::real);
+  scg::GridCPU<T> expectedPotential(N, N, currentDimension, scg::Type::real);
 
   // Get the pointers.
   T *const srcPtrX = currenDensityCPU.getDataPointer(0);
@@ -139,10 +138,10 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
 
   for (int j = 0; j < N; ++j) {
     // Y-coordinate relative to the center of the disc.
-    const T y = latticeLength * (static_cast<T>(j) - center);
+    const T y = latticeSpacing * (static_cast<T>(j) - center);
     for (int i = 0; i < N; ++i) {
       // Y-coordinate relative to the center of the disc.
-      const T x = latticeLength * (static_cast<T>(i) - center);
+      const T x = latticeSpacing * (static_cast<T>(i) - center);
 
       // The distance from the center of the disc.
       const T r = std::hypot(x, y);
@@ -187,18 +186,19 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   }
 
   // Copy the current density to the GPU.
-  const GridGPU<T> currenDensityGPU(currenDensityCPU);
+  const scg::GridGPU<T> currenDensityGPU(currenDensityCPU);
 
   // =================== ACT ==================== //
   // Construct a vector-potential grid on the GPU.
-  GridGPU<T> potentialGPU(N, N, currentDimension, Type::real);
+  scg::GridGPU<T> potentialGPU(N, N, currentDimension, scg::Type::real);
 
   // Compute the induced vector potential.
-  computeVectorPotential(potentialGPU, currenDensityGPU, domainGPU,
-                         latticeLength, penetrationDepth);
+  scg::ComputeVectorPotential<T> computeVectorPotential;
+  computeVectorPotential.compute(currenDensityGPU, latticeSpacing,
+                                 penetrationDepth, potentialGPU);
 
   // Copy the vector potential to the CPU.
-  const GridCPU<T> potentialCPU(potentialGPU);
+  const scg::GridCPU<T> potentialCPU(potentialGPU);
 
   // =================== ASSERT ==================== //
   const T expectedRelativeFrobeniusNorm = static_cast<T>(0);
@@ -216,10 +216,10 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
 
 TEST_CASE("Test magnetostatics (float)") {
   const float tolerance = 1e-3f;
-  // TODO(niclas): The current implementation of how to compute the vector
-  // potential is abyssmal for float. It is not very symmetric. But the overall
-  // solution is still fairly good. Investigate!
-  const float symmetryTolerance = 1e-2f;
+  // TODO(niclas): Why do the tolerance need to be this large for float?
+  // Investigate! Reverse the order of the filters, so that the smallest eigen
+  // value comes first?
+  const float symmetryTolerance = 1e-3f;
   helper::testMagnetoStaticsDisc(tolerance, symmetryTolerance);
 }
 
@@ -228,4 +228,3 @@ TEST_CASE("Test magnetostatics (double)") {
   const double symmetryTolerance = 1e-8;
   helper::testMagnetoStaticsDisc(tolerance, symmetryTolerance);
 }
-} // namespace scg

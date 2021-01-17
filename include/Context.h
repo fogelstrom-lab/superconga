@@ -110,6 +110,7 @@ private:
   FermiSurface<T> *m_fermiSurface;
 
   GridGPU<T> *m_inducedVectorPotential;
+  ComputeVectorPotential<T> m_computeVectorPotential;
 
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
@@ -279,6 +280,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
         "Context<T>::initialize(): ComputeProperty");
   }
 
+  // The induced vector potential.
   const T penetrationDepth = m_parameters->getPenetrationDepth();
   if (m_computeCurrent && (penetrationDepth > static_cast<T>(0))) {
     std::cout << "Context::initialize() --> Initializing vector potential\n";
@@ -287,6 +289,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
     GridGPU<T>::initializeGrid(m_inducedVectorPotential, latticeSide,
                                latticeSide, numSpatialDims, Type::real);
     m_inducedVectorPotential->setZero();
+
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): vector potential");
   }
@@ -317,20 +320,20 @@ template <typename T> void Context<T>::compute() {
 
   // Compute the induced vector potential.
   if (m_inducedVectorPotential) {
-    // Note, we are not setting the current to zero outside of the grain. This
-    // is handled in `computeVectorPotential` by checking the domain labels.
+    // Note that it is assumed that all values outside of the grain is already
+    // set to zero.
     const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
-    const GridGPU<char> domainLabels = *(m_geometry->getDomainGrid());
-
-    // The London penetration depth.
-    const T penetrationDepth = m_parameters->getPenetrationDepth();
 
     // The physical side length of a lattice site.
     const T gridElementSize = m_parameters->getGridElementSize();
 
+    // The London penetration depth.
+    const T penetrationDepth = m_parameters->getPenetrationDepth();
+
     // Solve Maxwell's equation relating the vector potential to the current.
-    computeVectorPotential(*m_inducedVectorPotential, currentDensity,
-                           domainLabels, gridElementSize, penetrationDepth);
+    m_computeVectorPotential.compute(currentDensity, gridElementSize,
+                                     penetrationDepth,
+                                     *m_inducedVectorPotential);
   }
 
   // Stop timer.

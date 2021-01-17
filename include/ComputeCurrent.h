@@ -175,6 +175,10 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     _current_real->insertGrid(_current);
     *_current_real *= T_Tc;
 
+    // Set the current to zero outside of the grain.
+    ContextModule<T>::getContext()->getGeometry()->zeroValuesOutsideDomainRef(
+        _current_real);
+
     const T residual = computeResidual(current_old, *_current_real);
     C::setResidual(residual);
 
