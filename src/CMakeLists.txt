@@ -10,8 +10,10 @@ get_filename_component(name ${SRC} NAME_WE)
 # Create command-line executable
 add_executable(${name} ${SRC})
 
+find_package(Armadillo REQUIRED)
+
 # Include directories
-target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include ${ARMADILLO_INCLUDE_DIRS})
 
 # Build src binaries into build/bin/
 set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
@@ -26,7 +28,8 @@ target_link_libraries(
           gfortran
           lapack
           blas
-          jsoncpp_lib)
+          jsoncpp_lib
+          ${ARMADILLO_LIBRARIES})
 
 # Use C++17 since it is the latest standard CUDA supports
 message(STATUS "Enable C++ standard: C++17")

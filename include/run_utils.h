@@ -12,7 +12,6 @@
 #ifndef RUN_UTILS_H_
 #define RUN_UTILS_H_
 
-#include "ComputeVectorPotential.h" // Compute the vector potential induced by currents
 #include "Context.h"
 #include "Grid.h"
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
@@ -207,47 +206,35 @@ void saveInducedFluxDensity(
     const bool inVerbose = true,
     const std::string &inDataFileName = "magnetic_flux_density") {
 
-  // Construct full file name.
-  const std::filesystem::path gridDataFile =
-      inDataPath / (inDataFileName + ".grd");
+  // Fetch the vector potential. If it is a null pointer it will be ignored.
+  const GridGPU<T> *const inducedVectorPotential =
+      inContext->getInducedVectorPotential();
 
-  // Fetch parameters from context.
-  Parameters<T> *parameters = inContext->getParameters();
+  if (inducedVectorPotential) {
+    // Fetch parameters from context.
+    Parameters<T> *parameters = inContext->getParameters();
 
-  // Fetch current density and set to zero outside grain.
-  GridGPU<T> current = *(inContext->getComputeCurrent()->getResult());
-  inContext->getGeometry()->zeroValuesOutsideDomainRef(&current);
-  const int numLatticePoints = current.dimX();
+    // TODO(niclas): Convert to (reduced) coherence length? I.e. divide by 2pi.
+    const T latticeSpacing = parameters->getGridElementSize();
 
-  // Domain structure for vector potential calculation.
-  GridGPU<char> domain = *(inContext->getGeometry()->getDomainGrid());
+    // The magnetic flux-density is simply the curl of the vector potential.
+    const GridGPU<T> magneticFluxDensity =
+        inducedVectorPotential->curl(latticeSpacing);
 
-  // Create GPU storage for vector potential.
-  GridGPU<T> vectorPotential(numLatticePoints, numLatticePoints, 2, Type::real);
+    // Construct full file name.
+    const std::filesystem::path gridDataFile =
+        inDataPath / (inDataFileName + ".grd");
 
-  // Convert lattice spacing back to proper coherence lengths:
-  // hbar*<vF>/(2*Pi*kB*Tc).
-  const T latticeSpacing =
-      parameters->getGridElementSize() * static_cast<T>(2.0 * M_PI);
-
-  // Solve the vector potential from the current.
-  const T penetrationDepth =
-      parameters->getPenetrationDepth() * static_cast<T>(2.0 * M_PI);
-  computeVectorPotential(vectorPotential, current, domain, latticeSpacing,
-                         penetrationDepth);
-
-  // Solve the magnetic flux density from the vector potential through Maxwell.
-  GridGPU<T> magneticFluxDensity = vectorPotential.curl(latticeSpacing);
-
-  // Try to save induced flux density to file. Exit program if fail.
-  if (magneticFluxDensity.write(gridDataFile, parameters)) {
-    std::cout << "ERROR! Could not save induced flux density to file: "
-              << gridDataFile << std::endl;
-    std::exit(EXIT_FAILURE);
-  } else {
-    if (inVerbose) {
-      std::cout << "Saved induced flux density to file: " << gridDataFile
-                << std::endl;
+    // Try to save induced flux density to file. Exit program if fail.
+    if (magneticFluxDensity.write(gridDataFile, parameters)) {
+      std::cout << "ERROR! Could not save induced flux density to file: "
+                << gridDataFile << std::endl;
+      std::exit(EXIT_FAILURE);
+    } else {
+      if (inVerbose) {
+        std::cout << "Saved induced flux density to file: " << gridDataFile
+                  << std::endl;
+      }
     }
   }
 }

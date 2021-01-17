@@ -14,6 +14,8 @@ if(NOT doctest_POPULATED)
   add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+find_package(Armadillo REQUIRED)
+
 ###############################################################################
 # SOURCE FILES
 ###############################################################################
@@ -53,7 +55,7 @@ foreach(file ${SRC})
 
   # ----------------------------------- # Add extra compile options and flags #
   # ----------------------------------- # Include directories
-  target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+  target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include ${ARMADILLO_INCLUDE_DIRS})
   # External libraries
   target_link_libraries(
     ${name}
@@ -64,6 +66,7 @@ foreach(file ${SRC})
             lapack
             blas
             jsoncpp_lib
+            ${ARMADILLO_LIBRARIES}
             doctest::doctest)
 
   # Use C++17 since it is the lates standard CUDA supports

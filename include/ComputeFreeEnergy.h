@@ -310,7 +310,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     if (inducedVectorPotential) {
       // Compute the magnetic field.
       GridGPU<T> magneticField =
-          (*inducedVectorPotential).curl(latticeElementSize);
+          inducedVectorPotential->curl(latticeElementSize);
 
       // Note, by setting values outside of the grain to zero, we are only
       // including the contribution of the induced magnetic field within the
