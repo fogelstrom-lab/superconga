@@ -24,29 +24,39 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 
   // Create parameters, and set the only value the geometruGroup needs.
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
-  const int gridResolution = 32;
-  parameters->setGridResolution(gridResolution);
+
+  // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
+  const T gridWidth = static_cast<T>(10);
+  parameters->setGrainWidth(gridWidth);
+
+  // Set the number of lattice points per coherence length:
+  const T pointsPerCoherenceLength = static_cast<T>(3.5);
+  parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Create a geometry group.
   scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(context);
+  const T grainFracton = parameters->getGrainFraction();
   if (inIsDisc) {
     // Add two disconnected discs.
     const T diameter = static_cast<T>(0.25);
     const T centerX = static_cast<T>(0.25);
     const T centerY = static_cast<T>(0.25);
-    geometryGroup->add(new scg::DiscGeometry<T>(diameter, centerX, centerY),
-                       scg::Type::add);
-    geometryGroup->add(new scg::DiscGeometry<T>(diameter, -centerX, -centerY),
-                       scg::Type::add);
+    geometryGroup->add(
+        new scg::DiscGeometry<T>(grainFracton, diameter, centerX, centerY),
+        scg::Type::add);
+    geometryGroup->add(
+        new scg::DiscGeometry<T>(grainFracton, diameter, -centerX, -centerY),
+        scg::Type::add);
   } else {
     const int numVerticesSquare = 4;
     const T holeScale = static_cast<T>(0.25);
     // Add a square.
-    geometryGroup->add(new scg::PolygonGeometry<T>(numVerticesSquare),
-                       scg::Type::add);
+    geometryGroup->add(
+        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare),
+        scg::Type::add);
     // Remove a square in the middle.
     geometryGroup->add(
-        new scg::PolygonGeometry<T>(numVerticesSquare, holeScale),
+        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare, holeScale),
         scg::Type::remove);
   }
 
@@ -55,6 +65,7 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 
   // Get and set the dimensions of our grids.
   const int numFields = 1;
+  const int gridResolution = parameters->getGridResolutionBase();
   const scg::Type::type representation = scg::Type::real;
 
   // Create the test grid (on the CPU).

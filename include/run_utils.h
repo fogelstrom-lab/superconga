@@ -229,7 +229,7 @@ void saveInducedFluxDensity(
                                         Type::real);
 
   // Convert lattice spacing back to proper coherence lengths:
-  // hbar*vF/(2*Pi*kB*Tc).
+  // hbar*<vF>/(2*Pi*kB*Tc).
   const T latticeSpacing =
       parameters->getGridElementSize() * static_cast<T>(2.0 * M_PI);
 

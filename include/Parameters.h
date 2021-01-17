@@ -35,10 +35,9 @@ public:
   int getGridResolutionCoherence() const { return m_numGridCoherence; }
   int getGridResolutionDeltaRotated() const { return m_numGridCoherence; }
 
-  T getGrainWidthCoherenceLengths() const {
-    return m_grainWidthCoherenceLengths;
-  }
+  T getGrainWidth() const { return m_grainWidth; }
   T getGridElementSize() const { return m_gridElementSize; }
+  T getGrainFraction() const { return m_grainFraction; }
   int getAngularResolution() const { return m_numAngles; }
   T getAngleIncrement() const;
 
@@ -62,12 +61,12 @@ public:
   // Setters
   // TODO: (Patric) Change name from grid to grain when referring to the
   // superconducting grain.
-  // TODO: (Patric) Change all internal length units to hbar*vF/(2*pi*kB*Tc)
-  // rather than hbar*vF/(kB*Tc). WARNING! This is not as trivial as it
+  // TODO: (Patric) Change all internal length units to hbar*<vF>/(2*pi*kB*Tc)
+  // rather than hbar*<vF>/(kB*Tc). WARNING! This is not as trivial as it
   // seems, and will have far-reaching consequences with non-trivial scaling
   // factors.
-  void setGrainWidthCoherenceLengths(const T inGrainWidthCoherenceLengths);
-  void setGridResolution(const int inNumGridBase);
+  void setGrainWidth(const T inGrainWidth);
+  void setPointsPerCoherenceLength(const T inPointsPerCoherenceLength);
   void setAngularResolution(const int inNumAngles) {
     m_numAngles = inNumAngles;
   }
@@ -120,11 +119,17 @@ private:
   // Number of elements for order parameter solution.
   int m_numGridBase;
 
-  // Side length of superconducting grain in units h_bar * <vF> / (kB * Tc).
-  T m_grainWidthCoherenceLengths;
+  // Side length of superconducting grain in units hbar*<vF>/(kB*Tc).
+  T m_grainWidth;
+
+  // The number of lattice points per coherence length.
+  T m_pointsPerCoherenceLength;
 
   // Width of one grid element.
   T m_gridElementSize;
+
+  // The fraction of the simulation lattice maximally used for the grain.
+  T m_grainFraction;
 
   // Number of angles to solve for.
   int m_numAngles;
@@ -144,7 +149,6 @@ private:
   T m_magneticFieldStrength;
 
   // The penetration depth used when solving for the vector potential.
-  // TODO(niclas): In what units? I guess coherence lengths.
   T m_penetrationDepth;
 
   // The number of Matsubara energies.
@@ -166,9 +170,10 @@ private:
   const int m_version;
   int m_isValid;
 
-  // Helper functions
+  // Set the lattice resolution.
+  void setLatticeResolution(const T inGrainWidth,
+                            const T inPointsPerCoherenceLength);
   int computeGridResolutionRotated(const int numGridBase) const;
-  void setGridElementSize();
   T toInternalLength(const T inLength) const {
     return inLength / static_cast<T>(2.0 * M_PI);
   }
@@ -176,16 +181,17 @@ private:
 
 template <typename T>
 Parameters<T>::Parameters(Context<T> *const inOutContext)
-    : m_grainWidthCoherenceLengths(20.0), m_numAngles(64), m_energyCutoff(10),
-      m_temperature(0.5), m_magneticFieldStrength(0.0),
-      m_convergenceCriterion(1E-6), m_numEnergies(128), m_energyMin(0.0),
-      m_energyMax(3.0), m_smearingFactor(0.05), m_numMatsubaraEnergies(20),
+    : m_grainWidth(static_cast<T>(5)),
+      m_pointsPerCoherenceLength(static_cast<T>(20)), m_numAngles(64),
+      m_energyCutoff(static_cast<T>(10)), m_temperature(static_cast<T>(0.5)),
+      m_magneticFieldStrength(static_cast<T>(0)),
+      m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
+      m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
+      m_smearingFactor(static_cast<T>(0.05)), m_numMatsubaraEnergies(20),
       m_penetrationDepth(-static_cast<T>(1)), m_version(2), m_isValid(1) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
-  // TODO(niclas): This is ugly.
-  const int numGridBase = 101;
-  setGridResolution(numGridBase);
+  setLatticeResolution(m_grainWidth, m_pointsPerCoherenceLength);
 }
 
 template <typename T>
@@ -217,7 +223,7 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
     std::cout << "Parameters<T>::operator=(): Warning, differing versions of "
                  "Parameters class\n";
 
-  m_grainWidthCoherenceLengths = inOther.getGrainWidthCoherenceLengths();
+  m_grainWidth = inOther.getGrainWidth();
   m_numAngles = inOther.getAngularResolution();
   m_energyCutoff = inOther.getCutOff();
   m_temperature = inOther.getTemperature();
@@ -232,7 +238,13 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
   m_numMatsubaraEnergies = inOther.m_numMatsubaraEnergies;
   m_penetrationDepth = inOther.m_penetrationDepth;
 
-  setGridResolution(inOther.getGridResolutionBase());
+  m_grainFraction = inOther.m_grainFraction;
+  m_grainWidth = inOther.m_grainWidth;
+  m_pointsPerCoherenceLength = inOther.m_pointsPerCoherenceLength;
+  m_gridElementSize = inOther.m_gridElementSize;
+
+  m_numGridBase = inOther.m_numGridBase;
+  m_numGridCoherence = inOther.m_numGridCoherence;
 
   return *this;
 }
@@ -267,32 +279,44 @@ void Parameters<T>::setEnergyRange(const T inEnergyMin, const T inEnergyMax,
   }
 }
 
-template <typename T>
-void Parameters<T>::setGrainWidthCoherenceLengths(
-    const T inGrainWidthCoherenceLengths) {
-  // Give grain width in coherence lengths: hbar*vF/(2*pi*kB*Tc). The scaling
-  // to internal length units hbar*vF/(kB*Tc) is appropriately done when
-  // calculating the size of the discrete lattice spacing.
-  m_grainWidthCoherenceLengths = inGrainWidthCoherenceLengths;
-  setGridElementSize();
+template <typename T> void Parameters<T>::setGrainWidth(const T inGrainWidth) {
+  // Grain width in coherence lengths: hbar*<vF>/(kB*Tc).
+  m_grainWidth = inGrainWidth;
+
+  // Update the lattice resolution.
+  setLatticeResolution(m_grainWidth, m_pointsPerCoherenceLength);
 }
 
 template <typename T>
-void Parameters<T>::setGridResolution(const int inNumGridBase) {
-  m_numGridBase = inNumGridBase;
-  m_numGridCoherence = computeGridResolutionRotated(inNumGridBase);
+void Parameters<T>::setPointsPerCoherenceLength(
+    const T inPointsPerCoherenceLength) {
+  // Points per coherence length: hbar*<vF>/(kB*Tc).
+  m_pointsPerCoherenceLength = inPointsPerCoherenceLength;
 
-  // Set new grid element width.
-  setGridElementSize();
+  // Update the lattice resolution.
+  setLatticeResolution(m_grainWidth, m_pointsPerCoherenceLength);
 }
 
-// Calculate the lattice spacing size in physical units of hbar*vF/(kB*Tc)
-template <typename T> void Parameters<T>::setGridElementSize() {
-  const T gridElementSize =
-      m_grainWidthCoherenceLengths /
-      ((static_cast<T>(m_numGridBase-1)) *
-       static_cast<T>(constants::GRAIN_SIZE_FRACTION));
-  m_gridElementSize = toInternalLength(gridElementSize);
+template <typename T>
+void Parameters<T>::setLatticeResolution(const T inGrainWidth,
+                                         const T inPointsPerCoherenceLength) {
+  // The number lattice points required for the grain itself, excluding safety
+  // margin.
+  const int numPointsGrain =
+      static_cast<int>(std::round(inGrainWidth * inPointsPerCoherenceLength));
+
+  // The total number of required points, including safety margin.
+  const int numPointsTotal = numPointsGrain + 2 * constants::GRAIN_SIZE_MARGIN;
+
+  // The fraction of points for the grain.
+  m_grainFraction =
+      static_cast<T>(numPointsGrain) / static_cast<T>(numPointsTotal);
+
+  // The side length of a lattice site.
+  m_gridElementSize = inGrainWidth / static_cast<T>(numPointsGrain);
+
+  m_numGridBase = numPointsTotal;
+  m_numGridCoherence = computeGridResolutionRotated(numPointsTotal);
 }
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
@@ -363,7 +387,7 @@ int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) const {
 
 template <typename T> void Parameters<T>::print() const {
   std::cout << "Grain Resolution Base: " << m_numGridBase << std::endl;
-  std::cout << "Grain Width: " << m_grainWidthCoherenceLengths << std::endl;
+  std::cout << "Grain Width: " << m_grainWidth << std::endl;
   std::cout << "Grain Element Size: " << m_gridElementSize << std::endl;
   std::cout << "Angular Resolution: " << m_numAngles << std::endl;
   std::cout << "Temperature: " << m_temperature << std::endl;

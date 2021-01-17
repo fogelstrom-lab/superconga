@@ -148,7 +148,7 @@ def make_default_parser():
         "--grain-side-length",
         type=float,
         default=None,
-        help="Side length of grain in units of coherence lengths (hbar*v_F)/(2*pi*k_B*T_c).",
+        help="Side length of grain in units of coherence lengths (hbar*<v_F>)/(2*pi*k_B*T_c).",
     )
 
     # Penetration depth.
@@ -203,10 +203,10 @@ def make_default_parser():
     # Lattice side length.
     parser.add_argument(
         "-N",
-        "--lattice-side-length",
-        type=int,
+        "--points-per-coherence-length",
+        type=float,
         default=None,
-        help="Number of discrete lattice points in the grain. Set to odd value for best convergence. Recommended to be at least 10 times the grain size.",
+        help="Number of lattice points per coherence length. Recommended value 10.",
     )
 
     # Num Fermi momenta.
@@ -412,7 +412,7 @@ def validate(simparams: dict) -> bool:
         "data_path": {"type": str},
         "external_flux_quanta": {"type": float},
         "grain_side_length": {"type": float, "low": 0.0},
-        "lattice_side_length": {"type": int, "low": 0},
+        "points_per_coherence_length": {"type": float, "low": 0.0},
         "num_fermi_momenta": {"type": int, "low": 0},
         "num_iterations_max": {"type": int, "low": 0},
         "num_iterations_min": {"type": int, "low": 0},
@@ -1094,10 +1094,12 @@ class MainWindow(QMainWindow):
         simulationBoxLayout.setLabelAlignment(Qt.AlignLeft)
 
         # Lattice grid size
-        self._lattice_side_length = InputInt(jsonKey="lattice_side_length", minValue=1)
-        self.register(self._lattice_side_length)
+        self._points_per_coherence_length = InputInt(
+            jsonKey="points_per_coherence_length", minValue=1
+        )
+        self.register(self._points_per_coherence_length)
         simulationBoxLayout.addRow(
-            QLabel("Lattice side length"), self._lattice_side_length
+            QLabel("Points per coherence length"), self._points_per_coherence_length,
         )
 
         # Number of Fermi momenta
@@ -1380,7 +1382,9 @@ def main() -> None:
     set_value(simparams, "data_path", args.data_path)
     set_value(simparams, "external_flux_quanta", args.external_flux_quanta)
     set_value(simparams, "grain_side_length", args.grain_side_length)
-    set_value(simparams, "lattice_side_length", args.lattice_side_length)
+    set_value(
+        simparams, "points_per_coherence_length", args.points_per_coherence_length
+    )
     set_value(simparams, "num_fermi_momenta", args.num_fermi_momenta)
     set_value(simparams, "num_iterations_max", args.num_iterations_max)
     set_value(simparams, "num_iterations_min", args.num_iterations_min)

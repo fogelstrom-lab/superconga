@@ -19,10 +19,10 @@
 
 // ========================= Simulation parameters ========================= //
 namespace simParams {
-// Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
+// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
 const double GRAIN_SIDE_LENGTH = 10.0;
-// Number of lattice points per grain side length
-const int GRID_RESOLUTION = 201;
+// Number of lattice points per coherence length
+const double POINTS_PER_COHERENCE_LENGTH = 10.0;
 } // namespace simParams
 
 namespace helper {
@@ -47,11 +47,11 @@ template <typename T>
 scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
-  // Set grain resolution in number of lattice sites
-  parameters->setGridResolution(simParams::GRID_RESOLUTION);
-  // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
-  parameters->setGrainWidthCoherenceLengths(
-      static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
+  // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
+  parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
+  // Set the number of lattice points per coherence length.
+  parameters->setPointsPerCoherenceLength(
+      static_cast<T>(simParams::POINTS_PER_COHERENCE_LENGTH));
   return parameters;
 }
 
@@ -83,25 +83,27 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
       // Create geometry group: add/remove geometry objects (e.g. discs,
       // polygons) from the geometry group
       scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
-
+      const T grainFraction = parameters->getGrainFraction();
       switch (grainShape) {
       case GrainShape::disc: {
         const T discGrainScale = static_cast<T>(0.8);
-        geometry->add(new scg::DiscGeometry<T>(discGrainScale), scg::Type::add);
+        geometry->add(new scg::DiscGeometry<T>(grainFraction, discGrainScale),
+                      scg::Type::add);
         break;
       }
       case GrainShape::square: {
         const int numVerticesSquare = 4;
-        geometry->add(new scg::PolygonGeometry<T>(numVerticesSquare),
-                      scg::Type::add);
+        geometry->add(
+            new scg::PolygonGeometry<T>(grainFraction, numVerticesSquare),
+            scg::Type::add);
         break;
       }
       case GrainShape::octagon: {
         const int numVerticesOctagon = 8;
         const T octagonGrainScale = static_cast<T>(0.75);
-        geometry->add(
-            new scg::PolygonGeometry<T>(numVerticesOctagon, octagonGrainScale),
-            scg::Type::add);
+        geometry->add(new scg::PolygonGeometry<T>(
+                          grainFraction, numVerticesOctagon, octagonGrainScale),
+                      scg::Type::add);
         break;
       }
       case GrainShape::irregular: {
@@ -119,18 +121,18 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
             static_cast<T>(0.0 * scg::constants::MAXIMUM_COORDINATE),
             static_cast<T>(-0.8 * scg::constants::MAXIMUM_COORDINATE),
             static_cast<T>(-0.6 * scg::constants::MAXIMUM_COORDINATE)};
-        geometry->add(
-            new scg::PolygonGeometry<T>(numVertices, xVertices, yVertices),
-            scg::Type::add);
+        geometry->add(new scg::PolygonGeometry<T>(grainFraction, numVertices,
+                                                  xVertices, yVertices),
+                      scg::Type::add);
         // Remove small disc
         const T discGrainScale = static_cast<T>(0.2);
         const T discCenterX =
             static_cast<T>(0.2 * scg::constants::MAXIMUM_COORDINATE);
         const T discCenterY =
             static_cast<T>(0.1 * scg::constants::MAXIMUM_COORDINATE);
-        geometry->add(
-            new scg::DiscGeometry<T>(discGrainScale, discCenterX, discCenterY),
-            scg::Type::remove);
+        geometry->add(new scg::DiscGeometry<T>(grainFraction, discGrainScale,
+                                               discCenterX, discCenterY),
+                      scg::Type::remove);
         break;
       }
       }

@@ -32,11 +32,11 @@ namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.001;
 
-// Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
-const double GRAIN_SIDE_LENGTH = 10.0;
+// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
+const double GRAIN_SIDE_LENGTH = 10.0 / (2.0 * M_PI);
 
-// Number of lattice points per grain side length.
-const int GRID_RESOLUTION = 32;
+// Number of lattice points per coherence length
+const double POINTS_PER_COHERENCE_LENGTH = 32.0 / GRAIN_SIDE_LENGTH;
 
 // Number of discrete trajectory angles (on the Fermi-surface). S-wave behaves
 // much nicer.
@@ -69,17 +69,17 @@ scg::Parameters<T> *applySimParams(const bool inUseSwave,
   // Storage for system simulation parameters (e.g. temperature, lattice size)
   scg::Parameters<T> *parameters = new scg::Parameters<T>(inOutContext);
 
-  // Set grain resolution in number of lattice sites
-  parameters->setGridResolution(simParams::GRID_RESOLUTION);
+  // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
+  parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
+
+  // Set the number of lattice points per coherence length.
+  parameters->setPointsPerCoherenceLength(
+      static_cast<T>(simParams::POINTS_PER_COHERENCE_LENGTH));
 
   // Number of discrete steps in momentum angle
   const int numAngles =
       inUseSwave ? simParams::NUM_ANGLES_SWAVE : simParams::NUM_ANGLES_DWAVE;
   parameters->setAngularResolution(numAngles);
-
-  // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
-  parameters->setGrainWidthCoherenceLengths(
-      static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
 
   // Set convergence criterion
   parameters->setConvergenceCriterion(
@@ -108,11 +108,12 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
   scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  const T grainFraction = parameters->getGrainFraction();
   if (inIsDisc) {
-    geometry->add(new scg::DiscGeometry<T>(), scg::Type::add);
+    geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
   } else {
     const int numVerticesSquare = 4;
-    geometry->add(new scg::PolygonGeometry<T>(numVerticesSquare),
+    geometry->add(new scg::PolygonGeometry<T>(grainFraction, numVerticesSquare),
                   scg::Type::add);
   }
 
