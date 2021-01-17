@@ -17,7 +17,8 @@ public:
   // Initialize a disc. inDiameter gives the diameter of the
   // disc relative to the available simulation space (to be padded by the grain
   // margin). The center coordinate is (inCenterX, inCenterY).
-  DiscGeometry(const T inDiameter = static_cast<T>(1.0),
+  DiscGeometry(const T inGrainFraction,
+               const T inDiameter = static_cast<T>(1.0),
                const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
   DiscGeometry(const DiscGeometry &inOther);
@@ -215,21 +216,16 @@ DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &inOther)
 }
 
 template <typename T>
-DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
-                              const T inCenterY)
+DiscGeometry<T>::DiscGeometry(const T inGrainFraction, const T inDiameter,
+                              const T inCenterX, const T inCenterY)
     : GeometryComponent<T>() {
 
-  // Scale to internal coordinate system and apply the margin (grain size frac).
-  const T coordinateScaleFactor =
-      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
-
   // Calculate radius from diameter and apply margin/scaling.
-  const T discRadiusPadded =
-      static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
+  const T discRadiusPadded = static_cast<T>(0.5) * inDiameter * inGrainFraction;
 
   // Apply scaling and margin to center coordinates
-  const T centerPaddedX = inCenterX * coordinateScaleFactor;
-  const T centerPaddedY = inCenterY * coordinateScaleFactor;
+  const T centerPaddedX = inCenterX * inGrainFraction;
+  const T centerPaddedY = inCenterY * inGrainFraction;
   m_disc = new Disc<T>(discRadiusPadded, centerPaddedX, centerPaddedY);
 }
 

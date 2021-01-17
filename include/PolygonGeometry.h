@@ -20,19 +20,45 @@ public:
   // disc relative to the available simulation space (to be padded by the grain
   // margin). inAngle specifies the rotation of the polygon, and (inCenterX,
   // inCenterY) is the center coordinate
-  PolygonGeometry(const int inNumVertices,
+
+  /// \brief Create a regular polygon inside a circle.
+  ///
+  /// \param inGrainFraction The fraction of the simulation space maximally used
+  /// for the grain. In order to handle interpolation a few pixels are needed as
+  /// a buffer outside of the grain, thus the grain fraction must be less than
+  /// one.
+  /// \param inNumVertices The numer of vertices of the polygon, e.g. 4 will
+  /// produce a square.
+  /// \param inDiameter The diameter of the bounding circle. It will be scaled
+  /// by the grain fraction.
+  /// \param inAngle The rotation of the polygon.
+  /// \param inCenterX The x-coordinate of the circle center. It will be scaled
+  /// by the grain fraction.
+  /// \param inCenterY The y-coordiante of the circle center. It will be scaled
+  /// by the grain fraction.
+  PolygonGeometry(const T inGrainFraction, const int inNumVertices,
                   const T inDiameter = static_cast<T>(1.0),
                   const T inAngle = static_cast<T>(0.0),
                   const T inCenterX = static_cast<T>(0.0),
                   const T inCenterY = static_cast<T>(0.0));
 
-  // Initialize the polygon to a predefined vertex set
+  /// \brief Create a polygon from a predefined vertex set.
+  ///
+  /// \param inGrainFraction The fraction of the simulation space maximally used
+  /// for the grain. In order to handle interpolation a few pixels are needed as
+  /// a buffer outside of the grain, thus the grain fraction must be less than
+  /// one.
+  /// \param inNumVertices The numer of vertices of the polygon.
+  /// \param inVerticesX The x-coordinates of the polygon vertices. They will be
+  /// scaled by the grain fraction.
+  /// \param inVerticesY The y-coordinates of the polygon vertices.  They will
+  /// be scaled by the grain fraction.
   // TODO: (Patric) This should throw an exception if inNumVertices is not the
   // same length as inVerticesX and inVerticesY. Better yet, remove
   // use of inNumvertices, and throw an exception if X and Y vertices are not
   // same length.
-  PolygonGeometry(const int inNumVertices, const T *const inVerticesX,
-                  const T *const inVerticesY);
+  PolygonGeometry(const T inGrainFraction, const int inNumVertices,
+                  const T *const inVerticesX, const T *const inVerticesY);
 
   PolygonGeometry &operator=(PolygonGeometry other);
 
@@ -224,21 +250,18 @@ PolygonGeometry<T>::PolygonGeometry(const PolygonGeometry<T> &other)
 // n-gon. A square (4-gon) will hence have a side-length that is a factor
 // sqrt(2) smaller than inDiameter.
 template <typename T>
-PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
+PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
+                                    const int inNumVertices, const T inDiameter,
                                     const T inAngle, const T inCenterX,
                                     const T inCenterY)
     : GeometryComponent<T>() {
-  // Scale to internal coordinate system and apply the margin (grain size frac).
-  const T coordinateScaleFactor =
-      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
-
   // Calculate radius from diameter and apply margin/scaling.
   const T polygonRadiusPadded =
-      static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
+      static_cast<T>(0.5) * inDiameter * inGrainFraction;
 
   // Apply scaling and margin to center coordinates.
-  const T centerPaddedX = inCenterX * coordinateScaleFactor;
-  const T centerPaddedY = inCenterY * coordinateScaleFactor;
+  const T centerPaddedX = inCenterX * inGrainFraction;
+  const T centerPaddedY = inCenterY * inGrainFraction;
 
   m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
                              centerPaddedX, centerPaddedY);
@@ -248,7 +271,8 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices, const T inDiameter,
 // Todo(patric): Check that inVertices actually has the same length as
 // inNumVertices, or better yet, send in a vector.
 template <typename T>
-PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
+PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
+                                    const int inNumVertices,
                                     const T *const inVerticesX,
                                     const T *const inVerticesY)
     : GeometryComponent<T>() {
@@ -259,11 +283,6 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
                  "inNumVertices = "
               << inNumVertices << std::endl;
   }
-
-  // Scale to internal coordinate system and apply the margin (through grain
-  // size fraction).
-  const T coordinateScaleFactor =
-      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
 
   T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
   T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
@@ -284,8 +303,8 @@ PolygonGeometry<T>::PolygonGeometry(const int inNumVertices,
                 << constants::MAXIMUM_COORDINATE << "]." << std::endl;
     }
 
-    scaledVerticesX[vertexIdx] = vertexX * coordinateScaleFactor;
-    scaledVerticesY[vertexIdx] = vertexY * coordinateScaleFactor;
+    scaledVerticesX[vertexIdx] = vertexX * inGrainFraction;
+    scaledVerticesY[vertexIdx] = vertexY * inGrainFraction;
   }
 
   m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);

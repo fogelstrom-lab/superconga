@@ -21,18 +21,8 @@ namespace scg {
 template <typename T> using vector2d = std::array<T, 2>;
 
 namespace constants {
-
-// Margin around superconducting grain in simulation space. A margin
-// of 0.04 means that the grain covers 1.0-0.04 = 96 percent of the total
-// simulation space.
-const double GRAIN_SIZE_MARGIN = 0.04;
-
-// Return grain size fraction of simulation domain. Should never be
-// larger than 96 percent! This is to allow for padding of the order parameter
-// for treatment of boundary conditions. The grain size percent is used when
-// setting up a new simulation grain to calculate the lattice spacing in
-// setGridElementSize(), and in the classes PolygonGeometry and DiscGeometry.
-const double GRAIN_SIZE_FRACTION = 1.0 - GRAIN_SIZE_MARGIN;
+// Margin around superconducting grain in simulation space, in pixels.
+const int GRAIN_SIZE_MARGIN = 3;
 
 // Size of coordinate system where grain is allowed to be, as seen by the user:
 // [-MAXIMUM_COORDINATE, +MAXIMUM_COORDINATE], used when specifying size

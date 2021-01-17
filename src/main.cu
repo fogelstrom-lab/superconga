@@ -101,22 +101,35 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+
   // Set temperature.
   const T temperature = static_cast<T>(simParams["temperature"].asDouble());
   parameters->setTemperature(temperature);
-  // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc).
+
+  // Set grain sidelength in coherence length.
+  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
+  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
+  // appropriately.
   const T grainSideLength =
-      static_cast<T>(simParams["grain_side_length"].asDouble());
-  parameters->setGrainWidthCoherenceLengths(grainSideLength);
-  // Set grain resolution in number of lattice sites.
-  const int latticeSideLength = simParams["lattice_side_length"].asInt();
-  parameters->setGridResolution(latticeSideLength);
+      static_cast<T>(simParams["grain_side_length"].asDouble() / (2.0 * M_PI));
+  parameters->setGrainWidth(grainSideLength);
+
+  // Set the number of lattice points per coherence length.
+  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
+  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
+  // appropriately.
+  const T pointsPerCoherenceLength = static_cast<T>(
+      simParams["points_per_coherence_length"].asDouble() * 2.0 * M_PI);
+  parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
+
   // Set number of Ozaki energies.
   const int numOzakiEnergies = simParams["num_ozaki_energies"].asInt();
   parameters->setNumMatsubaraEnergies(numOzakiEnergies);
+
   // Number of discrete steps in momentum angle.
   const int numFermiMomenta = simParams["num_fermi_momenta"].asInt();
   parameters->setAngularResolution(numFermiMomenta);
+
   // Set convergence criterion.
   const T convergenceCriterion =
       static_cast<T>(simParams["convergence_criterion"].asDouble());
@@ -131,19 +144,19 @@ int main(int argc, char *argv[]) {
   // from the geometry group.
   scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
-  // Add polygon to simulation space, scale to fit in simulation domain
-  // (grainScale 1.0 is 100% of simulation space).
-  const T grainScale = static_cast<T>(1.0);
-
   // Check if to set up a disc or polygon.
   const int numVertices = simParams["num_polygon_edges"].asInt();
   const bool isDisc = numVertices < 0;
 
+  // Get the grain fraction, which is needed for scaling the geometry
+  // components.
+  const T grainFracton = parameters->getGrainFraction();
+
   // Make the grain a disc or a square.
   if (isDisc) {
-    geometry->add(new scg::DiscGeometry<T>(grainScale), scg::Type::add);
+    geometry->add(new scg::DiscGeometry<T>(grainFracton), scg::Type::add);
   } else {
-    geometry->add(new scg::PolygonGeometry<T>(numVertices, grainScale),
+    geometry->add(new scg::PolygonGeometry<T>(grainFracton, numVertices),
                   scg::Type::add);
   }
 
@@ -154,10 +167,12 @@ int main(int argc, char *argv[]) {
 
     // Circular or square hole.
     if (isDisc) {
-      geometry->add(new scg::DiscGeometry<T>(holeScale), scg::Type::remove);
-    } else {
-      geometry->add(new scg::PolygonGeometry<T>(numVertices, holeScale),
+      geometry->add(new scg::DiscGeometry<T>(grainFracton, holeScale),
                     scg::Type::remove);
+    } else {
+      geometry->add(
+          new scg::PolygonGeometry<T>(grainFracton, numVertices, holeScale),
+          scg::Type::remove);
     }
   }
 

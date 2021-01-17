@@ -31,10 +31,10 @@
 namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.5;
-// Size of superconducting grain in coherence lengths hbar*vF/(2*pi*kB*Tc)
+// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
 const double GRAIN_SIDE_LENGTH = 10.0;
-// Number of lattice points per grain side length
-const int GRID_RESOLUTION = 55;
+// Number of lattice points per coherence length
+const double POINTS_PER_COHERENCE_LENGTH = 55.0 / GRAIN_SIDE_LENGTH;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 5;
 // Number of discrete energies (poles)
@@ -60,11 +60,11 @@ template <typename T>
 scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
-  // Set grain resolution in number of lattice sites
-  parameters->setGridResolution(static_cast<T>(simParams::GRID_RESOLUTION));
-  // Set grain sidelength in coherence lengths: hbar*vF/(2*pi*kB*Tc)
-  parameters->setGrainWidthCoherenceLengths(
-      static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
+  // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
+  parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
+  // Set the number of lattice points per coherence length.
+  parameters->setPointsPerCoherenceLength(
+      static_cast<T>(simParams::POINTS_PER_COHERENCE_LENGTH));
   // Number of discrete steps in momentum angle
   parameters->setAngularResolution(simParams::NUM_ANGLES);
   // Set convergence criterion
@@ -96,8 +96,10 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     // Create geometry group: add/remove geometry objects (e.g. discs,
     // polygons) from the geometry group
     scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
-    geometry->add(new scg::PolygonGeometry<T>(NUM_VERTICES_SQUARE),
-                  scg::Type::add);
+    const T grainFracton = parameters->getGrainFraction();
+    geometry->add(
+        new scg::PolygonGeometry<T>(grainFracton, NUM_VERTICES_SQUARE),
+        scg::Type::add);
 
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields

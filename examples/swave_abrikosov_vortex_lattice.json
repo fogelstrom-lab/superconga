@@ -4,7 +4,7 @@
   "data_path": "data",
   "external_flux_quanta": 20.0,
   "grain_side_length": 40.0,
-  "lattice_side_length": 201,
+  "points_per_coherence_length": 5.025,
   "num_fermi_momenta": 55,
   "num_iterations_max": 1000,
   "num_iterations_min": 20,
