@@ -12,6 +12,7 @@
 #include "Type.h"
 #include "cplx.h"
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -253,15 +254,17 @@ public:
 
   //// File I/O ////
 
-  int read(const char *filename, Parameters<T> *param = 0);
-  int read(const char *filename, int num, Parameters<T> *param = 0);
+  int read(const std::filesystem::path &filename, Parameters<T> *param = 0);
+  int read(const std::filesystem::path &filename, int num,
+           Parameters<T> *param = 0);
 
-  int write(const char *filename, Parameters<T> *param = 0);
-  int write(const char *filename, int num, Parameters<T> *param = 0);
+  int write(const std::filesystem::path &filename, Parameters<T> *param = 0);
+  int write(const std::filesystem::path &filename, int num,
+            Parameters<T> *param = 0);
 
-  int readNumpyArray(const char *filename,
+  int readNumpyArray(const std::filesystem::path &filename,
                      int numFields = 1); // Can only read real valued data
-  int writeNumpyArray(const char *filename,
+  int writeNumpyArray(const std::filesystem::path &filename,
                       Type::type representation = Type::complex);
 
   // Print data to terminal
@@ -272,8 +275,9 @@ public:
   void printDimensions() const;
 
   //// Static functions ////
-  static int readParameters(const char *filename, Parameters<T> *param);
-  static int readParameters(const char *filename, int num,
+  static int readParameters(const std::filesystem::path &filename,
+                            Parameters<T> *param);
+  static int readParameters(const std::filesystem::path &filename, int num,
                             Parameters<T> *param);
 
   // Safely initialize or delete GridData pointers, without copying values.
@@ -1333,7 +1337,7 @@ void GridData<T, DEV>::printDimensions() const {
 /* ==================== FILE ====================*/
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::read(const char *filename, int num,
+int GridData<T, DEV>::read(const std::filesystem::path &filename, int num,
                            Parameters<T> *param) {
   char buf[256];
   sprintf(buf, "%s.%d.grd", filename, num);
@@ -1342,7 +1346,7 @@ int GridData<T, DEV>::read(const char *filename, int num,
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::write(const char *filename, int num,
+int GridData<T, DEV>::write(const std::filesystem::path &filename, int num,
                             Parameters<T> *param) {
   char buf[256];
   sprintf(buf, "%s.%d.grd", filename, num);
@@ -1351,7 +1355,8 @@ int GridData<T, DEV>::write(const char *filename, int num,
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::read(const char *filename, Parameters<T> *param) {
+int GridData<T, DEV>::read(const std::filesystem::path &filename,
+                           Parameters<T> *param) {
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1433,7 +1438,8 @@ int GridData<T, DEV>::read(const char *filename, Parameters<T> *param) {
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
+int GridData<T, DEV>::write(const std::filesystem::path &filename,
+                            Parameters<T> *param) {
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
   size_t numBytesHeader = 32 * sizeof(int);
@@ -1491,7 +1497,8 @@ int GridData<T, DEV>::write(const char *filename, Parameters<T> *param) {
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
+int GridData<T, DEV>::readNumpyArray(const std::filesystem::path &filename,
+                                     int numFields) {
   const int MAX_TOKENS_PER_LINE = 16384;
 
   // create a file-reading object
@@ -1611,7 +1618,7 @@ int GridData<T, DEV>::readNumpyArray(const char *filename, int numFields) {
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::writeNumpyArray(const char *filename,
+int GridData<T, DEV>::writeNumpyArray(const std::filesystem::path &filename,
                                       Type::type representation) {
   // Open file for writing
   std::ofstream file(filename,
@@ -1683,8 +1690,8 @@ int GridData<T, DEV>::writeNumpyArray(const char *filename,
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::readParameters(const char *filename, int num,
-                                     Parameters<T> *param) {
+int GridData<T, DEV>::readParameters(const std::filesystem::path &filename,
+                                     int num, Parameters<T> *param) {
   char buf[256];
   sprintf(buf, "%s.%d.grd", filename, num);
 
@@ -1692,7 +1699,7 @@ int GridData<T, DEV>::readParameters(const char *filename, int num,
 }
 
 template <typename T, typename DEV>
-int GridData<T, DEV>::readParameters(const char *filename,
+int GridData<T, DEV>::readParameters(const std::filesystem::path &filename,
                                      Parameters<T> *param) {
   // Data header structure: (all int datatype)
   // size of datatype in bytes, isComplex, num_x, num_y, num_z, num_fields
