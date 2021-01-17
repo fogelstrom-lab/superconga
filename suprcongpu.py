@@ -191,6 +191,26 @@ def make_default_parser():
 
     # =============== ACCURACY =============== #
 
+    # Optimizer.
+    parser.add_argument(
+        "--opt-step-size",
+        type=float,
+        default=None,
+        help="Optimizer step size.",
+    )
+    parser.add_argument(
+        "--opt-inertia",
+        type=float,
+        default=None,
+        help="Optimizer inertia.",
+    )
+    parser.add_argument(
+        "--opt-rank",
+        type=int,
+        default=None,
+        help="Optimizer rank.",
+    )
+
     # Convergence criterion.
     parser.add_argument(
         "-c",
@@ -304,7 +324,7 @@ def make_default_parser():
 def set_value(
     simparams: dict,
     key: str,
-    value: Union[int, float, list],
+    value: Union[dict, int, float, list],
     group: Optional[str] = None,
 ) -> None:
     # If the value is None then it is not set in the command line arguments, so it should not be used.
@@ -312,23 +332,23 @@ def set_value(
         if group is None:
             simparams[key] = value
         else:
-            # This should always be true as we get a list from the parser.
-            assert isinstance(value, list)
-
-            if group in simparams:
-                # The group, e.g. 'order_parameter' already exists.
-                # Check that the lengths of the lists agree.
-                assert isinstance(simparams[group], list)
-                assert len(value) == len(simparams[group])
-                for i, elem in enumerate(value):
-                    # TODO(niclas): Add dummy value so one can only specify e.g. the second critical temperature.
-                    simparams[group][i][key] = elem
+            if isinstance(value, list):
+                if group in simparams:
+                    # The group, e.g. 'order_parameter' already exists.
+                    # Check that the lengths of the lists agree.
+                    assert isinstance(simparams[group], list)
+                    assert len(value) == len(simparams[group])
+                    for i, elem in enumerate(value):
+                        # TODO(niclas): Add dummy value so one can only specify e.g. the second critical temperature.
+                        simparams[group][i][key] = elem
+                else:
+                    # The group, e.g. 'order_parameter' does not exist, so lets create a dict for every element of 'value'.
+                    tmp = []
+                    for elem in value:
+                        tmp.append({key: elem})
+                    simparams[group] = tmp
             else:
-                # The group, e.g. 'order_parameter' does not exist, so lets create a dict for every element of 'value'.
-                tmp = []
-                for elem in value:
-                    tmp.append({key: elem})
-                simparams[group] = tmp
+                simparams[group][key] = value
 
 
 def set_flag(simparams: dict, key: str, on: bool, off: bool) -> None:
@@ -418,6 +438,14 @@ def validate(simparams: dict) -> bool:
         "num_iterations_min": {"type": int, "low": 0},
         "num_ozaki_energies": {"type": int, "low": 0},
         "num_polygon_edges": {"type": int, "excluded": [0, 1, 2]},
+        "optimizer": {
+            "type": dict,
+            "sub": {
+                "step_size": {"type": float},
+                "inertia": {"type": float},
+                "rank": {"type": int, "low": 0},
+            },
+        },
         "order_parameter": {
             "type": list,
             "sub": {
@@ -798,7 +826,9 @@ class InputDropdown(Serializable, QWidget, metaclass=QMeta):
 
 class OrderParameterComponent(Serializable, QWidget, metaclass=QMeta):
     def __init__(
-        self, *, parent=None,
+        self,
+        *,
+        parent=None,
     ):
         super().__init__(parent)
 
@@ -1059,7 +1089,8 @@ class MainWindow(QMainWindow):
         self._crystal_axes_rotation = InputFloat(jsonKey="crystal_axes_rotation")
         self.register(self._crystal_axes_rotation)
         physicsBoxLayout.addRow(
-            QLabel("Crystal axes rotation [2\u03C0]"), self._crystal_axes_rotation,
+            QLabel("Crystal axes rotation [2\u03C0]"),
+            self._crystal_axes_rotation,
         )
 
         # Grain side length
@@ -1260,7 +1291,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def handle_save_file(self):
         saveFileName = QFileDialog.getSaveFileName(
-            self, caption="Save config file", filter="Config file (*.json)",
+            self,
+            caption="Save config file",
+            filter="Config file (*.json)",
         )[0]
 
         if saveFileName:
@@ -1391,12 +1424,20 @@ def main() -> None:
     set_value(simparams, "num_ozaki_energies", args.num_ozaki_energies)
     set_value(simparams, "num_polygon_edges", args.num_polygon_edges)
 
+    group = "optimizer"
+    set_value(simparams, "step_size", args.opt_step_size, group)
+    set_value(simparams, "inertia", args.opt_inertia, group)
+    set_value(simparams, "rank", args.opt_rank, group)
+
     group = "order_parameter"
     set_value(simparams, "critical_temperature", args.op_tc, group)
     set_value(simparams, "initial_phase_shift", args.op_init_phase_shift, group)
     set_value(simparams, "initial_phase_winding", args.op_init_phase_winding, group)
     set_value(
-        simparams, "initial_random_phase_weight", args.op_init_rand_phase_weight, group,
+        simparams,
+        "initial_random_phase_weight",
+        args.op_init_rand_phase_weight,
+        group,
     )
     set_value(simparams, "symmetry", args.op_sym, group)
     set_value(simparams, "penetration_depth", args.penetration_depth)

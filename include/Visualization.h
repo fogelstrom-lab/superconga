@@ -47,9 +47,10 @@ public:
                  T maxVal = 1.0);
 
   template <typename GRID>
-  void plotImage(const GRID &grid, int field, Type::type representation,
-                 int img_x, int img_y, int normalize = 1, T minVal = 0.0,
-                 T maxVal = 1.0);
+  void plotImage(const GRID &grid, const int field,
+                 const Type::type representation, const int img_x,
+                 const int img_y, const int normalize = 1, const T minVal = 0.0,
+                 const T maxVal = 1.0, const bool erase = true);
 
   void label(std::string info, int img_x, int img_y);
 
@@ -299,9 +300,11 @@ void Visualization<T>::getImageCoordinatesFromWindow(int x, int y, int &img_x,
 
 template <typename T>
 template <typename GRID>
-void Visualization<T>::plotImage(const GRID &grid, int field,
-                                 Type::type representation, int img_x,
-                                 int img_y, int normalize, T minVal, T maxVal) {
+void Visualization<T>::plotImage(const GRID &grid, const int field,
+                                 const Type::type representation,
+                                 const int img_x, const int img_y,
+                                 const int normalize, const T minVal,
+                                 const T maxVal, const bool erase) {
   if (grid.dimX() > _Nx_img || grid.dimY() > _Ny_img) {
     std::cout << "Visualization<T>::plotImage() ERROR: dimensions of input "
                  "grid does not match allocated image.\n";
@@ -317,15 +320,18 @@ void Visualization<T>::plotImage(const GRID &grid, int field,
     if (representation == Type::real || representation == Type::imag) {
       drawField(&grid, field, img_x, img_y, representation, normalize, minVal,
                 maxVal);
-      eraseValuesOutsideDomain(img_x, img_y);
+      if (erase) {
+        eraseValuesOutsideDomain(img_x, img_y);
+      }
     } else if (representation == Type::complex && img_x + 1 < _num_image_X) {
       drawField(&grid, field, img_x, img_y, Type::real, normalize, minVal,
                 maxVal);
       drawField(&grid, field, img_x + 1, img_y, Type::imag, normalize, minVal,
                 maxVal);
-
-      eraseValuesOutsideDomain(img_x, img_y);
-      eraseValuesOutsideDomain(img_x + 1, img_y);
+      if (erase) {
+        eraseValuesOutsideDomain(img_x, img_y);
+        eraseValuesOutsideDomain(img_x + 1, img_y);
+      }
     }
   } else {
     std::cout << "Visualization<T>::plotImage() ERROR: field index or subimage "

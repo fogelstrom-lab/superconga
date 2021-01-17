@@ -8,7 +8,6 @@
 #include "DiscGeometry.h" // Used to constructed simulated grain from discs
 #include "FermiSurfaceCircle.h" // Standard circle Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
-#include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
 #include "OrderParameter.h" // Container class for order parameter components
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
@@ -149,10 +148,6 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   scg::ComputeFreeEnergy<T> *computeFreeEnergy =
       new scg::ComputeFreeEnergy<T>(context);
   scg::ComputeCurrent<T> *computeCurrent = new scg::ComputeCurrent<T>(context);
-
-  // Choose convergence accelerator
-  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
-  computeOrderParameter->setOptimizer(optimizer);
 
   // Choose FermiSurface
   scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();

@@ -314,7 +314,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   // Compute energy shift from magnetic field
   GridGPU<T> *eShift = R::getEnergyShift();
 
-  // Fetch the vector potential. If it is a null pointer it will be ignored.
+  // Fetch the vector potential.
   GridGPU<T> *inducedVectorPotential =
       C::getContext()->getInducedVectorPotential();
 

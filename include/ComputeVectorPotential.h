@@ -2,8 +2,11 @@
 #define COMPUTE_VECTOR_POTENTIAL_H_
 
 // Because we are compiling with NVCC and not GCC.
+#ifndef ARMA_ALLOW_FAKE_GCC
 #define ARMA_ALLOW_FAKE_GCC
+#endif
 
+#include "ComputeResidual.h"
 #include "Grid.h"
 #include "Type.h"
 #include <armadillo>
@@ -17,6 +20,10 @@ namespace scg {
 /// \brief Class for computing the vector potential.
 template <typename T> class ComputeVectorPotential {
 private:
+  // The vector potential.
+  // TODO(niclas): Use unique_ptr.
+  GridGPU<T> *m_vectorPotential;
+
   // The eigen decomposition of a matrix is given by A = VDV^T. We store a few
   // of the eigenvectors. They are called filters as they are used for
   // cross-correlation.
@@ -26,11 +33,18 @@ private:
   // is positive or negative.
   std::vector<bool> m_positiveFilter;
 
+  // The residual.
+  // TODO(niclas): I am not sure it should live here.
+  T m_residual;
+
   // Whether the filters are initialized or not.
   bool m_isInitialized;
 
   // Factor to scale the final result with.
   double m_scale;
+
+  // The physical area of a lattice site.
+  T m_latticeSiteArea;
 
   // The maximum error of the approximation.
   const double m_maxError;
@@ -99,27 +113,65 @@ public:
   ComputeVectorPotential(const T inMaxError = static_cast<T>(1e-6),
                          const bool inAnalytical = true);
 
-  /// \brief Compute the vector potential.
+  /// \brief Destructor.
+  ~ComputeVectorPotential() {
+    std::cout << "~ComputeVectorPotential<T>\n";
+    delete m_vectorPotential;
+  }
+
+  /// \brief Initialize.
+  ///
+  /// \param inGridResolution The number of lattice sites per side.
+  /// \param inGridCellLength Physical side length of a lattice site, in units
+  /// of xi_0 = hbar <v_F> / (k_B T_c).
+  ///
+  /// \return void.
+  void initialize(const int inGridResolution, const T inGridCellLength);
+
+  /// \brief Solve the Poisson equation for the vector potential.
   ///
   /// \param inCurrentDensity The current density, in units of J_d = 4 pi |e|
   /// <v_F> N_F k_B T_c.
-  /// \param inGridCellLength Physical side length of a lattice site, in units
-  /// of xi_0 = hbar <v_F> / (k_B T_c).
   /// \param inKappa The Ginzburg-Landau parameter, kappa = lambda_L / xi_0,
   /// where lambda_L = (mu_0 e^2 <v_F>^2 N_F)^(- 1 / 2)
-  /// \param outVectorPotential The vector potential, in units of A_0 = Phi_0 /
-  /// xi_0, where Phi_0 = pi hbar / |e|.
   ///
   /// \return void.
-  void compute(const GridGPU<T> &inCurrentDensity, const T inGridCellLength,
-               const T inKappa, GridGPU<T> &outVectorPotential);
+  void solve(const GridGPU<T> &inCurrentDensity, const T inKappa);
+
+  /// \brief Compute the residual.
+  ///
+  /// Given the self-consistency equation
+  ///
+  /// x = g(x)
+  ///
+  /// it computes
+  ///
+  /// residual = |x - g(x)| / |x|
+  ///
+  /// \param inLHS The left-hand side of the self-consitency equation, 'x'.
+  ///
+  /// \return Void.
+  void computeResidual(const GridGPU<T> &inLHS);
+
+  /// \brief Get the resulting vector potential.
+  ///
+  /// \return The vector potential, in units of A_0 = Phi_0 /
+  /// xi_0, where Phi_0 = pi hbar / |e|.
+  GridGPU<T> *getResult() const { return m_vectorPotential; }
+
+  /// \brief Get the residual.
+  ///
+  /// \return The residual.
+  T getResidual() const { return m_residual; }
 };
 
 template <typename T>
 ComputeVectorPotential<T>::ComputeVectorPotential(const T inMaxError,
                                                   const bool inAnalytical)
-    : m_maxError(static_cast<double>(inMaxError)), m_analytical(inAnalytical),
-      m_isInitialized(false), m_scale(1.0) {}
+    : m_vectorPotential(nullptr), m_maxError(static_cast<double>(inMaxError)),
+      m_analytical(inAnalytical), m_residual(static_cast<T>(0)),
+      m_isInitialized(false), m_scale(0.0),
+      m_latticeSiteArea(static_cast<T>(0.0)) {}
 
 template <typename T>
 void ComputeVectorPotential<T>::makeFilter2D(const int inGridResolution,
@@ -298,9 +350,6 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
       break;
     }
   }
-
-  // Initialization complete.
-  m_isInitialized = true;
 }
 
 namespace cvp_internal {
@@ -367,13 +416,29 @@ crossCorrelateTranspose(const int inGridResolution, const int inDimension,
 } // namespace cvp_internal
 
 template <typename T>
-void ComputeVectorPotential<T>::compute(const GridGPU<T> &inCurrentDensity,
-                                        const T inGridCellLength,
-                                        const T inKappa,
-                                        GridGPU<T> &outVectorPotential) {
+void ComputeVectorPotential<T>::initialize(const int inGridResolution,
+                                           const T inGridCellLength) {
+  // Initialize the vector potential.
+  const int dimension = 2;
+  GridGPU<T>::initializeGrid(m_vectorPotential, inGridResolution,
+                             inGridResolution, dimension, Type::real);
+  m_vectorPotential->setZero();
+
+  // Initialize the filters.
+  initializeFilters(inGridResolution, inGridCellLength);
+
+  m_latticeSiteArea = inGridCellLength * inGridCellLength;
+
+  // Initialization complete.
+  m_isInitialized = true;
+}
+
+template <typename T>
+void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
+                                      const T inKappa) {
   // Check that the sizes of the grids, as well as representation (i.e. real or
   // complex), are equal.
-  assert(inCurrentDensity == outVectorPotential);
+  assert(inCurrentDensity == *m_vectorPotential);
 
   // Check that the grids are real.
   assert(inCurrentDensity.representation() == Type::real);
@@ -385,27 +450,24 @@ void ComputeVectorPotential<T>::compute(const GridGPU<T> &inCurrentDensity,
   const int gridResolution = inCurrentDensity.dimX();
   const int dimension = inCurrentDensity.numFields();
 
-  // Initialize filters if needed.
-  // TODO(niclas): Check dimensions and re-initialize if they do not agree.
-  if (!m_isInitialized) {
-    initializeFilters(gridResolution, inGridCellLength);
-  }
-
-  // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  outVectorPotential.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
-
   // The number of filters.
   assert(m_filters.size() == m_positiveFilter.size());
   const std::size_t numFilters = m_filters.size();
 
+  // Copy the grid so we can compute the residual.
+  const GridGPU<T> vectorPotentialOld = *m_vectorPotential;
+
   // Set to zero because we will add stuff to it.
-  outVectorPotential.setZero();
+  m_vectorPotential->setZero();
 
   // Temporary grids.
   GridGPU<T> tmp0(gridResolution, gridResolution, dimension, Type::real);
   GridGPU<T> tmp1(gridResolution, gridResolution, dimension, Type::real);
+
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  m_vectorPotential->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
   // Loop over filters.
   for (std::size_t i = 0; i < numFilters; ++i) {
@@ -426,20 +488,26 @@ void ComputeVectorPotential<T>::compute(const GridGPU<T> &inCurrentDensity,
     // Accumulate.
     const bool isPositive = m_positiveFilter[i];
     if (isPositive) {
-      outVectorPotential += tmp1;
+      *m_vectorPotential += tmp1;
     } else {
-      outVectorPotential -= tmp1;
+      *m_vectorPotential -= tmp1;
     }
   }
 
   // Factor from the equation itself.
   const T equationFactor = -static_cast<T>(4.0) / (inKappa * inKappa);
 
-  // Area per lattice site.
-  const T gridCellArea = inGridCellLength * inGridCellLength;
-
   // Scale the final result.
-  outVectorPotential *= equationFactor * gridCellArea * static_cast<T>(m_scale);
+  *m_vectorPotential *=
+      equationFactor * m_latticeSiteArea * static_cast<T>(m_scale);
+}
+
+template <typename T>
+void ComputeVectorPotential<T>::computeResidual(const GridGPU<T> &inLHS) {
+  // TODO(niclas): We need to specifiy the namespace in order to avoid
+  // compilation errors due to this method having the same name as the function
+  // being called.
+  m_residual = scg::computeResidual(inLHS, *m_vectorPotential);
 }
 } // namespace scg
 

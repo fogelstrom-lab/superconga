@@ -3,9 +3,8 @@
 
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
-#include "IntegrationIteratorOzaki.h"
 #include "Grid.h"
-#include "Optimizer.h"
+#include "IntegrationIteratorOzaki.h"
 
 namespace scg {
 template <typename T> class ComputeOrderParameter : public ComputeProperty<T> {
@@ -47,21 +46,10 @@ public:
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  // Set optimizer, e.g. OptimizerFixedPoint.
-  void setOptimizer(Optimizer<T> *opt) {
-    if (_opt) {
-      delete _opt;
-    }
-    _opt = opt;
-  }
-
 private:
   // Computed order parameter will be stored here at end of
   // IntegrationIterator::compute() function.
   OrderParameter<T> *_delta;
-
-  // Optimizer.
-  Optimizer<T> *_opt;
 
   // Each component stored in a separate field.
   GridGPU<T> *_delta_fields;
@@ -72,13 +60,11 @@ private:
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter()
-    : ComputeProperty<T>(), _delta(0), _delta_fields(0), _deltaTmp(0),
-      _opt(new Optimizer<T>()) {}
+    : ComputeProperty<T>(), _delta(0), _delta_fields(0), _deltaTmp(0) {}
 
 template <typename T>
 ComputeOrderParameter<T>::ComputeOrderParameter(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), _delta(0), _delta_fields(0), _deltaTmp(0),
-      _opt(new Optimizer<T>()) {
+    : ComputeProperty<T>(ctx), _delta(0), _delta_fields(0), _deltaTmp(0) {
   ctx->add(this);
 }
 
@@ -92,9 +78,6 @@ template <typename T> ComputeOrderParameter<T>::~ComputeOrderParameter() {
   }
   if (_delta_fields) {
     delete _delta_fields;
-  }
-  if (_opt) {
-    delete _opt;
   }
 }
 
@@ -142,8 +125,9 @@ template <typename T>
 void ComputeOrderParameter<T>::setOrderParameter(
     const OrderParameter<T> *delta_in) {
   if (delta_in) {
-    if (_delta)
+    if (_delta) {
       delete _delta;
+    }
     _delta = new OrderParameter<T>(*delta_in);
   }
 }
@@ -159,10 +143,11 @@ void ComputeOrderParameter<T>::initializeIteration(int numFields) {
     // Temporary grids for new order parameter components
     const int numDelta = _delta->getNumOrderParameterComponents();
 
-    for (int i = 0; i < numDelta; ++i)
+    for (int i = 0; i < numDelta; ++i) {
       _delta->getOrderParameterComponent(i)
           ->getOrderParameterField()
           ->setZero();
+    }
   }
 }
 
@@ -247,11 +232,6 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
       ctx->getGeometry()->zeroValuesOutsideDomainRef(component);
     }
 
-    // Take step with the optimizer. Note, OptimizerLargePush requires the
-    // residual.
-    const T previousResidual = C::getResidual();
-    _opt->step(_delta, previousResidual);
-
     // Fetch the previous order parameter so we can compute the residual.
     OrderParameter<T> *deltaOld = ContextModule<T>::getOrderParameter();
 
@@ -272,15 +252,13 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     const bool isConverged = residual < param->getConvergenceCriterion();
     C::setConverged(isConverged);
 
-    // A little counter-intuitive perhaps, but we need to update the order
-    // parameter in the context module.
-    *deltaOld = *_delta;
-
     // Copy results to grid with one field per order parameter component.
     for (int i = 0; i < Nc; ++i) {
       _delta->getOrderParameterComponentField(i)->copyFieldTo(_delta_fields, 0,
                                                               i);
     }
+  } else {
+    C::setConverged(false);
   }
 }
 } // namespace scg

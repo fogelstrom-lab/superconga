@@ -10,6 +10,11 @@
   "num_iterations_min": 20,
   "num_ozaki_energies": 20,
   "num_polygon_edges": 4,
+  "optimizer": {
+    "step_size": 1.5,
+    "inertia": 0.333,
+    "rank": 1
+  },
   "order_parameter": [
     {
       "critical_temperature": 1.0,
@@ -27,4 +32,3 @@
   "verbose": true,
   "visualize": true
 }
-

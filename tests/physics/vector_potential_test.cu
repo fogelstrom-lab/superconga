@@ -189,16 +189,13 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   const scg::GridGPU<T> currenDensityGPU(currenDensityCPU);
 
   // =================== ACT ==================== //
-  // Construct a vector-potential grid on the GPU.
-  scg::GridGPU<T> potentialGPU(N, N, currentDimension, scg::Type::real);
-
   // Compute the induced vector potential.
   scg::ComputeVectorPotential<T> computeVectorPotential;
-  computeVectorPotential.compute(currenDensityGPU, latticeSpacing,
-                                 penetrationDepth, potentialGPU);
+  computeVectorPotential.initialize(N, latticeSpacing);
+  computeVectorPotential.solve(currenDensityGPU, penetrationDepth);
 
   // Copy the vector potential to the CPU.
-  const scg::GridCPU<T> potentialCPU(potentialGPU);
+  const scg::GridCPU<T> potentialCPU = *(computeVectorPotential.getResult());
 
   // =================== ASSERT ==================== //
   const T expectedRelativeFrobeniusNorm = static_cast<T>(0);

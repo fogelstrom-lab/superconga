@@ -183,7 +183,7 @@ void saveFreeEnergy(const Context<T> *const inContext,
   // Append line with energy and other information
   std::stringstream ss;
   ss << inContext->getNumIterations() << " ";
-  ss << inContext->getResidual(0) << " ";
+  ss << inContext->getResidual() << " ";
   ss.precision(dataFloatDecimals);
   ss << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea() << " ";
   writeLineToFile(freeEnergyFile, ss);
@@ -206,35 +206,33 @@ void saveInducedFluxDensity(
     const bool inVerbose = true,
     const std::string &inDataFileName = "magnetic_flux_density") {
 
-  // Fetch the vector potential. If it is a null pointer it will be ignored.
+  // Fetch the vector potential.
   const GridGPU<T> *const inducedVectorPotential =
       inContext->getInducedVectorPotential();
 
-  if (inducedVectorPotential) {
-    // Fetch parameters from context.
-    Parameters<T> *parameters = inContext->getParameters();
+  // Fetch parameters from context.
+  Parameters<T> *parameters = inContext->getParameters();
 
-    // TODO(niclas): Convert to (reduced) coherence length? I.e. divide by 2pi.
-    const T latticeSpacing = parameters->getGridElementSize();
+  // TODO(niclas): Convert to (reduced) coherence length? I.e. divide by 2pi.
+  const T latticeSpacing = parameters->getGridElementSize();
 
-    // The magnetic flux-density is simply the curl of the vector potential.
-    const GridGPU<T> magneticFluxDensity =
-        inducedVectorPotential->curl(latticeSpacing);
+  // The magnetic flux-density is simply the curl of the vector potential.
+  const GridGPU<T> magneticFluxDensity =
+      inducedVectorPotential->curl(latticeSpacing);
 
-    // Construct full file name.
-    const std::filesystem::path gridDataFile =
-        inDataPath / (inDataFileName + ".grd");
+  // Construct full file name.
+  const std::filesystem::path gridDataFile =
+      inDataPath / (inDataFileName + ".grd");
 
-    // Try to save induced flux density to file. Exit program if fail.
-    if (magneticFluxDensity.write(gridDataFile, parameters)) {
-      std::cout << "ERROR! Could not save induced flux density to file: "
-                << gridDataFile << std::endl;
-      std::exit(EXIT_FAILURE);
-    } else {
-      if (inVerbose) {
-        std::cout << "Saved induced flux density to file: " << gridDataFile
-                  << std::endl;
-      }
+  // Try to save induced flux density to file. Exit program if fail.
+  if (magneticFluxDensity.write(gridDataFile, parameters)) {
+    std::cout << "ERROR! Could not save induced flux density to file: "
+              << gridDataFile << std::endl;
+    std::exit(EXIT_FAILURE);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved induced flux density to file: " << gridDataFile
+                << std::endl;
     }
   }
 }
@@ -346,42 +344,66 @@ void saveDataWrapper(const Context<T> *const inContext,
 ///
 /// \return - void
 template <typename T> void printIterationStatus(Context<T> *inContext) {
-  std::cout << "Iteration = " << inContext->getNumIterations() << ", ";
-  std::cout << "Residual = " << inContext->getResidual(0) << ", ";
-  std::cout << "Free Energy = "
-            << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea()
-            << ", ";
-  std::cout << "Iteration time = " << inContext->getComputeTime() << std::endl;
+  const int numIterations = inContext->getNumIterations();
+  const T residual = inContext->getResidual();
+  const T freeEnergy =
+      inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+  const T computeTime = inContext->getComputeTime();
+
+  std::cout << "Iteration = " << numIterations << ", Residual = " << residual
+            << ", Free Energy = " << freeEnergy
+            << ", Iteration time = " << computeTime << std::endl;
 }
 
 /// \brief Create visualization object
 ///
 /// \param inContext - Context object.
-/// \param inPlotOrderParameter - Whether to plot the order parameter or
-/// not.
-/// \param inPlotCurrentDensity - Whether to plot the current density
 ///
 /// \return - Visualization object pointer.
 // TODO(patric): Move this functionality to visualization class.
 template <typename T>
-Visualization<T> *createVisualization(const Context<T> *const inContext,
-                                      const bool inPlotOrderParameter = true,
-                                      const bool inPlotCurrentDensity = true) {
+Visualization<T> *createVisualization(const Context<T> *const inContext) {
+  // Compute the number of columns and rows. The number of plots in
+  // visualization = numRows * numCols.
+  int numCols = 0;
+  int numRows = 0;
 
-  const int numOrderParameterComponents =
-      inContext->getOrderParameter()->getNumOrderParameterComponents();
+  // Add order parameter.
+  if (inContext->getComputeOrderParameter()) {
+    // One column for each order-parameter component.
+    const int numOrderParameterComponents =
+        inContext->getOrderParameter()->getNumOrderParameterComponents();
+    numCols += numOrderParameterComponents;
 
-  // Number of plots in visualization = numPlotsY * numPlotsX.
-  const int numPlotsX = (inPlotCurrentDensity ? 3 : 2);
-  const int numPlotsY =
-      static_cast<int>(inPlotOrderParameter) * numOrderParameterComponents +
-      static_cast<int>(inPlotCurrentDensity);
+    // Two rows: magnitude and phase.
+    numRows = 2;
+  }
+
+  // Add current density.
+  if (inContext->getComputeCurrent()) {
+    // A single column for the current density.
+    numCols++;
+
+    // Three rows: magnitude and x/y-components.
+    numRows = 3;
+  }
+
+  // Add vector potential (and magnetic field).
+  const T penetrationDepth = inContext->getParameters()->getPenetrationDepth();
+  if (penetrationDepth > static_cast<T>(0)) {
+    // One column for the induced vector potential, and one for the induced
+    // magnetic field.
+    numCols += 2;
+
+    // Three rows: magnitude and x/y-components.
+    numRows = 3;
+  }
 
   // Create visualization object.
   const int gridResolutionBase =
       inContext->getParameters()->getGridResolutionBase();
   Visualization<T> *gui = new Visualization<T>(
-      gridResolutionBase, gridResolutionBase, numPlotsX, numPlotsY);
+      gridResolutionBase, gridResolutionBase, numCols, numRows);
 
   gui->setGeometry(inContext->getGeometry());
   gui->setPrintParameters(inContext->getParameters());
@@ -392,59 +414,92 @@ Visualization<T> *createVisualization(const Context<T> *const inContext,
 ///
 /// \param inContext - Context object.
 /// \param inGUI - Visualization object.
-/// \param inPlotOrderParameter - Whether to plot the order parameter or
-/// not.
-/// \param inPlotCurrentDensity - Whether to plot the current density
-/// or not.
 ///
 /// \return - void
 template <typename T>
-void display(Context<T> *inContext, Visualization<T> *inGUI,
-             const bool inPlotOrderParameter = true,
-             const bool inPlotCurrentDensity = true) {
-  // Clear the plotting region
+void display(Context<T> *inContext, Visualization<T> *inGUI) {
+  // Clear the plotting region.
   inGUI->clearImage();
 
-  // Plot the current density.
-  if (inPlotCurrentDensity) {
-    const int rowIdx = 0;
-    // Plot the x-component of the current density.
-    inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 0,
-                     Type::real, 0, rowIdx);
+  // Column index of index.
+  int colIdx = 0;
 
-    // Plot the y-component of the current density.
-    inGUI->plotImage(*(inContext->getComputeCurrent()->getResult()), 1,
-                     Type::real, 1, rowIdx);
+  // Get compute order-parameter object.
+  const ComputeOrderParameter<T> *const computeOrderParameter =
+      inContext->getComputeOrderParameter();
 
-    // Plot the magnitude of the current density.
-    inGUI->plotImage(
-        inContext->getComputeCurrent()->getResult()->fieldMagnitude(), 0,
-        Type::real, 2, rowIdx);
-  }
-
-  // Plot the order parameter.
-  if (inPlotOrderParameter) {
-    const int rowOffset = static_cast<int>(inPlotCurrentDensity);
+  if (computeOrderParameter) {
+    // Plot the order parameter.
     const int numOrderParameterComponents =
         inContext->getOrderParameter()->getNumOrderParameterComponents();
-    for (int i = 0; i < numOrderParameterComponents; ++i) {
-      // Do it in the opposite order so the first OP component is plotted at the
-      // top.
-      const int rowIdx = rowOffset + numOrderParameterComponents - 1 - i;
+    for (; colIdx < numOrderParameterComponents; ++colIdx) {
+      // Get the order parameter component.
+      const GridGPU<T> component =
+          *(inContext->getOrderParameter()->getOrderParameterComponentField(
+              colIdx));
 
       // Plot the magnitude of the order parameter.
-      inGUI->plotImage(
-          inContext->getComputeOrderParameter()->getResult()->abs(), i,
-          Type::real, 0, rowIdx);
+      inGUI->plotImage(component.abs(), 0, Type::real, colIdx, 2);
 
       // Plot the phase of the order parameter.
-      inGUI->plotImage(
-          inContext->getComputeOrderParameter()->getResult()->complexPhase(), i,
-          Type::real, 1, rowIdx);
+      inGUI->plotImage(component.complexPhase(), 0, Type::real, colIdx, 1);
     }
   }
 
-  // Render the plots
+  // Get compute current object.
+  const ComputeCurrent<T> *const computeCurrent =
+      inContext->getComputeCurrent();
+
+  if (computeCurrent) {
+    // For convenience.
+    const int xComponent = 0;
+    const int yComponent = 1;
+
+    // Get the current.
+    const GridGPU<T> J = *(inContext->getComputeCurrent()->getResult());
+
+    // Plot the current.
+    inGUI->plotImage(J.fieldMagnitude(), 0, Type::real, colIdx, 2);
+    inGUI->plotImage(J, xComponent, Type::real, colIdx, 1);
+    inGUI->plotImage(J, yComponent, Type::real, colIdx, 0);
+    colIdx++;
+
+    // The London penetration depth.
+    const T penetrationDepth =
+        inContext->getParameters()->getPenetrationDepth();
+
+    if (penetrationDepth > static_cast<T>(0)) {
+      // Just to set "erase = false", i.e. plot everywhere, not just in the
+      // grain.
+      // TODO(niclas): Change the parameter order in Visualization, so we don't
+      // have to set all in order to do this.
+      const int normalize = 1;
+      const T minVal = static_cast<T>(0);
+      const T maxVal = static_cast<T>(1);
+      const bool erase = false;
+
+      // Get the vector potential.
+      const GridGPU<T> A = *(inContext->getInducedVectorPotential());
+
+      // Plot the induced vector potential.
+      inGUI->plotImage(A.fieldMagnitude(), 0, Type::real, colIdx, 2, normalize,
+                       minVal, maxVal, erase);
+      inGUI->plotImage(A, xComponent, Type::real, colIdx, 1, normalize, minVal,
+                       maxVal, erase);
+      inGUI->plotImage(A, yComponent, Type::real, colIdx, 0, normalize, minVal,
+                       maxVal, erase);
+      colIdx++;
+
+      // Plot the induced magnetic field.
+      const T latticeSpacing = inContext->getParameters()->getGridElementSize();
+      const GridGPU<T> divA = A.div(latticeSpacing);
+      const GridGPU<T> magneticFluxDensity = A.curl(latticeSpacing);
+      inGUI->plotImage(magneticFluxDensity, 0, Type::real, colIdx, 2, normalize,
+                       minVal, maxVal, erase);
+    }
+  }
+
+  // Render the plots.
   inGUI->draw();
 }
 

@@ -4,11 +4,12 @@
 #include "ComputeVectorPotential.h"
 #include "ContextModule.h"
 #include "Grid.h"
+#include "Optimizer.h"
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 namespace scg {
-template <typename> class CoherenceFunctions;
 template <typename> class ComputeCurrent;
 template <typename> class ComputeCurrentDensity;
 template <typename> class ComputeFreeEnergy;
@@ -43,6 +44,15 @@ public:
   void set(Parameters<T> *inParameters) { m_parameters = inParameters; }
   void set(RiccatiSolver<T> *inRiccatiSolver) {
     m_riccatiSolver = inRiccatiSolver;
+  }
+
+  /// \brief Set the optimizer.
+  ///
+  /// \param inOptimizer The optimizer as a unique pointer.
+  ///
+  /// \return Void.
+  void set(std::unique_ptr<Optimizer<T>> &&inOptimizer) {
+    m_optimizer = std::move(inOptimizer);
   }
 
   // Adders of compute objects.
@@ -86,7 +96,7 @@ public:
     return m_computeObjectList[idx];
   }
 
-  T getResidual(const int inIdx) const;
+  T getResidual() const;
 
   T getComputeTime() const { return m_computeTime; }
   int getNumIterations() const { return m_numIterations; }
@@ -112,6 +122,10 @@ private:
   GridGPU<T> *m_inducedVectorPotential;
   ComputeVectorPotential<T> m_computeVectorPotential;
 
+  // The optimizer. It is only used when computing the order parameter and/or
+  // the vector potential.
+  std::unique_ptr<Optimizer<T>> m_optimizer;
+
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
   T m_computeTime;
@@ -133,7 +147,7 @@ Context<T>::Context()
       m_computeCurrent(nullptr), m_computeCurrentDensity(nullptr),
       m_computeFreeEnergy(nullptr), m_computeOrderParameter(nullptr),
       m_computeLDOS(nullptr), m_computeTime(static_cast<T>(0.0)),
-      m_numIterations(0) {}
+      m_numIterations(0), m_optimizer(std::make_unique<Optimizer<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
   std::cout << "~Context()\n";
@@ -281,14 +295,20 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   }
 
   // The induced vector potential.
-  const T penetrationDepth = m_parameters->getPenetrationDepth();
-  if (m_computeCurrent && (penetrationDepth > static_cast<T>(0))) {
+  {
     std::cout << "Context::initialize() --> Initializing vector potential\n";
-    const int latticeSide = m_parameters->getGridResolutionBase();
+    // Initialize the stored vector potential.
+    const int gridResolution = m_parameters->getGridResolutionBase();
     const int numSpatialDims = 2;
-    GridGPU<T>::initializeGrid(m_inducedVectorPotential, latticeSide,
-                               latticeSide, numSpatialDims, Type::real);
+    GridGPU<T>::initializeGrid(m_inducedVectorPotential, gridResolution,
+                               gridResolution, numSpatialDims, Type::real);
     m_inducedVectorPotential->setZero();
+
+    // The physical side length of a lattice site.
+    const T gridElementSize = m_parameters->getGridElementSize();
+
+    // Initialize the vector-potential solver.
+    m_computeVectorPotential.initialize(gridResolution, gridElementSize);
 
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): vector potential");
@@ -318,28 +338,39 @@ template <typename T> void Context<T>::compute() {
   // Compute e.g. the order parameter.
   m_integrationIterator->compute();
 
-  // Compute the induced vector potential.
-  if (m_inducedVectorPotential) {
-    // Note that it is assumed that all values outside of the grain is already
-    // set to zero.
-    const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
-
-    // The physical side length of a lattice site.
-    const T gridElementSize = m_parameters->getGridElementSize();
-
+  if (m_computeOrderParameter) {
     // The London penetration depth.
     const T penetrationDepth = m_parameters->getPenetrationDepth();
 
-    // Solve Maxwell's equation relating the vector potential to the current.
-    m_computeVectorPotential.compute(currentDensity, gridElementSize,
-                                     penetrationDepth,
-                                     *m_inducedVectorPotential);
+    // Compute the induced vector potential. It can only be done if the current
+    // density is computed, and the penetration depth is finite.
+    if (m_computeCurrent && (penetrationDepth > static_cast<T>(0))) {
+      // Note that it is assumed that all values outside of the grain is already
+      // set to zero.
+      const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
+
+      // Solve Maxwell's equation relating the vector potential to the current.
+      m_computeVectorPotential.solve(currentDensity, penetrationDepth);
+
+      // Compute the residual.
+      m_computeVectorPotential.computeResidual(*m_inducedVectorPotential);
+    }
+
+    // Compute the next order parameter and vector potential, but do not update.
+    m_optimizer->compute(*(m_computeOrderParameter->getOrderParameter()),
+                         *(m_computeVectorPotential.getResult()),
+                         *m_orderParameter, *m_inducedVectorPotential);
+
+    // Update the order parameter and vector potential.
+    // TODO(niclas): Should we really update when we have reached convergence?
+    // The update might screw it up (slightly).
+    m_optimizer->update(*m_orderParameter, *m_inducedVectorPotential);
   }
 
   // Stop timer.
   const auto stopTime = std::chrono::high_resolution_clock::now();
 
-  // Count the number of milliseconds.
+  // Count the number of microseconds.
   const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
                             stopTime - startTime)
                             .count();
@@ -347,21 +378,37 @@ template <typename T> void Context<T>::compute() {
   // Convert to seconds.
   m_computeTime = static_cast<T>(duration) * static_cast<T>(1e-6);
 
+  // Increase iteration counter.
   m_numIterations++;
 }
 
-template <typename T> T Context<T>::getResidual(int idx) const {
-  if (idx < getNumComputeObjects()) {
-    return m_computeObjectList[idx]->getResidual();
-  } else {
-    // TODO(niclas): Is this behavior really what the user expects?!
-    return static_cast<T>(1.0);
+template <typename T> T Context<T>::getResidual() const {
+  // Get the convergence of the vector potential first. If the vector
+  // potential is not computed, it will be zero.
+  T maxResidual = m_computeVectorPotential.getResidual();
+
+  // Get the convergence for all compute objects.
+  const int numComputeObjects = getNumComputeObjects();
+  for (int i = 0; i < numComputeObjects; ++i) {
+    const T residual = m_computeObjectList[i]->getResidual();
+    maxResidual = std::max(residual, maxResidual);
   }
+  return maxResidual;
 }
 
 template <typename T> bool Context<T>::isConverged() const {
-  // TODO(niclas): Check all compute objects?
-  return getComputeObject(0)->isConverged();
+  // Check the convergence of the vector potential first. If the vector
+  // potential is not computed, it will be converged.
+  const T convergenceCriterion = m_parameters->getConvergenceCriterion();
+  const T residual = m_computeVectorPotential.getResidual();
+  bool success = residual < convergenceCriterion;
+
+  // Check the convergence for all compute objects.
+  const int numComputeObjects = getNumComputeObjects();
+  for (int i = 0; i < numComputeObjects; ++i) {
+    success &= m_computeObjectList[i]->isConverged();
+  }
+  return success;
 }
 } // namespace scg
 
