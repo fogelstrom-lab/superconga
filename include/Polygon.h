@@ -9,8 +9,6 @@
 
 namespace scg {
 template <typename T> class Polygon {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   Polygon();
   ~Polygon();
@@ -33,7 +31,7 @@ public:
   Polygon &operator=(Polygon inOther);
 
   int getNumVertices() const { return m_numVertices; }
-  GridGPU *getVertices() const { return m_vertices; }
+  GridGPU<T> *getVertices() const { return m_vertices; }
 
   // Copy vertices from arrays inVerticesX and inVerticesY.
   void setVertices(const T *const inVerticesX, const T *const inVerticesY);
@@ -60,7 +58,7 @@ private:
   const int m_dimension = 2;
 
   int m_numVertices;
-  GridGPU *m_vertices;
+  GridGPU<T> *m_vertices;
 };
 
 template <typename T> Polygon<T>::Polygon() : m_vertices(0), m_numVertices(0) {}
@@ -69,7 +67,7 @@ template <typename T>
 Polygon<T>::Polygon(const Polygon<T> &inOther)
     : m_vertices(0), m_numVertices(inOther.m_numVertices) {
   if (inOther.m_vertices)
-    m_vertices = new GridGPU(*inOther.m_vertices);
+    m_vertices = new GridGPU<T>(*inOther.m_vertices);
 }
 
 template <typename T>
@@ -80,7 +78,7 @@ Polygon<T>::Polygon(const int inNumVertices, const T inRadius, const T inAngle,
   const int numX = inNumVertices;
   const int numY = 1;
 
-  m_vertices = new GridGPU(numX, numY, m_dimension, Type::real);
+  m_vertices = new GridGPU<T>(numX, numY, m_dimension, Type::real);
 
   setVerticesRadial(inNumVertices, inRadius, inAngle, inCenterX, inCenterY);
 }
@@ -93,7 +91,7 @@ Polygon<T>::Polygon(const int inNumVertices, const T *const inVerticesX,
   const int numX = inNumVertices;
   const int numY = 1;
 
-  m_vertices = new GridGPU(numX, numY, m_dimension, Type::real);
+  m_vertices = new GridGPU<T>(numX, numY, m_dimension, Type::real);
 
   setVertices(inVerticesX, inVerticesY);
 }
@@ -111,7 +109,7 @@ template <typename T> Polygon<T> &Polygon<T>::operator=(Polygon<T> inOther) {
 template <typename T>
 void Polygon<T>::setVertices(const T *const inVerticesX,
                              const T *const inVerticesY) {
-  typename Vector<T>::GPU &vertices = *(m_vertices->getVector());
+  VectorGPU<T> &vertices = *(m_vertices->getVector());
   const int offset = m_vertices->getFieldComponentOffset(1);
 
   for (int i = 0; i < m_numVertices; ++i) {

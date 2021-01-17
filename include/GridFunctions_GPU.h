@@ -19,63 +19,65 @@ struct GridFunctions
 template <typename, typename> class GridData;
 
 template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
-  typedef GridData<T, thrust::device_vector<T>> GridGPU;
-  typedef thrust::device_vector<T> Vector;
+  GridData<T, thrust::device_vector<T>> *grid;
 
-  GridGPU *grid;
-
-  GridFunctions(GridGPU *ptr) : grid(ptr) {}
+  GridFunctions(GridData<T, thrust::device_vector<T>> *ptr) : grid(ptr) {}
 
   template <typename T2>
   void typeConvert(GridData<T2, thrust::device_vector<T2>> &other) const;
 
   // IN place transponate
-  GridGPU &transpose(const int field);
+  GridData<T, thrust::device_vector<T>> &transpose(const int field);
 
   // Compute the complex magnitude squared, of specified field.
-  void complexMagnitudeSq(GridGPU *result) const;
+  void complexMagnitudeSq(GridData<T, thrust::device_vector<T>> *result) const;
 
   // Compute complex phase of this (complex) grid.
-  void complexPhase(GridGPU *result) const;
+  void complexPhase(GridData<T, thrust::device_vector<T>> *result) const;
 
   // Compute gradient of complex phase of this grid.
-  void complexPhaseGradient(GridGPU *result, const T h) const;
+  void complexPhaseGradient(GridData<T, thrust::device_vector<T>> *result,
+                            const T h) const;
 
   // Compute the magnitude of the real part of this vector field.
-  void fieldMagnitude(GridGPU *result) const;
+  void fieldMagnitude(GridData<T, thrust::device_vector<T>> *result) const;
 
   // Compute divergence
-  void div(GridGPU *result, const T h) const;
+  void div(GridData<T, thrust::device_vector<T>> *result, const T h) const;
 
   // Compute curl
-  void curl(GridGPU *result, const T h) const;
+  void curl(GridData<T, thrust::device_vector<T>> *result, const T h) const;
 
   // Compute Laplacian
-  void del2(GridGPU *result, const T h) const;
+  void del2(GridData<T, thrust::device_vector<T>> *result, const T h) const;
 
   // Sum all fields.
-  void sumFieldComponents(GridGPU *result) const;
+  void sumFieldComponents(GridData<T, thrust::device_vector<T>> *result) const;
 
   // Insert other grid into this. <x,y>_offset are offset in discrete elements
   // from center. x_offset = y_offset = 0 results in a centered grid.
-  void insertGrid(const GridGPU *other, const int x_offset, const int y_offset);
+  void insertGrid(const GridData<T, thrust::device_vector<T>> *other,
+                  const int x_offset, const int y_offset);
 
   // Insert other grid into this, with applied rotation (to other grid).
-  void insertRotatedGrid(const GridGPU *other, const T phi, const int x_offset,
-                         const int y_offset, Type::type part);
+  void insertRotatedGrid(const GridData<T, thrust::device_vector<T>> *other,
+                         const T phi, const int x_offset, const int y_offset,
+                         Type::type part);
 
   // Add other grid to this, with applied rotation (to other grid).
-  void insertRotatedGridAdditive(const GridGPU *other, const T phi, int field,
-                                 const int x_offset, const int y_offset,
-                                 Type::type part);
+  void
+  insertRotatedGridAdditive(const GridData<T, thrust::device_vector<T>> *other,
+                            const T phi, int field, const int x_offset,
+                            const int y_offset, Type::type part);
 
   // Change resolution of grid, with linear interpolation of existing data.
   void resample(const int nx_new, const int ny_new);
-  void resample(GridGPU *&target, const int nx_new, const int ny_new) const;
+  void resample(GridData<T, thrust::device_vector<T>> *&target,
+                const int nx_new, const int ny_new) const;
 
   // Find min and max value of range
-  static void minmax(const GridGPU &grid, T &minv, T &maxv, int field,
-                     Type::type part);
+  static void minmax(const GridData<T, thrust::device_vector<T>> &grid, T &minv,
+                     T &maxv, int field, Type::type part);
 
   // Helper functions to create kernel dimensions
   void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock) const;
@@ -565,7 +567,7 @@ GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
-    GridGPU *result) const {
+    GridData<T, thrust::device_vector<T>> *result) const {
   dim3 tpb, bpg;
   getKernelDimensionsFields(bpg, tpb);
 
@@ -578,7 +580,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
-    GridGPU *result) const {
+    GridData<T, thrust::device_vector<T>> *result) const {
   dim3 tpb, bpg;
   getKernelDimensionsFields(bpg, tpb);
 
@@ -591,7 +593,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
-    GridGPU *result, const T h) const {
+    GridData<T, thrust::device_vector<T>> *result, const T h) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -605,7 +607,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
-    GridGPU *result) const {
+    GridData<T, thrust::device_vector<T>> *result) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -618,8 +620,8 @@ void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::div(GridGPU *result,
-                                                     const T h) const {
+void GridFunctions<T, thrust::device_vector<T>>::div(
+    GridData<T, thrust::device_vector<T>> *result, const T h) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -631,8 +633,8 @@ void GridFunctions<T, thrust::device_vector<T>>::div(GridGPU *result,
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::curl(GridGPU *result,
-                                                      const T h) const {
+void GridFunctions<T, thrust::device_vector<T>>::curl(
+    GridData<T, thrust::device_vector<T>> *result, const T h) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -644,8 +646,8 @@ void GridFunctions<T, thrust::device_vector<T>>::curl(GridGPU *result,
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::del2(GridGPU *result,
-                                                      const T h) const {
+void GridFunctions<T, thrust::device_vector<T>>::del2(
+    GridData<T, thrust::device_vector<T>> *result, const T h) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -662,7 +664,7 @@ void GridFunctions<T, thrust::device_vector<T>>::del2(GridGPU *result,
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::sumFieldComponents(
-    GridGPU *result) const {
+    GridData<T, thrust::device_vector<T>> *result) const {
   dim3 tpb, bpg;
   getKernelDimensions(bpg, tpb);
 
@@ -682,7 +684,8 @@ void GridFunctions<T, thrust::device_vector<T>>::sumFieldComponents(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::insertGrid(
-    const GridGPU *other, const int x_offset, const int y_offset) {
+    const GridData<T, thrust::device_vector<T>> *other, const int x_offset,
+    const int y_offset) {
   // insert 'other' grid into 'this'
   const int Nx_other = other->dimX();
   const int Ny_other = other->dimY();
@@ -738,8 +741,8 @@ void GridFunctions<T, thrust::device_vector<T>>::insertGrid(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGrid(
-    const GridGPU *other, const T phi, const int x_offset, const int y_offset,
-    Type::type part) {
+    const GridData<T, thrust::device_vector<T>> *other, const T phi,
+    const int x_offset, const int y_offset, Type::type part) {
   checkCudaError("GridData<T>::insertRotatedGrid() b4 ");
 
   // Grid dimensions of grid to rotate and read from (lookup grid)
@@ -792,8 +795,8 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGrid(
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGridAdditive(
-    const GridGPU *other, const T phi, int field, const int x_offset,
-    const int y_offset, Type::type part) {
+    const GridData<T, thrust::device_vector<T>> *other, const T phi, int field,
+    const int x_offset, const int y_offset, Type::type part) {
   int fieldStart, fieldEnd;
 
   if (field == -1) {
@@ -868,7 +871,7 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
   const int numElements = nx_new * ny_new * numFields * (1 + isComplex);
 
   // Allocate vector for new grid
-  Vector *vec_tmp = new Vector(numElements);
+  thrust::device_vector<T> *vec_tmp = new thrust::device_vector<T>(numElements);
 
   const int nx = grid->dimX();
   const int ny = grid->dimY();
@@ -908,9 +911,10 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
 
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::resample(
-    GridGPU *&target, const int nx_new, const int ny_new) const {
-  GridGPU::initializeGrid(target, nx_new, ny_new, grid->numFields(),
-                          grid->representation());
+    GridData<T, thrust::device_vector<T>> *&target, const int nx_new,
+    const int ny_new) const {
+  GridData<T, thrust::device_vector<T>>::initializeGrid(
+      target, nx_new, ny_new, grid->numFields(), grid->representation());
 
   const int isComplex = int(grid->isComplex());
   const int numFields = grid->numFields();
@@ -936,11 +940,10 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::minmax(const GridGPU &grid,
-                                                        T &minv, T &maxv,
-                                                        int field,
-                                                        Type::type part) {
-  Vector &vec = *(grid.getVector());
+void GridFunctions<T, thrust::device_vector<T>>::minmax(
+    const GridData<T, thrust::device_vector<T>> &grid, T &minv, T &maxv,
+    int field, Type::type part) {
+  thrust::device_vector<T> &vec = *(grid.getVector());
 
   size_t start = grid.getFieldComponentOffset(field, part);
   size_t end = start + grid.dimX() * grid.dimY();

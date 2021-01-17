@@ -12,26 +12,26 @@ template <typename> class GeometryGroup;
 
 template <typename T, template <typename> class GREENS>
 struct GreensFunctionStatic {
-  typedef typename Grid<T>::GPU GridGPU;
-
   // Greens function functions
-  static void computeGreens(GridGPU *result, const ParameterIterator<int> *iter,
-                            const GridGPU *gamma, const GridGPU *gammabar);
+  static void computeGreens(GridGPU<T> *result,
+                            const ParameterIterator<int> *iter,
+                            const GridGPU<T> *gamma,
+                            const GridGPU<T> *gammabar);
 
-  static void computeGreensSumEnergy(GridGPU *result,
+  static void computeGreensSumEnergy(GridGPU<T> *result,
                                      const ParameterIterator<int> *iter,
-                                     const GridGPU *gamma,
-                                     const GridGPU *gammabar);
+                                     const GridGPU<T> *gamma,
+                                     const GridGPU<T> *gammabar);
 
-  static void computeGreensSumEnergy(GridGPU *result,
+  static void computeGreensSumEnergy(GridGPU<T> *result,
                                      const ParameterIterator<int> *iter,
-                                     const GridGPU *summandFactor,
-                                     const GridGPU *gamma,
-                                     const GridGPU *gammabar);
+                                     const GridGPU<T> *summandFactor,
+                                     const GridGPU<T> *gamma,
+                                     const GridGPU<T> *gammabar);
 
   // Helper functions
   static void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
-                                  const GridGPU *grid, int numEnergies = 0);
+                                  const GridGPU<T> *grid, int numEnergies = 0);
 };
 
 namespace internal {
@@ -128,8 +128,8 @@ computeGreensSumEnergy_kernel(const int N, const int Ne, const T *summandFactor,
 // Compute greens function for all energies, without integrating (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreens(
-    GridGPU *result, const ParameterIterator<int> *iter, const GridGPU *gamma,
-    const GridGPU *gammabar) {
+    GridGPU<T> *result, const ParameterIterator<int> *iter,
+    const GridGPU<T> *gamma, const GridGPU<T> *gammabar) {
   int numEnergies = iter->getNumInterval();
 
   dim3 bpg, tpb;
@@ -149,12 +149,12 @@ void GreensFunctionStatic<T, GREENS>::computeGreens(
 // Compute greens function for all energies and integrate (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
-    GridGPU *result, const ParameterIterator<int> *iter, const GridGPU *gamma,
-    const GridGPU *gammabar) {
+    GridGPU<T> *result, const ParameterIterator<int> *iter,
+    const GridGPU<T> *gamma, const GridGPU<T> *gammabar) {
   int numEnergies = iter->getNumInterval();
 
   dim3 bpg, tpb;
-  GridGPU::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
 
   // Compute Greens function from gamma and gammabar
   internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
@@ -169,13 +169,13 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
 // Compute greens function for all energies and integrate (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
-    GridGPU *result, const ParameterIterator<int> *iter,
-    const GridGPU *summandFactor, const GridGPU *gamma,
-    const GridGPU *gammabar) {
+    GridGPU<T> *result, const ParameterIterator<int> *iter,
+    const GridGPU<T> *summandFactor, const GridGPU<T> *gamma,
+    const GridGPU<T> *gammabar) {
   int numEnergies = iter->getNumInterval();
 
   dim3 bpg, tpb;
-  GridGPU::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
 
   // Compute Greens function from gamma and gammabar
   internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
@@ -189,10 +189,9 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
 }
 
 template <typename T, template <typename> class GREENS>
-void GreensFunctionStatic<T, GREENS>::getKernelDimensions(dim3 &blocksPerGrid,
-                                                          dim3 &threadsPerBlock,
-                                                          const GridGPU *grid,
-                                                          int numEnergies) {
+void GreensFunctionStatic<T, GREENS>::getKernelDimensions(
+    dim3 &blocksPerGrid, dim3 &threadsPerBlock, const GridGPU<T> *grid,
+    int numEnergies) {
   const int N = grid->dimX();
 
   if (numEnergies == 0)

@@ -4,13 +4,11 @@
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
 #include "IntegrationIteratorOzaki.h"
+#include "Grid.h"
 #include "Optimizer.h"
 
 namespace scg {
 template <typename T> class ComputeOrderParameter : public ComputeProperty<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   // Constructors and Destructors
   ComputeOrderParameter();
@@ -26,7 +24,7 @@ public:
   void setOrderParameter(const OrderParameter<T> *delta_in);
 
   // Virtual functions
-  virtual GridGPU *getResult() { return _delta_fields; }
+  virtual GridGPU<T> *getResult() { return _delta_fields; }
 
   // This should be called once for every iteration, before any integration
   // takes place.
@@ -39,8 +37,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar);
+  virtual void computeGreensAngle(ParameterIterator<int> *iter,
+                                  GridGPU<T> *gamma, GridGPU<T> *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -66,10 +64,10 @@ private:
   Optimizer<T> *_opt;
 
   // Each component stored in a separate field.
-  GridGPU *_delta_fields;
+  GridGPU<T> *_delta_fields;
 
   // Temp storage for computation of order parameter
-  GridGPU *_deltaTmp;
+  GridGPU<T> *_deltaTmp;
 };
 
 template <typename T>
@@ -112,15 +110,15 @@ template <typename T> int ComputeOrderParameter<T>::initialize() {
 
   const int Nc = _delta->getNumOrderParameterComponents();
 
-  GridGPU::initializeGrid(_deltaTmp, N0, N0);
-  GridGPU::initializeGrid(_delta_fields, N0, N0, Nc, Type::complex);
+  GridGPU<T>::initializeGrid(_deltaTmp, N0, N0);
+  GridGPU<T>::initializeGrid(_delta_fields, N0, N0, Nc, Type::complex);
 
   ComputeProperty<T>::initGreensAngle(N1);
 
   ComputeProperty<T>::setConverged(false);
 
-  GridCPU energies_cpu = *(C::getIntegrationIterator()->getEnergies());
-  GridCPU residues_cpu = *(C::getIntegrationIterator()->getResidues());
+  GridCPU<T> energies_cpu = *(C::getIntegrationIterator()->getEnergies());
+  GridCPU<T> residues_cpu = *(C::getIntegrationIterator()->getResidues());
 
   // Initialize coupling constant
   for (int i = 0; i < Nc; ++i) {
@@ -175,12 +173,12 @@ template <typename T> void ComputeOrderParameter<T>::initializeGreensAngle() {
 
 template <typename T>
 void ComputeOrderParameter<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                                  GridGPU *gamma,
-                                                  GridGPU *gammabar) {
+                                                  GridGPU<T> *gamma,
+                                                  GridGPU<T> *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     typedef ComputeProperty<T> C;
     IntegrationIterator<T> *ii = ContextModule<T>::getIntegrationIterator();
-    GridGPU *residues = ii->getResidues();
+    GridGPU<T> *residues = ii->getResidues();
 
     GreensFunctionStatic<T, Greens_Delta>::computeGreensSumEnergy(
         C::getGreensCurrentAngle(), iter, residues, gamma, gammabar);
@@ -193,7 +191,7 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
   typedef ComputeProperty<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *greens = C::getGreensCurrentAngle();
+    GridGPU<T> *greens = C::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens);
@@ -244,7 +242,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     // compute the residual with values that actually matter.
     const Context<T> *const ctx = ContextModule<T>::getContext();
     for (int i = 0; i < Nc; ++i) {
-      GridGPU *const component =
+      GridGPU<T> *const component =
           _delta->getOrderParameterComponent(i)->getOrderParameterField();
       ctx->getGeometry()->zeroValuesOutsideDomainRef(component);
     }
@@ -260,9 +258,9 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     // Compute the residual component-wise and pick the maximum one.
     T residual = static_cast<T>(0.0);
     for (int i = 0; i < Nc; ++i) {
-      const GridGPU *const componentOld =
+      const GridGPU<T> *const componentOld =
           deltaOld->getOrderParameterComponent(i)->getOrderParameterField();
-      const GridGPU *const componentNew =
+      const GridGPU<T> *const componentNew =
           _delta->getOrderParameterComponent(i)->getOrderParameterField();
 
       const T residualComponent = computeResidual(*componentOld, *componentNew);

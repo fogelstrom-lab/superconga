@@ -12,8 +12,6 @@
 
 namespace scg {
 template <typename T> class OrderParameterComponent {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructors and destructor.
   OrderParameterComponent(const BasisFunctionSymmetry inSymmetry);
@@ -30,7 +28,7 @@ public:
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
 
-  GridGPU *getOrderParameterField() const { return _deltaComp; }
+  GridGPU<T> *getOrderParameterField() const { return _deltaComp; }
   T getRelativeTc() const { return _Tcthis_Tc; }
   void setRelativeTc(const T Tc) { _Tcthis_Tc = Tc; }
 
@@ -39,13 +37,13 @@ public:
   }
   T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
 
-  void computeMomentumDependence(GridGPU *target, const T pX, const T pY,
+  void computeMomentumDependence(GridGPU<T> *target, const T pX, const T pY,
                                  bool conjugateBasisFunction = false) const;
 
   void initCouplingConstant(const T *energies, const T *residues);
 
   void applyCouplingConstant();
-  void applyCouplingConstant(GridGPU *target) const;
+  void applyCouplingConstant(GridGPU<T> *target) const;
 
   T deltaBulk() const;
 
@@ -78,7 +76,7 @@ private:
   BasisFunction<T> m_basisFunction;
 
   // Order parameter component
-  GridGPU *_deltaComp;
+  GridGPU<T> *_deltaComp;
 };
 
 template <typename T>
@@ -98,7 +96,7 @@ OrderParameterComponent<T>::OrderParameterComponent(
       m_crystalAxesRotation(other.m_crystalAxesRotation),
       m_basisFunction(other.m_basisFunction) {
   if (other._deltaComp) {
-    _deltaComp = new GridGPU(*other._deltaComp);
+    _deltaComp = new GridGPU<T>(*other._deltaComp);
   }
 }
 
@@ -146,7 +144,7 @@ void OrderParameterComponent<T>::initialize(
   if (_deltaComp && _deltaComp->dimX() != N) {
     _deltaComp->resample(N, N);
   } else {
-    GridGPU::initializeGrid(_deltaComp, N, N);
+    GridGPU<T>::initializeGrid(_deltaComp, N, N);
   }
 
   if (inFermiSurface) {
@@ -187,7 +185,8 @@ template <typename T> void OrderParameterComponent<T>::applyCouplingConstant() {
 }
 
 template <typename T>
-void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) const {
+void OrderParameterComponent<T>::applyCouplingConstant(
+    GridGPU<T> *target) const {
   if (m_isCouplingConstantInitialized) {
     (*target) *= m_couplingConstant;
   } else {
@@ -197,7 +196,7 @@ void OrderParameterComponent<T>::applyCouplingConstant(GridGPU *target) const {
 
 template <typename T>
 void OrderParameterComponent<T>::computeMomentumDependence(
-    GridGPU *target, const T pX, const T pY,
+    GridGPU<T> *target, const T pX, const T pY,
     bool conjugateBasisFunction) const {
   T pXRotated;
   T pYRotated;

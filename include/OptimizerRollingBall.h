@@ -1,6 +1,7 @@
 #ifndef OPTIMIZER_ROLLING_BALL_H_
 #define OPTIMIZER_ROLLING_BALL_H_
 
+#include "Grid.h"
 #include "Optimizer.h"
 #include "OrderParameter.h"
 #include <algorithm>
@@ -12,8 +13,6 @@ namespace scg {
 // TODO: (Patric) Implement warmup/burnin and final relaxation at end of
 // simulation, with getters and setters.
 template <typename T> class OptimizerRollingBall : public Optimizer<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructor.
   OptimizerRollingBall(const T inIneartialWeight = static_cast<T>(0.5),
@@ -79,14 +78,14 @@ void OptimizerRollingBall<T>::step(OrderParameter<T> *const inOutOrderParameter,
         inOutOrderParameter->getNumOrderParameterComponents();
     for (int i = 0; i < numComponents; ++i) {
       // The current order parameter,
-      GridGPU *d0 = inOutOrderParameter->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d0 = inOutOrderParameter->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
       // The order parameter from one iteration ago.
-      GridGPU *d1 = m_orderParameterKMinusOne->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d1 = m_orderParameterKMinusOne->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
       // The order parameter from two iterations ago.
-      GridGPU *d2 = m_orderParameterKMinusTwo->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d2 = m_orderParameterKMinusTwo->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
 
       // Update the order parameter with a rolling ball step.
       *d0 += (*d1 - *d2) * weight;

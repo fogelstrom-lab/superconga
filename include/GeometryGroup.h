@@ -13,8 +13,6 @@
 
 namespace scg {
 template <typename T> class GeometryGroup : public ContextModule<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   GeometryGroup();
   virtual ~GeometryGroup();
@@ -45,7 +43,7 @@ public:
 
   // Create discrete representation with resolution NxN, and return domain
   // labels only. Does not store data in any member variables.
-  Grid<char>::GPU *createDomain(const int N) const;
+  GridGPU<char> *createDomain(const int N) const;
 
   /// \brief Extrapolates values outwards from boundary, using the rotated
   /// geometry.
@@ -57,7 +55,7 @@ public:
   /// By extrapolating the boundary values, this artifact is eliminated.
   ///
   /// \param target The grid to be extended.
-  void extendValuesAtBoundary(GridGPU *target) const;
+  void extendValuesAtBoundary(GridGPU<T> *target) const;
 
   /// \brief Extrapolates values outwards from boundary, using the non-rotated
   /// reference geometry.
@@ -69,7 +67,7 @@ public:
   /// By extrapolating the boundary values, this artifact is eliminated.
   ///
   /// \param target The grid to be extended.
-  void extendValuesAtBoundaryRef(GridGPU *target) const;
+  void extendValuesAtBoundaryRef(GridGPU<T> *target) const;
 
   /// \brief Set values outside of the domain to zero, using the non-rotated
   /// reference geometry.
@@ -80,7 +78,7 @@ public:
   /// with the zeroValuesOutsideDomainRef() function.
   ///
   /// \param target The grid to be zeroed.
-  void zeroValuesOutsideDomainRef(GridGPU *target) const;
+  void zeroValuesOutsideDomainRef(GridGPU<T> *target) const;
 
   int getNumGrainLatticeSites();
   // Computes the physical area of the geometry.
@@ -88,7 +86,7 @@ public:
 
   // Computes the average of the specified field in the inpute grid, only using
   // the values inside the actual geometry definition.
-  cplx<T> fieldAverage(GridGPU *data, const int field = 0);
+  cplx<T> fieldAverage(GridGPU<T> *data, const int field = 0);
 
   // Getters
   void getGridDimensions(int &Nx, int &Ny) const;
@@ -101,12 +99,12 @@ public:
   T *getBoundaryDistance() const;
 
   // Getters for pointers to grids containing discrete geometry representation
-  Grid<char>::GPU *getDomainLabelsGrid() const { return _domainLabels; }
-  GridGPU *getNormalsGrid() const { return _normals; }
-  GridGPU *getBoundaryDistanceGrid() const { return _boundaryDistance; }
+  GridGPU<char> *getDomainLabelsGrid() const { return _domainLabels; }
+  GridGPU<T> *getNormalsGrid() const { return _normals; }
+  GridGPU<T> *getBoundaryDistanceGrid() const { return _boundaryDistance; }
 
   // Get domain labels grid for the geometry in reference frame.
-  Grid<char>::GPU *getDomainGrid() const { return _domain_ref; }
+  GridGPU<char> *getDomainGrid() const { return _domain_ref; }
 
   // Helper functions to find locations of geometry boundary crossings. Only
   // used by the BoundaryStorage class so far, when determining how much memory
@@ -134,21 +132,21 @@ private:
 
   void geomOpAdd(GeometryComponent<T> *newGeom);
   void geomOpRemove(GeometryComponent<T> *newGeom);
-  void geomOp(GeometryComponent<T> *newGeom, Grid<char>::GPU *geomOpMatrix);
+  void geomOp(GeometryComponent<T> *newGeom, GridGPU<char> *geomOpMatrix);
 
-  void geomOpAdd(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
-  void geomOpRemove(Grid<char>::GPU *dom, Grid<char>::GPU *dom_local) const;
+  void geomOpAdd(GridGPU<char> *dom, GridGPU<char> *dom_local) const;
+  void geomOpRemove(GridGPU<char> *dom, GridGPU<char> *dom_local) const;
 
-  int computeNumGrainLatticeSites(const Grid<char>::GPU &inDomainLabels);
+  int computeNumGrainLatticeSites(const GridGPU<char> &inDomainLabels);
 
-  void extendValuesAtBoundary(const Grid<char>::GPU &inDomainLabels,
-                              GridGPU &inOutTarget) const;
+  void extendValuesAtBoundary(const GridGPU<char> &inDomainLabels,
+                              GridGPU<T> &inOutTarget) const;
 
   std::vector<GeometryComponent<T> *> _geomComponentList;
 
   std::vector<int> _geomOpList;
-  Grid<char>::GPU *_geomOpAdd;
-  Grid<char>::GPU *_geomOpRemove;
+  GridGPU<char> *_geomOpAdd;
+  GridGPU<char> *_geomOpRemove;
 
   T _currentAngle;
 
@@ -173,19 +171,19 @@ private:
   // 0=outside, 1=inside, 2=inside, near boundary entry, 3=inside, near boundary
   // exit.
   const char m_maxValidLabel = 3;
-  Grid<char>::GPU *_domainLabels;
+  GridGPU<char> *_domainLabels;
 
   // Field with boundary normals for discrete geometry (2 fields (x- and
   // y-component)). Only stored where nodes are labeled 2 or 3.
-  GridGPU *_normals;
+  GridGPU<T> *_normals;
 
   // Field with distances between the boundary nodes to the exact location of
   // the geometry, as measured along the positive gamma trajectory. Only stored
   // where nodes are labeled 2 or 3.
-  GridGPU *_boundaryDistance;
+  GridGPU<T> *_boundaryDistance;
 
   // Geometry domain labels grid in reference/unrotated frame (theta=0)
-  Grid<char>::GPU *_domain_ref;
+  GridGPU<char> *_domain_ref;
 
   // The number of lattice sites in the grain.
   int m_numGrainLatticeSites;
@@ -458,16 +456,16 @@ GeometryGroup<T>::GeometryGroup(const GeometryGroup<T> &other)
     : ContextModule<T>(other), _domainLabels(0), _normals(0),
       _boundaryDistance(0), _domain_ref(0) {
   if (other._domainLabels) {
-    _domainLabels = new Grid<char>::GPU(*other._domainLabels);
+    _domainLabels = new GridGPU<char>(*other._domainLabels);
   }
   if (other._normals) {
-    _normals = new GridGPU(*other._normals);
+    _normals = new GridGPU<T>(*other._normals);
   }
   if (other._boundaryDistance) {
-    _boundaryDistance = new GridGPU(*other._boundaryDistance);
+    _boundaryDistance = new GridGPU<T>(*other._boundaryDistance);
   }
   if (other._domain_ref) {
-    _domain_ref = new Grid<char>::GPU(*other._domain_ref);
+    _domain_ref = new GridGPU<char>(*other._domain_ref);
   }
 
   const int Nc = other.getNumGeometryComponents();
@@ -545,9 +543,9 @@ template <typename T> int GeometryGroup<T>::initialize() {
       ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
 
   // Initialize grids with data for ONE angle
-  GridGPU::initializeGrid(_normals, N, N, 2, Type::real);
-  GridGPU::initializeGrid(_boundaryDistance, N, N, 1, Type::real);
-  Grid<char>::GPU::initializeGrid(_domainLabels, N, N, 1, Type::real);
+  GridGPU<T>::initializeGrid(_normals, N, N, 2, Type::real);
+  GridGPU<T>::initializeGrid(_boundaryDistance, N, N, 1, Type::real);
+  GridGPU<char>::initializeGrid(_domainLabels, N, N, 1, Type::real);
 
   if (_domain_ref) {
     delete _domain_ref;
@@ -574,8 +572,8 @@ template <typename T> void GeometryGroup<T>::setGeomOpMatrix() {
   char op_add[16] = {0, 1, 2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 3, 1, 1, 3};
   char op_remove[16] = {0, 0, 0, 0, 1, 0, 3, 2, 2, 0, 0, 2, 3, 0, 3, 0};
 
-  _geomOpAdd = new Grid<char>::GPU(16, 1, 1, Type::real);
-  _geomOpRemove = new Grid<char>::GPU(16, 1, 1, Type::real);
+  _geomOpAdd = new GridGPU<char>(16, 1, 1, Type::real);
+  _geomOpRemove = new GridGPU<char>(16, 1, 1, Type::real);
 
   _geomOpAdd->setData(op_add, 16);
   _geomOpRemove->setData(op_remove, 16);
@@ -607,14 +605,14 @@ template <typename T> void GeometryGroup<T>::create(const T angle) {
 }
 
 template <typename T>
-Grid<char>::GPU *GeometryGroup<T>::createDomain(const int N) const {
+GridGPU<char> *GeometryGroup<T>::createDomain(const int N) const {
   // Initialize compound geom grids
-  Grid<char>::GPU *dom = new Grid<char>::GPU(N, N, 1, Type::real);
+  GridGPU<char> *dom = new GridGPU<char>(N, N, 1, Type::real);
   dom->setZero();
 
   // Perform operations for each element
   for (int i = 0; i < getNumGeometryComponents(); ++i) {
-    Grid<char>::GPU *dom_local = _geomComponentList[i]->createDomain(N);
+    GridGPU<char> *dom_local = _geomComponentList[i]->createDomain(N);
 
     if (_geomOpList[i] == Type::add) {
       geomOpAdd(dom, dom_local);
@@ -672,7 +670,7 @@ GeometryGroup<T>::getGeometryComponent(const int comp) const {
 
 template <typename T>
 void GeometryGroup<T>::geomOp(GeometryComponent<T> *newGeom,
-                              Grid<char>::GPU *geomOpMatrix) {
+                              GridGPU<char> *geomOpMatrix) {
   int Nx, Ny;
   getGridDimensions(Nx, Ny);
 
@@ -699,10 +697,10 @@ void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
   dim3 bpg, tpb;
   _domainLabels->getKernelDimensions(bpg, tpb);
 
-  Grid<char>::GPU *domResult = _domainLabels;
+  GridGPU<char> *domResult = _domainLabels;
 
-  Grid<char>::GPU *domTmp(0);
-  Grid<char>::GPU::initializeGrid(domTmp, domResult);
+  GridGPU<char> *domTmp(0);
+  GridGPU<char>::initializeGrid(domTmp, domResult);
   domTmp->setZero();
 
   internal::geomOpRemove_kernel<T><<<bpg, tpb>>>(
@@ -716,24 +714,24 @@ void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
 }
 
 template <typename T>
-void GeometryGroup<T>::geomOpAdd(Grid<char>::GPU *dom,
-                                 Grid<char>::GPU *dom_local) const {
+void GeometryGroup<T>::geomOpAdd(GridGPU<char> *dom,
+                                 GridGPU<char> *dom_local) const {
   int N = dom->dimX();
 
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, N, N);
 
   internal::geomOpAdd_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
 }
 
 template <typename T>
-void GeometryGroup<T>::geomOpRemove(Grid<char>::GPU *dom,
-                                    Grid<char>::GPU *dom_local) const {
+void GeometryGroup<T>::geomOpRemove(GridGPU<char> *dom,
+                                    GridGPU<char> *dom_local) const {
   int N = dom->dimX();
 
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, N, N);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, N, N);
 
   internal::geomOpRemove_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
@@ -741,7 +739,7 @@ void GeometryGroup<T>::geomOpRemove(Grid<char>::GPU *dom,
 
 template <typename T>
 int GeometryGroup<T>::computeNumGrainLatticeSites(
-    const Grid<char>::GPU &inDomainLabels) {
+    const GridGPU<char> &inDomainLabels) {
   // Get size.
   const int numX = inDomainLabels.dimX();
   const int numY = inDomainLabels.dimY();
@@ -786,12 +784,12 @@ template <typename T> T GeometryGroup<T>::area() {
 
 // Compute field aveage, only accounting for nodes inside geometry
 template <typename T>
-cplx<T> GeometryGroup<T>::fieldAverage(GridGPU *data, const int field) {
+cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
   const T angle = static_cast<T>(0);
   create(angle);
 
-  typename Vector<T>::CPU vec_cpu = *(_domainLabels->getVector());
-  typename Grid<T>::CPU data_cpu = *data;
+  VectorCPU<T> vec_cpu = *(_domainLabels->getVector());
+  GridCPU<T> data_cpu = *data;
 
   const int complex = data->isComplex();
 
@@ -981,7 +979,7 @@ void GeometryGroup<T>::findBoundaryCrossingsAlongNegativeTrajectory(
 
 template <typename T>
 void GeometryGroup<T>::extendValuesAtBoundary(
-    const Grid<char>::GPU &inDomainLabels, GridGPU &inOutTarget) const {
+    const GridGPU<char> &inDomainLabels, GridGPU<T> &inOutTarget) const {
   const int Nx_geom = inDomainLabels.dimX();
   const int Ny_geom = inDomainLabels.dimY();
 
@@ -1018,17 +1016,17 @@ void GeometryGroup<T>::extendValuesAtBoundary(
 }
 
 template <typename T>
-void GeometryGroup<T>::extendValuesAtBoundary(GridGPU *grid) const {
+void GeometryGroup<T>::extendValuesAtBoundary(GridGPU<T> *grid) const {
   extendValuesAtBoundary(*_domainLabels, *grid);
 }
 
 template <typename T>
-void GeometryGroup<T>::extendValuesAtBoundaryRef(GridGPU *grid) const {
+void GeometryGroup<T>::extendValuesAtBoundaryRef(GridGPU<T> *grid) const {
   extendValuesAtBoundary(*_domain_ref, *grid);
 }
 
 template <typename T>
-void GeometryGroup<T>::zeroValuesOutsideDomainRef(GridGPU *target) const {
+void GeometryGroup<T>::zeroValuesOutsideDomainRef(GridGPU<T> *target) const {
   const int Nx_dom = _domain_ref->dimX();
   const int Ny_dom = _domain_ref->dimY();
 

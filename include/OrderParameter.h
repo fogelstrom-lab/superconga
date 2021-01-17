@@ -11,8 +11,6 @@
 
 namespace scg {
 template <typename T> class OrderParameter : public ContextModule<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructors and Destructors
   OrderParameter();
@@ -31,12 +29,12 @@ public:
   // Getters
   int getNumOrderParameterComponents() const;
   OrderParameterComponent<T> *getOrderParameterComponent(int delta_idx) const;
-  GridGPU *getOrderParameterComponentField(int delta_idx) const;
+  GridGPU<T> *getOrderParameterComponentField(int delta_idx) const;
 
-  GridGPU *getOrderParameterField();
+  GridGPU<T> *getOrderParameterField();
   // Perform rotation and return pointer
-  GridGPU *getOrderParameterFieldRotated(const int angleIdx);
-  GridGPU *getOrderParameterFieldRotated() const {
+  GridGPU<T> *getOrderParameterFieldRotated(const int angleIdx);
+  GridGPU<T> *getOrderParameterFieldRotated() const {
     return _orderParameterCompoundRotated;
   } // Return pointer to current rotational frame
 
@@ -48,8 +46,8 @@ private:
 
   std::vector<OrderParameterComponent<T> *> _orderParameterComponentList;
 
-  GridGPU *_orderParameterCompound;
-  GridGPU *_orderParameterCompoundRotated;
+  GridGPU<T> *_orderParameterCompound;
+  GridGPU<T> *_orderParameterCompoundRotated;
 };
 
 template <typename T>
@@ -68,11 +66,11 @@ OrderParameter<T>::OrderParameter(const OrderParameter<T> &other)
         other._orderParameterComponentList[i]->clone());
 
   if (other._orderParameterCompound)
-    _orderParameterCompound = new GridGPU(*other._orderParameterCompound);
+    _orderParameterCompound = new GridGPU<T>(*other._orderParameterCompound);
 
   if (other._orderParameterCompoundRotated)
     _orderParameterCompoundRotated =
-        new GridGPU(*other._orderParameterCompoundRotated);
+        new GridGPU<T>(*other._orderParameterCompoundRotated);
 }
 
 template <typename T>
@@ -110,8 +108,8 @@ template <typename T> int OrderParameter<T>::initialize() {
   const int N1 =
       ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(_orderParameterCompound, N0, N0);
-  GridGPU::initializeGrid(_orderParameterCompoundRotated, N1, N1);
+  GridGPU<T>::initializeGrid(_orderParameterCompound, N0, N0);
+  GridGPU<T>::initializeGrid(_orderParameterCompoundRotated, N1, N1);
 
   const FermiSurface<T> *const fermiSurface =
       ContextModule<T>::getFermiSurface();
@@ -122,7 +120,7 @@ template <typename T> int OrderParameter<T>::initialize() {
 
     // Zero the values outside of the grain, so that we only compute residuals
     // of values that actually matter.
-    GridGPU *const component = getOrderParameterComponentField(i);
+    GridGPU<T> *const component = getOrderParameterComponentField(i);
     ContextModule<T>::getGeometry()->zeroValuesOutsideDomainRef(component);
   }
   return 0;
@@ -155,13 +153,12 @@ OrderParameter<T>::getOrderParameterComponent(int delta_idx) const {
 }
 
 template <typename T>
-typename Grid<T>::GPU *
+GridGPU<T> *
 OrderParameter<T>::getOrderParameterComponentField(int delta_idx) const {
   return getOrderParameterComponent(delta_idx)->getOrderParameterField();
 }
 
-template <typename T>
-typename Grid<T>::GPU *OrderParameter<T>::getOrderParameterField() {
+template <typename T> GridGPU<T> *OrderParameter<T>::getOrderParameterField() {
   // Add delta components together
   _orderParameterCompound->setZero();
 
@@ -174,7 +171,7 @@ typename Grid<T>::GPU *OrderParameter<T>::getOrderParameterField() {
 }
 
 template <typename T>
-typename Grid<T>::GPU *
+GridGPU<T> *
 OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   // Get global model parameters
   const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
@@ -192,11 +189,11 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
 
   // We need to sum all components with their basis function function
   // multiplied.
-  GridGPU opSummed(N0, N0);
+  GridGPU<T> opSummed(N0, N0);
   opSummed.setZero();
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
     OrderParameterComponent<T> *component = getOrderParameterComponent(i);
-    GridGPU grid = *(component->getOrderParameterField());
+    GridGPU<T> grid = *(component->getOrderParameterField());
     component->computeMomentumDependence(&grid, momentumX, momentumY);
     opSummed += grid;
   }

@@ -7,12 +7,6 @@
 #include <cmath>
 #include <doctest/doctest.h>
 
-// Typedefs for Grid objects (wrapper for GridData objects)
-typedef typename scg::Grid<float>::GPU floatGridGPU;
-typedef typename scg::Grid<float>::CPU floatGridCPU;
-typedef typename scg::Grid<double>::GPU doubleGridGPU;
-typedef typename scg::Grid<double>::CPU doubleGridCPU;
-
 namespace helper {
 // ============ Constants used in multiple tests ============ //
 // Max dimension for real field is 2 (vector field)
@@ -165,33 +159,33 @@ void testSumSquareReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
 // =============== Test GridData::sumSquare =============== //
 TEST_CASE("Test GridData<float>::sumSquare - Complex, GPU") {
-  helper::testSumSquareComplex<float, floatGridGPU>();
+  helper::testSumSquareComplex<float, scg::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumSquare - Complex, CPU") {
-  helper::testSumSquareComplex<float, floatGridCPU>();
+  helper::testSumSquareComplex<float, scg::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumSquare - Real, GPU") {
-  helper::testSumSquareReal<float, floatGridGPU>();
+  helper::testSumSquareReal<float, scg::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumSquare - Real, CPU") {
-  helper::testSumSquareReal<float, floatGridCPU>();
+  helper::testSumSquareReal<float, scg::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<double>::sumSquare - Complex, GPU") {
-  helper::testSumSquareComplex<double, doubleGridGPU>();
+  helper::testSumSquareComplex<double, scg::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumSquare - Complex, CPU") {
-  helper::testSumSquareComplex<double, doubleGridCPU>();
+  helper::testSumSquareComplex<double, scg::GridCPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumSquare - Real, GPU") {
-  helper::testSumSquareReal<double, doubleGridGPU>();
+  helper::testSumSquareReal<double, scg::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumSquare - Real, CPU") {
-  helper::testSumSquareReal<double, doubleGridCPU>();
+  helper::testSumSquareReal<double, scg::GridCPU<double>>();
 }

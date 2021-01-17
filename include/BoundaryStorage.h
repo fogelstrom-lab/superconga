@@ -13,9 +13,6 @@ namespace scg {
 template <typename T> class ComputeProperty;
 
 template <typename T> class BoundaryStorage {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   BoundaryStorage();
   virtual ~BoundaryStorage();
@@ -32,41 +29,41 @@ public:
                                        const int *const sparseIndices);
 
   // Storage getters
-  Grid<int>::GPU *getIndexSparseIn_gamma() const {
+  GridGPU<int> *getIndexSparseIn_gamma() const {
     return _index_sparse_in_gamma;
   }
-  Grid<int>::GPU *getIndexSparseOut_gamma() const {
+  GridGPU<int> *getIndexSparseOut_gamma() const {
     return _index_sparse_out_gamma;
   }
-  Grid<int>::GPU *getIndexSparseIn_gammabar() const {
+  GridGPU<int> *getIndexSparseIn_gammabar() const {
     return _index_sparse_in_gammabar;
   }
-  Grid<int>::GPU *getIndexSparseOut_gammabar() const {
+  GridGPU<int> *getIndexSparseOut_gammabar() const {
     return _index_sparse_out_gammabar;
   }
 
-  Grid<int>::GPU *getBoundaryIntersectCoords_gamma() const {
+  GridGPU<int> *getBoundaryIntersectCoords_gamma() const {
     return _coord_bnd_intersect_gamma;
   }
-  Grid<int>::GPU *getBoundaryIntersectCoords_gammabar() const {
+  GridGPU<int> *getBoundaryIntersectCoords_gammabar() const {
     return _coord_bnd_intersect_gammabar;
   }
 
-  Grid<int>::GPU *getNumBoundaryIntersect_gamma() const {
+  GridGPU<int> *getNumBoundaryIntersect_gamma() const {
     return _num_bnd_intersect_gamma;
   }
-  Grid<int>::GPU *getNumBoundaryIntersect_gammabar() const {
+  GridGPU<int> *getNumBoundaryIntersect_gammabar() const {
     return _num_bnd_intersect_gammabar;
   }
 
-  GridGPU *getBoundaryIn_gamma() const { return _boundary_in_gamma; }
-  GridGPU *getBoundaryOut_gamma() const { return _boundary_out_gamma; }
-  GridGPU *getBoundaryIn_gammabar() const { return _boundary_in_gammabar; }
-  GridGPU *getBoundaryOut_gammabar() const { return _boundary_out_gammabar; }
+  GridGPU<T> *getBoundaryIn_gamma() const { return _boundary_in_gamma; }
+  GridGPU<T> *getBoundaryOut_gamma() const { return _boundary_out_gamma; }
+  GridGPU<T> *getBoundaryIn_gammabar() const { return _boundary_in_gammabar; }
+  GridGPU<T> *getBoundaryOut_gammabar() const { return _boundary_out_gammabar; }
 
   // Helper array getters (see description below)
-  Grid<int>::CPU *getTrajectoryRangeX() const { return _trajectoryRange_x; }
-  Grid<int>::CPU *getTrajectoryRangeY() const { return _trajectoryRange_y; }
+  GridCPU<int> *getTrajectoryRangeX() const { return _trajectoryRange_x; }
+  GridCPU<int> *getTrajectoryRangeY() const { return _trajectoryRange_y; }
 
   int getNumIntersectingTrajectoriesAngle(const int angleIdx) const;
   int getTrajectoryStartIndexAngle(const int angleIdx) const;
@@ -104,11 +101,11 @@ private:
 
   // Indices into sparse storage arrays
   //
-  Grid<int>::GPU *_index_sparse_in_gamma;
-  Grid<int>::GPU *_index_sparse_out_gamma;
+  GridGPU<int> *_index_sparse_in_gamma;
+  GridGPU<int> *_index_sparse_out_gamma;
 
-  Grid<int>::GPU *_index_sparse_in_gammabar;
-  Grid<int>::GPU *_index_sparse_out_gammabar;
+  GridGPU<int> *_index_sparse_in_gammabar;
+  GridGPU<int> *_index_sparse_out_gammabar;
 
   // Arrays with information about on how to find the trajectories which
   // actually intersects the computational domain (geometry). This information
@@ -116,28 +113,28 @@ private:
   // launching.
 
   // Start and end x- and y-indices for trajectory integration
-  Grid<int>::CPU *_trajectoryRange_x;
-  Grid<int>::CPU *_trajectoryRange_y;
+  GridCPU<int> *_trajectoryRange_x;
+  GridCPU<int> *_trajectoryRange_y;
 
   // Per trajectory start and end y-indices for trajectory integration
-  Grid<int>::GPU *_trajectoryRangeAllStart_y;
-  Grid<int>::GPU *_trajectoryRangeAllEnd_y;
+  GridGPU<int> *_trajectoryRangeAllStart_y;
+  GridGPU<int> *_trajectoryRangeAllEnd_y;
 
   // Local (to frame of current angle) y-coordinates where trajectory intersects
   // boundary. Used for geometries where one trajectory can have multiple
   // boundary intersections.
-  Grid<int>::GPU *_coord_bnd_intersect_gamma;
-  Grid<int>::GPU *_coord_bnd_intersect_gammabar;
+  GridGPU<int> *_coord_bnd_intersect_gamma;
+  GridGPU<int> *_coord_bnd_intersect_gammabar;
 
-  Grid<int>::GPU *_num_bnd_intersect_gamma;
-  Grid<int>::GPU *_num_bnd_intersect_gammabar;
+  GridGPU<int> *_num_bnd_intersect_gamma;
+  GridGPU<int> *_num_bnd_intersect_gammabar;
 
   // Storage for domain boundary gammas. Use _index_sparse_* to get values.
-  GridGPU *_boundary_in_gamma;
-  GridGPU *_boundary_out_gamma;
+  GridGPU<T> *_boundary_in_gamma;
+  GridGPU<T> *_boundary_out_gamma;
 
-  GridGPU *_boundary_in_gammabar;
-  GridGPU *_boundary_out_gammabar;
+  GridGPU<T> *_boundary_in_gammabar;
+  GridGPU<T> *_boundary_out_gammabar;
 };
 
 // CONSIDER IMPLEMENTING WITH MAJORITY: angle, energy, trajectory
@@ -248,24 +245,24 @@ void BoundaryStorage<T>::initialize(const int numTrajectoriesPerAngle,
     _numEnergies = numEnergies;
     _numAngles = numAngles;
 
-    Grid<int>::GPU::initializeGrid(_index_sparse_in_gamma,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
-    Grid<int>::GPU::initializeGrid(_index_sparse_out_gamma,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
-    Grid<int>::GPU::initializeGrid(_index_sparse_in_gammabar,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
-    Grid<int>::GPU::initializeGrid(_index_sparse_out_gammabar,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
-    Grid<int>::GPU::initializeGrid(_num_bnd_intersect_gamma,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
-    Grid<int>::GPU::initializeGrid(_num_bnd_intersect_gammabar,
-                                   numTrajectoriesPerAngle, 1, numAngles,
-                                   Type::real);
+    GridGPU<int>::initializeGrid(_index_sparse_in_gamma,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
+    GridGPU<int>::initializeGrid(_index_sparse_out_gamma,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
+    GridGPU<int>::initializeGrid(_index_sparse_in_gammabar,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
+    GridGPU<int>::initializeGrid(_index_sparse_out_gammabar,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
+    GridGPU<int>::initializeGrid(_num_bnd_intersect_gamma,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
+    GridGPU<int>::initializeGrid(_num_bnd_intersect_gammabar,
+                                 numTrajectoriesPerAngle, 1, numAngles,
+                                 Type::real);
 
     // Compute indices to access sparse storage
     computeSparseIndices(numEnergies, numAngles);
@@ -281,21 +278,19 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
 
   int numPossibleTrajectories = _index_sparse_in_gamma->dimX();
 
-  Grid<int>::CPU::initializeGrid(_trajectoryRange_x, numAngles, 1, 2,
-                                 Type::real);
-  Grid<int>::CPU::initializeGrid(_trajectoryRange_y, numAngles, 1, 2,
-                                 Type::real);
-  Grid<int>::GPU::initializeGrid(_trajectoryRangeAllStart_y,
-                                 numPossibleTrajectories, 1, numAngles,
-                                 Type::real);
-  Grid<int>::GPU::initializeGrid(_trajectoryRangeAllEnd_y,
-                                 numPossibleTrajectories, 1, numAngles,
-                                 Type::real);
+  GridCPU<int>::initializeGrid(_trajectoryRange_x, numAngles, 1, 2, Type::real);
+  GridCPU<int>::initializeGrid(_trajectoryRange_y, numAngles, 1, 2, Type::real);
+  GridGPU<int>::initializeGrid(_trajectoryRangeAllStart_y,
+                               numPossibleTrajectories, 1, numAngles,
+                               Type::real);
+  GridGPU<int>::initializeGrid(_trajectoryRangeAllEnd_y,
+                               numPossibleTrajectories, 1, numAngles,
+                               Type::real);
 
-  Grid<int>::CPU trajectoryRangeAllStart_y(numPossibleTrajectories, 1,
-                                           numAngles, Type::real);
-  Grid<int>::CPU trajectoryRangeAllEnd_y(numPossibleTrajectories, 1, numAngles,
+  GridCPU<int> trajectoryRangeAllStart_y(numPossibleTrajectories, 1, numAngles,
                                          Type::real);
+  GridCPU<int> trajectoryRangeAllEnd_y(numPossibleTrajectories, 1, numAngles,
+                                       Type::real);
 
   trajectoryRangeAllStart_y.setValue(-1);
   trajectoryRangeAllEnd_y.setValue(-1);
@@ -306,7 +301,7 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
   int *idx_y_start = _trajectoryRange_y->getDataPointer(0);
   int *idx_y_end = _trajectoryRange_y->getDataPointer(1);
 
-  Grid<int>::CPU index_sparse_in_gamma = *_index_sparse_in_gamma;
+  GridCPU<int> index_sparse_in_gamma = *_index_sparse_in_gamma;
 
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     idx_x_start[angleIdx] = 0;
@@ -339,7 +334,7 @@ void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
     const T systemAngle = _fermiSurface->getSystemAngle(angleIdx);
     _geom->create(-systemAngle);
 
-    Grid<char>::CPU dom = *(_geom->getDomainLabelsGrid());
+    GridCPU<char> dom = *(_geom->getDomainLabelsGrid());
     char *dom_p = dom.getDataPointer();
 
     int Nx = dom.dimX();
@@ -412,14 +407,14 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   int Y = _index_sparse_in_gamma->dimY();
   int F = _index_sparse_in_gamma->numFields();
 
-  Grid<int>::CPU index_sparse_in_gamma(X, Y, F, Type::real);
-  Grid<int>::CPU index_sparse_out_gamma(X, Y, F, Type::real);
-  Grid<int>::CPU index_sparse_in_gammabar(X, Y, F, Type::real);
-  Grid<int>::CPU index_sparse_out_gammabar(X, Y, F, Type::real);
-  Grid<int>::CPU num_bnd_intersect_gamma(X, Y, F, Type::real);
-  Grid<int>::CPU num_bnd_intersect_gammabar(X, Y, F, Type::real);
+  GridCPU<int> index_sparse_in_gamma(X, Y, F, Type::real);
+  GridCPU<int> index_sparse_out_gamma(X, Y, F, Type::real);
+  GridCPU<int> index_sparse_in_gammabar(X, Y, F, Type::real);
+  GridCPU<int> index_sparse_out_gammabar(X, Y, F, Type::real);
+  GridCPU<int> num_bnd_intersect_gamma(X, Y, F, Type::real);
+  GridCPU<int> num_bnd_intersect_gammabar(X, Y, F, Type::real);
 
-  Grid<char>::CPU dom_cpu;
+  GridCPU<char> dom_cpu;
 
   std::cout << "BoundaryStorage<T>::computeSparseIndices(): Nx,Ny = " << Nx
             << " " << Ny << "\n";
@@ -475,8 +470,8 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   Y = _coord_bnd_intersect_gamma->dimY();
   F = _coord_bnd_intersect_gamma->numFields();
 
-  Grid<int>::CPU coord_bnd_intersect_gamma(X, Y, F, Type::real);
-  Grid<int>::CPU coord_bnd_intersect_gammabar(X, Y, F, Type::real);
+  GridCPU<int> coord_bnd_intersect_gamma(X, Y, F, Type::real);
+  GridCPU<int> coord_bnd_intersect_gammabar(X, Y, F, Type::real);
 
   int *coord_gamma_ptr = coord_bnd_intersect_gamma.getDataPointer();
   int *coord_gammabar_ptr = coord_bnd_intersect_gammabar.getDataPointer();
@@ -523,19 +518,19 @@ void BoundaryStorage<T>::allocMemSparseStorage(const int numElemGammaIn,
   int numStorage_in_gammabar = numElemGammaBarIn * numEnergies;
   int numStorage_out_gammabar = numElemGammaBarOut * numEnergies;
 
-  Grid<int>::GPU::initializeGrid(_coord_bnd_intersect_gamma, numElemGammaOut, 1,
-                                 1, Type::real);
-  Grid<int>::GPU::initializeGrid(_coord_bnd_intersect_gammabar,
-                                 numElemGammaBarOut, 1, 1, Type::real);
+  GridGPU<int>::initializeGrid(_coord_bnd_intersect_gamma, numElemGammaOut, 1,
+                               1, Type::real);
+  GridGPU<int>::initializeGrid(_coord_bnd_intersect_gammabar,
+                               numElemGammaBarOut, 1, 1, Type::real);
 
-  GridGPU::initializeGrid(_boundary_in_gamma, numStorage_in_gamma, 1, 1,
-                          Type::complex);
-  GridGPU::initializeGrid(_boundary_out_gamma, numStorage_out_gamma, 1, 1,
-                          Type::complex);
-  GridGPU::initializeGrid(_boundary_in_gammabar, numStorage_in_gammabar, 1, 1,
-                          Type::complex);
-  GridGPU::initializeGrid(_boundary_out_gammabar, numStorage_out_gammabar, 1, 1,
-                          Type::complex);
+  GridGPU<T>::initializeGrid(_boundary_in_gamma, numStorage_in_gamma, 1, 1,
+                             Type::complex);
+  GridGPU<T>::initializeGrid(_boundary_out_gamma, numStorage_out_gamma, 1, 1,
+                             Type::complex);
+  GridGPU<T>::initializeGrid(_boundary_in_gammabar, numStorage_in_gammabar, 1,
+                             1, Type::complex);
+  GridGPU<T>::initializeGrid(_boundary_out_gammabar, numStorage_out_gammabar, 1,
+                             1, Type::complex);
 
   // Print some info
   std::cout << "\nSparse storage num energies = " << numEnergies << "\n";

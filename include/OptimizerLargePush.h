@@ -11,8 +11,6 @@ namespace scg {
 // TODO: (Patric) Implement warmup/burnin and final relaxation at end of
 // simulation, with getters and setters.
 template <typename T> class OptimizerLargePush : public Optimizer<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructor.
   OptimizerLargePush(
@@ -123,14 +121,14 @@ void OptimizerLargePush<T>::step(OrderParameter<T> *const inOutOrderParameter,
 
     for (int i = 0; i < numComponents; ++i) {
       // The current order parameter,
-      GridGPU *d0 = inOutOrderParameter->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d0 = inOutOrderParameter->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
       // The order parameter from one iteration ago.
-      GridGPU *d1 = m_orderParameterKMinusOne->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d1 = m_orderParameterKMinusOne->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
       // The order parameter from two iterations ago.
-      GridGPU *d2 = m_orderParameterKMinusTwo->getOrderParameterComponent(i)
-                        ->getOrderParameterField();
+      GridGPU<T> *d2 = m_orderParameterKMinusTwo->getOrderParameterComponent(i)
+                           ->getOrderParameterField();
 
       if (doPush) {
         // Update the order parameter with a large push step.

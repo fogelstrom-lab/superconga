@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "ComputeVectorPotential.h"
-#include "GridData.h"
+#include "Grid.h"
 #include "Type.h"
 #include <cmath>
 #include <doctest/doctest.h>
@@ -19,9 +19,8 @@ namespace helper {
 ///
 /// \return The relative Frobenius norm.
 template <typename T>
-T computeRelativeFrobeniusNorm(
-    const GridData<T, thrust::host_vector<T>> &inTest,
-    const GridData<T, thrust::host_vector<T>> &inRef) {
+T computeRelativeFrobeniusNorm(const GridCPU<T> &inTest,
+                               const GridCPU<T> &inRef) {
 
   T *const testPtr = inTest.getDataPointer();
   T *const refPtr = inRef.getDataPointer();
@@ -53,8 +52,7 @@ T computeRelativeFrobeniusNorm(
 ///
 /// \return Void.
 template <typename T>
-void testSymmetry(const GridData<T, thrust::host_vector<T>> &inVectorPotential,
-                  const T inTolerance) {
+void testSymmetry(const GridCPU<T> &inVectorPotential, const T inTolerance) {
   // Get pointers.
   const T *const ptrX = inVectorPotential.getDataPointer(0);
   const T *const ptrY = inVectorPotential.getDataPointer(1);
@@ -130,10 +128,8 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   domainGPU.setValue('1', scg::Type::real);
 
   // Construct the current density, and the expected potential, on the CPU.
-  GridData<T, thrust::host_vector<T>> currenDensityCPU(N, N, currentDimension,
-                                                       Type::real);
-  GridData<T, thrust::host_vector<T>> expectedPotential(N, N, currentDimension,
-                                                        Type::real);
+  GridCPU<T> currenDensityCPU(N, N, currentDimension, Type::real);
+  GridCPU<T> expectedPotential(N, N, currentDimension, Type::real);
 
   // Get the pointers.
   T *const srcPtrX = currenDensityCPU.getDataPointer(0);
@@ -191,20 +187,18 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   }
 
   // Copy the current density to the GPU.
-  const GridData<T, thrust::device_vector<T>> currenDensityGPU(
-      currenDensityCPU);
+  const GridGPU<T> currenDensityGPU(currenDensityCPU);
 
   // =================== ACT ==================== //
   // Construct a vector-potential grid on the GPU.
-  GridData<T, thrust::device_vector<T>> potentialGPU(N, N, currentDimension,
-                                                     Type::real);
+  GridGPU<T> potentialGPU(N, N, currentDimension, Type::real);
 
   // Compute the induced vector potential.
   computeVectorPotential(potentialGPU, currenDensityGPU, domainGPU,
                          latticeLength, penetrationDepth);
 
   // Copy the vector potential to the CPU.
-  const GridData<T, thrust::host_vector<T>> potentialCPU(potentialGPU);
+  const GridCPU<T> potentialCPU(potentialGPU);
 
   // =================== ASSERT ==================== //
   const T expectedRelativeFrobeniusNorm = static_cast<T>(0);

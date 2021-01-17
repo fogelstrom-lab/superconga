@@ -7,8 +7,6 @@
 
 namespace scg {
 template <typename T> class CoherenceFunctions : public ContextModule<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   CoherenceFunctions();
   virtual ~CoherenceFunctions();
@@ -20,15 +18,15 @@ public:
   int getNumComponents() const { return _Nrow * _Ncol; }
   Type::coherence getCoherenceFunctionSymmetry() const { return _cf_type; }
 
-  GridGPU *getPositive(int row = 0, int col = 0) const {
+  GridGPU<T> *getPositive(int row = 0, int col = 0) const {
     return _pos[row * _Ncol + col];
   }
-  GridGPU *getNegative(int row = 0, int col = 0) const {
+  GridGPU<T> *getNegative(int row = 0, int col = 0) const {
     return _neg[row * _Ncol + col];
   }
 
-  GridGPU *getPositive(int idx) const { return _pos[idx]; }
-  GridGPU *getNegative(int idx) const { return _neg[idx]; }
+  GridGPU<T> *getPositive(int idx) const { return _pos[idx]; }
+  GridGPU<T> *getNegative(int idx) const { return _neg[idx]; }
 
 private:
   Type::coherence _cf_type;
@@ -37,8 +35,8 @@ private:
   const int _Nrow;
   const int _Ncol;
 
-  std::vector<GridGPU *> _pos; // gamma
-  std::vector<GridGPU *> _neg; // gammabar
+  std::vector<GridGPU<T> *> _pos; // gamma
+  std::vector<GridGPU<T> *> _neg; // gammabar
 };
 
 template <typename T>
@@ -60,8 +58,8 @@ CoherenceFunctions<T>::CoherenceFunctions(Context<T> *ctx,
 
   const int components = getNumComponents();
 
-  _pos = std::vector<GridGPU *>(components);
-  _neg = std::vector<GridGPU *>(components);
+  _pos = std::vector<GridGPU<T> *>(components);
+  _neg = std::vector<GridGPU<T> *>(components);
 }
 
 template <typename T> CoherenceFunctions<T>::~CoherenceFunctions() {
@@ -85,8 +83,8 @@ template <typename T> int CoherenceFunctions<T>::initialize() {
 
   const int components = getNumComponents();
   for (int i = 0; i < components; ++i) {
-    GridGPU::initializeGrid(_pos[i], N1, N1, Ne, Type::complex);
-    GridGPU::initializeGrid(_neg[i], N1, N1, Ne, Type::complex);
+    GridGPU<T>::initializeGrid(_pos[i], N1, N1, Ne, Type::complex);
+    GridGPU<T>::initializeGrid(_neg[i], N1, N1, Ne, Type::complex);
 
     _pos[i]->setZero();
     _neg[i]->setZero();

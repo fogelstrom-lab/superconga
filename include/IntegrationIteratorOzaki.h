@@ -26,9 +26,6 @@ void dsygv_(int64_t *ITYPE, char *JOBZ, char *UPLO, int64_t *N, double *A,
 namespace scg {
 template <typename T>
 class IntegrationIteratorOzaki : public IntegrationIterator<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   IntegrationIteratorOzaki();
   ~IntegrationIteratorOzaki();
@@ -147,13 +144,13 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
   const int numEnergies = param->getNumMatsubaraEnergies();
 
   // Set ozaki energies
-  GridCPU *ozakiEnergiesCPU = new GridCPU(numEnergies, 1);
+  GridCPU<T> *ozakiEnergiesCPU = new GridCPU<T>(numEnergies, 1);
 
   T *ozakiEnergiesReal = ozakiEnergiesCPU->getDataPointer(0, Type::real);
   T *ozakiEnergiesImag = ozakiEnergiesCPU->getDataPointer(0, Type::imag);
 
-  GridCPU *ozakiPoles = new GridCPU(numEnergies, 1, 1, Type::real);
-  GridCPU *ozakiResidues = new GridCPU(numEnergies, 1, 1, Type::real);
+  GridCPU<T> *ozakiPoles = new GridCPU<T>(numEnergies, 1, 1, Type::real);
+  GridCPU<T> *ozakiResidues = new GridCPU<T>(numEnergies, 1, 1, Type::real);
 
   T *ozakiPolesPtr = ozakiPoles->getDataPointer(0, Type::real);
   T *ozakiResiduesPtr = ozakiResidues->getDataPointer(0, Type::real);
@@ -166,8 +163,8 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
     ozakiEnergiesImag[i] = ozakiPolesPtr[i] * temperature;
   }
 
-  GridGPU *energies = new GridGPU;
-  GridGPU *residues = new GridGPU;
+  GridGPU<T> *energies = new GridGPU<T>;
+  GridGPU<T> *residues = new GridGPU<T>;
   *energies = *ozakiEnergiesCPU;
   *residues = *ozakiResidues;
 
@@ -229,10 +226,10 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
   const int numAngles = context->getParameters()->getAngularResolution();
 
   // Pointer to temporary grid for order parameter in local frame
-  GridGPU *rotatedOrderParameter;
+  GridGPU<T> *rotatedOrderParameter;
 
   ParameterIterator<int> *energyIterator = I::getEnergyIterator();
-  GridGPU *energies = I::getEnergies();
+  GridGPU<T> *energies = I::getEnergies();
 
   RiccatiSolver<T> *riccatiSolver = context->getRiccatiSolver();
   GeometryGroup<T> *geometryGroup = context->getGeometry();
@@ -278,7 +275,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
   FermiSurface<T> *const fermiSurface = context->getFermiSurface();
 
   ParameterIterator<int> *energyIterator = I::getEnergyIterator();
-  GridGPU *energies = I::getEnergies();
+  GridGPU<T> *energies = I::getEnergies();
 
   RiccatiSolver<T> *riccatiSolver = context->getRiccatiSolver();
   GeometryGroup<T> *geometryGroup = context->getGeometry();
@@ -323,7 +320,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
     // A negative index is equivalent to a negative angle.
     // TODO(niclas): Slight optimization. Don't do the multiplication with
     // orderParameterFactor if the factor is 1.
-    const GridGPU rotatedOrderParameter =
+    const GridGPU<T> rotatedOrderParameter =
         *(orderParameter->getOrderParameterFieldRotated(-angleIdx)) *
         orderParameterFactor;
 

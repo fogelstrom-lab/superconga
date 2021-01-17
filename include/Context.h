@@ -156,15 +156,15 @@ template <typename T> Context<T>::~Context() {
 
   deleteComputeObjects();
 
-  Grid<float>::CPU::printAllocatedMemTotal();
-  Grid<double>::CPU::printAllocatedMemTotal();
-  Grid<int>::CPU::printAllocatedMemTotal();
-  Grid<char>::CPU::printAllocatedMemTotal();
+  GridCPU<float>::printAllocatedMemTotal();
+  GridCPU<double>::printAllocatedMemTotal();
+  GridCPU<int>::printAllocatedMemTotal();
+  GridCPU<char>::printAllocatedMemTotal();
 
-  Grid<float>::GPU::printAllocatedMemTotal();
-  Grid<double>::GPU::printAllocatedMemTotal();
-  Grid<int>::GPU::printAllocatedMemTotal();
-  Grid<char>::GPU::printAllocatedMemTotal();
+  GridGPU<float>::printAllocatedMemTotal();
+  GridGPU<double>::printAllocatedMemTotal();
+  GridGPU<int>::printAllocatedMemTotal();
+  GridGPU<char>::printAllocatedMemTotal();
 }
 
 template <typename T> void Context<T>::deleteComputeObjects() {
@@ -270,15 +270,15 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
 
-  Grid<float>::CPU::printAllocatedMemTotal();
-  Grid<double>::CPU::printAllocatedMemTotal();
-  Grid<int>::CPU::printAllocatedMemTotal();
-  Grid<char>::CPU::printAllocatedMemTotal();
+  GridCPU<float>::printAllocatedMemTotal();
+  GridCPU<double>::printAllocatedMemTotal();
+  GridCPU<int>::printAllocatedMemTotal();
+  GridCPU<char>::printAllocatedMemTotal();
 
-  Grid<float>::GPU::printAllocatedMemTotal();
-  Grid<double>::GPU::printAllocatedMemTotal();
-  Grid<int>::GPU::printAllocatedMemTotal();
-  Grid<char>::GPU::printAllocatedMemTotal();
+  GridGPU<float>::printAllocatedMemTotal();
+  GridGPU<double>::printAllocatedMemTotal();
+  GridGPU<int>::printAllocatedMemTotal();
+  GridGPU<char>::printAllocatedMemTotal();
 
   return 0;
 }

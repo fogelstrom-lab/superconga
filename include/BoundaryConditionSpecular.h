@@ -11,9 +11,6 @@
 namespace scg {
 template <typename T>
 class BoundaryConditionSpecular : public BoundaryCondition<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   BoundaryConditionSpecular() : BoundaryCondition<T>() {}
   virtual ~BoundaryConditionSpecular() {}
@@ -391,7 +388,7 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     const int numTrajectories = xIdxMax - xIdxMin + 1;
 
     dim3 bpg, tpb;
-    GridGPU::getKernelDimensions(bpg, tpb, numTrajectories, numEnergies);
+    GridGPU<T>::getKernelDimensions(bpg, tpb, numTrajectories, numEnergies);
 
     // Create geometry for current angle
     geom->create(-systemAngle);

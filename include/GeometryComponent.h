@@ -13,8 +13,6 @@
 
 namespace scg {
 template <typename T> class GeometryComponent {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   GeometryComponent();
   virtual ~GeometryComponent();
@@ -38,9 +36,9 @@ public:
   T *getBoundaryDistance() const;
 
   // Getters for pointers to grids containing discrete geometry representation
-  Grid<char>::GPU *getDomainLabelsGrid() const { return _domainLabels; }
-  GridGPU *getNormalsGrid() const { return _normals; }
-  GridGPU *getBoundaryDistanceGrid() const { return _boundaryDistance; }
+  GridGPU<char> *getDomainLabelsGrid() const { return _domainLabels; }
+  GridGPU<T> *getNormalsGrid() const { return _normals; }
+  GridGPU<T> *getBoundaryDistanceGrid() const { return _boundaryDistance; }
 
   // Create discrete representation for geometry component in rotational frame
   // given by angle argument Stores result in _domainLabels, _normals, and
@@ -49,7 +47,7 @@ public:
 
   // Create discrete representation with resolution NxN, and return domain
   // labels only. Does not store data in any member variables.
-  virtual Grid<char>::GPU *createDomain(const int N) const = 0;
+  virtual GridGPU<char> *createDomain(const int N) const = 0;
 
   // Label domain nodes which are close to boundary.
   void labelBoundaryNodes();
@@ -73,16 +71,16 @@ private:
   // Contains labels for discrete geometry. Label codes:
   // 0=outside, 1=inside, 2=inside, near boundary entry, 3=inside, near boundary
   // exit
-  Grid<char>::GPU *_domainLabels;
+  GridGPU<char> *_domainLabels;
 
   // Field with boundary normals for discrete geometry (2 fields (x- and
   // y-component)). Only stored where nodes are labeled 2 or 3.
-  GridGPU *_normals;
+  GridGPU<T> *_normals;
 
   // Field with distances between the boundary nodes to the exact location of
   // the geometry, as measured along the positive gamma trajectory. Only stored
   // where nodes are labeled 2 or 3.
-  GridGPU *_boundaryDistance;
+  GridGPU<T> *_boundaryDistance;
 };
 
 namespace internal {
@@ -146,11 +144,11 @@ GeometryComponent<T>::GeometryComponent(const GeometryComponent<T> &other)
     : _param(other._param), _domainLabels(0), _normals(0),
       _boundaryDistance(0) {
   if (other._domainLabels)
-    _domainLabels = new Grid<char>::GPU(*other._domainLabels);
+    _domainLabels = new GridGPU<char>(*other._domainLabels);
   if (other._normals)
-    _normals = new GridGPU(*other._normals);
+    _normals = new GridGPU<T>(*other._normals);
   if (other._boundaryDistance)
-    _boundaryDistance = new GridGPU(*other._boundaryDistance);
+    _boundaryDistance = new GridGPU<T>(*other._boundaryDistance);
 }
 
 template <typename T> GeometryComponent<T>::~GeometryComponent() {
@@ -176,15 +174,15 @@ template <typename T> void GeometryComponent<T>::allocateMem() {
     return;
   }
 
-  GridGPU::initializeGrid(_normals, N, N, 2, Type::real);
-  GridGPU::initializeGrid(_boundaryDistance, N, N, 1, Type::real);
-  Grid<char>::GPU::initializeGrid(_domainLabels, N, N, 1, Type::real);
+  GridGPU<T>::initializeGrid(_normals, N, N, 2, Type::real);
+  GridGPU<T>::initializeGrid(_boundaryDistance, N, N, 1, Type::real);
+  GridGPU<char>::initializeGrid(_domainLabels, N, N, 1, Type::real);
 }
 
 template <typename T> void GeometryComponent<T>::freeMem() {
-  GridGPU::deleteGrid(_normals);
-  GridGPU::deleteGrid(_boundaryDistance);
-  Grid<char>::GPU::deleteGrid(_domainLabels);
+  GridGPU<T>::deleteGrid(_normals);
+  GridGPU<T>::deleteGrid(_boundaryDistance);
+  GridGPU<char>::deleteGrid(_domainLabels);
 }
 
 template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
@@ -195,9 +193,9 @@ template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
   getKernelDimensions(bpg, tpb);
 
   // Label boundary interface nodes
-  Grid<char>::GPU *oldLabels = _domainLabels;
-  Grid<char>::GPU *newLabels(0);
-  Grid<char>::GPU::initializeGrid(newLabels, oldLabels);
+  GridGPU<char> *oldLabels = _domainLabels;
+  GridGPU<char> *newLabels(0);
+  GridGPU<char>::initializeGrid(newLabels, oldLabels);
 
   internal::labelEntryExit_Kernel<T><<<bpg, tpb>>>(
       oldLabels->getDataPointer(), newLabels->getDataPointer(), Nx, Ny);

@@ -7,12 +7,6 @@
 #include <cmath>
 #include <doctest/doctest.h>
 
-// Typedefs for Grid objects (wrapper for GridData objects)
-typedef typename scg::Grid<float>::GPU floatGridGPU;
-typedef typename scg::Grid<float>::CPU floatGridCPU;
-typedef typename scg::Grid<double>::GPU doubleGridGPU;
-typedef typename scg::Grid<double>::CPU doubleGridCPU;
-
 namespace helper {
 // ============ Constants used in multiple tests ============ //
 // Max dimension for real field is 2 (vector field)
@@ -168,33 +162,33 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
 // =============== Test GridData::sumMagnitude =============== //
 TEST_CASE("Test GridData<float>::sumMagnitude - Complex, GPU") {
-  helper::testSumMagnitudeComplex<float, floatGridGPU>();
+  helper::testSumMagnitudeComplex<float, scg::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Complex, CPU") {
-  helper::testSumMagnitudeComplex<float, floatGridCPU>();
+  helper::testSumMagnitudeComplex<float, scg::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Real, GPU") {
-  helper::testSumMagnitudeReal<float, floatGridGPU>();
+  helper::testSumMagnitudeReal<float, scg::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Real, CPU") {
-  helper::testSumMagnitudeReal<float, floatGridCPU>();
+  helper::testSumMagnitudeReal<float, scg::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Complex, GPU") {
-  helper::testSumMagnitudeComplex<double, doubleGridGPU>();
+  helper::testSumMagnitudeComplex<double, scg::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Complex, CPU") {
-  helper::testSumMagnitudeComplex<double, doubleGridCPU>();
+  helper::testSumMagnitudeComplex<double, scg::GridCPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Real, GPU") {
-  helper::testSumMagnitudeReal<double, doubleGridGPU>();
+  helper::testSumMagnitudeReal<double, scg::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Real, CPU") {
-  helper::testSumMagnitudeReal<double, doubleGridCPU>();
+  helper::testSumMagnitudeReal<double, scg::GridCPU<double>>();
 }

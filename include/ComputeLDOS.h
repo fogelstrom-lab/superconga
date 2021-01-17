@@ -7,9 +7,6 @@
 
 namespace scg {
 template <typename T> class ComputeLDOS : public ComputeProperty<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   // Constructors and Destructors
   ComputeLDOS();
@@ -17,9 +14,9 @@ public:
 
   ComputeLDOS(Context<T> *ctx);
 
-  virtual GridGPU *getResult() { return m_ldosAll; }
-  GridGPU *getResultInterval() { return m_ldosInterval; }
-  GridCPU *getDOS() { return m_dos; }
+  virtual GridGPU<T> *getResult() { return m_ldosAll; }
+  GridGPU<T> *getResultInterval() { return m_ldosInterval; }
+  GridCPU<T> *getDOS() { return m_dos; }
 
   virtual IntegrationIterator<T> *
   createIntegrationIterator(int numEnergiesPerBlock = -1);
@@ -37,8 +34,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar);
+  virtual void computeGreensAngle(ParameterIterator<int> *iter,
+                                  GridGPU<T> *gamma, GridGPU<T> *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -54,13 +51,13 @@ public:
 private:
   // Computed LDOS will be stored here at end of IntegrationIterator::compute()
   // function.
-  GridGPU *m_ldosInterval;
+  GridGPU<T> *m_ldosInterval;
 
   // The result when every energy level has converged.
-  GridGPU *m_ldosAll;
+  GridGPU<T> *m_ldosAll;
 
   // Integrated DOS for system, for each energy level.
-  GridCPU *m_dos;
+  GridCPU<T> *m_dos;
 
   bool m_multFermiFunction;
 };
@@ -99,11 +96,11 @@ template <typename T> int ComputeLDOS<T>::initialize() {
   const int numEnergiesInterval =
       C::getIntegrationIterator()->getEnergyIterator()->getNumInterval();
 
-  GridGPU::initializeGrid(m_ldosInterval, N0, N0, numEnergiesInterval,
-                          Type::real);
-  GridGPU::initializeGrid(m_ldosAll, N0, N0, numEnergies, Type::real);
+  GridGPU<T>::initializeGrid(m_ldosInterval, N0, N0, numEnergiesInterval,
+                             Type::real);
+  GridGPU<T>::initializeGrid(m_ldosAll, N0, N0, numEnergies, Type::real);
   // Field 0 of m_dos contains E, field 1 contains DOS.
-  GridCPU::initializeGrid(m_dos, numEnergies, 1, 2, Type::real);
+  GridCPU<T>::initializeGrid(m_dos, numEnergies, 1, 2, Type::real);
 
   const int memoryLDOS =
       (m_ldosAll->numElements() + m_ldosInterval->numElements()) *
@@ -139,7 +136,8 @@ template <typename T> void ComputeLDOS<T>::initializeGreensAngle() {
 
 template <typename T>
 void ComputeLDOS<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                        GridGPU *gamma, GridGPU *gammabar) {
+                                        GridGPU<T> *gamma,
+                                        GridGPU<T> *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     GreensFunctionStatic<T, Greens>::computeGreens(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar);
@@ -150,7 +148,7 @@ template <typename T>
 void ComputeLDOS<T>::integrateGreensAngle(GeometryGroup<T> *geom,
                                           const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
+    GridGPU<T> *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens);
@@ -180,7 +178,7 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     const int numAngles = C::getParameters()->getAngularResolution();
     const T T_Tc = C::getParameters()->getTemperature();
 
-    GridGPU *energies = C::getIntegrationIterator()->getEnergies();
+    GridGPU<T> *energies = C::getIntegrationIterator()->getEnergies();
 
     // Compute LDOS
     *m_ldosInterval *= -1.0;
@@ -207,7 +205,7 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     T *E_ptr = m_dos->getDataPointer(0) + energyIdx_offset;
     T *DOS_ptr = m_dos->getDataPointer(1) + energyIdx_offset;
 
-    GridCPU energies_cpu = *energies;
+    GridCPU<T> energies_cpu = *energies;
     T *energies_ptr =
         energies_cpu.getDataPointer(0, Type::real) + energyIdx_offset;
 

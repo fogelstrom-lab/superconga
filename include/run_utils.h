@@ -14,8 +14,7 @@
 
 #include "ComputeVectorPotential.h" // Compute the vector potential induced by currents
 #include "Context.h"
-#include "Grid.h"     // Grid and GridData
-#include "GridData.h" // Grid and GridData
+#include "Grid.h"
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
@@ -216,17 +215,15 @@ void saveInducedFluxDensity(
   Parameters<T> *parameters = inContext->getParameters();
 
   // Fetch current density and set to zero outside grain.
-  typename Grid<T>::GPU current =
-      *(inContext->getComputeCurrent()->getResult());
+  GridGPU<T> current = *(inContext->getComputeCurrent()->getResult());
   inContext->getGeometry()->zeroValuesOutsideDomainRef(&current);
   const int numLatticePoints = current.dimX();
 
   // Domain structure for vector potential calculation.
-  Grid<char>::GPU domain = *(inContext->getGeometry()->getDomainGrid());
+  GridGPU<char> domain = *(inContext->getGeometry()->getDomainGrid());
 
   // Create GPU storage for vector potential.
-  typename Grid<T>::GPU vectorPotential(numLatticePoints, numLatticePoints, 2,
-                                        Type::real);
+  GridGPU<T> vectorPotential(numLatticePoints, numLatticePoints, 2, Type::real);
 
   // Convert lattice spacing back to proper coherence lengths:
   // hbar*<vF>/(2*Pi*kB*Tc).
@@ -240,8 +237,7 @@ void saveInducedFluxDensity(
                          penetrationDepth);
 
   // Solve the magnetic flux density from the vector potential through Maxwell.
-  typename Grid<T>::GPU magneticFluxDensity =
-      vectorPotential.curl(latticeSpacing);
+  GridGPU<T> magneticFluxDensity = vectorPotential.curl(latticeSpacing);
 
   // Try to save induced flux density to file. Exit program if fail.
   if (magneticFluxDensity.write(gridDataFile, parameters)) {
@@ -275,7 +271,7 @@ void saveGridData(
   Parameters<T> *parameters = inContext->getParameters();
 
   // Fetch order parameter.
-  typename Grid<T>::GPU *const orderParameterSave =
+  GridGPU<T> *const orderParameterSave =
       inContext->getComputeOrderParameter()->getResult();
 
   // Set order parameter to zero outside simulation domain (non-zero values are
@@ -299,8 +295,7 @@ void saveGridData(
   }
 
   // Fetch current density.
-  typename Grid<T>::GPU *const currentSave =
-      inContext->getComputeCurrent()->getResult();
+  GridGPU<T> *const currentSave = inContext->getComputeCurrent()->getResult();
 
   // Set current density to zero outside simulation domain (non-zero values are
   // used for interpolation).

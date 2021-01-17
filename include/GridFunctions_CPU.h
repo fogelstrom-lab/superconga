@@ -21,50 +21,51 @@ struct GridFunctions
 template <typename, typename> class GridData;
 
 template <typename T> struct GridFunctions<T, thrust::host_vector<T>> {
-  typedef GridData<T, thrust::host_vector<T>> GridCPU;
-  typedef thrust::host_vector<T> Vector;
+  GridData<T, thrust::host_vector<T>> *grid;
 
-  GridCPU *grid;
-
-  GridFunctions(GridCPU *ptr) : grid(ptr) {}
+  GridFunctions(GridData<T, thrust::host_vector<T>> *ptr) : grid(ptr) {}
 
   template <typename T2>
   void typeConvert(GridData<T2, thrust::device_vector<T2>> &other) const;
 
   // Compute the complex magnitude squared, of specified field.
-  void complexMagnitudeSq(GridCPU *result) const;
+  void complexMagnitudeSq(GridData<T, thrust::host_vector<T>> *result) const;
 
   // Compute complex phase of this (complex) grid.
-  void complexPhase(GridCPU *result) const;
+  void complexPhase(GridData<T, thrust::host_vector<T>> *result) const;
 
   // Compute gradient of complex phase of this grid.
-  void complexPhaseGradient(GridCPU *result, const T h) const;
+  void complexPhaseGradient(GridData<T, thrust::host_vector<T>> *result,
+                            const T h) const;
 
   // Compute the magnitude of the real part of this vector field.
-  void fieldMagnitude(GridCPU *result) const;
+  void fieldMagnitude(GridData<T, thrust::host_vector<T>> *result) const;
 
   // Sum all fields.
-  void sumFieldComponents(GridCPU *result) const;
+  void sumFieldComponents(GridData<T, thrust::host_vector<T>> *result) const;
 
   // Insert other grid into this. <x,y>_offset are offset in discrete elements
   // from center. x_offset = y_offset = 0 results in a centered grid.
-  void insertGrid(const GridCPU *other, const int x_offset, const int y_offset);
+  void insertGrid(const GridData<T, thrust::host_vector<T>> *other,
+                  const int x_offset, const int y_offset);
 
   // Insert other grid into this, with applied rotation (to other grid).
-  void insertRotatedGrid(const GridCPU *other, const T phi, const int x_offset,
-                         const int y_offset, Type::type part);
+  void insertRotatedGrid(const GridData<T, thrust::host_vector<T>> *other,
+                         const T phi, const int x_offset, const int y_offset,
+                         Type::type part);
 
   // Add other grid to this, with applied rotation (to other grid).
-  void insertRotatedGridAdditive(const GridCPU *other, const T phi, int field,
-                                 const int x_offset, const int y_offset,
-                                 Type::type part);
+  void
+  insertRotatedGridAdditive(const GridData<T, thrust::host_vector<T>> *other,
+                            const T phi, int field, const int x_offset,
+                            const int y_offset, Type::type part);
 
   // Change resolution of grid, with linear interpolation of existing data.
   void resample(const int nx_new, const int ny_new);
 
   // Find min and max value of range
-  static void minmax(const GridCPU &grid, T &minv, T &maxv, int field,
-                     Type::type part);
+  static void minmax(const GridData<T, thrust::host_vector<T>> &grid, T &minv,
+                     T &maxv, int field, Type::type part);
 };
 
 namespace internal {
@@ -256,19 +257,19 @@ void GridFunctions<T, thrust::host_vector<T>>::typeConvert(
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexMagnitudeSq(
-    GridCPU *result) const {
+    GridData<T, thrust::host_vector<T>> *result) const {
   iterTwoComplexToReal(*grid, *result, internal::ComplexMagnitudeSqFunc<T>());
 }
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexPhase(
-    GridCPU *result) const {
+    GridData<T, thrust::host_vector<T>> *result) const {
   iterTwoComplexToReal(*grid, *result, internal::ComplexPhaseFunc<T>());
 }
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::fieldMagnitude(
-    GridCPU *result) const {
+    GridData<T, thrust::host_vector<T>> *result) const {
   result->setZero();
   iterTwo(*grid, *result, internal::FieldMagnitudeFunc<T>(), Type::real);
   result->sqrt();
@@ -276,14 +277,14 @@ void GridFunctions<T, thrust::host_vector<T>>::fieldMagnitude(
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::sumFieldComponents(
-    GridCPU *result) const {
+    GridData<T, thrust::host_vector<T>> *result) const {
   result->setZero();
   iterTwo(*grid, *result, internal::AddFuncTwo<T>(), grid->representation());
 }
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexPhaseGradient(
-    GridCPU *result, const T h) const {
+    GridData<T, thrust::host_vector<T>> *result, const T h) const {
   const int Nx = grid->_dimX;
   const int Ny = grid->_dimY;
 
@@ -353,9 +354,9 @@ void GridFunctions<T, thrust::host_vector<T>>::complexPhaseGradient(
 }
 
 template <typename T>
-void GridFunctions<T, thrust::host_vector<T>>::insertGrid(const GridCPU *other,
-                                                          const int x_offset,
-                                                          const int y_offset) {
+void GridFunctions<T, thrust::host_vector<T>>::insertGrid(
+    const GridData<T, thrust::host_vector<T>> *other, const int x_offset,
+    const int y_offset) {
   // insert 'other' grid into 'this'
   const int Nx_this = grid->dimX();
   const int Ny_this = grid->dimY();
@@ -423,8 +424,8 @@ void GridFunctions<T, thrust::host_vector<T>>::insertGrid(const GridCPU *other,
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGrid(
-    const GridCPU *other, const T phi, const int x_offset, const int y_offset,
-    Type::type representation) {
+    const GridData<T, thrust::host_vector<T>> *other, const T phi,
+    const int x_offset, const int y_offset, Type::type representation) {
   // Grid dimensions of grid to rotate and read from (lookup grid)
   const int Nx_this = grid->dimX();
   const int Ny_this = grid->dimY();
@@ -501,8 +502,8 @@ void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGrid(
 
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGridAdditive(
-    const GridCPU *other, const T phi, int field, const int x_offset,
-    const int y_offset, Type::type representation) {
+    const GridData<T, thrust::host_vector<T>> *other, const T phi, int field,
+    const int x_offset, const int y_offset, Type::type representation) {
   int fieldStart, fieldEnd;
 
   if (field == -1) {
@@ -599,7 +600,7 @@ void GridFunctions<T, thrust::host_vector<T>>::resample(const int nx_new,
   const int numElements = nx_new * ny_new * numFields * (1 + isComplex);
 
   // Allocate vector for new grid
-  Vector *vec_tmp = new Vector(numElements);
+  thrust::host_vector<T> *vec_tmp = new thrust::host_vector<T>(numElements);
 
   T *data, *data_tmp;
 
@@ -677,11 +678,10 @@ void GridFunctions<T, thrust::host_vector<T>>::resample(const int nx_new,
 }
 
 template <typename T>
-void GridFunctions<T, thrust::host_vector<T>>::minmax(const GridCPU &grid,
-                                                      T &minv, T &maxv,
-                                                      int field,
-                                                      Type::type part) {
-  Vector &vec = *(grid.getVector());
+void GridFunctions<T, thrust::host_vector<T>>::minmax(
+    const GridData<T, thrust::host_vector<T>> &grid, T &minv, T &maxv,
+    int field, Type::type part) {
+  thrust::host_vector<T> &vec = *(grid.getVector());
 
   size_t start = grid.getFieldComponentOffset(field, part);
   size_t end = start + grid.dimX() * grid.dimY();
