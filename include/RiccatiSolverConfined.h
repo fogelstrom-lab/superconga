@@ -313,15 +313,13 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // Compute energy shift from magnetic field
   GridGPU<T> *eShift = R::getEnergyShift();
-  GridGPU<T> *ps = R::getInducedVectorPotential();
 
-  // Whether we should add the contribution from the vector potential generated
-  // by the current to the energy shift.
-  const bool coupleInducedVectorPotential =
-      R::hasComputedInducedVectorPotential();
+  // Fetch the vector potential. If it is a null pointer it will be ignored.
+  GridGPU<T> *inducedVectorPotential =
+      C::getContext()->getInducedVectorPotential();
 
-  computeEnergyShift<T, POTENTIAL>(
-      this, ps, eShift, coupleInducedVectorPotential, current_angle_idx);
+  computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
+                                   current_angle_idx);
 
   const T fermiSpeed = C::getFermiSurface()->getFermiSpeed(current_angle_idx);
 
