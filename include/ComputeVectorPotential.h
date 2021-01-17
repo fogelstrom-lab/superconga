@@ -9,62 +9,81 @@ namespace scg {
 namespace internal {
 // Compute vector potential by integrating greens function kernel
 template <typename T>
-__global__ void
-computeVectorPotential2d_kernel(T *Ax, T *Ay, const T *jx, const T *jy,
-                                const char *geom, const int px, const int py,
-                                const T h, const T c, const int Nx) {
+__global__ void computeVectorPotential2d_kernel(
+    T *const inOutVectorPotentialX, T *const inOutVectorPotentialY,
+    const T *const inCurrentDensityX, const T *const inCurrentDensityY,
+    const int px, const int py, const T inLatticeSpacing, const int Nx) {
   // Coordinates to grid
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  const int idx = y * Nx + x;
-  const int idxp = py * Nx + px;
-
   if (x < Nx && y < Nx) {
-    T mult, h2 = h * h;
+    // For convenience.
+    const T latticeArea = inLatticeSpacing * inLatticeSpacing;
 
+    T factor;
     if (x == px && y == py) {
-      mult = c * 0.25 * h2 * (M_PI - 6.0 + 2.0 * log(h2 * 0.5));
+      factor = static_cast<T>(0.25) * latticeArea *
+               (static_cast<T>(M_PI - 6.0) +
+                static_cast<T>(2.0) * log(latticeArea * static_cast<T>(0.5)));
     } else {
-      const T dx = px - x;
-      const T dy = py - y;
-
-      mult = c * h2 * log(h * sqrt(dx * dx + dy * dy));
+      const T dx = static_cast<T>(px - x);
+      const T dy = static_cast<T>(py - y);
+      factor = latticeArea * log(inLatticeSpacing * sqrt(dx * dx + dy * dy));
     }
 
-    Ax[idx] += mult * jx[idxp];
-    Ay[idx] += mult * jy[idxp];
+    // Vector-potential index.
+    const int idx = y * Nx + x;
+
+    // Current-density index.
+    const int idxp = py * Nx + px;
+
+    inOutVectorPotentialX[idx] += factor * inCurrentDensityX[idxp];
+    inOutVectorPotentialY[idx] += factor * inCurrentDensityY[idxp];
   }
 }
 } // namespace internal
 
 template <typename T>
-void computeVectorPotential(GridData<T, thrust::device_vector<T>> *A,
-                            const GridData<T, thrust::device_vector<T>> *j,
-                            GridData<char, thrust::device_vector<char>> *geom,
-                            const T h, const T c) {
-  A->setZero();
+void computeVectorPotential(
+    GridData<T, thrust::device_vector<T>> &inOutVectorPotential,
+    const GridData<T, thrust::device_vector<T>> &inCurrentDensity,
+    const GridData<char, thrust::device_vector<char>> &inDomainLabels,
+    const T inLatticeSpacing, const T inKappa) {
+  // Set to zero because we'll add stuff to it.
+  inOutVectorPotential.setZero();
 
+  // Get the required kernel dimensions.
   dim3 bpg, tpb;
-  A->getKernelDimensions(bpg, tpb);
+  inOutVectorPotential.getKernelDimensions(bpg, tpb);
 
-  const int N = A->dimX();
+  const int N = inOutVectorPotential.dimX();
 
-  GridData<char, thrust::host_vector<char>> geom_host = *geom;
-  char *g = geom_host.getDataPointer(0);
+  // Get the thrust-vector from the domain labels, and copy to the CPU.
+  const thrust::host_vector<char> domainLabelsCPU = *inDomainLabels.getVector();
+  const char *const domainLabelsPtr =
+      thrust::raw_pointer_cast(domainLabelsCPU.data());
 
-  // Note, the vector potential is computed for all lattice sites, not just the
-  // ones within the grain.
   for (int y = 0; y < N; ++y) {
     for (int x = 0; x < N; ++x) {
-      if (g[y * N + x]) {
+      if (domainLabelsPtr[y * N + x] > 0) {
         internal::computeVectorPotential2d_kernel<<<bpg, tpb>>>(
-            A->getDataPointer(0), A->getDataPointer(1), j->getDataPointer(0),
-            j->getDataPointer(1), geom->getDataPointer(0), x, y, h, c, N);
+            inOutVectorPotential.getDataPointer(0),
+            inOutVectorPotential.getDataPointer(1),
+            inCurrentDensity.getDataPointer(0),
+            inCurrentDensity.getDataPointer(1), x, y, inLatticeSpacing, N);
       }
     }
   }
-  *A *= (-1.0 / (2.0 * M_PI));
+
+  // Factor from the equation itself.
+  const T equationFactor = -static_cast<T>(4.0) / (inKappa * inKappa);
+
+  // Factor from the Green function.
+  const T greenFactor = static_cast<T>(1) / static_cast<T>(2.0 * M_PI);
+
+  // Scale the result appropriately.
+  inOutVectorPotential *= equationFactor * greenFactor;
 }
 } // namespace scg
 

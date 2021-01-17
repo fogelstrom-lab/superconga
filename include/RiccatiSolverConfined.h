@@ -318,7 +318,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // Whether we should add the contribution from the vector potential generated
   // by the current to the energy shift.
-  const bool coupleInducedVectorPotential = R::doCoupleInducedVectorPotential();
+  const bool coupleInducedVectorPotential =
+      R::hasComputedInducedVectorPotential();
 
   computeEnergyShift<T, POTENTIAL>(
       this, ps, eShift, coupleInducedVectorPotential, current_angle_idx);

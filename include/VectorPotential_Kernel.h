@@ -2,35 +2,88 @@
 #define VECTOR_POTENTIAL_KERNEL_H_
 
 #include <cuda.h>
+#include <math.h>
 
 namespace scg {
 template <typename T, template <typename> class POTENTIAL>
-__global__ void
-computeEnergyShift_external_kernel(T *eShift, const T systemAngle, const T B,
-                                   const int N, const T h) {
-  const int x = blockDim.x * blockIdx.x + threadIdx.x;
-  const int y = blockDim.y * blockIdx.y + threadIdx.y;
+__global__ void computeEnergyShiftOnlyExternalKernel(
+    const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
+    const T inMagneticFieldStrength, const int inGridResolution,
+    const T inGridElementSize, T *const outEnergyShift) {
+  // XY-coordinate indices.
+  const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
+  const int yIdx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  const int idx = y * N + x;
+  if (xIdx < inGridResolution && yIdx < inGridResolution) {
+    // Center system coordinates at origin.
+    const T offset =
+        -static_cast<T>(0.5) * static_cast<T>(inGridResolution - 1);
 
-  if (x < N && y < N) {
-    eShift[idx] = T(M_PI) * POTENTIAL<T>::computeVectorPotential_local(
-                                (T)x, (T)y, B, systemAngle, N, h);
+    // Go to local, physical coordinates.
+    T x = (static_cast<T>(xIdx) + offset) * inGridElementSize;
+    T y = (static_cast<T>(yIdx) + offset) * inGridElementSize;
+
+    // Rotate local coordinates to global frame.
+    utils::rotate(inSystemAngle, x, y);
+
+    T vectorPotentialX;
+    T vectorPotentialY;
+    POTENTIAL<T>::computeVectorPotential_local(
+        inMagneticFieldStrength, x, y, vectorPotentialX, vectorPotentialY);
+
+    // Linear index.
+    const int idx = yIdx * inGridResolution + xIdx;
+
+    // Compute energy shift.
+    // The factor pi comes from our choice of coordinates.
+    outEnergyShift[idx] =
+        static_cast<T>(M_PI) * (inFermiVelocityX * vectorPotentialX +
+                                inFermiVelocityY * vectorPotentialY);
   }
 }
 
-template <typename T>
-__global__ void
-computeEnergyShift_internal_kernel(T *eShift, const T *jx, const T *jy,
-                                   const T systemAngle, const int N) {
-  const int x = blockDim.x * blockIdx.x + threadIdx.x;
-  const int y = blockDim.y * blockIdx.y + threadIdx.y;
+template <typename T, template <typename> class POTENTIAL>
+__global__ void computeEnergyShiftKernel(
+    const T *const inVectorPotentialX, const T *const inVectorPotentialY,
+    const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
+    const T inMagneticFieldStrength, const int inGridResolution,
+    const T inGridElementSize, T *const outEnergyShift) {
+  // XY-coordinate indices.
+  const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
+  const int yIdx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  const int idx = y * N + x;
+  if (xIdx < inGridResolution && yIdx < inGridResolution) {
+    // Center system coordinates at origin.
+    const T offset =
+        -static_cast<T>(0.5) * static_cast<T>(inGridResolution - 1);
 
-  if (x < N && y < N)
-    eShift[idx] +=
-        T(M_PI) * (cos(systemAngle) * jx[idx] + sin(systemAngle) * jy[idx]);
+    // Go to local, physical coordinates.
+    T x = (static_cast<T>(xIdx) + offset) * inGridElementSize;
+    T y = (static_cast<T>(yIdx) + offset) * inGridElementSize;
+
+    // Rotate local coordinates to global frame.
+    utils::rotate(inSystemAngle, x, y);
+
+    // External vector potential.
+    T extVectorPotentialX;
+    T extVectorPotentialY;
+    POTENTIAL<T>::computeVectorPotential_local(inMagneticFieldStrength, x, y,
+                                               extVectorPotentialX,
+                                               extVectorPotentialY);
+
+    // Linear index.
+    const int idx = yIdx * inGridResolution + xIdx;
+
+    // The total vector potential.
+    const T vectorPotentialX = inVectorPotentialX[idx] + extVectorPotentialX;
+    const T vectorPotentialY = inVectorPotentialY[idx] + extVectorPotentialY;
+
+    // Compute energy shift.
+    // The factor pi comes from our choice of coordinates.
+    outEnergyShift[idx] =
+        static_cast<T>(M_PI) * (inFermiVelocityX * vectorPotentialX +
+                                inFermiVelocityY * vectorPotentialY);
+  }
 }
 } // namespace scg
 

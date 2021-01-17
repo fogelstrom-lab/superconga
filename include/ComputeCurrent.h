@@ -125,7 +125,7 @@ void ComputeCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
     IntegrationIterator<T> *ii = C::getIntegrationIterator();
     GridGPU *residues = ii->getResidues();
 
-    GreensFunctionStatic<T, Greens_Current>::computeGreensSumEnergy(
+    GreensFunctionStatic<T, Greens>::computeGreensSumEnergy(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, residues, gamma,
         gammabar);
   }
@@ -140,8 +140,6 @@ void ComputeCurrent<T>::integrateGreensAngle(GeometryGroup<T> *geom,
     // Compensate for numerical diffusion from interpolation during rotation.
     geom->extendValuesAtBoundary(greens);
 
-    const int numAngles =
-        ComputeProperty<T>::getParameters()->getAngularResolution();
     const T systemAngle =
         ComputeProperty<T>::getFermiSurface()->getSystemAngle(angleIdx);
 

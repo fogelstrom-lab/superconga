@@ -19,6 +19,7 @@
       "symmetry": "dx2-y2"
     }
   ],
+  "penetration_depth": -1.0,
   "save_data": false,
   "save_data_interval": 200,
   "solenoid": false,

@@ -216,38 +216,32 @@ void saveInducedFluxDensity(
   Parameters<T> *parameters = inContext->getParameters();
 
   // Fetch current density and set to zero outside grain.
-  typename Grid<T>::GPU *current = inContext->getComputeCurrent()->getResult();
-  inContext->getGeometry()->zeroValuesOutsideDomainRef(current);
-  const int numLatticePoints = current->dimX();
+  typename Grid<T>::GPU current =
+      *(inContext->getComputeCurrent()->getResult());
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&current);
+  const int numLatticePoints = current.dimX();
 
   // Domain structure for vector potential calculation.
-  Grid<char>::GPU *domain =
-      inContext->getGeometry()->createDomain(numLatticePoints);
+  Grid<char>::GPU domain = *(inContext->getGeometry()->getDomainGrid());
 
   // Create GPU storage for vector potential.
-  typename Grid<T>::GPU *vectorPotential = new
-      typename Grid<T>::GPU(numLatticePoints, numLatticePoints, 2, Type::real);
+  typename Grid<T>::GPU vectorPotential(numLatticePoints, numLatticePoints, 2,
+                                        Type::real);
 
   // Convert lattice spacing back to proper coherence lengths:
   // hbar*vF/(2*Pi*kB*Tc).
   const T latticeSpacing =
       parameters->getGridElementSize() * static_cast<T>(2.0 * M_PI);
 
-  // Calculate coefficients for Poissons equation
-  // TODO(patric): this should be done inside computeVectorPotential!
-  const T penetrationDepth = parameters->getPenetrationDepth();
-  const T minusInvKappaSquared =
-      -static_cast<T>(1.0) / (penetrationDepth * penetrationDepth);
-
   // Solve the vector potential from the current.
+  const T penetrationDepth =
+      parameters->getPenetrationDepth() * static_cast<T>(2.0 * M_PI);
   computeVectorPotential(vectorPotential, current, domain, latticeSpacing,
-                         minusInvKappaSquared);
+                         penetrationDepth);
 
   // Solve the magnetic flux density from the vector potential through Maxwell.
   typename Grid<T>::GPU magneticFluxDensity =
-      vectorPotential->curl(latticeSpacing);
-
-  delete vectorPotential;
+      vectorPotential.curl(latticeSpacing);
 
   // Try to save induced flux density to file. Exit program if fail.
   if (magneticFluxDensity.write(gridDataFile, parameters)) {
