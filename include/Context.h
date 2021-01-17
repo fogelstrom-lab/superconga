@@ -1,6 +1,7 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
+#include "ComputeVectorPotential.h"
 #include "ContextModule.h"
 #include "Grid.h"
 #include <chrono>
@@ -91,6 +92,10 @@ public:
   int getNumIterations() const { return m_numIterations; }
   int getNumComputeObjects() const { return m_computeObjectList.size(); }
 
+  GridGPU<T> *getInducedVectorPotential() const {
+    return m_inducedVectorPotential;
+  }
+
   // Helpers
   bool isConverged() const;
 
@@ -103,6 +108,8 @@ private:
   RiccatiSolver<T> *m_riccatiSolver;
   IntegrationIterator<T> *m_integrationIterator;
   FermiSurface<T> *m_fermiSurface;
+
+  GridGPU<T> *m_inducedVectorPotential;
 
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
@@ -121,10 +128,11 @@ template <typename T>
 Context<T>::Context()
     : m_parameters(nullptr), m_geometry(nullptr), m_orderParameter(nullptr),
       m_riccatiSolver(nullptr), m_integrationIterator(nullptr),
-      m_fermiSurface(nullptr), m_computeCurrent(nullptr),
-      m_computeCurrentDensity(nullptr), m_computeFreeEnergy(nullptr),
-      m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
-      m_computeTime(static_cast<T>(0.0)), m_numIterations(0) {}
+      m_fermiSurface(nullptr), m_inducedVectorPotential(nullptr),
+      m_computeCurrent(nullptr), m_computeCurrentDensity(nullptr),
+      m_computeFreeEnergy(nullptr), m_computeOrderParameter(nullptr),
+      m_computeLDOS(nullptr), m_computeTime(static_cast<T>(0.0)),
+      m_numIterations(0) {}
 
 template <typename T> Context<T>::~Context() {
   std::cout << "~Context()\n";
@@ -152,6 +160,11 @@ template <typename T> Context<T>::~Context() {
   if (m_fermiSurface) {
     delete m_fermiSurface;
     std::cout << "~Context(): Deleted FermiSurface\n";
+  }
+
+  if (m_inducedVectorPotential) {
+    delete m_inducedVectorPotential;
+    std::cout << "~Context(): Deleted vector potential\n";
   }
 
   deleteComputeObjects();
@@ -266,6 +279,18 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
         "Context<T>::initialize(): ComputeProperty");
   }
 
+  const T penetrationDepth = m_parameters->getPenetrationDepth();
+  if (m_computeCurrent && (penetrationDepth > static_cast<T>(0))) {
+    std::cout << "Context::initialize() --> Initializing vector potential\n";
+    const int latticeSide = m_parameters->getGridResolutionBase();
+    const int numSpatialDims = 2;
+    GridGPU<T>::initializeGrid(m_inducedVectorPotential, latticeSide,
+                               latticeSide, numSpatialDims, Type::real);
+    m_inducedVectorPotential->setZero();
+    ContextModule<T>::checkCudaError(
+        "Context<T>::initialize(): vector potential");
+  }
+
   m_numIterations = 0;
 
   std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
@@ -284,8 +309,31 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 }
 
 template <typename T> void Context<T>::compute() {
+  // Start timer.
   const auto startTime = std::chrono::high_resolution_clock::now();
+
+  // Compute e.g. the order parameter.
   m_integrationIterator->compute();
+
+  // Compute the induced vector potential.
+  if (m_inducedVectorPotential) {
+    // Note, we are not setting the current to zero outside of the grain. This
+    // is handled in `computeVectorPotential` by checking the domain labels.
+    const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
+    const GridGPU<char> domainLabels = *(m_geometry->getDomainGrid());
+
+    // The London penetration depth.
+    const T penetrationDepth = m_parameters->getPenetrationDepth();
+
+    // The physical side length of a lattice site.
+    const T gridElementSize = m_parameters->getGridElementSize();
+
+    // Solve Maxwell's equation relating the vector potential to the current.
+    computeVectorPotential(*m_inducedVectorPotential, currentDensity,
+                           domainLabels, gridElementSize, penetrationDepth);
+  }
+
+  // Stop timer.
   const auto stopTime = std::chrono::high_resolution_clock::now();
 
   // Count the number of milliseconds.
@@ -294,7 +342,7 @@ template <typename T> void Context<T>::compute() {
                             .count();
 
   // Convert to seconds.
-  m_computeTime = static_cast<T>(duration) / static_cast<T>(1e6);
+  m_computeTime = static_cast<T>(duration) * static_cast<T>(1e-6);
 
   m_numIterations++;
 }

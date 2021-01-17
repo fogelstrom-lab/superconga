@@ -302,15 +302,15 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
           integrandFactor;
     }
 
-    const bool hasComputedInducedVectorPotential =
-        C::getRiccatiSolver()->hasComputedInducedVectorPotential();
+    // Fetch the vector potential. If it is a null pointer it will be ignored.
+    const GridGPU<T> *const inducedVectorPotential =
+        C::getContext()->getInducedVectorPotential();
 
     // Add contribution from the induced magnetic field.
-    if (hasComputedInducedVectorPotential) {
+    if (inducedVectorPotential) {
       // Compute the magnetic field.
       GridGPU<T> magneticField =
-          (*(C::getContext()->getRiccatiSolver()->getInducedVectorPotential()))
-              .curl(latticeElementSize);
+          (*inducedVectorPotential).curl(latticeElementSize);
 
       // Note, by setting values outside of the grain to zero, we are only
       // including the contribution of the induced magnetic field within the
