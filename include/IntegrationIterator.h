@@ -9,8 +9,6 @@
 
 namespace scg {
 template <typename T> class IntegrationIterator : public ContextModule<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   IntegrationIterator();
   virtual ~IntegrationIterator();
@@ -48,10 +46,10 @@ public:
   virtual void initEnergies() = 0;
 
   // Getters
-  GridGPU *getEnergies() const { return _energies; }
-  GridGPU *getResidues() const { return _residues; }
+  GridGPU<T> *getEnergies() const { return _energies; }
+  GridGPU<T> *getResidues() const { return _residues; }
 
-  GridGPU *getOrderParameterFieldCurrentAngle() const {
+  GridGPU<T> *getOrderParameterFieldCurrentAngle() const {
     return ContextModule<T>::getContext()
         ->getOrderParameter()
         ->getOrderParameterFieldRotated();
@@ -62,13 +60,13 @@ public:
   int getBoundaryIdx_offset() const { return _boundaryIdxOffset; }
 
   // Setters
-  void setEnergies(GridGPU *en) {
+  void setEnergies(GridGPU<T> *en) {
     if (_energies)
       delete _energies;
     _energies = en;
   }
   void setNumEnergiesPerBlock(int num);
-  void setResidues(GridGPU *res) {
+  void setResidues(GridGPU<T> *res) {
     if (_residues)
       delete _residues;
     _residues = res;
@@ -82,23 +80,23 @@ public:
 
   // Debug
   void setDebug(int angleIdx) { _debug_store_angle = angleIdx; }
-  GridGPU *getDebugGrid() const { return _debug_store_grid; }
+  GridGPU<T> *getDebugGrid() const { return _debug_store_grid; }
   // void			computeDebug();
 
 private:
   // Debug
   int _debug_store_angle;
-  GridGPU *_debug_store_grid;
+  GridGPU<T> *_debug_store_grid;
 
   // Energy iterators
-  GridGPU *_energies;
+  GridGPU<T> *_energies;
   ParameterIterator<int> *_energy_iter;
 
   // Factor to multiply summand with in energy sum, i.e. different factor for
   // different energies. In the case of Ozaki integration iterator, these
   // factors are the Ozaki residues. For Matsubara and Keldysh, it will be a
   // factor of 1 for each energy.
-  GridGPU *_residues;
+  GridGPU<T> *_residues;
 
   // Max energies a compute block can have
   int _numEnergiesPerBlock;

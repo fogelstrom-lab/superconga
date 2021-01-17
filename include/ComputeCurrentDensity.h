@@ -2,15 +2,13 @@
 #define COMPUTE_CURRENT_DENSITY_H_
 
 #include "ComputeProperty.h"
+#include "Grid.h"
 #include "IntegrationIteratorKeldysh.h"
 #include <cmath>
 #include <limits>
 
 namespace scg {
 template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   // Constructors and Destructors
   ComputeCurrentDensity();
@@ -18,7 +16,7 @@ public:
 
   ComputeCurrentDensity(Context<T> *ctx);
 
-  virtual GridGPU *getResult() { return _lcurrent_all; }
+  virtual GridGPU<T> *getResult() { return _lcurrent_all; }
   virtual IntegrationIterator<T> *
   createIntegrationIterator(int numEnergiesPerBlock = -1);
 
@@ -32,8 +30,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar);
+  virtual void computeGreensAngle(ParameterIterator<int> *iter,
+                                  GridGPU<T> *gamma, GridGPU<T> *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -42,14 +40,14 @@ public:
   // Compute physical property from greens function.
   virtual void computePropertyFromGreens();
 
-  GridGPU *getResultInterval(int field = 0) {
+  GridGPU<T> *getResultInterval(int field = 0) {
     if (field == 0)
       return _lcurrent_x;
     else
       return _lcurrent_y;
   }
 
-  GridCPU *getCurrentDensity() const { return _current; }
+  GridCPU<T> *getCurrentDensity() const { return _current; }
 
   int getMultFermiFunction() const { return _multFermiFunction; }
   void setMultFermiFunction(const int mult) { _multFermiFunction = mult; }
@@ -57,17 +55,17 @@ public:
 private:
   // Computed local current density will be stored here at end of
   // IntegrationIterator::compute() function.
-  GridGPU *_lcurrent_x;
-  GridGPU *_lcurrent_y;
+  GridGPU<T> *_lcurrent_x;
+  GridGPU<T> *_lcurrent_y;
 
   // Total current density for system, for each energy level
-  GridGPU *_lcurrent_all;
+  GridGPU<T> *_lcurrent_all;
 
   // Integrated current, per energy level
-  GridCPU *_current;
+  GridCPU<T> *_current;
 
   // Temporary grid.
-  GridGPU *_tmp;
+  GridGPU<T> *_tmp;
 
   // Multiply with fermi function
   int _multFermiFunction;
@@ -115,11 +113,14 @@ template <typename T> int ComputeCurrentDensity<T>::initialize() {
   int numEnergiesInterval =
       C::getIntegrationIterator()->getEnergyIterator()->getNumInterval();
 
-  GridGPU::initializeGrid(_lcurrent_all, N0, N0, 2 * numEnergies, Type::real);
-  GridGPU::initializeGrid(_lcurrent_x, N0, N0, numEnergiesInterval, Type::real);
-  GridGPU::initializeGrid(_lcurrent_y, N0, N0, numEnergiesInterval, Type::real);
-  GridGPU::initializeGrid(_tmp, N0, N0, numEnergiesInterval, Type::real);
-  GridCPU::initializeGrid(_current, numEnergies, 1, 2, Type::real);
+  GridGPU<T>::initializeGrid(_lcurrent_all, N0, N0, 2 * numEnergies,
+                             Type::real);
+  GridGPU<T>::initializeGrid(_lcurrent_x, N0, N0, numEnergiesInterval,
+                             Type::real);
+  GridGPU<T>::initializeGrid(_lcurrent_y, N0, N0, numEnergiesInterval,
+                             Type::real);
+  GridGPU<T>::initializeGrid(_tmp, N0, N0, numEnergiesInterval, Type::real);
+  GridCPU<T>::initializeGrid(_current, numEnergies, 1, 2, Type::real);
 
   _current->setZero();
 
@@ -144,8 +145,8 @@ void ComputeCurrentDensity<T>::initializeIteration(int numFields) {
 
 template <typename T>
 void ComputeCurrentDensity<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                                  GridGPU *gamma,
-                                                  GridGPU *gammabar) {
+                                                  GridGPU<T> *gamma,
+                                                  GridGPU<T> *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     GreensFunctionStatic<T, Greens>::computeGreens(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar);
@@ -156,7 +157,7 @@ template <typename T>
 void ComputeCurrentDensity<T>::integrateGreensAngle(GeometryGroup<T> *geom,
                                                     const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
+    GridGPU<T> *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation
     geom->extendValuesAtBoundary(greens);
@@ -196,7 +197,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
     int numEnergiesCurrentBlock = iter->getNumInterval();
     int energyIdx_offset = iter->getCurrentValue();
 
-    GridGPU *energies = C::getIntegrationIterator()->getEnergies();
+    GridGPU<T> *energies = C::getIntegrationIterator()->getEnergies();
 
     // Add fermifunction
     if (_multFermiFunction) {
@@ -226,7 +227,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
     }
 
     // Integrate local current density (used to compute residual)
-    GridCPU energies_cpu = *energies;
+    GridCPU<T> energies_cpu = *energies;
     T *energies_ptr =
         energies_cpu.getDataPointer(0, Type::real) + energyIdx_offset;
 

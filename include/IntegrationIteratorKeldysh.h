@@ -12,9 +12,6 @@
 namespace scg {
 template <typename T>
 class IntegrationIteratorKeldysh : public IntegrationIterator<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   IntegrationIteratorKeldysh();
   ~IntegrationIteratorKeldysh();
@@ -84,7 +81,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
             << ", numE = " << numEnergies << "\n";
 
   // Generate energy array
-  GridCPU energies_cpu(numEnergies, 1);
+  GridCPU<T> energies_cpu(numEnergies, 1);
 
   T *const energies_re = energies_cpu.getDataPointer(0, Type::real);
   T *const energies_im = energies_cpu.getDataPointer(0, Type::imag);
@@ -98,7 +95,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
     energies_im[i] = smearingFactor;
   }
 
-  GridGPU *energies = new GridGPU(energies_cpu);
+  GridGPU<T> *energies = new GridGPU<T>(energies_cpu);
 
   IntegrationIterator<T>::setEnergies(energies);
 }
@@ -154,7 +151,7 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
   typedef ContextModule<T> C;
 
   ParameterIterator<int> *energyIterator = I::getEnergyIterator();
-  GridGPU *energies = I::getEnergies();
+  GridGPU<T> *energies = I::getEnergies();
 
   RiccatiSolver<T> *riccatiSolver = C::getRiccatiSolver();
   GeometryGroup<T> *geometry = C::getGeometry();
@@ -165,7 +162,7 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
     const int numAngles = C::getParameters()->getAngularResolution();
     for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
       // Rotate order parameter field to current angle
-      GridGPU *orderParameterRotated =
+      GridGPU<T> *orderParameterRotated =
           orderParameter->getOrderParameterFieldRotated(-angleIdx);
 
       // Angle (in radians) of system in local frame
@@ -244,7 +241,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   }
 
   // Get everything needed for the angle loop.
-  GridGPU *energies = I::getEnergies();
+  GridGPU<T> *energies = I::getEnergies();
   GeometryGroup<T> *geometry = C::getGeometry();
   OrderParameter<T> *orderParameter = C::getOrderParameter();
 
@@ -255,7 +252,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   const int numAngles = C::getParameters()->getAngularResolution();
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Rotate order parameter.
-    GridGPU *orderParameterRotated =
+    GridGPU<T> *orderParameterRotated =
         orderParameter->getOrderParameterFieldRotated(-angleIdx);
 
     const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);

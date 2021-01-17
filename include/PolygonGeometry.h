@@ -65,7 +65,7 @@ public:
   PolygonGeometry *clone() const override { return new PolygonGeometry(*this); }
 
   void create(const T inAngle) override;
-  Grid<char>::GPU *createDomain(const int N) const override;
+  GridGPU<char> *createDomain(const int N) const override;
 
   Polygon<T> *getPolygon() const { return m_polygon; }
 
@@ -352,16 +352,16 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
 }
 
 template <typename T>
-Grid<char>::GPU *
+GridGPU<char> *
 PolygonGeometry<T>::createDomain(const int inLatticeSideLength) const {
   const int numFields = 1;
-  Grid<char>::GPU *dom_component = new Grid<char>::GPU(
+  GridGPU<char> *dom_component = new GridGPU<char>(
       inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, inLatticeSideLength,
-                                    inLatticeSideLength);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, inLatticeSideLength,
+                                  inLatticeSideLength);
 
   // Calc inside/outside.
   internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(

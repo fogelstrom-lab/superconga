@@ -29,7 +29,7 @@ public:
   DiscGeometry *clone() const override { return new DiscGeometry(*this); }
 
   void create(const T inAngle) override;
-  Grid<char>::GPU *createDomain(const int inLatticeSideLength) const override;
+  GridGPU<char> *createDomain(const int inLatticeSideLength) const override;
 
   Disc<T> *getDisc() const { return m_disc; }
 
@@ -274,10 +274,10 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
 }
 
 template <typename T>
-Grid<char>::GPU *
+GridGPU<char> *
 DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
   const int numFields = 1;
-  Grid<char>::GPU *dom_component = new Grid<char>::GPU(
+  GridGPU<char> *dom_component = new GridGPU<char>(
       inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
@@ -297,8 +297,8 @@ DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
 
   // Get the required kernel dimensions.
   dim3 bpg, tpb;
-  Grid<T>::GPU::getKernelDimensions(bpg, tpb, inLatticeSideLength,
-                                    inLatticeSideLength);
+  GridGPU<T>::getKernelDimensions(bpg, tpb, inLatticeSideLength,
+                                  inLatticeSideLength);
 
   // Compute domain labels.
   internal::generateDisc_Kernel<T>

@@ -9,8 +9,6 @@
 #include <string>
 
 namespace scg {
-template <typename, typename> class GridData;
-
 template <typename T> class Parameters : public ContextModule<T> {
 public:
   Parameters() : m_version(2) {}

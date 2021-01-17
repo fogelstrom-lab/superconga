@@ -28,9 +28,6 @@ namespace scg {
 template <typename T> class BoundaryStorage;
 
 template <typename T> class RiccatiSolver : public ContextModule<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   // Constructors and Destructors
 
@@ -44,8 +41,8 @@ public:
 
   // Get pointers to storage of Riccati solutions (gamma/coherence functions).
   // These grids have dimensions (x,y,energy)
-  GridGPU *getGamma() const { return _gamma; }
-  GridGPU *getGammabar() const { return _gammabar; }
+  GridGPU<T> *getGamma() const { return _gamma; }
+  GridGPU<T> *getGammabar() const { return _gammabar; }
 
   // Functions related to Boundary condition:
 
@@ -62,8 +59,8 @@ public:
   }
 
   // Vector potential
-  GridGPU *getInducedVectorPotential() const { return m_vectorPotential; }
-  GridGPU *getEnergyShift() const { return _eShift; }
+  GridGPU<T> *getInducedVectorPotential() const { return m_vectorPotential; }
+  GridGPU<T> *getEnergyShift() const { return _eShift; }
 
   bool hasComputedInducedVectorPotential() const {
     return m_hasComputedInducedVectorPotential;
@@ -77,15 +74,15 @@ public:
 
   virtual void
   computeInitialCondition(const ParameterIterator<int> &energy_iter,
-                          const GridGPU *energies, const GridGPU *delta,
+                          const GridGPU<T> *energies, const GridGPU<T> *delta,
                           const int angleIdx) = 0;
 
   virtual void computeBoundaryConditions();
 
   virtual void
   computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
-                            const GridGPU *energies, const GridGPU *deltaRot,
-                            const int angleIdx) = 0;
+                            const GridGPU<T> *energies,
+                            const GridGPU<T> *deltaRot, const int angleIdx) = 0;
 
   // For Computation of Free energy (as in ComputeFreeEnergy2 class)
   T getOrderParameterMultFactor() const { return _orderParameterMult; }
@@ -105,8 +102,8 @@ private:
   // INSTEAD!
 
   // Storage for riccati trajectories
-  GridGPU *_gamma;
-  GridGPU *_gammabar;
+  GridGPU<T> *_gamma;
+  GridGPU<T> *_gammabar;
 
   // Holds (and reflects) gammas on boundary between interations
   BoundaryStorage<T> *_storage;
@@ -122,10 +119,10 @@ private:
   bool m_hasComputedInducedVectorPotential;
 
   // Vector potential field
-  GridGPU *m_vectorPotential;
+  GridGPU<T> *m_vectorPotential;
 
   // Precomputed field for energy shift
-  GridGPU *_eShift;
+  GridGPU<T> *_eShift;
 
   // A flag to indicate that delta should be multiplied with a constant,
   // as required by the free energy computation by J. Sauls et al.
@@ -137,13 +134,10 @@ private:
 // parameter issues
 template <typename T, template <typename> class VP>
 void computeEnergyShift(ContextModule<T> *inContextModule,
-                        typename Grid<T>::GPU *inVectorPotential,
-                        typename Grid<T>::GPU *inEnergyShift,
+                        GridGPU<T> *inVectorPotential,
+                        GridGPU<T> *inEnergyShift,
                         const bool inCoupleInducedVectorPotential,
                         const int angleIdx) {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
   Parameters<T> *parameters = inContextModule->getParameters();
 
   // Add contribution from external magnetic field
@@ -163,7 +157,7 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   inEnergyShift->getKernelDimensions(bpg, tpb);
 
   if (inCoupleInducedVectorPotential) {
-    GridGPU vectorPotentialRotated(N1, N1, 2, Type::real);
+    GridGPU<T> vectorPotentialRotated(N1, N1, 2, Type::real);
     vectorPotentialRotated.setZero();
     vectorPotentialRotated.insertRotatedGrid(inVectorPotential, -systemAngle);
 
@@ -215,8 +209,8 @@ template <typename T> int RiccatiSolver<T>::initialize() {
   const int N1 =
       ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(m_vectorPotential, N0, N0, 2, Type::real);
-  GridGPU::initializeGrid(_eShift, N1, N1, 1, Type::real);
+  GridGPU<T>::initializeGrid(m_vectorPotential, N0, N0, 2, Type::real);
+  GridGPU<T>::initializeGrid(_eShift, N1, N1, 1, Type::real);
 
   m_vectorPotential->setZero();
 
@@ -246,8 +240,8 @@ template <typename T> void RiccatiSolver<T>::initializeCoherenceFunctions() {
   int numFields =
       C::getIntegrationIterator()->getEnergyIterator()->getNumInterval();
 
-  GridGPU::initializeGrid(_gamma, N, N, numFields);
-  GridGPU::initializeGrid(_gammabar, N, N, numFields);
+  GridGPU<T>::initializeGrid(_gamma, N, N, numFields);
+  GridGPU<T>::initializeGrid(_gammabar, N, N, numFields);
 
   _gamma->setZero();
   _gammabar->setZero();
@@ -290,9 +284,9 @@ template <typename T> void RiccatiSolver<T>::computeInducedVectorPotential() {
 
       // Note, we are not setting the current to zero outside of the grain. This
       // is handled in `computeVectorPotential` by checking the domain labels.
-      const GridGPU currentDensity = *(j_compute->getResult());
+      const GridGPU<T> currentDensity = *(j_compute->getResult());
 
-      const Grid<char>::GPU domainLabels =
+      const GridGPU<char> domainLabels =
           *(ContextModule<T>::getContext()->getGeometry()->getDomainGrid());
 
       // Solve Maxwell's equation relating the vector potential to the current.

@@ -3,6 +3,7 @@
 
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
+#include "Grid.h"
 #include "IntegrationIteratorOzaki.h"
 #include "LocalGreens.h"
 #include "OrderParameterBulk.h"
@@ -13,9 +14,6 @@
 
 namespace scg {
 template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   // Constructors and Destructors
   ComputeFreeEnergy();
@@ -23,7 +21,7 @@ public:
 
   ComputeFreeEnergy(Context<T> *const inOutContext);
 
-  virtual GridGPU *getResult() { return m_freeEnergyGrid; }
+  virtual GridGPU<T> *getResult() { return m_freeEnergyGrid; }
   T getFreeEnergy() const { return m_freeEnergy; }
   T getFreeEnergyPerUnitArea() const { return m_freeEnergyPerUnitArea; }
 
@@ -43,7 +41,7 @@ public:
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
   virtual void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
-                                  GridGPU *inGamma, GridGPU *inGammabar);
+                                  GridGPU<T> *inGamma, GridGPU<T> *inGammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -58,7 +56,7 @@ private:
   T m_freeEnergy;
   T m_freeEnergyPerUnitArea;
 
-  GridGPU *m_freeEnergyGrid;
+  GridGPU<T> *m_freeEnergyGrid;
 };
 
 /// \brief Compute the free-energy kernel I
@@ -160,7 +158,7 @@ template <typename T> int ComputeFreeEnergy<T>::initialize() {
   const int N0 = C::getParameters()->getGridResolutionBase();
   const int N1 = C::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(m_freeEnergyGrid, N0, N0);
+  GridGPU<T>::initializeGrid(m_freeEnergyGrid, N0, N0);
 
   C::initGreensAngle(N1);
 
@@ -195,18 +193,19 @@ template <typename T> void ComputeFreeEnergy<T>::initializeGreensAngle() {
 // point (summed over energies).
 template <typename T>
 void ComputeFreeEnergy<T>::computeGreensAngle(
-    ParameterIterator<int> *inParameterIterator, GridGPU *inGamma,
-    GridGPU *inGammabar) {
+    ParameterIterator<int> *inParameterIterator, GridGPU<T> *inGamma,
+    GridGPU<T> *inGammabar) {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
     IntegrationIterator<T> *integrationIter = C::getIntegrationIterator();
 
-    GridGPU *freeEnergyKernelIntegrand =
+    GridGPU<T> *freeEnergyKernelIntegrand =
         ComputeProperty<T>::getGreensCurrentAngle();
 
-    GridGPU *deltaRot = integrationIter->getOrderParameterFieldCurrentAngle();
-    GridGPU *ozakiResidues = integrationIter->getResidues();
+    GridGPU<T> *deltaRot =
+        integrationIter->getOrderParameterFieldCurrentAngle();
+    GridGPU<T> *ozakiResidues = integrationIter->getResidues();
 
     const int numEnergies = inParameterIterator->getNumInterval();
     const int energyIdxStart = inParameterIterator->getCurrentValue();
@@ -235,7 +234,7 @@ template <typename T>
 void ComputeFreeEnergy<T>::integrateGreensAngle(
     GeometryGroup<T> *inGeometryGroup, const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *freeEnergyKernelIntegrand =
+    GridGPU<T> *freeEnergyKernelIntegrand =
         ComputeProperty<T>::getGreensCurrentAngle();
 
     inGeometryGroup->extendValuesAtBoundary(freeEnergyKernelIntegrand);
@@ -263,8 +262,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
         C::getGeometry()->getNumGrainLatticeSites();
 
     // Compute second term of free energy not involving angle integration
-    GridCPU ozakiEnergies = *(C::getIntegrationIterator()->getEnergies());
-    GridCPU ozakiResidues = *(C::getIntegrationIterator()->getResidues());
+    GridCPU<T> ozakiEnergies = *(C::getIntegrationIterator()->getEnergies());
+    GridCPU<T> ozakiResidues = *(C::getIntegrationIterator()->getResidues());
 
     const T *ozakiEnergies_im = ozakiEnergies.getDataPointer(0, Type::imag);
     const T *ozakiResidues_re = ozakiResidues.getDataPointer(0, Type::real);
@@ -286,7 +285,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     const T freeEnergyPerunitArea_old = m_freeEnergyPerUnitArea;
 
     OrderParameter<T> *orderParameter = C::getOrderParameter();
-    GridGPU deltaField(*(orderParameter->getOrderParameterField()));
+    GridGPU<T> deltaField(*(orderParameter->getOrderParameterField()));
     C::getGeometry()->zeroValuesOutsideDomainRef(&deltaField);
 
     m_freeEnergyPerUnitArea =
@@ -309,7 +308,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     // Add contribution from the induced magnetic field.
     if (hasComputedInducedVectorPotential) {
       // Compute the magnetic field.
-      GridGPU magneticField =
+      GridGPU<T> magneticField =
           (*(C::getContext()->getRiccatiSolver()->getInducedVectorPotential()))
               .curl(latticeElementSize);
 

@@ -19,11 +19,6 @@
 
 namespace scg {
 template <typename T> class Visualization {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
-  // template typename GRID can be either GridCPU or GridGPU.
-
 public:
   Visualization();
   ~Visualization();
@@ -58,10 +53,10 @@ public:
 
   void label(std::string info, int img_x, int img_y);
 
-  void plotGraph(GridCPU *xdata, GridCPU *ydata, float r, float g, float b,
-                 int image_idx_x, int image_idx_y, float y_mult = 1.0);
-  void plotVerticalMarker(GridCPU *xdata, T x_coord, float r, float g, float b,
-                          int image_idx_x, int image_idx_y);
+  void plotGraph(GridCPU<T> *xdata, GridCPU<T> *ydata, float r, float g,
+                 float b, int image_idx_x, int image_idx_y, float y_mult = 1.0);
+  void plotVerticalMarker(GridCPU<T> *xdata, T x_coord, float r, float g,
+                          float b, int image_idx_x, int image_idx_y);
 
   void eraseValuesOutsideDomain(const int image_idx_x,
                                 const int image_idx_y = 0);
@@ -163,7 +158,7 @@ private:
 
 #ifdef __CUDACC__
   GeometryGroup<T> *_geom;
-  Grid<char>::CPU *_geom_mask;
+  GridCPU<char> *_geom_mask;
 #endif
 };
 
@@ -353,7 +348,7 @@ void Visualization<T>::drawField(const GRID *grid, const int field,
   const int Nx = grid->dimX();
   const int Ny = grid->dimY();
 
-  GridCPU grid_cpu = (*grid)[field];
+  GridCPU<T> grid_cpu = (*grid)[field];
 
   T *data = grid_cpu.getDataPointer(0, representation);
 
@@ -361,7 +356,7 @@ void Visualization<T>::drawField(const GRID *grid, const int field,
   int img_idx = image_idx_y * _num_image_X + image_idx_x;
 
   T minVal_img, maxVal_img;
-  GridCPU::minmax(grid_cpu, minVal_img, maxVal_img, 0, representation);
+  GridCPU<T>::minmax(grid_cpu, minVal_img, maxVal_img, 0, representation);
 
   _minValImg[img_idx] = minVal_img;
   _maxValImg[img_idx] = maxVal_img;
@@ -411,7 +406,7 @@ void Visualization<T>::drawField(const GRID *grid, const int field,
 }
 
 template <typename T>
-void Visualization<T>::plotGraph(GridCPU *xdata, GridCPU *ydata, float r,
+void Visualization<T>::plotGraph(GridCPU<T> *xdata, GridCPU<T> *ydata, float r,
                                  float g, float b, int image_idx_x,
                                  int image_idx_y, float y_mult) {
   int N = xdata->dimX();
@@ -489,7 +484,7 @@ void Visualization<T>::plotGraph(GridCPU *xdata, GridCPU *ydata, float r,
 }
 
 template <typename T>
-void Visualization<T>::plotVerticalMarker(GridCPU *xdata, T x_coord, float r,
+void Visualization<T>::plotVerticalMarker(GridCPU<T> *xdata, T x_coord, float r,
                                           float g, float b, int image_idx_x,
                                           int image_idx_y) {
   int N = xdata->dimX();
@@ -655,7 +650,7 @@ template <typename T> void Visualization<T>::clearImage(int img_x, int img_y) {
 #ifdef __CUDACC__
   if (_geom_mask == 0 && _geom) {
     _geom->create(0.0);
-    _geom_mask = new Grid<char>::CPU(*_geom->getDomainLabelsGrid());
+    _geom_mask = new GridCPU<char>(*_geom->getDomainLabelsGrid());
   }
 #endif
 }

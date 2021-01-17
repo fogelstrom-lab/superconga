@@ -5,6 +5,7 @@
 #ifndef ORDER_PARAMETER_INITIAL_H_
 #define ORDER_PARAMETER_INITIAL_H_
 
+#include "Grid.h"
 #include "OrderParameterComponent.h"
 #include "defines.h"
 #include "utils.h"
@@ -17,9 +18,6 @@
 
 namespace scg {
 template <typename T> struct Initial {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   /// \brief Initialize order parameter to bulk value.
   ///
@@ -47,7 +45,7 @@ public:
   ///
   /// \return - void.
   static void grid(OrderParameterComponent<T> *inOutDeltaComponent,
-                   const GridGPU &inGrid);
+                   const GridGPU<T> &inGrid);
 
   /// \brief Initialize order parameter to bulk with phase winding.
   ///
@@ -274,7 +272,7 @@ void Initial<T>::bulk(OrderParameterComponent<T> *inOutDeltaComponent,
                       const T inPhase) {
 
   const T deltaBulk = inOutDeltaComponent->deltaBulk();
-  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *deltaGrid = inOutDeltaComponent->getOrderParameterField();
   deltaGrid->setValue(deltaBulk * std::cos(inPhase), Type::real);
   deltaGrid->setValue(deltaBulk * std::sin(inPhase), Type::imag);
 }
@@ -282,7 +280,7 @@ void Initial<T>::bulk(OrderParameterComponent<T> *inOutDeltaComponent,
 template <typename T>
 void Initial<T>::constant(OrderParameterComponent<T> *inOutDeltaComponent,
                           const T inRealPart, const T inImaginaryPart) {
-  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   deltaGrid->setValue(inRealPart, Type::real);
   deltaGrid->setValue(inImaginaryPart, Type::imag);
@@ -290,10 +288,10 @@ void Initial<T>::constant(OrderParameterComponent<T> *inOutDeltaComponent,
 
 template <typename T>
 void Initial<T>::grid(OrderParameterComponent<T> *inOutDeltaComponent,
-                      const GridGPU &inGrid) {
-  GridGPU tmp = inGrid;
+                      const GridGPU<T> &inGrid) {
+  GridGPU<T> tmp = inGrid;
 
-  GridGPU *delta = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *delta = inOutDeltaComponent->getOrderParameterField();
 
   if (tmp.dimX() != delta->dimX()) {
     tmp.resample(delta->dimX(), delta->dimY());
@@ -308,7 +306,7 @@ void Initial<T>::perturbedPhaseWinding(
     const T inRandomPhaseMix, const T inPhaseShift, const T inCenterX,
     const T inCenterY, const T inCutoffRadius) {
   // Get pointer to order parameter data.
-  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   // Compute order parameter bulk value.
   const T deltaBulk = inOutDeltaComponent->deltaBulk();
@@ -353,7 +351,7 @@ void Initial<T>::edgePhaseCrystal(
     const T inDecayLength, const T inCenterX, const T inCenterY,
     const T inRotAngle) {
   // Get pointer to order parameter data.
-  GridGPU *deltaGrid = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *deltaGrid = inOutDeltaComponent->getOrderParameterField();
 
   // Number of lattice points in order parameter lattice.
   const int numLatticePoints = deltaGrid->dimX();
@@ -394,12 +392,12 @@ void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
 template <typename T>
 int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
                      const char *const inFilename) {
-  GridCPU tmp;
+  GridCPU<T> tmp;
 
   if (tmp.read(inFilename))
     return 1;
 
-  GridGPU *delta = inOutDeltaComponent->getOrderParameterField();
+  GridGPU<T> *delta = inOutDeltaComponent->getOrderParameterField();
 
   if (tmp.dimX() != delta->dimX())
     tmp.resample(delta->dimX(), delta->dimY());

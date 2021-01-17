@@ -3,13 +3,12 @@
 
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
+#include "Grid.h"
 #include "IntegrationIteratorOzaki.h"
 #include "utils.h"
 
 namespace scg {
 template <typename T> class ComputeCurrent : public ComputeProperty<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructors and Destructors
   ComputeCurrent();
@@ -17,7 +16,7 @@ public:
 
   ComputeCurrent(Context<T> *ctx);
 
-  virtual GridGPU *getResult() { return _current_real; }
+  virtual GridGPU<T> *getResult() { return _current_real; }
 
   virtual int initialize();
 
@@ -35,8 +34,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter, GridGPU *gamma,
-                                  GridGPU *gammabar);
+  virtual void computeGreensAngle(ParameterIterator<int> *iter,
+                                  GridGPU<T> *gamma, GridGPU<T> *gammabar);
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -48,11 +47,11 @@ public:
 private:
   // Computed current will be stored here at end of
   // IntegrationIterator::compute() function.
-  GridGPU *_current;
-  GridGPU *_current_real;
+  GridGPU<T> *_current;
+  GridGPU<T> *_current_real;
 
   // Temporary grid.
-  GridGPU *_tmp;
+  GridGPU<T> *_tmp;
 };
 
 template <typename T>
@@ -82,9 +81,9 @@ template <typename T> int ComputeCurrent<T>::initialize() {
   const int N0 = C::getParameters()->getGridResolutionBase();
   const int N1 = C::getParameters()->getGridResolutionCoherence();
 
-  GridGPU::initializeGrid(_current, N0, N0, 2);
-  GridGPU::initializeGrid(_current_real, N0, N0, 2, Type::real);
-  GridGPU::initializeGrid(_tmp, N1, N1);
+  GridGPU<T>::initializeGrid(_current, N0, N0, 2);
+  GridGPU<T>::initializeGrid(_current_real, N0, N0, 2, Type::real);
+  GridGPU<T>::initializeGrid(_tmp, N1, N1);
 
   _current_real->setZero();
 
@@ -118,12 +117,13 @@ template <typename T> void ComputeCurrent<T>::initializeGreensAngle() {
 
 template <typename T>
 void ComputeCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                           GridGPU *gamma, GridGPU *gammabar) {
+                                           GridGPU<T> *gamma,
+                                           GridGPU<T> *gammabar) {
 
   if (ComputeProperty<T>::doCompute()) {
     typedef ContextModule<T> C;
     IntegrationIterator<T> *ii = C::getIntegrationIterator();
-    GridGPU *residues = ii->getResidues();
+    GridGPU<T> *residues = ii->getResidues();
 
     GreensFunctionStatic<T, Greens>::computeGreensSumEnergy(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, residues, gamma,
@@ -135,7 +135,7 @@ template <typename T>
 void ComputeCurrent<T>::integrateGreensAngle(GeometryGroup<T> *geom,
                                              const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
-    GridGPU *greens = ComputeProperty<T>::getGreensCurrentAngle();
+    GridGPU<T> *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
     // Compensate for numerical diffusion from interpolation during rotation.
     geom->extendValuesAtBoundary(greens);
@@ -170,7 +170,7 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
   if (C::doCompute()) {
     const T T_Tc = C::getParameters()->getTemperature();
 
-    GridGPU current_old = *_current_real;
+    GridGPU<T> current_old = *_current_real;
 
     _current_real->insertGrid(_current);
     *_current_real *= T_Tc;

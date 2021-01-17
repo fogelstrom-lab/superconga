@@ -18,6 +18,7 @@
 #include "DiscGeometry.h"
 #include "FermiSurfaceCircle.h"
 #include "GeometryGroup.h"
+#include "Grid.h"
 #include "OrderParameter.h"
 #include "OrderParameterBasis.h"
 #include "OrderParameterInitial.h"
@@ -148,7 +149,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   }
 
   // Get results.
-  typename scg::Grid<T>::CPU *dosObject = context->getComputeLDOS()->getDOS();
+  scg::GridCPU<T> *dosObject = context->getComputeLDOS()->getDOS();
   const T *const energies = dosObject->getDataPointer(0);
   const T *const dos = dosObject->getDataPointer(1);
 

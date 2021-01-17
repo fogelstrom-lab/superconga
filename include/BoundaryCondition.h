@@ -6,9 +6,6 @@
 
 namespace scg {
 template <typename T> class BoundaryCondition {
-  typedef typename Grid<T>::GPU GridGPU;
-  typedef typename Grid<T>::CPU GridCPU;
-
 public:
   BoundaryCondition() : _bc_map(0) {}
   virtual ~BoundaryCondition() {
@@ -27,7 +24,7 @@ public:
   virtual void computeBoundaryCondition(Context<T> *ctx) = 0;
 
   // Not used yet
-  Grid<char> *getBoundaryConditionMap() const { return _bc_map; }
+  GridGPU<char> *getBoundaryConditionMap() const { return _bc_map; }
 
   // Not implemented
   // Should set values/labels in _bc_map to specify where BC applies to.
@@ -43,7 +40,7 @@ private:
   // _domainLabels). Should specify where the boundary condition will be
   // applied, so that different BC's can be mixed. Currently one BC is applied
   // to all boundary nodes.
-  Grid<char> *_bc_map;
+  GridGPU<char> *_bc_map;
 };
 } // namespace scg
 

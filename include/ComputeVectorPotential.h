@@ -45,11 +45,10 @@ __global__ void computeVectorPotential2d_kernel(
 } // namespace internal
 
 template <typename T>
-void computeVectorPotential(
-    GridData<T, thrust::device_vector<T>> &inOutVectorPotential,
-    const GridData<T, thrust::device_vector<T>> &inCurrentDensity,
-    const GridData<char, thrust::device_vector<char>> &inDomainLabels,
-    const T inLatticeSpacing, const T inKappa) {
+void computeVectorPotential(GridGPU<T> &inOutVectorPotential,
+                            const GridGPU<T> &inCurrentDensity,
+                            const GridGPU<char> &inDomainLabels,
+                            const T inLatticeSpacing, const T inKappa) {
   // Set to zero because we'll add stuff to it.
   inOutVectorPotential.setZero();
 

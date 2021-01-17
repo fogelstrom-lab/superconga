@@ -1,6 +1,7 @@
 #ifndef RICCATI_SOLVER_CONFINED_H_
 #define RICCATI_SOLVER_CONFINED_H_
 
+#include "Grid.h"
 #include "RiccatiSolver.h"
 #include "cplx.h"
 #include <cmath>
@@ -10,8 +11,6 @@ namespace scg {
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
 class RiccatiSolverConfined : public RiccatiSolver<T> {
-  typedef typename Grid<T>::GPU GridGPU;
-
 public:
   // Constructors and Destructors
 
@@ -25,12 +24,12 @@ public:
   // Functions
   virtual void
   computeInitialCondition(const ParameterIterator<int> &energy_iter,
-                          const GridGPU *energies, const GridGPU *delta,
+                          const GridGPU<T> *energies, const GridGPU<T> *delta,
                           const int angleIdx);
 
   virtual void
   computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
-                            const GridGPU *energies, const GridGPU *delta,
+                            const GridGPU<T> *energies, const GridGPU<T> *delta,
                             const int angleIdx);
 
   void gammaSymmetryTransform();
@@ -259,8 +258,8 @@ int RiccatiSolverConfined<T, GAMMA, POTENTIAL>::initialize() {
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
 void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
-    const ParameterIterator<int> &energy_iter, const GridGPU *energies,
-    const GridGPU *deltaRot, const int current_angle_idx) {
+    const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+    const GridGPU<T> *deltaRot, const int current_angle_idx) {
   typedef RiccatiSolver<T> R;
   typedef ContextModule<T> C;
 
@@ -274,8 +273,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   const int numAngles = param->getAngularResolution();
 
   // Get pointers to grids
-  GridGPU *gamma = R::getGamma();
-  GridGPU *gammabar = R::getGammabar();
+  GridGPU<T> *gamma = R::getGamma();
+  GridGPU<T> *gammabar = R::getGammabar();
 
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
@@ -313,8 +312,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   // via a templated function object.
 
   // Compute energy shift from magnetic field
-  GridGPU *eShift = R::getEnergyShift();
-  GridGPU *ps = R::getInducedVectorPotential();
+  GridGPU<T> *eShift = R::getEnergyShift();
+  GridGPU<T> *ps = R::getInducedVectorPotential();
 
   // Whether we should add the contribution from the vector potential generated
   // by the current to the energy shift.
@@ -391,11 +390,11 @@ template <typename T, template <typename> class GAMMA,
 void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::gammaSymmetryTransform() {
   typedef RiccatiSolver<T> R;
 
-  GridGPU *gamma = R::getGamma();
-  GridGPU *gammabar = R::getGammabar();
+  GridGPU<T> *gamma = R::getGamma();
+  GridGPU<T> *gammabar = R::getGammabar();
 
   // Do this ONLY if testing negative vF
-  GridGPU gammaTmp(gamma);
+  GridGPU<T> gammaTmp(gamma);
   gammaTmp = *gamma;
 
   *gamma = *gammabar;
@@ -408,8 +407,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::gammaSymmetryTransform() {
 template <typename T, template <typename> class GAMMA,
           template <typename> class POTENTIAL>
 void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
-    const ParameterIterator<int> &energy_iter, const GridGPU *energies,
-    const GridGPU *deltaRot, const int current_angle_idx) {
+    const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+    const GridGPU<T> *deltaRot, const int current_angle_idx) {
   typedef RiccatiSolver<T> R;
   typedef ContextModule<T> C;
 
@@ -423,8 +422,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   const int numAngles = param->getAngularResolution();
 
   // Get pointers to grids
-  GridGPU *gamma = R::getGamma();
-  GridGPU *gammabar = R::getGammabar();
+  GridGPU<T> *gamma = R::getGamma();
+  GridGPU<T> *gammabar = R::getGammabar();
 
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
@@ -446,7 +445,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
                               numEnergiesCurrentBlock, current_angle_idx);
 
   // Get energy shift from magnetic field
-  GridGPU *eShift = R::getEnergyShift();
+  GridGPU<T> *eShift = R::getEnergyShift();
 
   // 	Solve gamma by propagating riccati trajectories along positive y
   internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
