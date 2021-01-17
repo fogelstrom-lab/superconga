@@ -323,7 +323,7 @@ void saveInducedFluxDensity(
 
   // Fetch current density and set to zero outside grain.
   typename Grid<T>::GPU *current = inContext->getComputeCurrent()->getResult();
-  inContext->getGeometry()->zeroValuesOutsideDomain(current);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(current);
   const int numLatticePoints = current->dimX();
 
   // Domain structure for vector potential calculation.
@@ -392,7 +392,7 @@ void saveGridData(
 
   // Set order parameter to zero outside simulation domain (non-zero values are
   // used for interpolation).
-  inContext->getGeometry()->zeroValuesOutsideDomain(orderParameterSave);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(orderParameterSave);
 
   // Construct full file name for order-parameter file.
   char orderParameterFile[512];
@@ -417,7 +417,7 @@ void saveGridData(
 
   // Set current density to zero outside simulation domain (non-zero values are
   // used for interpolation).
-  inContext->getGeometry()->zeroValuesOutsideDomain(currentSave);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(currentSave);
 
   // Construct full file name for current density.
   char currentDensityFile[512];

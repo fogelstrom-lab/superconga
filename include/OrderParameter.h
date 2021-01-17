@@ -123,7 +123,7 @@ template <typename T> int OrderParameter<T>::initialize() {
     // Zero the values outside of the grain, so that we only compute residuals
     // of values that actually matter.
     GridGPU *const component = getOrderParameterComponentField(i);
-    ContextModule<T>::getGeometry()->zeroValuesOutsideDomain(component);
+    ContextModule<T>::getGeometry()->zeroValuesOutsideDomainRef(component);
   }
   return 0;
 }
@@ -201,30 +201,10 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
     opSummed += grid;
   }
 
-  // The following is bit of a horrible hack to get this to work properly.
-  // After having summed the components we need to extend values at the boundary
-  // so that values outside of the domain do not creep into the sample when
-  // rotation. But the geometry has an internal state; the rotation angle. So we
-  // must set the internal angle to zero before extending the values, and then
-  // reset it (so that we don't screw up something downstream). Every state
-  // change causes the geometry to be re-computed.
-  // TODO(niclas): Somehow fix this, so one can use methods without worrying
-  // about changing internal states. I guess this would be a part of making
-  // everything const correct!?
+  // Extend the values at the boundary. Note that this is done using the
+  // non-rotated geometry.
   GeometryGroup<T> *const geometry = ContextModule<T>::getGeometry();
-
-  // Get the internal rotation of the geometry, so we can reset it afterwards.
-  const T currentAngle = geometry->getCurrentAngle();
-
-  // Set the geometry to zero rotation.
-  const T zeroAngle = static_cast<T>(0);
-  geometry->create(zeroAngle);
-
-  // Compensate for numerical diffusion from interpolation during rotation.
-  geometry->extendValuesAtBoundary(&opSummed);
-
-  // Reset the geometry.
-  geometry->create(currentAngle);
+  geometry->extendValuesAtBoundaryRef(&opSummed);
 
   // Rotate the order parameter and insert it in the larger grid
   // _orderParameterCompoundRotated.

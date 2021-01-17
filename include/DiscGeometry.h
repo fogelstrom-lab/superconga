@@ -28,7 +28,7 @@ public:
   DiscGeometry *clone() const override { return new DiscGeometry(*this); }
 
   void create(const T inAngle) override;
-  Grid<char>::GPU *createDomain(const int inLatticeSideLength) override;
+  Grid<char>::GPU *createDomain(const int inLatticeSideLength) const override;
 
   Disc<T> *getDisc() const { return m_disc; }
 
@@ -44,6 +44,100 @@ private:
 
 namespace internal {
 template <typename T>
+__device__ char computeDomainLabel(const int inX, const int inY,
+                                   const T inRadius, const T inOffsetX,
+                                   const T inOffsetY) {
+  // For convenience.
+  const T radiusSquared = inRadius * inRadius;
+
+  // In order to determine the domain label of a pixel we check, in a 3x3
+  // neighborhood, whether those pixels are within the circle or not, and then
+  // computing the row majority. The row majority is due to the trajectories
+  // going downward along the y-axis, i.e. the columns.
+  //
+  // Example A:
+  //
+  // X 0 0     0
+  // X X 0 ==> X
+  // X X X     X
+  //
+  // where 0 = outside circle, X = inside circle, and the center pixel is the
+  // one we want to label. There are four labels:
+  //
+  // 3: Exit    - (X, X, 0)^T
+  // 2: Entry   - (0, X, X)^T
+  // 1: Inside  - (X, X, X)^T
+  // 0: Outside - All other
+  //
+  // So the center pixel in the example is an entry node.
+  //
+  // Example B:
+  //
+  // 0 0 0     0
+  // 0 X 0 ==> 0
+  // X X X     X
+  //
+  // This gives that the pixel is outside, even though the pixel is within the
+  // circle. This also means that
+  //
+  // 0 X 0     0
+  // X X X ==> X
+  // X X X     X
+  //
+  // gives an entry node. The rational for this is that we want to lonesome
+  // pixels like the top one. If we only looked at the center column in
+  // Example B, we double determine the center pixel to be an entry node.
+  // But consider the same case, but rotated 90 degrees.
+  //
+  // X 0 0     0
+  // X X 0 ==> X
+  // X 0 0     0
+  //
+  // If we only looked at the center column, this same pixel, would be
+  // determined to be outside the domain. Which is an inconsistency.
+  // By looking at a 3x3 neighborhood we can get rid of those pixels in all
+  // directions.
+  const int numExtend = 1;
+  const int numPoints = 2 * numExtend + 1;
+  bool neighbors[numPoints];
+  for (int j = 0; j < numPoints; ++j) {
+    // Neighbour y-coordinate.
+    const T ny = static_cast<T>(inY - 1 + j) - inOffsetY;
+
+    int rowSum = 0;
+    for (int i = 0; i < numPoints; ++i) {
+      // Neighbour x-coordinate.
+      const T nx = static_cast<T>(inX - 1 + i) - inOffsetX;
+
+      // Is the neighbor inside the circle?
+      const bool isInside = nx * nx + ny * ny <= radiusSquared;
+
+      rowSum += isInside ? 1 : 0;
+    }
+    // Check if majority is inside.
+    neighbors[j] = rowSum > numExtend;
+  }
+
+  // Determine domain label.
+  char domainLabel = 0;
+  if (neighbors[0] && neighbors[1] && neighbors[2]) {
+    // Inside: (X, X, X)^T
+    domainLabel = 1;
+  } else if (!neighbors[0] && neighbors[1] && neighbors[2]) {
+    // Entry: (0, X, X)^T
+    domainLabel = 2;
+  } else if (neighbors[0] && neighbors[1] && !neighbors[2]) {
+    // Exit: (X, X, 0)^T
+    domainLabel = 3;
+  } else {
+    // Outside.
+    domainLabel = 0;
+  }
+
+  return domainLabel;
+}
+
+template <typename T>
 __global__ void
 generateDisc_Kernel(const int inNumX, const int inNumY, const T inRadius,
                     const T inOffsetX, const T inOffsetY,
@@ -53,96 +147,13 @@ generateDisc_Kernel(const int inNumX, const int inNumY, const T inRadius,
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
 
   if (tx < inNumX && ty < inNumY) {
-    // For convenience.
-    const T radiusSquared = inRadius * inRadius;
+    // Compute domain label.
+    const char domainLabel =
+        computeDomainLabel(tx, ty, inRadius, inOffsetX, inOffsetY);
 
     // Centered coordinates.
     const T x = static_cast<T>(tx) - inOffsetX;
     const T y = static_cast<T>(ty) - inOffsetY;
-
-    // In order to determine the domain label of a pixel we check, in a 3x3
-    // neighborhood, whether those pixels are within the circle or not, and then
-    // computing the row majority. The row majority is due to the trajectories
-    // going downward along the y-axis, i.e. the columns.
-    //
-    // Example A:
-    //
-    // X 0 0     0
-    // X X 0 ==> X
-    // X X X     X
-    //
-    // where 0 = outside circle, X = inside circle, and the center pixel is the
-    // one we want to label. There are four labels:
-    //
-    // 3: Exit    - (X, X, 0)^T
-    // 2: Entry   - (0, X, X)^T
-    // 1: Inside  - (X, X, X)^T
-    // 0: Outside - All other
-    //
-    // So the center pixel in the example is an entry node.
-    //
-    // Example B:
-    //
-    // 0 0 0     0
-    // 0 X 0 ==> 0
-    // X X X     X
-    //
-    // This gives that the pixel is outside, even though the pixel is within the
-    // circle. This also means that
-    //
-    // 0 X 0     0
-    // X X X ==> X
-    // X X X     X
-    //
-    // gives an entry node. The rational for this is that we want to lonesome
-    // pixels like the top one. If we only looked at the center column in
-    // Example B, we double determine the center pixel to be an entry node.
-    // But consider the same case, but rotated 90 degrees.
-    //
-    // X 0 0     0
-    // X X 0 ==> X
-    // X 0 0     0
-    //
-    // If we only looked at the center column, this same pixel, would be
-    // determined to be outside the domain. Which is an inconsistency.
-    // By looking at a 3x3 neighborhood we can get rid of those pixels in all
-    // directions.
-    const int numExtend = 1;
-    const int numPoints = 2 * numExtend + 1;
-    bool neighbors[numPoints];
-    for (int j = 0; j < numPoints; ++j) {
-      // Neighbour y-coordinate.
-      const T ny = static_cast<T>(ty - 1 + j) - inOffsetY;
-
-      int rowSum = 0;
-      for (int i = 0; i < numPoints; ++i) {
-        // Neighbour x-coordinate.
-        const T nx = static_cast<T>(tx - 1 + i) - inOffsetX;
-
-        // Is the neighbor inside the circle?
-        const bool isInside = nx * nx + ny * ny <= radiusSquared;
-
-        rowSum += isInside ? 1 : 0;
-      }
-      // Check if majority is inside.
-      neighbors[j] = rowSum > numExtend;
-    }
-
-    // Determine domain label.
-    char domainLabel = 0;
-    if (neighbors[0] && neighbors[1] && neighbors[2]) {
-      // Inside: (X, X, X)^T
-      domainLabel = 1;
-    } else if (!neighbors[0] && neighbors[1] && neighbors[2]) {
-      // Entry: (0, X, X)^T
-      domainLabel = 2;
-    } else if (neighbors[0] && neighbors[1] && !neighbors[2]) {
-      // Exit: (X, X, 0)^T
-      domainLabel = 3;
-    } else {
-      // Outside.
-      domainLabel = 0;
-    }
 
     // Distance along y (trajectory path direction) to exact boundary location
     T boundaryDistance = static_cast<T>(0);
@@ -152,7 +163,7 @@ generateDisc_Kernel(const int inNumX, const int inNumY, const T inRadius,
     // If the pixel is entry or exit.
     if (domainLabel > 1) {
       // Determine boundary normal at exact boundary location
-      boundaryDistance = sqrt(radiusSquared - x * x) - abs(y);
+      boundaryDistance = sqrt(inRadius * inRadius - x * x) - abs(y);
       normalX = -x / inRadius;
 
       if (y <= static_cast<T>(0)) {
@@ -173,6 +184,27 @@ generateDisc_Kernel(const int inNumX, const int inNumY, const T inRadius,
     outNormalsY[idx] = normalY;
   }
 }
+
+template <typename T>
+__global__ void generateDisc_Kernel(const int inNumX, const int inNumY,
+                                    const T inRadius, const T inOffsetX,
+                                    const T inOffsetY,
+                                    char *const outDomainLabels) {
+  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (tx < inNumX && ty < inNumY) {
+    // Linear index.
+    const int idx = ty * inNumX + tx;
+
+    // Compute domain label.
+    const char domainLabel =
+        computeDomainLabel(tx, ty, inRadius, inOffsetX, inOffsetY);
+
+    // For polygons it is only ones and zeros.
+    outDomainLabels[idx] = domainLabel > 0 ? 1 : 0;
+  }
+}
 } // namespace internal
 
 template <typename T>
@@ -189,12 +221,12 @@ DiscGeometry<T>::DiscGeometry(const T inDiameter, const T inCenterX,
 
   // Scale to internal coordinate system and apply the margin (grain size frac).
   const T coordinateScaleFactor =
-      static_cast<T>(constants::GRAIN_SIZE_FRACTION *
-                     constants::INTERNAL_MAXIMUM_COORDINATE_DISC /
-                     constants::MAXIMUM_COORDINATE);
+      static_cast<T>(constants::GRAIN_SIZE_FRACTION);
+
   // Calculate radius from diameter and apply margin/scaling.
   const T discRadiusPadded =
       static_cast<T>(0.5) * inDiameter * coordinateScaleFactor;
+
   // Apply scaling and margin to center coordinates
   const T centerPaddedX = inCenterX * coordinateScaleFactor;
   const T centerPaddedY = inCenterY * coordinateScaleFactor;
@@ -218,16 +250,6 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
 
   G::allocateMem();
 
-  // TODO(niclas): Is this check necessary?
-  Parameters<T> *param = G::getParameters();
-  if (!param) {
-    // TODO(niclas): Raise exception instead!?
-    std::cerr << "DiscGeometry::create(): ERROR - No parameters object!\n";
-    return;
-  }
-
-  const int N = G::getParameters()->getGridResolutionBase();
-
   const T centerX = m_disc->getPosX();
   const T centerY = m_disc->getPosY();
 
@@ -239,10 +261,11 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   G::getGridDimensions(numX, numY);
 
   const T offsetX =
-      static_cast<T>(numX - 1) * (static_cast<T>(0.5) - rotatedCenterX);
+      static_cast<T>(numX - 1) * (rotatedCenterX + static_cast<T>(0.5));
   const T offsetY =
-      static_cast<T>(numY - 1) * (static_cast<T>(0.5) - rotatedCenterY);
+      static_cast<T>(numY - 1) * (rotatedCenterY + static_cast<T>(0.5));
 
+  const int N = G::getParameters()->getGridResolutionBase();
   const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
 
   dim3 bpg, tpb;
@@ -255,15 +278,36 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
 }
 
 template <typename T>
-Grid<char>::GPU *DiscGeometry<T>::createDomain(const int inLatticeSideLength) {
+Grid<char>::GPU *
+DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
   const int numFields = 1;
   Grid<char>::GPU *dom_component = new Grid<char>::GPU(
       inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
+  // Get the center of the disc.
+  const T centerX = m_disc->getPosX();
+  const T centerY = m_disc->getPosY();
+
+  // Compute the offsets needed for cordinate transformations.
+  const T offsetX =
+      static_cast<T>(inLatticeSideLength - 1) * (centerX + static_cast<T>(0.5));
+  const T offsetY =
+      static_cast<T>(inLatticeSideLength - 1) * (centerY + static_cast<T>(0.5));
+
+  // The radius in pixels.
+  const T radius =
+      m_disc->getRadius() * static_cast<T>(inLatticeSideLength - 1);
+
+  // Get the required kernel dimensions.
   dim3 bpg, tpb;
   Grid<T>::GPU::getKernelDimensions(bpg, tpb, inLatticeSideLength,
                                     inLatticeSideLength);
+
+  // Compute domain labels.
+  internal::generateDisc_Kernel<T>
+      <<<bpg, tpb>>>(inLatticeSideLength, inLatticeSideLength, radius, offsetX,
+                     offsetY, dom_component->getDataPointer());
 
   return dom_component;
 }

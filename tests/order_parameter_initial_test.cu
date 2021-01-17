@@ -194,7 +194,7 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
             context->initialize();
 
             // Remove all spurious values outside actual grain
-            context->getGeometry()->zeroValuesOutsideDomain(
+            context->getGeometry()->zeroValuesOutsideDomainRef(
                 orderParameterComponent->getOrderParameterField());
 
             // Fetch the grain-summed order-parameter magnitude
