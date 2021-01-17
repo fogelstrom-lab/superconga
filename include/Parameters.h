@@ -95,7 +95,7 @@ public:
   }
 
   void setPenetrationDepth(const T inPenetrationDepth) {
-    m_penetrationDepth = inPenetrationDepth;
+    m_penetrationDepth = toInternalLength(inPenetrationDepth);
   }
 
   void setValid() { m_isValid = 1; }
@@ -108,7 +108,6 @@ public:
   int write(const std::string &inFileName) const;
 
   // Helpers
-  static int computeGridResolutionRotated(const int numGridBase);
   int getVersion() const { return m_version; }
   void print() const;
 
@@ -168,7 +167,11 @@ private:
   int m_isValid;
 
   // Helper functions
+  int computeGridResolutionRotated(const int numGridBase) const;
   void setGridElementSize();
+  T toInternalLength(const T inLength) const {
+    return inLength / static_cast<T>(2.0 * M_PI);
+  }
 };
 
 template <typename T>
@@ -177,7 +180,7 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
       m_temperature(0.5), m_magneticFieldStrength(0.0),
       m_convergenceCriterion(1E-6), m_numEnergies(128), m_energyMin(0.0),
       m_energyMax(3.0), m_smearingFactor(0.05), m_numMatsubaraEnergies(20),
-      m_penetrationDepth(100.0), m_version(2), m_isValid(1) {
+      m_penetrationDepth(-static_cast<T>(1)), m_version(2), m_isValid(1) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
   // TODO(niclas): This is ugly.
@@ -285,10 +288,11 @@ void Parameters<T>::setGridResolution(const int inNumGridBase) {
 
 // Calculate the lattice spacing size in physical units of hbar*vF/(kB*Tc)
 template <typename T> void Parameters<T>::setGridElementSize() {
-  m_gridElementSize =
+  const T gridElementSize =
       m_grainWidthCoherenceLengths /
-      ((static_cast<T>(m_numGridBase) - static_cast<T>(1.0)) *
-       (static_cast<T>(2.0 * M_PI * constants::GRAIN_SIZE_FRACTION)));
+      ((static_cast<T>(m_numGridBase-1)) *
+       static_cast<T>(constants::GRAIN_SIZE_FRACTION));
+  m_gridElementSize = toInternalLength(gridElementSize);
 }
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
@@ -345,7 +349,7 @@ int Parameters<T>::write(const std::string &inFileName) const {
 }
 
 template <typename T>
-int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) {
+int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) const {
   // The rotated size is given by:
   // N + 2x >= sqrt(2)N
   // ==>

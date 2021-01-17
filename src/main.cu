@@ -38,6 +38,7 @@
 #include <iomanip>
 #include <iostream>
 #include <json/json.h>
+#include <limits>
 #include <memory>
 #include <string>
 
@@ -120,6 +121,8 @@ int main(int argc, char *argv[]) {
   const T convergenceCriterion =
       static_cast<T>(simParams["convergence_criterion"].asDouble());
   parameters->setConvergenceCriterion(convergenceCriterion);
+// Set penetration depth.
+  parameters->setPenetrationDepth(static_cast<T>(simParams["penetration_depth"].asDouble()));
 
   //***************************************************
   // CREATE GEOMETRY

@@ -151,6 +151,15 @@ def make_default_parser():
         help="Side length of grain in units of coherence lengths (hbar*v_F)/(2*pi*k_B*T_c).",
     )
 
+    # Penetration depth.
+    parser.add_argument(
+        "-k",
+        "--penetration-depth",
+        type=float,
+        default=None,
+        help="The London penetration depth, expressed in coherence lengths. If the value is less than, or equal to, zero the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
+    )
+
     # Crystal axes rotation.
     parser.add_argument(
         "-r",
@@ -403,11 +412,11 @@ def validate(simparams: dict) -> bool:
         "data_path": {"type": str},
         "external_flux_quanta": {"type": float},
         "grain_side_length": {"type": float, "low": 0.0},
-        "lattice_side_length": {"type": int, "low": 1},
-        "num_fermi_momenta": {"type": int, "low": 1},
-        "num_iterations_max": {"type": int, "low": 1},
-        "num_iterations_min": {"type": int, "low": 1},
-        "num_ozaki_energies": {"type": int, "low": 1},
+        "lattice_side_length": {"type": int, "low": 0},
+        "num_fermi_momenta": {"type": int, "low": 0},
+        "num_iterations_max": {"type": int, "low": 0},
+        "num_iterations_min": {"type": int, "low": 0},
+        "num_ozaki_energies": {"type": int, "low": 0},
         "num_polygon_edges": {"type": int, "excluded": [0, 1, 2]},
         "order_parameter": {
             "type": list,
@@ -419,6 +428,7 @@ def validate(simparams: dict) -> bool:
                 "symmetry": {"type": str, "one_of": VALID_SYMMETRIES},
             },
         },
+        "penetration_depth": {"type": float},
         "save_data": {"type": bool},
         "save_data_interval": {"type": int, "low": 0},
         "solenoid": {"type": bool},
@@ -440,7 +450,7 @@ def validate(simparams: dict) -> bool:
             simparams["order_parameter"][i]["critical_temperature"] /= Tc_max
 
         # Check that the minimum number of iterations is smaller than the maximum.
-        if not (simparams["num_iterations_max"] > simparams["num_iterations_min"]):
+        if not (simparams["num_iterations_max"] >= simparams["num_iterations_min"]):
             print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
             success = False
 
@@ -788,9 +798,7 @@ class InputDropdown(Serializable, QWidget, metaclass=QMeta):
 
 class OrderParameterComponent(Serializable, QWidget, metaclass=QMeta):
     def __init__(
-        self,
-        *,
-        parent=None,
+        self, *, parent=None,
     ):
         super().__init__(parent)
 
@@ -1040,12 +1048,18 @@ class MainWindow(QMainWindow):
             QLabel("External flux quanta [\u03A6\u2080]"), self._external_flux_quanta
         )
 
+        # Penetration depth
+        self._prenetration_depth = InputFloat(jsonKey="penetration_depth")
+        self.register(self._prenetration_depth)
+        physicsBoxLayout.addRow(
+            QLabel("Penetration depth [\u03BE\u2080]"), self._prenetration_depth
+        )
+
         # Crystal axes rotation
         self._crystal_axes_rotation = InputFloat(jsonKey="crystal_axes_rotation")
         self.register(self._crystal_axes_rotation)
         physicsBoxLayout.addRow(
-            QLabel("Crystal axes rotation [2\u03C0]"),
-            self._crystal_axes_rotation,
+            QLabel("Crystal axes rotation [2\u03C0]"), self._crystal_axes_rotation,
         )
 
         # Grain side length
@@ -1244,9 +1258,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def handle_save_file(self):
         saveFileName = QFileDialog.getSaveFileName(
-            self,
-            caption="Save config file",
-            filter="Config file (*.json)",
+            self, caption="Save config file", filter="Config file (*.json)",
         )[0]
 
         if saveFileName:
@@ -1380,12 +1392,10 @@ def main() -> None:
     set_value(simparams, "initial_phase_shift", args.op_init_phase_shift, group)
     set_value(simparams, "initial_phase_winding", args.op_init_phase_winding, group)
     set_value(
-        simparams,
-        "initial_random_phase_weight",
-        args.op_init_rand_phase_weight,
-        group,
+        simparams, "initial_random_phase_weight", args.op_init_rand_phase_weight, group,
     )
     set_value(simparams, "symmetry", args.op_sym, group)
+    set_value(simparams, "penetration_depth", args.penetration_depth)
 
     set_flag(simparams, "save_data", args.save_data, args.no_save_data)
     set_value(simparams, "save_data_interval", args.save_data_interval)

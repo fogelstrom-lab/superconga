@@ -5,6 +5,7 @@
 #ifndef LOCAL_VECTOR_POTENTIAL_H_
 #define LOCAL_VECTOR_POTENTIAL_H_
 
+#include <cuda.h>
 #include <string>
 
 #ifndef _HD_
@@ -14,136 +15,76 @@
 namespace scg {
 namespace VectorPotential {
 template <typename T> struct None {
-  _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
-                                             const T B, const T systemAngle,
-                                             const int N, const T h);
+  _HD_ static void computeVectorPotential_local(const T inMagneticFieldStrength,
+                                                const T inX, const T inY,
+                                                T &outVectorPotentialX,
+                                                T &outVectorPotentialY);
   static std::string type() { return std::string("none"); }
 };
 
-template <typename T> struct Linear {
-  _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
-                                             const T B, const T systemAngle,
-                                             const int N, const T h);
-  static std::string type() { return std::string("linear"); }
-};
-
 template <typename T> struct LinearCentered {
-  _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
-                                             const T B, const T systemAngle,
-                                             const int N, const T h);
+  _HD_ static void computeVectorPotential_local(const T inMagneticFieldStrength,
+                                                const T inX, const T inY,
+                                                T &outVectorPotentialX,
+                                                T &outVectorPotentialY);
   static std::string type() { return std::string("linear_centered"); }
 };
 
 template <typename T> struct Radial {
-  _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
-                                             const T B, const T systemAngle,
-                                             const int N, const T h);
+  _HD_ static void computeVectorPotential_local(const T inMagneticFieldStrength,
+                                                const T inX, const T inY,
+                                                T &outVectorPotentialX,
+                                                T &outVectorPotentialY);
   static std::string type() { return std::string("radial"); }
 };
 
 template <typename T> struct Solenoid {
-  _HD_ static T computeVectorPotential_local(const T x_local, const T y_local,
-                                             const T B, const T systemAngle,
-                                             const int N, const T h);
+  _HD_ static void computeVectorPotential_local(const T inMagneticFieldStrength,
+                                                const T inX, const T inY,
+                                                T &outVectorPotentialX,
+                                                T &outVectorPotentialY);
   static std::string type() { return std::string("solenoid"); }
 };
 } // namespace VectorPotential
 
 template <typename T>
-_HD_ T VectorPotential::None<T>::computeVectorPotential_local(
-    const T x_local, const T y_local, const T B, const T systemAngle,
-    const int N, const T h) {
-  return T(0.0);
+_HD_ void VectorPotential::None<T>::computeVectorPotential_local(
+    const T inMagneticFieldStrength, const T inX, const T inY,
+    T &outVectorPotentialX, T &outVectorPotentialY) {
+  outVectorPotentialX = static_cast<T>(0.0);
+  outVectorPotentialY = static_cast<T>(0.0);
 }
 
 template <typename T>
-_HD_ T VectorPotential::Linear<T>::computeVectorPotential_local(
-    const T x_local, const T y_local, const T B, const T systemAngle,
-    const int N, const T h) {
-  // Center system coordinates at origin
-  const T offset = -T(0.5) * (N - 1);
-
-  const T x_local_centered = (x_local + offset) * h;
-  const T y_local_centered = (y_local + offset) * h;
-
-  // Rotate local coordinates to global frame
-  const T x_global = x_local_centered * cos(systemAngle) -
-                     y_local_centered * sin(systemAngle) - offset * h;
-
-  // Add energy shift according to vector potential
-  // TODO(niclas): Should the PI/2 be here? Shouldn't this be the vF angle?
-  return B * x_global * sin(systemAngle + T(0.5) * T(M_PI));
+_HD_ void VectorPotential::LinearCentered<T>::computeVectorPotential_local(
+    const T inMagneticFieldStrength, const T inX, const T inY,
+    T &outVectorPotentialX, T &outVectorPotentialY) {
+  outVectorPotentialX = static_cast<T>(0.0);
+  outVectorPotentialY = inX * inMagneticFieldStrength;
 }
 
 template <typename T>
-_HD_ T VectorPotential::LinearCentered<T>::computeVectorPotential_local(
-    const T x_local, const T y_local, const T B, const T systemAngle,
-    const int N, const T h) {
-  // Center system coordinates at origin
-  const T offset = -T(0.5) * (N - 1);
-
-  const T x_local_centered = (x_local + offset) * h;
-  const T y_local_centered = (y_local + offset) * h;
-
-  // Rotate local coordinates to global frame
-  const T x_global =
-      x_local_centered * cos(systemAngle) - y_local_centered * sin(systemAngle);
-
-  // Add energy shift according to vector potential
-  // TODO(niclas): Should the PI/2 be here? Shouldn't this be the vF angle?
-  return B * x_global * sin(systemAngle + T(0.5) * T(M_PI));
+_HD_ void VectorPotential::Radial<T>::computeVectorPotential_local(
+    const T inMagneticFieldStrength, const T inX, const T inY,
+    T &outVectorPotentialX, T &outVectorPotentialY) {
+  const T factor = static_cast<T>(0.5) * inMagneticFieldStrength;
+  outVectorPotentialX = -inY * factor;
+  outVectorPotentialY = inX * factor;
 }
 
 template <typename T>
-_HD_ T VectorPotential::Radial<T>::computeVectorPotential_local(
-    const T x_local, const T y_local, const T B, const T systemAngle,
-    const int N, const T h) {
-  // Center system coordinates at origin
-  const T offset = -T(0.5) * (N - 1);
-  const T sinAngle = sin(systemAngle);
-  const T cosAngle = cos(systemAngle);
+_HD_ void VectorPotential::Solenoid<T>::computeVectorPotential_local(
+    const T inMagneticFieldStrength, const T inX, const T inY,
+    T &outVectorPotentialX, T &outVectorPotentialY) {
+  // TODO(niclas): Where does this come from?
 
-  const T x_local_centered = (x_local + offset) * h;
-  const T y_local_centered = (y_local + offset) * h;
+  // Don't allow it to be zero.
+  const T epsilon = static_cast<T>(1e-7);
+  const T r2 = max(inX * inX + inY * inY, epsilon);
+  const T factor = inMagneticFieldStrength / (static_cast<T>(2.0 * M_PI) * r2);
 
-  // Rotate local coordinates to global frame
-  const T x_global = x_local_centered * cosAngle - y_local_centered * sinAngle;
-  const T y_global = x_local_centered * sinAngle + y_local_centered * cosAngle;
-
-  // Add energy shift according to vector potential
-  // TODO(niclas): Should the PI/2 be here? Shouldn't this be the vF angle?
-  return T(0.5) * B *
-         (-y_global * cos(systemAngle + T(0.5) * T(M_PI)) +
-          x_global * sin(systemAngle + T(0.5) * T(M_PI)));
-}
-
-template <typename T>
-_HD_ T VectorPotential::Solenoid<T>::computeVectorPotential_local(
-    const T x_local, const T y_local, const T B, const T systemAngle,
-    const int N, const T h) {
-  // Center system coordinates at origin
-  const T offset = -T(0.5) * (N - 1);
-  const T sinAngle = sin(systemAngle);
-  const T cosAngle = cos(systemAngle);
-
-  const T x_local_centered = (x_local + offset) * h;
-  const T y_local_centered = (y_local + offset) * h;
-
-  // Rotate local coordinates to global frame
-  const T x_global = x_local_centered * cosAngle - y_local_centered * sinAngle;
-  const T y_global = x_local_centered * sinAngle + y_local_centered * cosAngle;
-
-  T r2 = x_global * x_global + y_global * y_global;
-
-  if (r2 < (T)1E-07)
-    r2 = (T)1E-07;
-
-  // Add energy shift according to vector potential:
-  // vF * A = vF * (Phi/(2*PI*r^2))*(-y,x)
-  // TODO(niclas): Should the PI/2 be here? Shouldn't this be the vF angle?
-  return B / (T(2.0) * T(M_PI) * r2) *
-         (-y_global * cos(systemAngle + T(0.5) * T(M_PI)) +
-          x_global * sin(systemAngle + T(0.5) * T(M_PI)));
+  outVectorPotentialX = -inY * factor;
+  outVectorPotentialY = inX * factor;
 }
 } // namespace scg
 
