@@ -12,3 +12,8 @@ build/
 
 # If passing --save-data to the Python wrapper it is saved here.
 data/
+
+# Virtual environments.
+venv/
+venv2/
+venv3/
