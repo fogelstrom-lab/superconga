@@ -1094,8 +1094,8 @@ class MainWindow(QMainWindow):
         simulationBoxLayout.setLabelAlignment(Qt.AlignLeft)
 
         # Lattice grid size
-        self._points_per_coherence_length = InputInt(
-            jsonKey="points_per_coherence_length", minValue=1
+        self._points_per_coherence_length = InputFloat(
+            jsonKey="points_per_coherence_length", minValue=1.0
         )
         self.register(self._points_per_coherence_length)
         simulationBoxLayout.addRow(
