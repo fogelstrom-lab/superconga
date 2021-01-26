@@ -12,6 +12,12 @@
 //===----------------------------------------------------------------------===//
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
+// TODO(niclas): These should not have to be included! They are needed because
+// "Context" only has forward declarations.
+#include "ComputeCurrent.h"
+#include "ComputeFreeEnergy.h"
+#include "ComputeOrderParameter.h"
+
 #include "BoundaryConditionSpecular.h"
 #include "ComputeLDOS.h"
 #include "Context.h"
@@ -141,7 +147,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   // Compute the LDOS.
   for (int i = 0; i < simParams::NUM_ITERATIONS_MAX; ++i) {
     context->compute();
-    const T residual = context->getResidual(0);
+    const T residual = context->getResidual();
     const bool isConverged = context->isConverged();
     if (isConverged) {
       break;

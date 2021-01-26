@@ -250,8 +250,6 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
                                  latticeSpacing, penetrationDepth);
 
   // =================== ASSERT ==================== //
-  scg::GridGPU<T> expVectorPotential(N, N, currentDimension, scg::Type::real);
-
   // The maximum error, in terms of relative Frobenius norm, of the
   // eigen-decomposition approximation.
   const T maxError = static_cast<T>(1e-6);
@@ -263,8 +261,10 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
 
   // Compute the induced vector potential.
   scg::ComputeVectorPotential<T> computeVectorPotential(maxError, analytical);
-  computeVectorPotential.compute(currenDensity, latticeSpacing,
-                                 penetrationDepth, expVectorPotential);
+  computeVectorPotential.initialize(N, latticeSpacing);
+  computeVectorPotential.solve(currenDensity, penetrationDepth);
+
+  scg::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
 
   const T residual = scg::computeResidual(vectorPotential, expVectorPotential);
 

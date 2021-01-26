@@ -182,9 +182,12 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     const T residual = computeResidual(current_old, *_current_real);
     C::setResidual(residual);
 
-    if (residual < C::getParameters()->getConvergenceCriterion()) {
-      C::setConverged();
-    }
+    const bool isConverged =
+        residual < C::getParameters()->getConvergenceCriterion();
+    C::setConverged(isConverged);
+
+  } else {
+    C::setConverged(false);
   }
 }
 } // namespace scg

@@ -6,7 +6,6 @@
 
 #include "BoundaryCondition.h"
 #include "BoundaryStorage.h"
-#include "ComputeCurrent.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
 #include "IntegrationIterator.h"
@@ -140,7 +139,9 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   dim3 bpg, tpb;
   inEnergyShift->getKernelDimensions(bpg, tpb);
 
-  if (inVectorPotential) {
+  const T penetrationDepth = parameters->getPenetrationDepth();
+
+  if (penetrationDepth > static_cast<T>(0)) {
     GridGPU<T> vectorPotentialRotated(N1, N1, 2, Type::real);
     vectorPotentialRotated.setZero();
     vectorPotentialRotated.insertRotatedGrid(inVectorPotential, -systemAngle);

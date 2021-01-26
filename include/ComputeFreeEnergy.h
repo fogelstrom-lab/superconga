@@ -302,12 +302,15 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
           integrandFactor;
     }
 
-    // Fetch the vector potential. If it is a null pointer it will be ignored.
-    const GridGPU<T> *const inducedVectorPotential =
-        C::getContext()->getInducedVectorPotential();
+    // The Ginzburg-Landau parameter.
+    const T penetrationDepth = C::getParameters()->getPenetrationDepth();
 
     // Add contribution from the induced magnetic field.
-    if (inducedVectorPotential) {
+    if (penetrationDepth > static_cast<T>(0)) {
+      // Fetch the vector potential.
+      const GridGPU<T> *const inducedVectorPotential =
+          C::getContext()->getInducedVectorPotential();
+
       // Compute the magnetic field.
       GridGPU<T> magneticField =
           inducedVectorPotential->curl(latticeElementSize);
@@ -322,14 +325,11 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       // surface of a 3D superconductor.
       C::getGeometry()->zeroValuesOutsideDomainRef(&magneticField);
 
-      // The Ginzburg-Landau parameter.
-      const T kappa = C::getParameters()->getPenetrationDepth();
-
       // Note that the prefactor depend on our choice of unit definitions, e.g.
       // (2pi) in the denominator of the coherence length. Here it is assumed
       // that it is defined without the (2pi).
-      const T magneticFactor =
-          static_cast<T>(0.5 * M_PI * M_PI) * kappa * kappa;
+      const T magneticFactor = static_cast<T>(0.5 * M_PI * M_PI) *
+                               penetrationDepth * penetrationDepth;
 
       const T magneticFreeEnergy = magneticFactor * magneticField.sumSquare();
       m_freeEnergyPerUnitArea += magneticFreeEnergy;
@@ -345,10 +345,12 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
         computeResidual(freeEnergyPerunitArea_old, m_freeEnergyPerUnitArea);
     ComputeProperty<T>::setResidual(residual);
 
-    if (residual < C::getParameters()->getConvergenceCriterion())
-      ComputeProperty<T>::setConverged();
+    const bool isConverged =
+        residual < C::getParameters()->getConvergenceCriterion();
+    ComputeProperty<T>::setConverged(isConverged);
   } else {
     m_freeEnergy = static_cast<T>(0.0);
+    ComputeProperty<T>::setConverged(false);
   }
 }
 } // namespace scg

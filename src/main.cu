@@ -22,7 +22,7 @@
 #include "DiscGeometry.h" // Used to constructed simulated grain from discs
 #include "FermiSurfaceCircle.h" // Standard circle Fermi surface
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
-#include "OptimizerRollingBall.h" // Convergence accelerator for self-consistency solver
+#include "Optimizer.h"
 #include "OrderParameter.h" // Container class for order parameter components
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
@@ -134,8 +134,9 @@ int main(int argc, char *argv[]) {
   const T convergenceCriterion =
       static_cast<T>(simParams["convergence_criterion"].asDouble());
   parameters->setConvergenceCriterion(convergenceCriterion);
-// Set penetration depth.
-  parameters->setPenetrationDepth(static_cast<T>(simParams["penetration_depth"].asDouble()));
+  // Set penetration depth.
+  parameters->setPenetrationDepth(
+      static_cast<T>(simParams["penetration_depth"].asDouble()));
 
   //***************************************************
   // CREATE GEOMETRY
@@ -253,6 +254,18 @@ int main(int argc, char *argv[]) {
   context->set(fermiSurface);
 
   //***************************************************
+  // OPTIMIZER
+  //***************************************************
+  const T stepSize =
+      static_cast<T>(simParams["optimizer"]["step_size"].asDouble());
+  const T inertia =
+      static_cast<T>(simParams["optimizer"]["inertia"].asDouble());
+  const std::size_t rank =
+      static_cast<std::size_t>(simParams["optimizer"]["rank"].asInt());
+  auto optimizer = std::make_unique<scg::Optimizer<T>>(stepSize, inertia, rank);
+  context->set(std::move(optimizer));
+
+  //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Order parameter compute object.
@@ -285,12 +298,6 @@ int main(int argc, char *argv[]) {
 
   // Add specular BC.
   riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
-
-  //***************************************************
-  // CHOOSE CONVERGENCE ACCELERATOR
-  //***************************************************
-  scg::OptimizerRollingBall<T> *optimizer = new scg::OptimizerRollingBall<T>();
-  computeOrderParameter->setOptimizer(optimizer);
 
   //***************************************************
   // INITIALIZE SIMULATION

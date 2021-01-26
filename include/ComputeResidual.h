@@ -24,7 +24,7 @@ template <typename T, typename DEV>
 T computeResidual(const GridData<T, DEV> &inOld,
                   const GridData<T, DEV> &inNew) {
   if (inOld != inNew) {
-    std::cout << "GridData::differenceMagnitude(): Error: Grids have different "
+    std::cout << "computeResidual: Error: Grids have different "
                  "dimensions.\n";
     // TODO(niclas): Raise exception instead!?
     return static_cast<T>(1e6);
