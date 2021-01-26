@@ -148,6 +148,11 @@ void saveParametersWrapper(const Context<T> *const inContext,
       inContext->getParameters()->getMagneticFieldStrength();
   internalParameters["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
 
+  const int numLatticeSitesPerSide =
+      inContext->getParameters()->getGridResolutionBase();
+  internalParameters["num_lattice_points"] =
+      numLatticeSitesPerSide * numLatticeSitesPerSide;
+
   // Save additional JSON parameters (if not already saved or updated)
   saveParameterFileJSON(internalParameters, fullPathInternalParameters,
                         inVerbose);
