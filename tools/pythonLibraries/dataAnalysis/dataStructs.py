@@ -47,27 +47,29 @@ class runData:
         # As a result, here is a lot of messy code to try to ensure backwards compability.
         if self.params != None:
             # Make sure grain margin is set
-            if not self.params.has_key('grainMargin'):
-                if self.params.has_key('outerRadius'):
+            if not ('grainMargin' in self.params):
+                if 'outerRadius' in self.params:
                     self.params['grainMargin'] = (1.0 - 2.0*self.params['outerRadius'])
                 else:
                     print('WARNING! Neither grainMargin nor outerRadius were specified! Assuming a margin of 0.04.')
                     self.params['grainMargin'] = 0.04
                     self.params['outerRadius'] = 0.5*(1.0 - self.params['grainMargin'])
             # Make sure that outerRadius is set, for backwards compability
-            if not self.params.has_key('outerRadius'):
+            if not ('outerRadius' in self.params):
                 # Due to the above if-statements, it is safe to assume grain margin is set
                 self.params['outerRadius'] = 0.5*(1.0 - self.params['grainMargin'])
 
             # Make sure number of lattice points is set
-            if not self.params.has_key('numLatticePoints'):
-                if self.params.has_key('Nx'):
+            if not 'numLatticePoints' in self.params:
+                if 'Nx' in self.params:
                     self.params['numLatticePoints'] = self.params['Nx']
+                elif 'num_lattice_points' in self.params:
+                    self.params['numLatticePoints'] = self.params['num_lattice_points']
                 else:
-                    raise Exception('ERROR! Neither Nx nor numLatticePoints were specified!')
+                    raise Exception('ERROR! Neither Nx, num_lattice_points, nor numLatticePoints were specified!')
             # Make sure that sideLength is set
-            if not self.params.has_key('sideLength'):
-                if self.params.has_key('R'):
+            if not ('sideLength' in self.params):
+                if 'R' in self.params:
                     self.params['sideLength'] = self.params['R']
                 else:
                     raise Exception('ERROR! Neither sideLength nor R were specified!')
@@ -165,20 +167,20 @@ class observable:
                 raise Exception('ERROR! The superfluid momentum ps cannot be calculated because the order parameter has not been initialized yet.')
             
             # Get grain coverage of simulation grain, to calculate min/max indices in grain
-            if caller.params.has_key('outerRadius'):
+            if 'outerRadius' in caller.params:
                 outerRadius = caller.params['outerRadius']
             else:
                 outerRadius = 0.5*(1.0 - caller.params['grainMargin'])
 
             # Get min/max indices of grain
-            if caller.params.has_key('minIndex'):
+            if 'minIndex' in caller.params:
                 _imin = caller.params['minIndex']
             else:
                 _imin = caller.getLatticePoint(coordinate=0,
                                         sideLength=caller.params['sideLength'],
                                         Nx=caller.params['numLatticePoints'],
                                         outerRadius=outerRadius)
-            if caller.params.has_key('minIndex'):
+            if 'minIndex' in caller.params:
                 _imax = caller.params['maxIndex']
             else:
                 _imax = caller.getLatticePoint(coordinate=caller.params['sideLength'],
@@ -301,14 +303,14 @@ def check_fields_in(fields_in, fileNames_in):
             if checkDict == None:
                 return None, None, None, checkMessage
             else:
-                checkDictKeys = checkDict.keys()
+                checkDictKeys = list(checkDict.keys())
                 if len(checkDictKeys) != 1:
                     raise Exception('ERROR! Incompatible dict length from check_field_string: %s' %
                                     checkDict)
                 thisObservable = checkDictKeys[0]
 
                 # Check for duplicate
-                if fieldDict_out.has_key(thisObservable):
+                if thisObservable in fieldDict_out:
                     if fieldDict_out[thisObservable] == checkDict[thisObservable]:
                         raise Exception('ERROR! Duplicate!\nfieldDict_out: %s\ncheckDict: %s' % 
                                         (fieldDict_out, checkDict))
@@ -365,7 +367,7 @@ def check_field_string(fields_in):
             observable = fl[0]
 
             #Check if observable exists
-            if defaultFieldDict.has_key(observable) and fl[0]:
+            if (observable in defaultFieldDict) and fl[0]:
                 fieldDict_out[observable] = defaultFieldDict[observable]
                 for field in defaultFieldDict[observable]:
                     fieldList_out.append(str('%s.%s' % (observable,field)))
@@ -378,7 +380,7 @@ def check_field_string(fields_in):
             observable = fl[0]
             field = fl[1]
             # Check if observable exists
-            if defaultFieldDict.has_key(observable) and fl[0]:
+            if (observable in defaultFieldDict) and fl[0]:
                 # Check if field exists
                 if (field in defaultFieldDict[observable]) and fl[1]:
                     fieldDict_out[observable] = [field]

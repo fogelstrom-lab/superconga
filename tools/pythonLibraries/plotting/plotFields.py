@@ -330,11 +330,11 @@ def plotGrid(pathList,
                     observable, field = thisField.split('.')
                     thisMax = runs[y_i][x_i].getFieldMax(observable,field)
                     thisMin = runs[y_i][x_i].getFieldMin(observable,field)
-                    if not maxValues.has_key(thisField):
+                    if not (thisField in maxValues):
                         maxValues[thisField] = thisMax
                     else:
                         maxValues[thisField] = max(thisMax,maxValues[thisField])
-                    if not minValues.has_key(thisField):
+                    if not (thisField in minValues):
                         minValues[thisField] = thisMin
                     else:
                         minValues[thisField] = min(thisMin,minValues[thisField])
@@ -374,7 +374,7 @@ def plotGrid(pathList,
             for x_i in range(0,numPlotsX):
                 if runs[y_i][x_i].params != None:
                     outerRadius = runs[y_i][x_i].params['outerRadius']
-                    if runs[y_i][x_i].params.has_key('innerRadius'):
+                    if 'innerRadius' in runs[y_i][x_i].params:
                         innerRadius = runs[y_i][x_i].params['innerRadius']
                     else:
                         print('Warning, run does not have parameter "innerRadius" set. Setting it to 0.35.')
@@ -385,7 +385,7 @@ def plotGrid(pathList,
                     searchSideLength = re.search('/R(\d+\.\d+)/', pathList[y_i][x_i])
                     if searchSideLength:
                         extractedSideLenth = searchSideLength.group(1)
-                        if defaultSideLengths.has_key(extractedSideLenth):
+                        if extractedSideLenth in defaultSideLengths:
                             sideLength = defaultSideLengths[extractedSideLenth]
                         else:
                             sideLength = None
@@ -495,7 +495,7 @@ def plotSweepGrid(sweepPath,
         raise Exception('Unknown wnums_in: %s' % wnums_in)
 
     for wnum in wnums:
-        if not sweep_dict.has_key(wnum):
+        if not (wnum in sweep_dict):
             raise Exception('Unknown wnum=%d in sweep_dict, has keys: %s' % (wnum, sweep_wnums))
 
     if bvalues_in == 'all':
