@@ -434,65 +434,8 @@ void saveConvergenceStatus(
   }
 }
 
-/// \brief Save induced magnetic flux density to file
-///
-/// \param inContext - Context object
-/// \param inDataPath - Path where to save save grid data file.
-/// \param inVerbose - Print success to terminal.
-/// \param inGridDataSaveFormat - Enum specifying which format to save the
-/// GridData in (see Type::fileFormat).
-/// \param inDataFileName - File name of induced flux density file.
-// Todo(patric): Create utils_io.h and move there.
-template <typename T>
-void saveInducedFluxDensity(
-    const Context<T> *const inContext, const std::filesystem::path &inDataPath,
-    const bool inVerbose = true,
-    const Type::fileFormat inGridDataSaveFormat = Type::binary,
-    const std::string &inDataFileName = "magnetic_flux_density") {
-
-  // Fetch the vector potential.
-  const GridGPU<T> *const inducedVectorPotential =
-      inContext->getInducedVectorPotential();
-
-  // Fetch parameters from context.
-  Parameters<T> *parameters = inContext->getParameters();
-
-  // TODO(niclas): Convert to (reduced) coherence length? I.e. divide by 2pi.
-  const T latticeSpacing = parameters->getGridElementSize();
-
-  // The magnetic flux-density is simply the curl of the vector potential.
-  const GridGPU<T> magneticFluxDensity =
-      inducedVectorPotential->curl(latticeSpacing);
-
-  // Try to save induced flux density to file. Exit program if fail.
-  const std::filesystem::path gridDataFile =
-      inDataPath /
-      (inDataFileName + internal::getFileExtension(inGridDataSaveFormat));
-
-  bool success = false;
-  if (inGridDataSaveFormat == Type::binary) {
-    success = magneticFluxDensity.write(gridDataFile, parameters) == 0;
-  } else {
-    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
-        getTextGridDataSaver<T>(inGridDataSaveFormat);
-
-    success = bool(textDataSaver) &&
-              textDataSaver->save(&magneticFluxDensity,
-                                  {"induced_flux_density"}, gridDataFile);
-  }
-  if (!success) {
-    std::cout << "ERROR! Could not save induced flux density to file: "
-              << gridDataFile << std::endl;
-    std::exit(EXIT_FAILURE);
-  } else {
-    if (inVerbose) {
-      std::cout << "Saved induced flux density to file: " << gridDataFile
-                << std::endl;
-    }
-  }
-}
-
-/// \brief Save order parameter and current to file.
+/// \brief Save the order parameter, the current density, the induced vector
+/// potential, and the induced magnetic-flux density to file.
 ///
 /// \param inContext - Context object for simulation.
 /// \param inDataPath - JSON object with parameter values.
@@ -501,6 +444,8 @@ void saveInducedFluxDensity(
 /// GridData in (see Type::fileFormat).
 /// \param inOrderParameterFileName - File name of order-parameter file.
 /// \param inCurrentDensityFileName - File name of current-density file.
+/// \param inVectorPotentialFileName - File name of current-density file.
+/// \param inFluxDensityFileName - File name of current-density file.
 ///
 /// \return - void
 template <typename T>
@@ -509,9 +454,15 @@ void saveGridData(
     const bool inVerbose = true,
     const Type::fileFormat inGridDataSaveFormat = Type::binary,
     const std::string &inOrderParameterFileName = "order_parameter",
-    const std::string &inCurrentDensityFileName = "current_density") {
+    const std::string &inCurrentDensityFileName = "current_density",
+    const std::string &inVectorPotentialFileName = "vector_potential",
+    const std::string &inFluxDensityFileName = "magnetic_flux_density") {
   // Fetch run parameters from context.
   Parameters<T> *parameters = inContext->getParameters();
+
+  // Set file extension.
+  const std::string extension =
+      internal::getFileExtension(inGridDataSaveFormat);
 
   // Fetch order parameter.
   GridGPU<T> *const orderParameterSave =
@@ -522,12 +473,10 @@ void saveGridData(
   inContext->getGeometry()->zeroValuesOutsideDomainRef(orderParameterSave);
 
   // Construct full file name for order-parameter file.
-  const std::string extension =
-      internal::getFileExtension(inGridDataSaveFormat);
   const std::filesystem::path orderParameterFile =
       inDataPath / (inOrderParameterFileName + extension);
 
-  // Try to save order parameter to file. Exit program if fail.
+  // Try to save to file. Exit program if fail.
   bool success = false;
   if (inGridDataSaveFormat == Type::binary) {
     success = orderParameterSave->write(orderParameterFile, parameters) == 0;
@@ -562,7 +511,7 @@ void saveGridData(
   const std::filesystem::path currentDensityFile =
       inDataPath / (inCurrentDensityFileName + extension);
 
-  // Try to save order parameter to file. Exit program if fail.
+  // Try to save to file. Exit program if fail.
   success = false;
   if (inGridDataSaveFormat == Type::binary) {
     success = currentSave->write(currentDensityFile, parameters) == 0;
@@ -581,6 +530,71 @@ void saveGridData(
   } else {
     if (inVerbose) {
       std::cout << "Saved current density to file: " << currentDensityFile
+                << std::endl;
+    }
+  }
+
+  // Fetch the vector potential.
+  const GridGPU<T> *const vectorPotentialSave =
+      inContext->getInducedVectorPotential();
+
+  // Construct full file name for vector potential
+  const std::filesystem::path vectorPotentialFile =
+      inDataPath / (inVectorPotentialFileName + extension);
+
+  // Try to save to file. Exit program if fail.
+  success = false;
+  if (inGridDataSaveFormat == Type::binary) {
+    success = vectorPotentialSave->write(vectorPotentialFile, parameters) == 0;
+  } else {
+    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
+        getTextGridDataSaver<T>(inGridDataSaveFormat);
+
+    success = bool(textDataSaver) &&
+              textDataSaver->save(vectorPotentialSave, {"a_x", "a_y"},
+                                  vectorPotentialFile);
+  }
+  if (!success) {
+    std::cout << "Could not save induced vector-potential to file: "
+              << vectorPotentialFile << std::endl;
+    std::exit(EXIT_FAILURE);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved induced vector-potential  to file: "
+                << vectorPotentialFile << std::endl;
+    }
+  }
+
+  // TODO(niclas): Convert to (reduced) coherence length? I.e. multiply by 2pi.
+  const T latticeSpacing = parameters->getGridElementSize();
+
+  // The magnetic flux-density is simply the curl of the vector potential.
+  const GridGPU<T> magneticFluxDensitySave =
+      vectorPotentialSave->curl(latticeSpacing);
+
+  // Construct full file name.
+  const std::filesystem::path fluxDensityFile =
+      inDataPath / (inFluxDensityFileName + extension);
+
+  // Try to save to file. Exit program if fail.
+  success = false;
+  if (inGridDataSaveFormat == Type::binary) {
+    success = magneticFluxDensitySave.write(fluxDensityFile, parameters) == 0;
+  } else {
+    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
+        getTextGridDataSaver<T>(inGridDataSaveFormat);
+
+    success =
+        bool(textDataSaver) &&
+        textDataSaver->save(&magneticFluxDensitySave, {"b_z"}, fluxDensityFile);
+  }
+  if (!success) {
+    std::cout << "Could not save induced flux-density to file: "
+              << fluxDensityFile << std::endl;
+    std::exit(EXIT_FAILURE);
+  } else {
+    if (inVerbose) {
+      std::cout << "Saved induced flux-density to file: " << fluxDensityFile
                 << std::endl;
     }
   }
@@ -620,11 +634,9 @@ void saveDataWrapper(
   saveConvergenceStatus(inContext, dataPath, inVerbose,
                         inIterationDataSaveFormat);
 
-  // Save order parameter and current to file.
+  // Save order parameter, current density, induced vector-potential, and
+  // induced magnetic flux-density, to file.
   saveGridData(inContext, dataPath, inVerbose, inGridDataSaveFormat);
-
-  // Save induced magnetic field to file.
-  saveInducedFluxDensity(inContext, dataPath, inVerbose, inGridDataSaveFormat);
 }
 
 /// \brief Print iteration status.
