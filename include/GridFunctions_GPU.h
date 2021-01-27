@@ -160,11 +160,7 @@ __global__ void complexPhase_kernel(const T *const inReal,
     const T real = inReal[idx_src];
     const T imag = inImag[idx_src];
 
-    // Note, previously atan2 was implemented by hand with the output being in
-    // the range [0, 2pi), so we'll keep that for now.
-    // TODO: (Niclas) is this necessary?
-    const T phase = atan2(imag, real);
-    outPhase[idx_dst] = utils::wrapToRangeTwoPi(phase);
+    outPhase[idx_dst] = atan2(imag, real);
   }
 }
 
