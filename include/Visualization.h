@@ -33,24 +33,17 @@ public:
   void setDisplayMult(const float displayMult) { _displayMult = displayMult; }
   void setPrintParameters(Parameters<T> *param) { _param = param; }
 
-  Color::Base *getColorScheme() { return &_colorScheme; }
-  void setColorScheme(Color::Base *colorScheme);
-  void setColorScheme(const Color::Base &colorScheme);
-
   // Initialize pixel buffer. num_img = 3 means allocate memory for 3 images -
   // i.e. one each for real, imag, and abs parts.
   void allocMemImageGrid(const int num_image_X, const int num_image_Y);
 
   template <typename GRID>
-  void drawField(const GRID *grid, int field, int image_idx_x, int image_idx_y,
-                 Type::type representation, int normalize = 1, T minVal = 0.0,
-                 T maxVal = 1.0);
+  void drawField(const GRID &grid, int field, int image_idx_x, int image_idx_y,
+                 Type::type representation, const bool inIsPositive);
 
   template <typename GRID>
-  void plotImage(const GRID &grid, const int field,
-                 const Type::type representation, const int img_x,
-                 const int img_y, const int normalize = 1, const T minVal = 0.0,
-                 const T maxVal = 1.0, const bool erase = true);
+  void plotImage(const GRID &grid, const int inColumnIdx,
+                 const bool erase = true);
 
   void label(std::string info, int img_x, int img_y);
 
@@ -155,7 +148,7 @@ private:
   std::string _textImg[64];
 
   // Other
-  Color::Base _colorScheme;
+  Colormap m_colormap;
 
 #ifdef __CUDACC__
   GeometryGroup<T> *_geom;
@@ -165,9 +158,8 @@ private:
 
 template <typename T>
 Visualization<T>::Visualization()
-    : _image(0), _colorScheme(0), _displayZoom(1), _num_image(0), _border_x(0),
-      _border_y(0), _border_top_y(0), _currentDrawnField(-1),
-      _displayMult(1.0) {
+    : _image(0), _displayZoom(1), _num_image(0), _border_x(0), _border_y(0),
+      _border_top_y(0), _currentDrawnField(-1), _displayMult(1.0) {
   for (int i = 0; i < 64; ++i) {
     _valImgUsed[i] = 0;
     _textImg[i] = "";
@@ -213,8 +205,6 @@ Visualization<T>::Visualization(const int Nx, const int Ny, const int numImageX,
 
 template <typename T> void Visualization<T>::constructor() {
   allocMemImageGrid(_num_image_X, _num_image_Y);
-
-  _colorScheme = Color::Jet();
 
   for (int i = 0; i < 64; ++i) {
     _valImgUsed[i] = 0;
@@ -300,11 +290,8 @@ void Visualization<T>::getImageCoordinatesFromWindow(int x, int y, int &img_x,
 
 template <typename T>
 template <typename GRID>
-void Visualization<T>::plotImage(const GRID &grid, const int field,
-                                 const Type::type representation,
-                                 const int img_x, const int img_y,
-                                 const int normalize, const T minVal,
-                                 const T maxVal, const bool erase) {
+void Visualization<T>::plotImage(const GRID &grid, const int inColumnIdx,
+                                 const bool erase) {
   if (grid.dimX() > _Nx_img || grid.dimY() > _Ny_img) {
     std::cout << "Visualization<T>::plotImage() ERROR: dimensions of input "
                  "grid does not match allocated image.\n";
@@ -314,23 +301,103 @@ void Visualization<T>::plotImage(const GRID &grid, const int field,
     return;
   }
 
+  // Get the number of fields.
   const int numFields = grid.numFields();
 
-  if (field < numFields && img_x < _num_image_X && img_y < _num_image_Y) {
-    if (representation == Type::real || representation == Type::imag) {
-      drawField(&grid, field, img_x, img_y, representation, normalize, minVal,
-                maxVal);
-      if (erase) {
-        eraseValuesOutsideDomain(img_x, img_y);
+  // Early exit if there is nothing to do.
+  if (numFields == 0) {
+    return;
+  }
+
+  // Check if this is a complex field.
+  const bool isComplex = grid.isComplex();
+
+  // Check if valid index.
+  if (inColumnIdx < _num_image_X) {
+    if (isComplex) {
+      // Only one field for complex grids are supported.
+      const int field = 0;
+
+      // Set the row index.
+      int rowIdx = _num_image_Y - 1;
+
+      // Check if valid index.
+      if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
+        // Plot the magnitude of the grid.
+        const bool isPositive = true;
+        drawField(grid.abs(), field, inColumnIdx, rowIdx, Type::real,
+                  isPositive);
+
+        // Erase values outside of the grain.
+        if (erase) {
+          eraseValuesOutsideDomain(inColumnIdx, rowIdx);
+        }
       }
-    } else if (representation == Type::complex && img_x + 1 < _num_image_X) {
-      drawField(&grid, field, img_x, img_y, Type::real, normalize, minVal,
-                maxVal);
-      drawField(&grid, field, img_x + 1, img_y, Type::imag, normalize, minVal,
-                maxVal);
-      if (erase) {
-        eraseValuesOutsideDomain(img_x, img_y);
-        eraseValuesOutsideDomain(img_x + 1, img_y);
+
+      // Decrease the row index, i.e. jump down one row.
+      rowIdx--;
+
+      // Check if valid index.
+      if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
+        // Plot the phase of the grid.
+        const bool isPositive = false;
+        drawField(grid.complexPhase(), field, inColumnIdx, rowIdx, Type::real,
+                  isPositive);
+
+        // Erase values outside of the grain.
+        if (erase) {
+          eraseValuesOutsideDomain(inColumnIdx, rowIdx);
+        }
+      }
+    } else {
+      // Set the row index.
+      int rowIdx = _num_image_Y - 1;
+
+      if (numFields == 1) {
+        // Check if valid index.
+        if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
+          // If there is only one (real valued) field, just plot it.
+          const int field = 0;
+          const bool isPositive = false;
+          drawField(grid, field, inColumnIdx, rowIdx, Type::real, isPositive);
+
+          // Erase values outside of the grain.
+          if (erase) {
+            eraseValuesOutsideDomain(inColumnIdx, rowIdx);
+          }
+        }
+      } else if (numFields > 1) {
+        // Check if valid index.
+        if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
+          // Plot the magnitude of the grid.
+          const int field = 0;
+          const bool isPositive = true;
+          drawField(grid.fieldMagnitude(), field, inColumnIdx, rowIdx,
+                    Type::real, isPositive);
+
+          // Erase values outside of the grain.
+          if (erase) {
+            eraseValuesOutsideDomain(inColumnIdx, rowIdx);
+          }
+        }
+
+        // Plot all fields, untouched.
+        const bool isPositive = false;
+        for (int field = 0; field < 2; ++field) {
+          // Decrease the row index, i.e. jump down one row.
+          rowIdx--;
+
+          // Check if valid index.
+          if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
+            // Plot this field.
+            drawField(grid, field, inColumnIdx, rowIdx, Type::real, isPositive);
+
+            // Erase values outside of the grain.
+            if (erase) {
+              eraseValuesOutsideDomain(inColumnIdx, rowIdx);
+            }
+          }
+        }
       }
     }
   } else {
@@ -347,64 +414,78 @@ void Visualization<T>::label(std::string info, int img_x, int img_y) {
 
 template <typename T>
 template <typename GRID>
-void Visualization<T>::drawField(const GRID *grid, const int field,
+void Visualization<T>::drawField(const GRID &grid, const int field,
                                  const int image_idx_x, const int image_idx_y,
-                                 Type::type representation, int normalize,
-                                 T minVal, T maxVal) {
-  const int Nx = grid->dimX();
-  const int Ny = grid->dimY();
+                                 const Type::type representation,
+                                 const bool inIsPositive) {
+  const int Nx = grid.dimX();
+  const int Ny = grid.dimY();
 
-  GridCPU<T> grid_cpu = (*grid)[field];
+  GridCPU<T> grid_cpu = grid[field];
 
   T *data = grid_cpu.getDataPointer(0, representation);
 
   // Get normalization parameters
   int img_idx = image_idx_y * _num_image_X + image_idx_x;
 
-  T minVal_img, maxVal_img;
-  GridCPU<T>::minmax(grid_cpu, minVal_img, maxVal_img, 0, representation);
+  T minVal, maxVal;
+  GridCPU<T>::minmax(grid_cpu, minVal, maxVal, 0, representation);
 
-  _minValImg[img_idx] = minVal_img;
-  _maxValImg[img_idx] = maxVal_img;
+  // Save the min/max values so we can print them in the window.
+  _minValImg[img_idx] = static_cast<float>(minVal);
+  _maxValImg[img_idx] = static_cast<float>(maxVal);
   _valImgUsed[img_idx] = 1;
 
-  if (normalize) {
-    minVal = minVal_img;
-    maxVal = maxVal_img;
+  // Set the limit, for normalizaing the pixel values. This is done so that the
+  // full range of colors is not used when the grid is essentially just zeros.
+  // Epsilon is the value where we stop using the full color range.
+  const T maxAbsVal = std::max(std::abs(minVal), std::abs(maxVal));
+  const T epsilon = static_cast<T>(1e-6);
+  const T limit = std::max(maxAbsVal, epsilon);
+
+  if (inIsPositive) {
+    minVal = static_cast<T>(0);
+    maxVal = limit;
+  } else {
+    minVal = -limit;
+    maxVal = limit;
   }
 
-  float pixelValue, *pixelPtr, diff, norm;
+  // Set the colormap type.
+  // TODO(niclas): Use a cyclic colormap for the phase.
+  const Colormap::Type colormapType =
+      inIsPositive ? Colormap::Type::HOT : Colormap::Type::RDBU_R;
 
-  diff = maxVal - minVal;
-
-  if (std::abs(diff) < 0.0000001f) {
-    diff = 1.0f;
-  }
-
-  norm = _displayMult / diff;
+  // The normalization factor. Note that the denominator cannot be zero due to
+  // 'epsilon' above.
+  const T normalization = _displayMult / (maxVal - minVal);
 
   // Image pointer and indexing
-  int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
-  int rowIndexOffset = getRowIndexOffset();
-  int i, j, ii, jj, idx, row, col;
+  const int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
+  const int rowIndexOffset = getRowIndexOffset();
+
+  float *pixelPtr;
 
   // Render image into buffer
-  for (j = 0; j < Ny; j++) {
-    for (i = 0; i < Nx; i++) {
-      idx = j * Nx + i;
+  for (int j = 0; j < Ny; j++) {
+    for (int i = 0; i < Nx; i++) {
+      const int idx = j * Nx + i;
 
-      pixelValue = ((float)data[idx] - minVal) * norm;
+      // Normalized pixel value.
+      const float pixelValue =
+          static_cast<float>((data[idx] - minVal) * normalization);
 
-      for (jj = 0; jj < _displayZoom; ++jj) {
-        for (ii = 0; ii < _displayZoom; ++ii) {
-          row = _displayZoom * j + jj;
-          col = _displayZoom * i + ii;
+      for (int jj = 0; jj < _displayZoom; ++jj) {
+        for (int ii = 0; ii < _displayZoom; ++ii) {
+          const int row = _displayZoom * j + jj;
+          const int col = _displayZoom * i + ii;
 
           // Find pointer to current pixel (3 values per pixel)
           pixelPtr = _image + 3 * (imgIndexOffset + row * rowIndexOffset + col);
 
-          _colorScheme.getColor(pixelValue, pixelPtr[0], pixelPtr[1],
-                                pixelPtr[2]);
+          // Set the pixel.
+          m_colormap.getColor(pixelValue, colormapType, pixelPtr[0],
+                              pixelPtr[1], pixelPtr[2]);
         }
       }
     }
@@ -622,16 +703,6 @@ void Visualization<T>::setGeometry(GeometryGroup<T> *geom) {
   _geom = geom;
 }
 #endif
-
-template <typename T>
-void Visualization<T>::setColorScheme(Color::Base *colorScheme) {
-  _colorScheme = *colorScheme;
-}
-
-template <typename T>
-void Visualization<T>::setColorScheme(const Color::Base &colorScheme) {
-  _colorScheme = colorScheme;
-}
 
 template <typename T> void Visualization<T>::clearImage(int img_x, int img_y) {
   if (img_x == -1 && img_y == -1) {

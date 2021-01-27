@@ -443,11 +443,8 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
           *(inContext->getOrderParameter()->getOrderParameterComponentField(
               colIdx));
 
-      // Plot the magnitude of the order parameter.
-      inGUI->plotImage(component.abs(), 0, Type::real, colIdx, 2);
-
-      // Plot the phase of the order parameter.
-      inGUI->plotImage(component.complexPhase(), 0, Type::real, colIdx, 1);
+      // Plot the order parameter.
+      inGUI->plotImage(component, colIdx);
     }
   }
 
@@ -456,17 +453,11 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
       inContext->getComputeCurrent();
 
   if (computeCurrent) {
-    // For convenience.
-    const int xComponent = 0;
-    const int yComponent = 1;
-
     // Get the current.
     const GridGPU<T> J = *(inContext->getComputeCurrent()->getResult());
 
     // Plot the current.
-    inGUI->plotImage(J.fieldMagnitude(), 0, Type::real, colIdx, 2);
-    inGUI->plotImage(J, xComponent, Type::real, colIdx, 1);
-    inGUI->plotImage(J, yComponent, Type::real, colIdx, 0);
+    inGUI->plotImage(J, colIdx);
     colIdx++;
 
     // The London penetration depth.
@@ -476,31 +467,20 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
     if (penetrationDepth > static_cast<T>(0)) {
       // Just to set "erase = false", i.e. plot everywhere, not just in the
       // grain.
-      // TODO(niclas): Change the parameter order in Visualization, so we don't
-      // have to set all in order to do this.
-      const int normalize = 1;
-      const T minVal = static_cast<T>(0);
-      const T maxVal = static_cast<T>(1);
       const bool erase = false;
 
       // Get the vector potential.
       const GridGPU<T> A = *(inContext->getInducedVectorPotential());
 
       // Plot the induced vector potential.
-      inGUI->plotImage(A.fieldMagnitude(), 0, Type::real, colIdx, 2, normalize,
-                       minVal, maxVal, erase);
-      inGUI->plotImage(A, xComponent, Type::real, colIdx, 1, normalize, minVal,
-                       maxVal, erase);
-      inGUI->plotImage(A, yComponent, Type::real, colIdx, 0, normalize, minVal,
-                       maxVal, erase);
+      inGUI->plotImage(A, colIdx, erase);
       colIdx++;
 
       // Plot the induced magnetic field.
       const T latticeSpacing = inContext->getParameters()->getGridElementSize();
       const GridGPU<T> divA = A.div(latticeSpacing);
       const GridGPU<T> magneticFluxDensity = A.curl(latticeSpacing);
-      inGUI->plotImage(magneticFluxDensity, 0, Type::real, colIdx, 2, normalize,
-                       minVal, maxVal, erase);
+      inGUI->plotImage(magneticFluxDensity, colIdx, erase);
     }
   }
 

@@ -1,139 +1,120 @@
-#ifndef COLORMAP_H
-#define COLORMAP_H
+#ifndef COLORMAP_H_
+#define COLORMAP_H_
 
-#include <algorithm> // std::swap
+#include <algorithm>
+#include <iostream>
+#include <vector>
 
 namespace scg {
-namespace Color {
-struct Base {
-  Base();
-  ~Base();
+class Colormap {
+private:
+  // Simple color struct.
+  struct Color {
+    float red;
+    float green;
+    float blue;
 
-  Base(const Base &other);
+    /// \brief Color constructor.
+    ///
+    /// \param inRed The red intensity.
+    /// \param inGreen The green intensity.
+    /// \param inBlue The blue intensity.
+    Color(const float inRed, const float inGreen, const float inBlue)
+        : red(inRed), green(inGreen), blue(inBlue) {}
+  };
 
-  Base(int numCol);
+  // The colormap defined by Mikael Håkansson.
+  const std::vector<Color> m_jet = {
+      Color(0.0f, 0.0f, 0.0f), Color(0.0f, 0.0f, 1.0f),
+      Color(0.0f, 1.0f, 1.0f), Color(1.0f, 1.0f, 0.0f),
+      Color(1.0f, 0.0f, 0.0f), Color(0.7f, 0.6f, 1.0f)};
 
-  Base &operator=(Base other) {
-    swap(*this, other);
-    return *this;
+  // Taken from Matplotlib. Not all values though, but equally spaced.
+  const std::vector<Color> m_hot = {
+      Color(0.0416f, 0.0f, 0.0f),     Color(0.2989711f, 0.0f, 0.0f),
+      Color(0.56663705f, 0.0f, 0.0f), Color(0.82400815f, 0.0f, 0.0f),
+      Color(1.0f, 0.09166748f, 0.0f), Color(1.0f, 0.34902f, 0.0f),
+      Color(1.0f, 0.61666662f, 0.0f), Color(1.0f, 0.87401915f, 0.0f),
+      Color(1.0f, 1.0f, 0.2124992f),  Color(1.0f, 1.0f, 0.59852901f),
+      Color(1.0f, 1.0f, 1.0f)};
+
+  // Taken from Matplotlib. Not all values though, but equally spaced.
+  const std::vector<Color> m_rdbu_r = {
+      Color(0.01960784f, 0.18823529f, 0.38039216f),
+      Color(0.13202614f, 0.40346021f, 0.67627835f),
+      Color(0.2627451f, 0.57647059f, 0.76470588f),
+      Color(0.57739331f, 0.77500961f, 0.87197232f),
+      Color(0.81960784f, 0.89803922f, 0.94117647f),
+      Color(0.96908881f, 0.96647443f, 0.96493656f),
+      Color(0.99215686f, 0.85882353f, 0.78039216f),
+      Color(0.95455594f, 0.64175317f, 0.50572857f),
+      Color(0.83921569f, 0.37647059f, 0.30196078f),
+      Color(0.6922722f, 0.0922722f, 0.16770473),
+      Color(0.40392157f, 0.0f, 0.12156863f)};
+
+public:
+  /// \brief Colormap constructor.
+  Colormap() {}
+
+  /// \brief Enum of the supported colormap types.
+  enum class Type { JET, HOT, RDBU_R };
+
+  /// \brief Get the color for a specific intensity, and colormap type.
+  ///
+  /// \param inIntensity A value in the range [0, 1].
+  /// \param inColormapType Enum, which colormap to use.
+  /// \param outRed The resulting red intensity.
+  /// \param outGreen The resulting green intensity.
+  /// \param outBlue The resulting blue intensity.
+  void getColor(const float inIntensity, const Type inColormapType,
+                float &outRed, float &outGreen, float &outBlue) const {
+    // Clamp, just in case.
+    const float intensity = std::clamp(inIntensity, 0.0f, 1.0f);
+
+    // Set colormap.
+    std::vector<Color> colormap;
+    switch (inColormapType) {
+    case Type::JET: {
+      colormap = m_jet;
+      break;
+    }
+    case Type::HOT: {
+      colormap = m_hot;
+      break;
+    }
+    case Type::RDBU_R: {
+      colormap = m_rdbu_r;
+      break;
+    }
+    default: {
+      std::cerr << "ERROR: Colormap not implemented!" << std::endl;
+    }
+    }
+
+    // The number of colors in this colormap.
+    const int numColors = static_cast<int>(colormap.size());
+
+    // Fractional index.
+    const float fracIdx = intensity * static_cast<float>(numColors - 1);
+
+    // The indices of the two colors to interpolate between.
+    const int lowIdx = static_cast<int>(fracIdx);
+    const int highIdx = lowIdx < (numColors - 1) ? lowIdx + 1 : lowIdx;
+
+    // The weights of the respective colors.
+    const float highWeight = fracIdx - static_cast<float>(lowIdx);
+    const float lowWeight = 1.0f - highWeight;
+
+    // Get the colors to interpolate between.
+    const Color low = colormap[lowIdx];
+    const Color high = colormap[highIdx];
+
+    // Interpolate the colors.
+    outRed = low.red * lowWeight + high.red * highWeight;
+    outGreen = low.green * lowWeight + high.green * highWeight;
+    outBlue = low.blue * lowWeight + high.blue * highWeight;
   }
-
-  void setColors(float *r, float *g, float *b);
-  void getColor(float param, float &r, float &g, float &b) const;
-
-  friend void swap(Base &A, Base &B) {
-    std::swap(A._numCol, B._numCol);
-    std::swap(A._r, B._r);
-    std::swap(A._g, B._g);
-    std::swap(A._b, B._b);
-  }
-  int _numCol;
-  float *_r, *_g, *_b;
 };
-
-Base::Base() : _r(0), _g(0), _b(0) {}
-
-Base::Base(const Base &other) {
-  _numCol = other._numCol;
-  _r = new float[_numCol];
-  _g = new float[_numCol];
-  _b = new float[_numCol];
-
-  setColors(other._r, other._g, other._b);
-}
-
-Base::Base(int numCol) {
-  _numCol = numCol;
-  _r = new float[_numCol];
-  _g = new float[_numCol];
-  _b = new float[_numCol];
-}
-
-Base::~Base() {
-  if (_r)
-    delete[] _r;
-  if (_g)
-    delete[] _g;
-  if (_b)
-    delete[] _b;
-}
-
-void Base::setColors(float *r, float *g, float *b) {
-  for (int i = 0; i < _numCol; ++i) {
-    _r[i] = r[i];
-    _g[i] = g[i];
-    _b[i] = b[i];
-  }
-}
-
-inline void Base::getColor(float param, float &r, float &g, float &b) const {
-  // Clamp value
-  if (param < 0.0f)
-    param = 0.0f;
-  else if (param > 1.0f)
-    param = 1.0f;
-
-  float paramIdx = param * (_numCol - 1);
-
-  int idx_low = paramIdx;
-  int idx_high = idx_low + (int)(idx_low < (_numCol - 1));
-
-  float high_frac = (paramIdx - (float)idx_low);
-  float low_frac = 1.0f - high_frac;
-
-  r = _r[idx_low] * low_frac + _r[idx_high] * high_frac;
-  g = _g[idx_low] * low_frac + _g[idx_high] * high_frac;
-  b = _b[idx_low] * low_frac + _b[idx_high] * high_frac;
-}
-
-struct Jet : Base {
-  Jet();
-};
-
-Jet::Jet() : Base(6) {
-  float r[6] = {0.0, 0.0, 0.0, 1.0, 1.0, 0.7};
-  float g[6] = {0.0, 0.0, 1.0, 1.0, 0.0, 0.6};
-  float b[6] = {0.0, 1.0, 1.0, 0.0, 0.0, 1.0};
-
-  setColors(r, g, b);
-}
-
-struct RedBlue : Base {
-  RedBlue();
-};
-
-RedBlue::RedBlue() : Base(9) {
-  float r[9] = {0.6, 0.2, 0.1, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
-  float g[9] = {0.9, 0.6, 0.4, 0.0, 0.0, 0.0, 0.4, 0.6, 0.9};
-  float b[9] = {1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.1, 0.2, 0.6};
-
-  setColors(r, g, b);
-}
-
-struct RedBlueWhite : Base {
-  RedBlueWhite();
-};
-
-RedBlueWhite::RedBlueWhite() : Base(3) {
-  float r[3] = {0.9, 1.0, 0.0};
-  float g[3] = {0.0, 1.0, 0.0};
-  float b[3] = {0.0, 1.0, 0.9};
-
-  setColors(r, g, b);
-}
-
-struct Copper : Base {
-  Copper();
-};
-
-Copper::Copper() : Base(5) {
-  float r[5] = {0.3, 0.8, 1.0, 1.0, 1.0};
-  float g[5] = {0.3, 0.2, 0.2, 0.7, 1.0};
-  float b[5] = {0.0, 0.2, 0.6, 0.9, 1.0};
-
-  setColors(r, g, b);
-}
-} // namespace Color
 } // namespace scg
 
-#endif // COLORMAP_H
+#endif // COLORMAP_H_

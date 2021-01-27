@@ -222,13 +222,7 @@ template <typename T> struct ComplexMagnitudeSqFunc {
 
 template <typename T> struct ComplexPhaseFunc {
   ComplexPhaseFunc() {}
-  T operator()(const T inReal, const T inImag) {
-    // Note, previously atan2 was implemented by hand with the output being in
-    // the range [0, 2pi), so we'll keep that for now.
-    // TODO: (Niclas) is this necessary?
-    const T phase = atan2(inImag, inReal);
-    return utils::wrapToRangeTwoPi(phase);
-  }
+  T operator()(const T inReal, const T inImag) { return atan2(inImag, inReal); }
 };
 
 template <typename T> struct FieldMagnitudeFunc {
