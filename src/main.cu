@@ -30,6 +30,7 @@
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
+#include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
 #include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
 #include "run_utils.h" // Commonly used functions in run files
@@ -349,7 +350,7 @@ int main(int argc, char *argv[]) {
   // Save at the very end.
   if (simParams["save_data"].asBool()) {
     scg::run_utils::saveDataWrapper(context, simParams,
-                                    simParams["verbose"].asBool());
+                                    simParams["verbose"].asBool(), scg::Type::csv);
   }
 
   // Cleanup dynamically allocated memory.
