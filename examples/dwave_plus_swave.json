@@ -11,9 +11,13 @@
   "num_ozaki_energies": 20,
   "num_polygon_edges": -1,
   "optimizer": {
-    "step_size": 1.5,
+    "anderson_always": true,
     "inertia": 0.333,
-    "rank": 1
+    "max_mixing": 1.0,
+    "min_mixing": 1.0,
+    "rank": 1,
+    "replace_oldest": true,
+    "step_size": 1.5
   },
   "order_parameter": [
     {

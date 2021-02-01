@@ -80,9 +80,9 @@ public:
   /// \param target The grid to be zeroed.
   void zeroValuesOutsideDomainRef(GridGPU<T> *target) const;
 
-  int getNumGrainLatticeSites();
+  int getNumGrainLatticeSites() const;
   // Computes the physical area of the geometry.
-  T area();
+  T area() const;
 
   // Computes the average of the specified field in the inpute grid, only using
   // the values inside the actual geometry definition.
@@ -771,11 +771,11 @@ int GeometryGroup<T>::computeNumGrainLatticeSites(
   return numGrainLatticeSites;
 }
 
-template <typename T> int GeometryGroup<T>::getNumGrainLatticeSites() {
+template <typename T> int GeometryGroup<T>::getNumGrainLatticeSites() const {
   return m_numGrainLatticeSites;
 }
 
-template <typename T> T GeometryGroup<T>::area() {
+template <typename T> T GeometryGroup<T>::area() const {
   const T gridElementSize =
       ContextModule<T>::getParameters()->getGridElementSize();
   const T areaPerLatticeSite = gridElementSize * gridElementSize;

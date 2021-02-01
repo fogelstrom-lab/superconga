@@ -39,6 +39,10 @@ public:
   ///
   /// x_min = sum_i (w_i * x_i)
   /// f_min = sum_i (w_i * f_i)
+  /// g_min = x_min + f_min * mix
+  ///
+  /// where the 'mix' factor is computed as in Matthias Eschrig's note. The
+  /// min/max value of the 'mix' factor is controlled by the user.
   ///
   /// The raw "gradient"
   ///
@@ -64,29 +68,40 @@ public:
   /// \param inInertia The inertia, v.
   /// \param inRank The number of previous steps to use, N, i.e. the rank of the
   /// least-squares problem.
+  /// \param inReplaceOldest Whether to replace the oldest, or the worst, of the
+  /// stored steps, when the storage is full.
+  /// \param inAndersonAlways Whether to take Anderson steps all the time, or
+  /// only when the storage is full.
+  /// \param inMinMixing The minimum allowed value of the mixing factor in the
+  /// Anderson step.
+  /// \param inMaxMixing The maximum allowed value of the mixing factor in the
+  /// Anderson step.
   Optimizer(const T inStepSize = static_cast<T>(1),
-            const T inIneartia = static_cast<T>(0),
-            const std::size_t inRank = 1);
+            const T inInertia = static_cast<T>(0), const std::size_t inRank = 1,
+            const bool inReplaceOldest = true,
+            const bool inAndersonAlways = true,
+            const T inMinMixing = static_cast<T>(1),
+            const T inMaxMixing = static_cast<T>(1));
 
   /// \brief Destructor of the optimizer base class.
   ~Optimizer(){};
 
   /// \brief Compute the next order parameter and vector potential.
   ///
-  /// \param inOrderParameterRHS The right-hand side of the self-consistency
-  /// equation for the order parameter.
-  /// \param inVectorPotentialRHS The right-hand side of the self-consistency
-  /// equation for the vector potential.
-  /// \param inOrderParameterLHS The left-hand side of the self-consistency
-  /// equation for the order parameter, it will be updated by the step.
-  /// \param inVectorPotentialLHS The left-hand side of the self-consistency
-  /// equation for the vector potential, it will be updated by the step.
+  /// \param inOrderParameterX The left-hand side of the self-consistency
+  /// equation for the order parameter, 'x'.
+  /// \param inVectorPotentialX The left-hand side of the self-consistency
+  /// equation for the vector potential, 'x'.
+  /// \param inOrderParameterG The right-hand side of the self-consistency
+  /// equation for the order parameter, 'g(x)'.
+  /// \param inVectorPotentialG The right-hand side of the self-consistency
+  /// equation for the vector potential, 'g(x)'.
   ///
   /// \return Void.
-  void compute(const OrderParameter<T> &inOrderParameterRHS,
-               const GridGPU<T> &inVectorPotentialRHS,
-               const OrderParameter<T> &inOrderParameterLHS,
-               const GridGPU<T> &inVectorPotentialLHS);
+  void compute(const OrderParameter<T> &inOrderParameterX,
+               const GridGPU<T> &inVectorPotentialX,
+               const OrderParameter<T> &inOrderParameterG,
+               const GridGPU<T> &inVectorPotentialG);
 
   /// \brief Get the next order parameter and vector potential.
   ///
@@ -150,24 +165,29 @@ private:
   ///
   /// If the system is singular no values for the weights are obtained.
   ///
+  /// \param outWeights The resulting weights {w_i}.
+  ///
   /// \return Whether the solve was successful or not.
-  bool solve();
+  bool solve(std::vector<T> &outWeights);
 
   /// \brief Set the concatenated grids.
   ///
   /// \param inX The left-hand side of the self-consistency equation. x.
-  /// \param inG The right-hand side of the self-consistency equation, g(x).
+  /// \param inF The residual, f(x) = g(x) - x.
   ///
-  /// \return Void.
-  void set(const GridGPU<T> &inX, const GridGPU<T> &inG);
+  /// \return Whether the latest residual was smaller than the worst stored one.
+  bool set(const GridGPU<T> &inX, const GridGPU<T> &inF);
 
   /// \brief Compute the next order parameter and vector potential.
   ///
-  /// \param inOldX The old order parameter and vector potential.
+  /// \param inX The current order parameter and vector potential.
+  /// \param inG The effective G. If rank = 1, then G = RHS, otherwise it is
+  /// computed by solving the least-squares problem.
   /// \param outNewX The new order parameter and vector potential.
   ///
   /// \return Void.
-  void computeNext(const GridGPU<T> &inOldX, GridGPU<T> &inNewX);
+  void computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
+                   GridGPU<T> &outNewX);
 
   /// \brief Sum all elements of a grid.
   ///
@@ -183,21 +203,38 @@ private:
   /// \return Void.
   void initialize(const GridGPU<T> &inX);
 
+  /// \brief Prune the stored steps. Remove the worst half.
+  ///
+  /// \return Void.
+  void prune();
+
   // The step size.
   const T m_stepSize;
 
   // The inertia.
   const T m_inertia;
 
-  // The maximum number of stored steps. When we store this many, the oldest one
-  // will be replaced.
+  // The maximum number of stored steps. When we store this many, the worst (or
+  // oldest) one will be replaced.
   const std::size_t m_rank;
 
-  // Whether the least-squares succeeded.
-  bool m_success;
+  // Whether to replace the oldest stored step, or the worst.
+  const bool m_replaceOldest;
+
+  // Whether to take Anderson steps all the time, or only when the storage is
+  // full.
+  const bool m_andersonAlways;
+
+  // As part of the Anderson step we have, minG = minX + minF * mix. These
+  // parameters control the range of the mixing factor.
+  const T m_minMixing;
+  const T m_maxMixing;
 
   // The iteration counter.
   std::size_t m_iterationIdx;
+
+  // The predicted residual, i.e. |minF|, from the Anderson step.
+  T m_predictedResidual;
 
   // The storage of the differences f(x) = g(x) - x, where x is the order
   // parameter and the vector potential concatenated.
@@ -210,8 +247,8 @@ private:
   // The storage of the squared residuals.
   std::vector<T> m_squaredResiduals;
 
-  // How much to weigh each stored step.
-  std::vector<T> m_weights;
+  // The storage of the iteration indices of when steps were stored.
+  std::vector<std::size_t> m_indices;
 
   // The running mean update.
   GridGPU<T> m_runningMean;
@@ -221,10 +258,14 @@ private:
 };
 
 template <typename T>
-Optimizer<T>::Optimizer(const T inStepSize, const T inIneartia,
-                        const std::size_t inRank)
-    : m_stepSize(inStepSize), m_inertia(inIneartia), m_rank(inRank),
-      m_success(true), m_iterationIdx(0) {}
+Optimizer<T>::Optimizer(const T inStepSize, const T inInertia,
+                        const std::size_t inRank, const bool inReplaceOldest,
+                        const bool inAndersonAlways, const T inMinMixing,
+                        const T inMaxMixing)
+    : m_stepSize(inStepSize), m_inertia(inInertia), m_rank(inRank),
+      m_replaceOldest(inReplaceOldest), m_andersonAlways(inAndersonAlways),
+      m_minMixing(inMinMixing), m_maxMixing(inMaxMixing), m_iterationIdx(0),
+      m_predictedResidual(static_cast<T>(0)) {}
 
 template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
@@ -239,54 +280,128 @@ template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   m_next.setZero();
 }
 
-template <typename T>
-void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterRHS,
-                           const GridGPU<T> &inVectorPotentialRHS,
-                           const OrderParameter<T> &inOrderParameterLHS,
-                           const GridGPU<T> &inVectorPotentialLHS) {
-  if (!m_success) {
-    // Get rid of all old stuff. But do not do a full reset. We want the running
-    // mean to remain as it is.
-    m_F.clear();
-    m_X.clear();
-    m_squaredResiduals.clear();
-  }
+template <typename T> void Optimizer<T>::prune() {
+  if (m_rank > 1) {
+    // Compute the median squared residual.
+    std::vector<T> tmp = m_squaredResiduals;
+    std::nth_element(tmp.begin(), tmp.begin() + tmp.size() / 2, tmp.end());
+    const T median = tmp[tmp.size() / 2];
 
+    // Temporary storage for the stuff to keep.
+    std::vector<GridGPU<T>> copyX;
+    std::vector<GridGPU<T>> copyF;
+    std::vector<T> copySquaredResiduals;
+    std::vector<std::size_t> copyIndices;
+
+    // Copy.
+    for (std::size_t i = 0; i < m_squaredResiduals.size(); ++i) {
+      const T squaredResidual = m_squaredResiduals[i];
+      if (squaredResidual < median) {
+        copyX.push_back(m_X[i]);
+        copyF.push_back(m_F[i]);
+        copySquaredResiduals.push_back(m_squaredResiduals[i]);
+        copyIndices.push_back(m_indices[i]);
+      }
+    }
+
+    // Replace member variables.
+    m_X = copyX;
+    m_F = copyF;
+    m_squaredResiduals = copySquaredResiduals;
+    m_indices = copyIndices;
+  }
+}
+
+template <typename T>
+void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
+                           const GridGPU<T> &inVectorPotentialX,
+                           const OrderParameter<T> &inOrderParameterG,
+                           const GridGPU<T> &inVectorPotentialG) {
   // We copy everything to one grid, so we need the dimensions of everything.
-  const int dimX = inVectorPotentialRHS.dimX();
-  const int dimY = inVectorPotentialRHS.dimY();
-  const T numComponents = inOrderParameterRHS.getNumOrderParameterComponents();
+  const int dimX = inVectorPotentialG.dimX();
+  const int dimY = inVectorPotentialG.dimY();
+  const T numComponents = inOrderParameterG.getNumOrderParameterComponents();
   const int complexFactor = 2;
   const int numFields =
-      complexFactor * numComponents + inVectorPotentialRHS.numFields();
+      complexFactor * numComponents + inVectorPotentialG.numFields();
   const Type::type representation = Type::real;
 
-  // Initialize grids.
-  GridGPU<T> rhs(dimX, dimY, numFields, representation);
-  GridGPU<T> lhs(dimX, dimY, numFields, representation);
+  // Initialize grids. The names come from the self-consistency equation:
+  // x = g(x).
+  GridGPU<T> X(dimX, dimY, numFields, representation);
+  GridGPU<T> G(dimX, dimY, numFields, representation);
 
   // Concatenate the order parameter and the vector potential to real-valued
   // grids.
-  Optimizer<T>::concatenate(inOrderParameterRHS, inVectorPotentialRHS, rhs);
-  Optimizer<T>::concatenate(inOrderParameterLHS, inVectorPotentialLHS, lhs);
+  Optimizer<T>::concatenate(inOrderParameterX, inVectorPotentialX, X);
+  Optimizer<T>::concatenate(inOrderParameterG, inVectorPotentialG, G);
 
   if (m_iterationIdx == 0) {
-    initialize(lhs);
+    initialize(X);
   }
 
-  // Set this iteration, i.e. update the member variables.
-  set(lhs, rhs);
-
-  // Solve the system of equations, determining the next step.
-  m_success = solve();
-
-  // Get the next step.
-  if (m_success) {
-    computeNext(lhs, m_next);
+  if (m_rank == 1) {
+    // If rank = 1 we don't have to do alot of complicated stuff. We can simply
+    // compute the next X directly.
+    computeNext(X, G, m_next);
   } else {
-    // Take a Picard step if the system was singular.
-    // TODO(niclas): Perhaps do something more clever.
-    m_next = rhs;
+    // Grid of residuals, what Matthias Eschrig calls f.
+    const GridGPU<T> F = G - X;
+
+    // Set this iteration, i.e. update the member variables. If m_replaceOldest
+    // == true, then success means that the new iteration is better than the
+    // worst stored. If m_replaceOldest == false, success is always true.
+    bool success = set(X, F);
+
+    // Check if we should try an Anderson step.
+    const bool tryAndersonStep = m_andersonAlways || (m_X.size() == m_rank);
+
+    if (success && tryAndersonStep) {
+      // Solve the system of equations, determining the next step. Success means
+      // that the system of equations was not singular.
+      std::vector<T> weights;
+      success &= solve(weights);
+
+      if (success) {
+        GridGPU<T> minX(dimX, dimY, numFields, representation);
+        GridGPU<T> minF(dimX, dimY, numFields, representation);
+
+        minX.setZero();
+        minF.setZero();
+
+        for (std::size_t i = 0; i < m_X.size(); ++i) {
+          minX += m_X[i] * weights[i];
+          minF += m_F[i] * weights[i];
+        }
+
+        // Compute the mixing factor.
+        const T residual = F.L1Norm();
+        const T factorP = (minX - X).L1Norm() / residual;
+        const T factorQ =
+            std::min(static_cast<T>(1), m_predictedResidual / residual);
+        const T mix = std::clamp(factorP * factorQ, m_minMixing, m_maxMixing);
+
+        // Compute the resulting G.
+        const GridGPU<T> minG = minX + minF * mix;
+
+        // Compute the next step.
+        computeNext(X, minG, m_next);
+
+        // Update the predicted residual.
+        m_predictedResidual = minF.L1Norm();
+      } else {
+        // Take a step using G.
+        computeNext(X, G, m_next);
+      }
+    } else {
+      // Take a step using G.
+      computeNext(X, G, m_next);
+    }
+
+    if (!success) {
+      // We have failed, so lets prune.
+      prune();
+    }
   }
 
   // Increase iteration index.
@@ -294,41 +409,64 @@ void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterRHS,
 }
 
 template <typename T>
-void Optimizer<T>::update(OrderParameter<T> &outOrderParameterLHS,
-                          GridGPU<T> &outVectorPotentialLHS) const {
+void Optimizer<T>::update(OrderParameter<T> &outOrderParameter,
+                          GridGPU<T> &outVectorPotential) const {
   // Split the grid into its constituent order parameter and vector potential.
-  Optimizer<T>::split(m_next, outOrderParameterLHS, outVectorPotentialLHS);
+  Optimizer<T>::split(m_next, outOrderParameter, outVectorPotential);
 }
 
 template <typename T>
-void Optimizer<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inG) {
-  // Grid of residuals, what Matthias Eschrig calls f.
-  const GridGPU<T> F = inG - inX;
-
+bool Optimizer<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inF) {
   // Slight optimization, compute it here instead of every time in 'solve'.
-  const T squaredResidual = F.sumSquare();
+  const T squaredResidual = inF.sumSquare();
 
-  if (m_F.size() >= m_rank) {
-    const std::size_t idx = m_iterationIdx % m_rank;
+  // Assume success.
+  bool success = true;
+
+  if (m_F.size() == m_rank) {
+    std::size_t idx = 0;
+    if (m_replaceOldest) {
+      // Get the oldest index.
+      const auto minelem = std::min_element(m_indices.begin(), m_indices.end());
+      idx = std::distance(m_indices.begin(), minelem);
+    } else {
+      // Get the index of the maximum squared residual.
+      const auto maxelem = std::max_element(m_squaredResiduals.begin(),
+                                            m_squaredResiduals.end());
+      idx = std::distance(m_squaredResiduals.begin(), maxelem);
+
+      // Check if this is an improvement.
+      const T maxSquaredResidual = *maxelem;
+      success = (squaredResidual < maxSquaredResidual);
+    }
+
+    // Replace.
     m_X[idx] = inX;
-    m_F[idx] = F;
+    m_F[idx] = inF;
     m_squaredResiduals[idx] = squaredResidual;
+    m_indices[idx] = m_iterationIdx;
   } else {
     m_X.push_back(inX);
-    m_F.push_back(F);
+    m_F.push_back(inF);
     m_squaredResiduals.push_back(squaredResidual);
+    m_indices.push_back(m_iterationIdx);
   }
+
+  return success;
 }
 
-template <typename T> bool Optimizer<T>::solve() {
+template <typename T> bool Optimizer<T>::solve(std::vector<T> &outWeights) {
   assert(m_F.size() == m_X.size());
+  assert(m_F.size() == m_squaredResiduals.size());
 
   // The number of equations.
   const std::size_t numEqs = m_F.size();
 
+  outWeights.clear();
+
   if (numEqs == 1) {
     // There is only one equation so the weight must be one.
-    m_weights.push_back(static_cast<T>(1));
+    outWeights.push_back(static_cast<T>(1));
     const bool success = true;
     return success;
   }
@@ -369,7 +507,6 @@ template <typename T> bool Optimizer<T>::solve() {
   const bool success = arma::solve(weights, A, b, arma::solve_opts::no_approx);
 
   // Update weights.
-  m_weights.clear();
   if (success) {
     // Remove Lagrange multiplier.
     weights.resize(numEqs);
@@ -377,7 +514,7 @@ template <typename T> bool Optimizer<T>::solve() {
     // Copy weights to member variable.
     for (std::size_t i = 0; i < numEqs; ++i) {
       const T weight = weights(i);
-      m_weights.push_back(weight);
+      outWeights.push_back(weight);
     }
   }
 
@@ -399,11 +536,10 @@ __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc,
 }
 
 template <typename T>
-__global__ void computeNext(const int inDimX, const int inDimY,
-                            const int inDimZ, const T inStepSize,
-                            const T inIneartia, const T *const inMinX,
-                            const T *const inMinF, const T *const inOldX,
-                            T *const inOutRunningMean, T *const outNewX) {
+__global__ void
+computeNext(const int inDimX, const int inDimY, const int inDimZ,
+            const T inStepSize, const T inInertia, const T *const inX,
+            const T *const inG, T *const inOutRunningMean, T *const outResult) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -413,63 +549,52 @@ __global__ void computeNext(const int inDimX, const int inDimY,
 
   if (x < inDimX && y < inDimY && z < inDimZ) {
     // Linear index.
-    const int idx = z * inDimX * inDimY + y * inDimX + x;
+    const int idx = inDimX * (z * inDimY + y) + x;
 
     // Read the old value once.
-    const T oldX = inOldX[idx];
+    const T X = inX[idx];
+
+    // The "gradient", i.e. the difference between the previous X and the
+    // proposed next X.
+    const T gradient = X - inG[idx];
 
     // Update the running mean.
-    // TODO(niclas): Should this factor be exposed to the user? If we want some
-    // stochastic behavior, it could be a random number. Perhaps with the
-    // standard deviation controlled by the user.
-    const T mix = static_cast<T>(1);
-    const T g = oldX - (inMinX[idx] + inMinF[idx] * mix);
-    const T runningMean = inIneartia * inOutRunningMean[idx] +
-                          (static_cast<T>(1) - inIneartia) * g;
+    const T runningMean = inInertia * inOutRunningMean[idx] +
+                          (static_cast<T>(1) - inInertia) * gradient;
     inOutRunningMean[idx] = runningMean;
 
     // Compute the result.
-    outNewX[idx] = oldX - inStepSize * runningMean;
+    outResult[idx] = X - inStepSize * runningMean;
   }
 }
 } // namespace opt_internal
 
 template <typename T>
-void Optimizer<T>::computeNext(const GridGPU<T> &inOldX, GridGPU<T> &outNewX) {
-  const int dimX = inOldX.dimX();
-  const int dimY = inOldX.dimY();
-  const int numFields = inOldX.numFields();
-  const Type::type representation = inOldX.representation();
-
-  GridGPU<T> minX(dimX, dimY, numFields, representation);
-  GridGPU<T> minF(dimX, dimY, numFields, representation);
-
-  minX.setZero();
-  minF.setZero();
-
-  for (std::size_t i = 0; i < m_X.size(); ++i) {
-    minX += m_X[i] * m_weights[i];
-    minF += m_F[i] * m_weights[i];
-  }
+void Optimizer<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
+                               GridGPU<T> &outNewX) {
+  const int dimX = inX.dimX();
+  const int dimY = inX.dimY();
+  const int numFields = inX.numFields();
 
   // Kernel parameters.
   dim3 numBlocks;
   dim3 numThreadsPerBlock;
-  inOldX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  inX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
   // Take a step, and update the running mean.
   opt_internal::computeNext<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, numFields, m_stepSize, m_inertia, minX.getDataPointer(),
-      minF.getDataPointer(), inOldX.getDataPointer(),
-      m_runningMean.getDataPointer(), outNewX.getDataPointer());
+      dimX, dimY, numFields, m_stepSize, m_inertia, inX.getDataPointer(),
+      inG.getDataPointer(), m_runningMean.getDataPointer(),
+      outNewX.getDataPointer());
 }
 
 template <typename T> void Optimizer<T>::reset() {
   m_F.clear();
   m_X.clear();
   m_squaredResiduals.clear();
-  m_weights.clear();
+  m_indices.clear();
   m_iterationIdx = 0;
+  m_predictedResidual = static_cast<T>(0);
 }
 
 template <typename T> T Optimizer<T>::sumGrid(const GridGPU<T> &inGrid) const {

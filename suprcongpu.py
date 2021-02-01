@@ -196,19 +196,53 @@ def make_default_parser():
         "--opt-step-size",
         type=float,
         default=None,
-        help="Optimizer step size.",
+        help="The step size in the optimizer.",
     )
     parser.add_argument(
         "--opt-inertia",
         type=float,
         default=None,
-        help="Optimizer inertia.",
+        help="The inertia of the optimizer.",
     )
     parser.add_argument(
         "--opt-rank",
         type=int,
         default=None,
-        help="Optimizer rank.",
+        help="The maximal rank of the system of equations in the Anderson step, i.e. the maximum number of stored steps.",
+    )
+    parser.add_argument(
+        "--opt-min-mixing",
+        type=float,
+        default=None,
+        help="The minimal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
+    )
+    parser.add_argument(
+        "--opt-max-mixing",
+        type=float,
+        default=None,
+        help="The maximal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
+    )
+    group_optimiser_replace = parser.add_mutually_exclusive_group()
+    group_optimiser_replace.add_argument(
+        "--opt-replace-worst",
+        action="store_true",
+        help="Replace the worst stored step in the optimizer, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
+    )
+    group_optimiser_replace.add_argument(
+        "--opt-replace-oldest",
+        action="store_true",
+        help="Replace the oldest stored step in the optimizer, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
+    )
+    group_optimiser_anderson = parser.add_mutually_exclusive_group()
+    group_optimiser_anderson.add_argument(
+        "--opt-anderson-always",
+        action="store_true",
+        help="Take Anderson steps all the time. Only applicable if rank > 1.",
+    )
+    group_optimiser_anderson.add_argument(
+        "--opt-anderson-full",
+        action="store_true",
+        help="Take Anderson steps only when the storage is full. Only applicable if rank > 1.",
     )
 
     # Convergence criterion.
@@ -353,11 +387,20 @@ def set_value(
                 simparams[group][key] = value
 
 
-def set_flag(simparams: dict, key: str, on: bool, off: bool) -> None:
+def set_flag(
+    simparams: dict,
+    key: str,
+    on: bool,
+    off: bool,
+    group: Optional[str] = None,
+) -> None:
     # The flags are mutually exclusive, so both cannot be true. If both are false then they have not been set in the command line arguments, and should therefore not be used.
     if on or off:
         # Off = True implies On = False and vice versa. So only the on value needs to be considered.
-        simparams[key] = on
+        if group is None:
+            simparams[key] = on
+        else:
+            simparams[group][key] = on
 
 
 def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> bool:
@@ -446,6 +489,10 @@ def validate(simparams: dict) -> bool:
                 "step_size": {"type": float},
                 "inertia": {"type": float},
                 "rank": {"type": int, "low": 0},
+                "replace_worst": {"type": bool},
+                "anderson_only_when_full": {"type": bool},
+                "min_mixing": {"type": float, "low": 0.0},
+                "max_mixing": {"type": float, "low": 0.0},
             },
         },
         "order_parameter": {
@@ -481,7 +528,16 @@ def validate(simparams: dict) -> bool:
 
         # Check that the minimum number of iterations is smaller than the maximum.
         if not (simparams["num_iterations_max"] >= simparams["num_iterations_min"]):
-            print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
+            print(
+                "--'num_iterations_max' must be larger than, or equal to, 'num_iterations_min'."
+            )
+            success = False
+
+        # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
+        if not (
+            simparams["optimizer"]["max_mixing"] >= simparams["optimizer"]["min_mixing"]
+        ):
+            print("--'max_mixing' must be larger than, or equal to, 'min_mixing'.")
             success = False
 
     return success
@@ -1431,6 +1487,22 @@ def main() -> None:
     set_value(simparams, "step_size", args.opt_step_size, group)
     set_value(simparams, "inertia", args.opt_inertia, group)
     set_value(simparams, "rank", args.opt_rank, group)
+    set_value(simparams, "min_mixing", args.opt_min_mixing, group)
+    set_value(simparams, "max_mixing", args.opt_max_mixing, group)
+    set_flag(
+        simparams,
+        "replace_oldest",
+        args.opt_replace_oldest,
+        args.opt_replace_worst,
+        group,
+    )
+    set_flag(
+        simparams,
+        "anderson_always",
+        args.opt_anderson_always,
+        args.opt_anderson_full,
+        group,
+    )
 
     group = "order_parameter"
     set_value(simparams, "critical_temperature", args.op_tc, group)
