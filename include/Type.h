@@ -17,6 +17,7 @@ struct Type {
   };
   enum location { start = 1, begin = 1, end = 2 };
   enum coherence { singlet = 1, triplet = 4 };
+  enum fileFormat { binary = 0, csv = 1 };
 };
 } // namespace scg
 

@@ -38,7 +38,7 @@ public:
     return _orderParameterCompoundRotated;
   } // Return pointer to current rotational frame
 
-  std::string getTypes() const;
+  std::vector<std::string> getTypes() const;
 
 private:
   template <typename S>
@@ -212,15 +212,16 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   return _orderParameterCompoundRotated;
 }
 
-template <typename T> std::string OrderParameter<T>::getTypes() const {
-  std::string types;
-
+template <typename T>
+std::vector<std::string> OrderParameter<T>::getTypes() const {
   const int numOrderParameterComponents = getNumOrderParameterComponents();
+  std::vector<std::string> types;
+  types.reserve(numOrderParameterComponents);
+
   for (int i = 0; i < numOrderParameterComponents; ++i) {
     const std::string componentType = getOrderParameterComponent(i)->getType();
-    types.append(componentType);
+    types.emplace_back(componentType);
   }
-
   return types;
 }
 } // namespace scg

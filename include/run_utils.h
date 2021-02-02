@@ -26,9 +26,11 @@
 #include <fstream>
 #include <iomanip>
 #include <json/json.h>
+#include <memory>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <vector>
 
 #ifdef __linux__
 #include <GL/freeglut.h>
@@ -43,9 +45,233 @@ namespace internal {
 // Constant used to check if user presses 'q' or 's' in the GUI to quit or save.
 bool guiUserQuit = false;
 bool guiUserSaveData = false;
+
+inline std::string getFileExtension(Type::fileFormat format) {
+  switch (format) {
+  case Type::binary:
+    return ".grd";
+  case Type::csv:
+    return ".csv";
+  default:
+    return "";
+  }
+}
 } // namespace internal
 
+//===------------------------------ Classes ------------------------------===//
+/// \brief Interface for saving per-iteration data
+///
+/// Interface for a class which encapsulates data saving on a per-iteration
+/// basis. Should be implemented for each save strategy (e.g. new save format,
+/// or different type of info to be stored).
+template <typename T> class IIterationDataSaveStrategy {
+public:
+  virtual bool save(const Context<T> *const inContext,
+                    const std::filesystem::path &inFilePath) = 0;
+
+  virtual ~IIterationDataSaveStrategy() = default;
+};
+
+template <typename T>
+class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
+public:
+  CSVIterationDataSaveStrategy() = default;
+
+  CSVIterationDataSaveStrategy(const std::string &delimiter,
+                               const int floatPrecision = 10)
+      : floatPrecision(floatPrecision), delimiter(delimiter) {}
+
+  bool save(const Context<T> *const inContext,
+            const std::filesystem::path &inFilePath) override {
+
+    if (!std::filesystem::exists(inFilePath)) {
+      if (!appendHeader(inFilePath)) {
+        return false;
+      };
+    }
+    return appendRow(inContext, inFilePath);
+  }
+
+private:
+  const int floatPrecision = 10;
+  const std::string delimiter = ",";
+
+  bool appendHeader(const std::filesystem::path &inFilePath) const {
+    std::ostringstream oss;
+    oss << "iteration" << delimiter << "residual" << delimiter
+        << "free_energy_per_unit_area";
+    return appendToFile(oss.str(), inFilePath);
+  };
+
+  bool appendRow(const Context<T> *const inContext,
+                 const std::filesystem::path &inFilePath) const {
+
+    std::ostringstream oss;
+    oss << inContext->getNumIterations() << delimiter
+        << inContext->getResidual() << delimiter
+        << std::setprecision(floatPrecision)
+        << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+    return appendToFile(oss.str(), inFilePath);
+  };
+
+  bool appendToFile(const std::string &inLine,
+                    std::filesystem::path inFilePath) const {
+    std::ofstream outFile(inFilePath, std::ios_base::app);
+    if (!outFile.good()) {
+      return false;
+    }
+    outFile << inLine << std::endl;
+    return true;
+  }
+};
+
+/// \brief Interface for saving GridGPU data type in textual format
+///
+/// Interface for a class which encapsulates saving GridGPU instances.
+/// Should be implemented for each save strategy (e.g. new save format,
+/// or different type of info to be stored).
+template <typename T> class ITextGridDataSaveStrategy {
+public:
+  virtual bool save(const GridGPU<T> *const inGridGPU,
+                    const std::vector<std::string> &inFieldTitles,
+                    const std::filesystem::path &inFilePath) = 0;
+
+  virtual ~ITextGridDataSaveStrategy() = default;
+};
+
+template <typename T>
+class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
+public:
+  CSVGridDataSaveStrategy() = default;
+
+  CSVGridDataSaveStrategy(const std::string &delimiter,
+                          const int floatPrecision = 10)
+      : floatPrecision(floatPrecision), delimiter(delimiter) {}
+
+  bool save(const GridGPU<T> *const inGridGPU,
+            const std::vector<std::string> &inFieldTitles,
+            const std::filesystem::path &inFilePath) override {
+
+    if (inFieldTitles.size() != inGridGPU->numFields()) {
+      return false;
+    }
+
+    if (!std::filesystem::exists(inFilePath)) {
+      if (!appendHeader(inFieldTitles, inGridGPU->isComplex(), inFilePath)) {
+        return false;
+      };
+    }
+    return appendData(inGridGPU, inFilePath);
+  }
+
+private:
+  const int floatPrecision = 10;
+  const std::string delimiter = ",";
+
+  bool appendHeader(const std::vector<std::string> &inColumnTitles,
+                    const bool isComplex,
+                    const std::filesystem::path &inFilePath) const {
+    std::ostringstream oss;
+    oss << "x_idx" << delimiter << "y_idx" << delimiter;
+    for (const auto &columnTitle : inColumnTitles) {
+      oss << columnTitle;
+
+      if (isComplex) {
+        oss << "_re" << delimiter << columnTitle << "_im";
+      }
+
+      if (columnTitle != inColumnTitles.back()) {
+        oss << delimiter;
+      }
+    }
+    return appendToFile(oss.str(), inFilePath);
+  };
+
+  bool appendData(const GridGPU<T> *const inGridGPU,
+                  const std::filesystem::path &inFilePath) const {
+    const thrust::host_vector<T> gridData = *(inGridGPU->getVector());
+    const T *data = thrust::raw_pointer_cast(gridData.data());
+
+    const bool isComplex = inGridGPU->isComplex();
+    const int numFields = inGridGPU->numFields();
+    std::vector<const T *> fieldPtrs;
+    fieldPtrs.reserve(numFields * (1 + int(isComplex)));
+    for (int f = 0; f < numFields; ++f) {
+      fieldPtrs.emplace_back(data +
+                             inGridGPU->getFieldComponentOffset(f, Type::real));
+      if (isComplex) {
+        fieldPtrs.emplace_back(
+            data + inGridGPU->getFieldComponentOffset(f, Type::imag));
+      }
+    }
+
+    const int dimX = inGridGPU->dimX();
+    const int dimY = inGridGPU->dimY();
+    for (int j = 0; j < dimY; ++j) {
+      for (int i = 0; i < dimX; ++i) {
+        const int idx = j * dimX + i;
+        std::ostringstream oss;
+        oss << i << delimiter << j << delimiter;
+        for (auto &&fieldPtr : fieldPtrs) {
+          oss << fieldPtr[idx];
+          if (fieldPtr != fieldPtrs.back()) {
+            oss << delimiter;
+          }
+        }
+        if (!appendToFile(oss.str(), inFilePath)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool appendToFile(const std::string &inLine,
+                    std::filesystem::path inFilePath) const {
+    std::ofstream outFile(inFilePath, std::ios_base::app);
+    if (!outFile.good()) {
+      return false;
+    }
+    outFile << inLine << std::endl;
+    return true;
+  }
+};
+
 //===----------------------------- Functions -----------------------------===//
+/// \brief Get IIterationDataSaveStrategy<T>* for concrete implementation
+///
+/// Return a pointer to the singleton instace of the interface implementation.
+/// The implementation should be stateless in order to be used safely this way.
+///
+/// \param format - save format enum (see Type::fileFormat).
+///
+/// \return - IIterationDataSaveStrategy<T>*
+template <typename T>
+std::unique_ptr<IIterationDataSaveStrategy<T>>
+getIterationDataSaver(const Type::fileFormat format) {
+  if (format == Type::csv) {
+    return std::make_unique<CSVIterationDataSaveStrategy<T>>();
+  }
+  return nullptr;
+}
+
+/// \brief Get ITextGridDataSaveStrategy<T>* for concrete implementation
+///
+/// Return a pointer to the singleton instace of the interface implementation.
+/// The implementation should be stateless in order to be used safely this way.
+///
+/// \param format - save format enum (see Type::fileFormat).
+///
+/// \return - ITextGridDataSaveStrategy<T>*
+template <typename T>
+std::unique_ptr<ITextGridDataSaveStrategy<T>>
+getTextGridDataSaver(const Type::fileFormat format) {
+  if (format == Type::csv) {
+    return std::make_unique<CSVGridDataSaveStrategy<T>>();
+  }
+  return nullptr;
+}
+
 /// \brief Detect OpenGL key presses
 ///
 /// Detect keypresses in OpenGL instance - useful e.g. for changing
@@ -57,7 +283,8 @@ bool guiUserSaveData = false;
 /// key press.
 ///
 /// \return - void
-void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
+inline void myKeyboardFunc(const unsigned char inKey, const int inX,
+                           const int inY) {
   std::cout << "key pressed: " << inKey << ", at (" << inX << ", " << inY
             << ")\n";
   if (inKey == 'q' || inKey == 'Q') {
@@ -67,25 +294,6 @@ void myKeyboardFunc(const unsigned char inKey, const int inX, const int inY) {
   }
 }
 
-/// \brief Write line to file
-///
-/// \param inFile - File to write to.
-/// \param inOStream - ostream object containing the line to write.
-/// \param inFileMode - Writing mode (e.g. append, truncate).
-///
-/// \return - void
-void writeLineToFile(
-    const std::filesystem::path &inFile, const std::ostream &inOStream,
-    const std::ios_base::openmode inFileMode = std::ios_base::app) {
-  std::ofstream outfile;
-
-  std::stringstream oss;
-  oss << inOStream.rdbuf();
-  outfile.open(inFile, inFileMode);
-  outfile << oss.str() << std::endl;
-  outfile.close();
-}
-
 /// \brief Save simulation parameters to JSON file.
 ///
 /// \param inJSON - JSON object with parameter values.
@@ -93,9 +301,9 @@ void writeLineToFile(
 /// \param inVerbose - Whether or not to print when file is written.
 ///
 /// \return - void
-void saveParameterFileJSON(const Json::Value &inJSON,
-                           const std::filesystem::path &inFile,
-                           const bool inVerbose = false) {
+inline void saveParameterFileJSON(const Json::Value &inJSON,
+                                  const std::filesystem::path &inFile,
+                                  const bool inVerbose = false) {
 
   std::ofstream ofstreamJSON(inFile);
   const int indentation = 4;
@@ -163,38 +371,33 @@ void saveParametersWrapper(const Context<T> *const inContext,
 /// \param inContext - Context object for simulation.
 /// \param inDataPath - Directory where to put free-energy file.
 /// \param inVerbose - Print success to terminal.
+/// \param inIterationDataSaveFormat - Enum specifying which format to save the
+/// per-iteration data in (see Type::fileFormat).
 /// \param inDataFileName - Name of free-energy file to write.
-/// \param dataFloatDecimals - Number of floating point digits to write in file.
 ///
 /// \return - void
 template <typename T>
-void saveFreeEnergy(const Context<T> *const inContext,
-                    const std::filesystem::path &inDataPath,
-                    const bool inVerbose = true,
-                    const std::string &inDataFileName = "free_energy",
-                    const int dataFloatDecimals = 10) {
-  // Construct full file name for free energy
+void saveFreeEnergy(
+    const Context<T> *const inContext, const std::filesystem::path &inDataPath,
+    const bool inVerbose = true,
+    const Type::fileFormat inIterationDataSaveFormat = Type::csv,
+    const std::string &inDataFileName = "free_energy") {
   const std::filesystem::path freeEnergyFile =
-      inDataPath / (inDataFileName + ".dat");
+      inDataPath /
+      (inDataFileName + internal::getFileExtension(inIterationDataSaveFormat));
 
-  // Add header if file does not exist.
-  std::ifstream freeEnergyFileStream(freeEnergyFile);
-  if (!freeEnergyFileStream.good()) {
-    std::stringstream ss_header;
-    ss_header << "# iterationNumber residual freeEnergyPerUnitArea";
-    writeLineToFile(freeEnergyFile, ss_header);
-  }
+  std::unique_ptr<IIterationDataSaveStrategy<T>> iterationDataSaver =
+      getIterationDataSaver<T>(inIterationDataSaveFormat);
 
-  // Append line with energy and other information
-  std::stringstream ss;
-  ss << inContext->getNumIterations() << " ";
-  ss << inContext->getResidual() << " ";
-  ss.precision(dataFloatDecimals);
-  ss << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea() << " ";
-  writeLineToFile(freeEnergyFile, ss);
-
-  if (inVerbose) {
-    std::cout << "Wrote free energy to file: " << freeEnergyFile << std::endl;
+  if (iterationDataSaver &&
+      iterationDataSaver->save(inContext, freeEnergyFile)) {
+    if (inVerbose) {
+      std::cout << "Wrote free energy to file: " << freeEnergyFile << std::endl;
+    }
+  } else {
+    std::cout << "ERROR! Failed to save " << freeEnergyFile << "file."
+              << std::endl;
+    std::exit(EXIT_FAILURE);
   }
 }
 
@@ -203,12 +406,15 @@ void saveFreeEnergy(const Context<T> *const inContext,
 /// \param inContext - Context object
 /// \param inDataPath - Path where to save save grid data file.
 /// \param inVerbose - Print success to terminal.
+/// \param inGridDataSaveFormat - Enum specifying which format to save the
+/// GridData in (see Type::fileFormat).
 /// \param inDataFileName - File name of induced flux density file.
 // Todo(patric): Create utils_io.h and move there.
 template <typename T>
 void saveInducedFluxDensity(
     const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
+    const Type::fileFormat inGridDataSaveFormat = Type::binary,
     const std::string &inDataFileName = "magnetic_flux_density") {
 
   // Fetch the vector potential.
@@ -225,12 +431,23 @@ void saveInducedFluxDensity(
   const GridGPU<T> magneticFluxDensity =
       inducedVectorPotential->curl(latticeSpacing);
 
-  // Construct full file name.
-  const std::filesystem::path gridDataFile =
-      inDataPath / (inDataFileName + ".grd");
-
   // Try to save induced flux density to file. Exit program if fail.
-  if (magneticFluxDensity.write(gridDataFile, parameters)) {
+  const std::filesystem::path gridDataFile =
+      inDataPath /
+      (inDataFileName + internal::getFileExtension(inGridDataSaveFormat));
+
+  bool success = false;
+  if (inGridDataSaveFormat == Type::binary) {
+    success = magneticFluxDensity.write(gridDataFile, parameters) == 0;
+  } else {
+    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
+        getTextGridDataSaver<T>(inGridDataSaveFormat);
+
+    success = bool(textDataSaver) &&
+              textDataSaver->save(&magneticFluxDensity,
+                                  {"induced_flux_density"}, gridDataFile);
+  }
+  if (!success) {
     std::cout << "ERROR! Could not save induced flux density to file: "
               << gridDataFile << std::endl;
     std::exit(EXIT_FAILURE);
@@ -247,6 +464,8 @@ void saveInducedFluxDensity(
 /// \param inContext - Context object for simulation.
 /// \param inDataPath - JSON object with parameter values.
 /// \param inVerbose - Print success to terminal.
+/// \param inGridDataSaveFormat - Enum specifying which format to save the
+/// GridData in (see Type::fileFormat).
 /// \param inOrderParameterFileName - File name of order-parameter file.
 /// \param inCurrentDensityFileName - File name of current-density file.
 ///
@@ -255,6 +474,7 @@ template <typename T>
 void saveGridData(
     const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
+    const Type::fileFormat inGridDataSaveFormat = Type::binary,
     const std::string &inOrderParameterFileName = "order_parameter",
     const std::string &inCurrentDensityFileName = "current_density") {
   // Fetch run parameters from context.
@@ -269,11 +489,25 @@ void saveGridData(
   inContext->getGeometry()->zeroValuesOutsideDomainRef(orderParameterSave);
 
   // Construct full file name for order-parameter file.
+  const std::string extension =
+      internal::getFileExtension(inGridDataSaveFormat);
   const std::filesystem::path orderParameterFile =
-      inDataPath / (inOrderParameterFileName + ".grd");
+      inDataPath / (inOrderParameterFileName + extension);
 
   // Try to save order parameter to file. Exit program if fail.
-  if (orderParameterSave->write(orderParameterFile, parameters)) {
+  bool success = false;
+  if (inGridDataSaveFormat == Type::binary) {
+    success = orderParameterSave->write(orderParameterFile, parameters) == 0;
+  } else {
+    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
+        getTextGridDataSaver<T>(inGridDataSaveFormat);
+
+    success = bool(textDataSaver) &&
+              textDataSaver->save(orderParameterSave,
+                                  inContext->getOrderParameter()->getTypes(),
+                                  orderParameterFile);
+  }
+  if (!success) {
     std::cout << "ERROR! Could not save Order Parameter to file: "
               << orderParameterFile << std::endl;
     std::exit(EXIT_FAILURE);
@@ -287,16 +521,27 @@ void saveGridData(
   // Fetch current density.
   GridGPU<T> *const currentSave = inContext->getComputeCurrent()->getResult();
 
-  // Set current density to zero outside simulation domain (non-zero values are
-  // used for interpolation).
+  // Set current density to zero outside simulation domain (non-zero values
+  // are used for interpolation).
   inContext->getGeometry()->zeroValuesOutsideDomainRef(currentSave);
 
   // Construct full file name for current density.
   const std::filesystem::path currentDensityFile =
-      inDataPath / (inCurrentDensityFileName + ".grd");
+      inDataPath / (inCurrentDensityFileName + extension);
 
   // Try to save order parameter to file. Exit program if fail.
-  if (currentSave->write(currentDensityFile, parameters)) {
+  success = false;
+  if (inGridDataSaveFormat == Type::binary) {
+    success = currentSave->write(currentDensityFile, parameters) == 0;
+  } else {
+    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
+        getTextGridDataSaver<T>(inGridDataSaveFormat);
+
+    success =
+        bool(textDataSaver) &&
+        textDataSaver->save(currentSave, {"j_x", "j_y"}, currentDensityFile);
+  }
+  if (!success) {
     std::cout << "Could not save current density to file: "
               << currentDensityFile << std::endl;
     std::exit(EXIT_FAILURE);
@@ -315,11 +560,18 @@ void saveGridData(
 ///
 /// \param inContext - Context object for simulation.
 /// \param inJSON - JSON object with parameter values.
+/// \param inGridDataSaveFormat - Enum specifying which format to save the
+/// GridData in (see Type::fileFormat).
+/// \param inIterationDataSaveFormat - Enum specifying which format to save the
+/// per-iteration data in (see Type::fileFormat).
 ///
 /// \return - void
 template <typename T>
-void saveDataWrapper(const Context<T> *const inContext,
-                     const Json::Value &inJSON, const bool inVerbose) {
+void saveDataWrapper(
+    const Context<T> *const inContext, const Json::Value &inJSON,
+    const bool inVerbose,
+    const Type::fileFormat inGridDataSaveFormat = Type::binary,
+    const Type::fileFormat inIterationDataSaveFormat = Type::csv) {
   // Construct full directory path.
   const std::filesystem::path dataBasePath(inJSON["data_path"].asString());
   const std::filesystem::path dataPath =
@@ -332,13 +584,13 @@ void saveDataWrapper(const Context<T> *const inContext,
   saveParametersWrapper(inContext, inJSON, dataPath, inVerbose);
 
   // Append free energy and iteration status to file.
-  saveFreeEnergy(inContext, dataPath, inVerbose);
+  saveFreeEnergy(inContext, dataPath, inVerbose, inIterationDataSaveFormat);
 
   // Save order parameter and current to file.
-  saveGridData(inContext, dataPath, inVerbose);
+  saveGridData(inContext, dataPath, inVerbose, inGridDataSaveFormat);
 
   // Save induced magnetic field to file.
-  saveInducedFluxDensity(inContext, dataPath, inVerbose);
+  saveInducedFluxDensity(inContext, dataPath, inVerbose, inGridDataSaveFormat);
 }
 
 /// \brief Print iteration status.
@@ -569,6 +821,8 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 /// \param inNumIterationsMax - The maximum number of iterations.
 /// \param inSaveData - Whether to save data or not.
 /// \param inSaveDataInterval - How frequently to save data.
+/// \param inGridDataSaveFormat - Enum specifying which format to save the
+/// GridData in (see Type::fileFormat).
 /// \param inJSON - JSON object with parameter values.
 ///
 /// \return - void.
@@ -579,7 +833,8 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
                    const int inNumIterationsMax = 1000,
                    const bool inSaveData = false,
                    const int inSaveDataInterval = 200,
-                   const Json::Value &inJSON = {}) {
+                   const Json::Value &inJSON = {},
+                   const Type::fileFormat inGridDataSaveFormat = Type::binary) {
   Status status = Status::kContinue;
   bool quit = false;
 
@@ -596,7 +851,8 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
                  "object was empty! (call to runSimulation() in run_utils.h)"
               << std::endl;
         } else {
-          saveDataWrapper(inOutContext, inJSON, inPrintStatus);
+          saveDataWrapper(inOutContext, inJSON, inPrintStatus,
+                          inGridDataSaveFormat);
         }
       }
     } else {
