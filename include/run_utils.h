@@ -314,55 +314,82 @@ inline void saveParameterFileJSON(const Json::Value &inJSON,
   }
 }
 
-/// \brief Save simulation parameters to JSON file.
+/// \brief Save config params, internal params, and results to JSON files.
+///
+/// This function saves three json files: one for config parameters, one for
+/// internal parameters, and one for scalar results.
+/// Motivation: It is useful to have the exact config parameters saved, so that
+/// a run can be resumed/continued/post-processed. These config parameters are
+/// saved to a JSON file. Furthermore, there are some internal parameters that
+/// are not possible to infer without running the program (the exact number of
+/// lattice points inside the grain), these are very useful to have access to
+/// when post-processing (e.g. for doing area normalization). Finally, there are
+/// some scalar results (e.g. area-averaged quantities) that are more
+/// appropriate and convenient to have in json rather than csv.
 ///
 /// \param inContext - Context object for simulation.
 /// \param inJSON - JSON object with parameter values.
-/// \param inDataPath - Directory where to put JSON file.
-/// \param inDataFileName - Name of JSON file to write.
+/// \param inDataPath - Directory where to put JSON files.
+/// \param inConfigFileName - Filename for config parameters.
+/// \param inInternalParametersFileName - Filename for internal parameters.
+/// \param inResultsFileName - Filename for scalar results.
 ///
 /// \return - void
 template <typename T>
-void saveParametersWrapper(const Context<T> *const inContext,
-                           const Json::Value &inJSON,
-                           const std::filesystem::path &inDataPath,
-                           const bool inVerbose = true,
-                           const std::string &inDataFileName = "config") {
+void saveParametersWrapper(
+    const Context<T> *const inContext, const Json::Value &inJSON,
+    const std::filesystem::path &inDataPath, const bool inVerbose = true,
+    const std::string &inConfigFileName = "config",
+    const std::string &inInternalParametersFileName = "internal_parameters",
+    const std::string &inResultsFileName = "results") {
   //***************************************************
   // CONFIG PARAMETERS
   //***************************************************
   // Construct full filepath to JSON-file.
-  const std::filesystem::path fullPathJSON =
-      inDataPath / (inDataFileName + ".json");
+  const std::filesystem::path fullPathConfigJSON =
+      inDataPath / (inConfigFileName + ".json");
+  const std::filesystem::path fullPathInternalParamsJSON =
+      inDataPath / (inInternalParametersFileName + ".json");
+  const std::filesystem::path fullPathResultsJSON =
+      inDataPath / (inResultsFileName + ".json");
 
-  // Save JSON parameters (if not already saved or updated)
-  saveParameterFileJSON(inJSON, fullPathJSON, inVerbose);
+  // Save config parameters to JSON file.
+  saveParameterFileJSON(inJSON, fullPathConfigJSON, inVerbose);
 
-  //***************************************************
-  // ADDITIONAL USEFUL INTERNAL PARAMETERS
-  //***************************************************
-  // Construct full filepath for extra internal parameters.
-  const std::filesystem::path fullPathInternalParameters =
-      inDataPath / (inDataFileName + "_internal_parameters.json");
-
-  // Add other useful parameters for post-processing.
-  Json::Value internalParameters;
-  internalParameters["area_compute"] = inContext->getGeometry()->area();
-  internalParameters["internal_lattice_points"] =
+  // Number of lattice sites in grain.
+  const int numGrainLatticeSites =
       inContext->getGeometry()->getNumGrainLatticeSites();
-  internalParameters["gauge"] =
-      inContext->getRiccatiSolver()->getVectorPotentialType();
-  internalParameters["external_flux_density"] =
-      inContext->getParameters()->getMagneticFieldStrength();
-  internalParameters["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
 
+  // Various results.
+  Json::Value resultsJSON;
+  resultsJSON["free_energy_per_unit_area"] =
+      inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+  resultsJSON["order_parameter_average_magnitude"] =
+      inContext->getComputeOrderParameter()->getResult()->sumMagnitude() /
+      static_cast<T>(numGrainLatticeSites);
+  resultsJSON["current_density_average_magnitude"] =
+      inContext->getComputeCurrent()->getResult()->sumMagnitude() /
+      static_cast<T>(numGrainLatticeSites);
+
+  // Save various results to JSON file.
+  saveParameterFileJSON(resultsJSON, fullPathResultsJSON, inVerbose);
+
+  // Internal parameters useful for post-processing.
+  Json::Value internalParamJSON;
+  internalParamJSON["area_compute"] = inContext->getGeometry()->area();
+  internalParamJSON["internal_lattice_points"] = numGrainLatticeSites;
+  internalParamJSON["gauge"] =
+      inContext->getRiccatiSolver()->getVectorPotentialType();
+  internalParamJSON["external_flux_density"] =
+      inContext->getParameters()->getMagneticFieldStrength();
+  internalParamJSON["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
   const int numLatticeSitesPerSide =
       inContext->getParameters()->getGridResolutionBase();
-  internalParameters["num_lattice_points"] =
+  internalParamJSON["num_lattice_points"] =
       numLatticeSitesPerSide * numLatticeSitesPerSide;
 
-  // Save additional JSON parameters (if not already saved or updated)
-  saveParameterFileJSON(internalParameters, fullPathInternalParameters,
+  // Save internal parameters to JSON file.
+  saveParameterFileJSON(internalParamJSON, fullPathInternalParamsJSON,
                         inVerbose);
 }
 
