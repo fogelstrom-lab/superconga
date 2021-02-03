@@ -307,8 +307,13 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
     // The physical side length of a lattice site.
     const T gridElementSize = m_parameters->getGridElementSize();
 
+    // The number of lattice site in the grain is needed for enforcing current
+    // conservation before computing the vector potential.
+    const int numGrainLatticeSites = m_geometry->getNumGrainLatticeSites();
+
     // Initialize the vector-potential solver.
-    m_computeVectorPotential.initialize(gridResolution, gridElementSize);
+    m_computeVectorPotential.initialize(gridResolution, gridElementSize,
+                                        numGrainLatticeSites);
 
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): vector potential");

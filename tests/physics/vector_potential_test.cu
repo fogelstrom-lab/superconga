@@ -112,19 +112,12 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   // "ComputeVectorPotential" is one.
   const T penetrationDepth = static_cast<T>(2);
 
-  // The number of "fields" for the domain labels and the current density.
-  const int domainDimension = 1;
+  // The number of "fields" for the current density.
   const int currentDimension = 2;
 
   // The radius and center coordinate of a disk.
   const T R = latticeSpacing * static_cast<T>(N - 1) * static_cast<T>(0.4);
   const T center = static_cast<T>(N - 1) * static_cast<T>(0.5);
-
-  // Set the domain labels to "1" everywhere, i.e. compute the vector potential
-  // everywhere. We do this because the analytical solution extends beyond the
-  // grain.
-  scg::GridGPU<char> domainGPU(N, N, domainDimension, scg::Type::real);
-  domainGPU.setValue('1', scg::Type::real);
 
   // Construct the current density, and the expected potential, on the CPU.
   scg::GridCPU<T> currenDensityCPU(N, N, currentDimension, scg::Type::real);
@@ -136,6 +129,7 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   T *const potPtrX = expectedPotential.getDataPointer(0);
   T *const potPtrY = expectedPotential.getDataPointer(1);
 
+  int numGrainLatticeSites = 0;
   for (int j = 0; j < N; ++j) {
     // Y-coordinate relative to the center of the disc.
     const T y = latticeSpacing * (static_cast<T>(j) - center);
@@ -149,7 +143,10 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
       // Whether a point is within the disk.
       const bool inDomain = r <= R;
 
-      // The lienar index.
+      // Increase the grain lattice site counter.
+      numGrainLatticeSites += inDomain ? 1 : 0;
+
+      // The linear index.
       const int idx = j * N + i;
 
       // The current density is given by r \hat{\phi}, i.e. there are rotating
@@ -191,7 +188,7 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
   // =================== ACT ==================== //
   // Compute the induced vector potential.
   scg::ComputeVectorPotential<T> computeVectorPotential;
-  computeVectorPotential.initialize(N, latticeSpacing);
+  computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
   computeVectorPotential.solve(currenDensityGPU, penetrationDepth);
 
   // Copy the vector potential to the CPU.
