@@ -185,7 +185,6 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     const bool isConverged =
         residual < C::getParameters()->getConvergenceCriterion();
     C::setConverged(isConverged);
-
   } else {
     C::setConverged(false);
   }

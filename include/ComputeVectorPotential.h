@@ -46,11 +46,19 @@ private:
   // The physical area of a lattice site.
   T m_latticeSiteArea;
 
+  // The number of lattice sites in the grain. It is needed for enforcing
+  // current conservation.
+  int m_numGrainLatticeSites;
+
   // The maximum error of the approximation.
   const double m_maxError;
 
   // Whether to use the analytical expression of the Green function.
   const bool m_analytical;
+
+  // Whether to enforce current conservation by subtracting the mean before
+  // computing the vector potential.
+  const bool m_enforceCurrentConservation;
 
   /// \brief Initialize filters.
   ///
@@ -103,6 +111,25 @@ private:
   void addFilter1D(const arma::Col<double> &inEigVec, const double inEigVal,
                    const double inScale);
 
+  /// \brief Subtract the mean of, i.e. center,a grid.
+  ///
+  /// \param inSrc The grid to center.
+  /// \param outDst The centered grid.
+  ///
+  /// \return Void.
+  void subtractMean(const GridGPU<T> &inSrc, GridGPU<T> &outDst);
+
+  /// \brief The internal method for solving the Poisson equation for the vector
+  /// potential.
+  ///
+  /// \param inCurrentDensity The current density, in units of J_d = 4 pi |e|
+  /// <v_F> N_F k_B T_c.
+  /// \param inKappa The Ginzburg-Landau parameter, kappa = lambda_L / xi_0,
+  /// where lambda_L = (mu_0 e^2 <v_F>^2 N_F)^(- 1 / 2)
+  ///
+  /// \return void.
+  void solveInternal(const GridGPU<T> &inCurrentDensity, const T inKappa);
+
 public:
   /// \brief Constructor.
   ///
@@ -110,8 +137,11 @@ public:
   /// of the approximation.
   /// \param inAnalytical Whether to use the analytical expression of the Green
   /// function, or a simpler approximation.
+  /// \param inEnforceCurrentConservation Whether to enforce current
+  /// conservation by sutracting the mean before computing the vector potential.
   ComputeVectorPotential(const T inMaxError = static_cast<T>(1e-6),
-                         const bool inAnalytical = true);
+                         const bool inAnalytical = true,
+                         const bool inEnforceCurrentConservation = true);
 
   /// \brief Destructor.
   ~ComputeVectorPotential() {
@@ -124,9 +154,11 @@ public:
   /// \param inGridResolution The number of lattice sites per side.
   /// \param inGridCellLength Physical side length of a lattice site, in units
   /// of xi_0 = hbar <v_F> / (k_B T_c).
+  /// \param inNumGrainLatticeSites The number of lattice sites in the grain.
   ///
   /// \return void.
-  void initialize(const int inGridResolution, const T inGridCellLength);
+  void initialize(const int inGridResolution, const T inGridCellLength,
+                  const int inNumGrainLatticeSites);
 
   /// \brief Solve the Poisson equation for the vector potential.
   ///
@@ -166,11 +198,13 @@ public:
 };
 
 template <typename T>
-ComputeVectorPotential<T>::ComputeVectorPotential(const T inMaxError,
-                                                  const bool inAnalytical)
+ComputeVectorPotential<T>::ComputeVectorPotential(
+    const T inMaxError, const bool inAnalytical,
+    const bool inEnforceCurrentConservation)
     : m_vectorPotential(nullptr), m_maxError(static_cast<double>(inMaxError)),
-      m_analytical(inAnalytical), m_residual(static_cast<T>(0)),
-      m_isInitialized(false), m_scale(0.0),
+      m_analytical(inAnalytical),
+      m_enforceCurrentConservation(inEnforceCurrentConservation),
+      m_residual(static_cast<T>(0)), m_isInitialized(false), m_scale(0.0),
       m_latticeSiteArea(static_cast<T>(0.0)) {}
 
 template <typename T>
@@ -406,18 +440,77 @@ crossCorrelateTranspose(const int inGridResolution, const int inDimension,
 
     // Destination index. Note the we write the transposed result, i.e. swapped
     // x- and y-index.
-    const int idxDst =
-        d * inGridResolution * inGridResolution + x * inGridResolution + y;
+    const int idxDst = inGridResolution * (d * inGridResolution + x) + y;
 
     // Write result.
     outDst[idxDst] = sum;
   }
 }
+
+/// \brief CUDA kernel for subtracting the mean of the current density.
+///
+/// \param inGridResolution The number of lattice sites per side of the source,
+/// denoted N.
+/// \param inDimension The dimension of the source, e.g. 2 for a 2D current,
+/// \param inMean The mean of each component.
+/// \param inSrc The raw current density.
+/// \param inOutResultY The current density with zero mean.
+///
+/// \return void.
+template <typename T>
+__global__ void subtractMean(const int inGridResolution, const int inDimension,
+                             const T *const inMean, const T *const inSrc,
+                             T *const outDst) {
+  // Indices of spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  // Index of component, e.g. x ==> 0 or y ==> 1.
+  const int d = blockIdx.z * blockDim.z + threadIdx.z;
+
+  if (x < inGridResolution && y < inGridResolution && d < inDimension) {
+    const int idx = inGridResolution * (d * inGridResolution + y) + x;
+    outDst[idx] = inSrc[idx] - inMean[d];
+  }
+}
 } // namespace cvp_internal
 
 template <typename T>
+void ComputeVectorPotential<T>::subtractMean(const GridGPU<T> &inSrc,
+                                             GridGPU<T> &outDst) {
+  // Check dimensions.
+  assert(inSrc == outDst);
+
+  // Get dimensions.
+  const int gridResolution = inSrc.dimX();
+  const int dimension = inSrc.numFields();
+
+  // Compute the mean on the CPU.
+  std::vector<T> meansCPU;
+  for (int i = 0; i < dimension; ++i) {
+    const T sum = inSrc.sumField(i);
+    const T mean = sum / static_cast<T>(m_numGrainLatticeSites);
+    meansCPU.push_back(mean);
+  }
+
+  // Copy to the GPU.
+  const thrust::device_vector<T> meansGPU = meansCPU;
+
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  inSrc.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+
+  // Call CUDA kernel.
+  cvp_internal::subtractMean<<<numBlocks, numThreadsPerBlock>>>(
+      gridResolution, dimension, thrust::raw_pointer_cast(meansGPU.data()),
+      inSrc.getDataPointer(), outDst.getDataPointer());
+}
+
+template <typename T>
 void ComputeVectorPotential<T>::initialize(const int inGridResolution,
-                                           const T inGridCellLength) {
+                                           const T inGridCellLength,
+                                           const int inNumGrainLatticeSites) {
   // Initialize the vector potential.
   const int dimension = 2;
   GridGPU<T>::initializeGrid(m_vectorPotential, inGridResolution,
@@ -429,13 +522,15 @@ void ComputeVectorPotential<T>::initialize(const int inGridResolution,
 
   m_latticeSiteArea = inGridCellLength * inGridCellLength;
 
+  m_numGrainLatticeSites = inNumGrainLatticeSites;
+
   // Initialization complete.
   m_isInitialized = true;
 }
 
 template <typename T>
-void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
-                                      const T inKappa) {
+void ComputeVectorPotential<T>::solveInternal(
+    const GridGPU<T> &inCurrentDensity, const T inKappa) {
   // Check that the sizes of the grids, as well as representation (i.e. real or
   // complex), are equal.
   assert(inCurrentDensity == *m_vectorPotential);
@@ -453,9 +548,6 @@ void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
   // The number of filters.
   assert(m_filters.size() == m_positiveFilter.size());
   const std::size_t numFilters = m_filters.size();
-
-  // Copy the grid so we can compute the residual.
-  const GridGPU<T> vectorPotentialOld = *m_vectorPotential;
 
   // Set to zero because we will add stuff to it.
   m_vectorPotential->setZero();
@@ -499,7 +591,31 @@ void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
 
   // Scale the final result.
   *m_vectorPotential *=
-      equationFactor * m_latticeSiteArea * static_cast<T>(m_scale);
+      (equationFactor * m_latticeSiteArea * static_cast<T>(m_scale));
+}
+
+template <typename T>
+void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
+                                      const T inKappa) {
+  if (m_enforceCurrentConservation) {
+    // Initialize a grid for the zero-mean current-density.
+    GridGPU<T> currentDensityZeroMean = GridGPU<T>(
+        inCurrentDensity.dimX(), inCurrentDensity.dimY(),
+        inCurrentDensity.numFields(), inCurrentDensity.representation());
+
+    // Subtract the mean.
+    subtractMean(inCurrentDensity, currentDensityZeroMean);
+
+    // Solve Poisson's equation.
+    solveInternal(currentDensityZeroMean, inKappa);
+  } else {
+    // Solve Poisson's equation.
+    solveInternal(inCurrentDensity, inKappa);
+  }
+
+  // TODO(niclas): Subtracting the mean of the current density makes the
+  // simulation more stable. But subtracting the mean of the vector potential is
+  // even better. But that might not be allowed.
 }
 
 template <typename T>

@@ -259,9 +259,14 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   // implementation before.
   const T analytical = false;
 
+  // Do not enforce current conservation.
+  const bool enforceCurrentConservation = false;
+  const int numGrainLatticeSites = N * N;
+
   // Compute the induced vector potential.
-  scg::ComputeVectorPotential<T> computeVectorPotential(maxError, analytical);
-  computeVectorPotential.initialize(N, latticeSpacing);
+  scg::ComputeVectorPotential<T> computeVectorPotential(
+      maxError, analytical, enforceCurrentConservation);
+  computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
   computeVectorPotential.solve(currenDensity, penetrationDepth);
 
   scg::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
