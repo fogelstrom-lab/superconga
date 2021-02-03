@@ -1,7 +1,7 @@
 {
   "convergence_criterion": 1e-6,
   "crystal_axes_rotation": 0.0,
-  "data_path": "data",
+  "data_path": "data/dwave_phase_crystal",
   "external_flux_quanta": 0.0,
   "grain_side_length": 50.0,
   "points_per_coherence_length": 8.02,
@@ -32,4 +32,3 @@
   "verbose": true,
   "visualize": true
 }
-

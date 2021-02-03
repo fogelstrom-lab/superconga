@@ -1,7 +1,7 @@
 {
   "convergence_criterion": 1e-5,
   "crystal_axes_rotation": 0.0,
-  "data_path": "data",
+  "data_path": "data/swave_abrikosov_vortex_lattice",
   "external_flux_quanta": 20.0,
   "grain_side_length": 40.0,
   "points_per_coherence_length": 5.025,
