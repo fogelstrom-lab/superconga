@@ -2,6 +2,9 @@
 # Get current working directory.
 pwd=$PWD
 
+# Update sub repos (e.g. armadillo).
+git submodule update --init --recursive
+
 # Build release.
 echo "Setup Release"
 mkdir -p $pwd/build/release
