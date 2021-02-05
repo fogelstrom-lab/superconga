@@ -9,7 +9,7 @@
 #include "ComputeResidual.h"
 #include "Grid.h"
 #include "Type.h"
-#include <armadillo>
+#include "armadillo_wrapper.h"
 #include <array>
 #include <cstddef>
 #include <cuda.h>

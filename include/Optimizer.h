@@ -9,8 +9,8 @@
 #include "Grid.h"
 #include "Optimizer.h"
 #include "Type.h"
+#include "armadillo_wrapper.h"
 #include <algorithm>
-#include <armadillo>
 #include <cassert>
 #include <cstddef>
 #include <cuda.h>
