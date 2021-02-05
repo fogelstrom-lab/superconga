@@ -35,6 +35,7 @@ set(SRC
     order_parameter_initial_test.cu
     order_parameter_bulk_test.cu
     parameters_test.cu
+    physics/current_conservation_test.cu
     physics/dos_test.cu
     physics/low_temp_free_energy_test.cu
     physics/vector_potential_test.cu
