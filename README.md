@@ -5,16 +5,32 @@
 SuprConGPU is open-source software for simulating the physics of superconducting and condensed-matter systems. The SuprConGPU library uses C++/CUDA for the numerical computations in the backend, and the packages Numpy, SCiPy, Matplotlib and Qt for the frontend. The goal of SuprConGPU is to ...(user-friendly, efficiency, systems/physics that can be covered) . SuprConGPU is largely based on the quasiclassical theory of superconductivity and ...(eilenberger, riccati, green functions) to ...(trajectories, boundary conditions, Anderson). SuprConGPU is avaiable to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms. This makes SuprConGPU an ideal tool to simulate superconductivity, both for research but also for educational purposes.
 
 
-## Badges
-
-
-
 ## Download
 The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#:~:text=Clone%20a%20repository&text=You%20can%20either%20clone%20it,paste%20in%20your%20command%20line.) the repository through the above interface.
 
 
 ## Installation
 For detailed instructions on installation and compilation, see: [https://suprcongpu.gitlab.io/suprcongpu-doc/install.html](https://suprcongpu.gitlab.io/suprcongpu-doc/install.html)
+
+
+## Basic usage
+The code is most easily run via its Python(3) front-end, either in terminal mode
+```python
+python suprcongpu.py
+```
+or with a GUI
+```python
+python suprcongpu.py --gui
+```
+It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the s-wave Abrikosov example:
+```python
+python suprcongpu.py --gui --file examples/swave_abrikosov_vortex_lattice.json
+```
+These example files can easily be copied/modified with a text editor or the GUI, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
+```python
+python suprcongpu.py --help
+```
+or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
 
 
 ## Documentation
