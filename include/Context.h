@@ -92,6 +92,9 @@ public:
   ComputeOrderParameter<T> *getComputeOrderParameter() const {
     return m_computeOrderParameter;
   }
+  ComputeVectorPotential<T> *getComputeVectorPotential() const {
+    return m_computeVectorPotential.get();
+  }
   ComputeProperty<T> *getComputeObject(int idx) const {
     return m_computeObjectList[idx];
   }
@@ -120,7 +123,7 @@ private:
   FermiSurface<T> *m_fermiSurface;
 
   GridGPU<T> *m_inducedVectorPotential;
-  ComputeVectorPotential<T> m_computeVectorPotential;
+  std::unique_ptr<ComputeVectorPotential<T>> m_computeVectorPotential;
 
   // The optimizer. It is only used when computing the order parameter and/or
   // the vector potential.
@@ -146,8 +149,10 @@ Context<T>::Context()
       m_fermiSurface(nullptr), m_inducedVectorPotential(nullptr),
       m_computeCurrent(nullptr), m_computeCurrentDensity(nullptr),
       m_computeFreeEnergy(nullptr), m_computeOrderParameter(nullptr),
-      m_computeLDOS(nullptr), m_computeTime(static_cast<T>(0.0)),
-      m_numIterations(0), m_optimizer(std::make_unique<Optimizer<T>>()) {}
+      m_computeLDOS(nullptr),
+      m_computeVectorPotential(std::make_unique<ComputeVectorPotential<T>>()),
+      m_computeTime(static_cast<T>(0.0)), m_numIterations(0),
+      m_optimizer(std::make_unique<Optimizer<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
   std::cout << "~Context()\n";
@@ -312,8 +317,8 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
     const int numGrainLatticeSites = m_geometry->getNumGrainLatticeSites();
 
     // Initialize the vector-potential solver.
-    m_computeVectorPotential.initialize(gridResolution, gridElementSize,
-                                        numGrainLatticeSites);
+    m_computeVectorPotential->initialize(gridResolution, gridElementSize,
+                                         numGrainLatticeSites);
 
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): vector potential");
@@ -355,15 +360,15 @@ template <typename T> void Context<T>::compute() {
       const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
 
       // Solve Maxwell's equation relating the vector potential to the current.
-      m_computeVectorPotential.solve(currentDensity, penetrationDepth);
+      m_computeVectorPotential->solve(currentDensity, penetrationDepth);
 
       // Compute the residual.
-      m_computeVectorPotential.computeResidual(*m_inducedVectorPotential);
+      m_computeVectorPotential->computeResidual(*m_inducedVectorPotential);
     }
 
     // Compute the next order parameter and vector potential, but do not update.
     m_optimizer->compute(*(m_computeOrderParameter->getOrderParameter()),
-                         *(m_computeVectorPotential.getResult()),
+                         *(m_computeVectorPotential->getResult()),
                          *m_orderParameter, *m_inducedVectorPotential);
 
     // Update the order parameter and vector potential.
@@ -390,7 +395,7 @@ template <typename T> void Context<T>::compute() {
 template <typename T> T Context<T>::getResidual() const {
   // Get the convergence of the vector potential first. If the vector
   // potential is not computed, it will be zero.
-  T maxResidual = m_computeVectorPotential.getResidual();
+  T maxResidual = m_computeVectorPotential->getResidual();
 
   // Get the convergence for all compute objects.
   const int numComputeObjects = getNumComputeObjects();
@@ -405,7 +410,7 @@ template <typename T> bool Context<T>::isConverged() const {
   // Check the convergence of the vector potential first. If the vector
   // potential is not computed, it will be converged.
   const T convergenceCriterion = m_parameters->getConvergenceCriterion();
-  const T residual = m_computeVectorPotential.getResidual();
+  const T residual = m_computeVectorPotential->getResidual();
   bool success = residual < convergenceCriterion;
 
   // Check the convergence for all compute objects.

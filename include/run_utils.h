@@ -98,7 +98,9 @@ private:
 
   bool appendHeader(const std::filesystem::path &inFilePath) const {
     std::ostringstream oss;
-    oss << "iteration" << delimiter << "residual" << delimiter
+    oss << "iteration" << delimiter << "order_parameter_residual" << delimiter
+        << "free_energy_residual" << delimiter << "current_density_residual"
+        << delimiter << "vector_potential_residual" << delimiter
         << "free_energy_per_unit_area";
     return appendToFile(oss.str(), inFilePath);
   };
@@ -108,7 +110,10 @@ private:
 
     std::ostringstream oss;
     oss << inContext->getNumIterations() << delimiter
-        << inContext->getResidual() << delimiter
+        << inContext->getComputeOrderParameter()->getResidual() << delimiter
+        << inContext->getComputeFreeEnergy()->getResidual() << delimiter
+        << inContext->getComputeCurrent()->getResidual() << delimiter
+        << inContext->getComputeVectorPotential()->getResidual() << delimiter
         << std::setprecision(floatPrecision)
         << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
     return appendToFile(oss.str(), inFilePath);
@@ -393,23 +398,23 @@ void saveParametersWrapper(
                         inVerbose);
 }
 
-/// \brief Save free energy to text file.
+/// \brief Save convergence status (residuals vs iteration) to file.
 ///
 /// \param inContext - Context object for simulation.
-/// \param inDataPath - Directory where to put free-energy file.
+/// \param inDataPath - Directory where to put file.
 /// \param inVerbose - Print success to terminal.
 /// \param inIterationDataSaveFormat - Enum specifying which format to save the
 /// per-iteration data in (see Type::fileFormat).
-/// \param inDataFileName - Name of free-energy file to write.
+/// \param inDataFileName - Name of file to write.
 ///
 /// \return - void
 template <typename T>
-void saveFreeEnergy(
+void saveConvergenceStatus(
     const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
     const Type::fileFormat inIterationDataSaveFormat = Type::csv,
-    const std::string &inDataFileName = "free_energy") {
-  const std::filesystem::path freeEnergyFile =
+    const std::string &inDataFileName = "convergence") {
+  const std::filesystem::path convergenceFile =
       inDataPath /
       (inDataFileName + internal::getFileExtension(inIterationDataSaveFormat));
 
@@ -417,12 +422,13 @@ void saveFreeEnergy(
       getIterationDataSaver<T>(inIterationDataSaveFormat);
 
   if (iterationDataSaver &&
-      iterationDataSaver->save(inContext, freeEnergyFile)) {
+      iterationDataSaver->save(inContext, convergenceFile)) {
     if (inVerbose) {
-      std::cout << "Wrote free energy to file: " << freeEnergyFile << std::endl;
+      std::cout << "Wrote convergence status to file: " << convergenceFile
+                << std::endl;
     }
   } else {
-    std::cout << "ERROR! Failed to save " << freeEnergyFile << "file."
+    std::cout << "ERROR! Failed to save " << convergenceFile << "file."
               << std::endl;
     std::exit(EXIT_FAILURE);
   }
@@ -610,8 +616,9 @@ void saveDataWrapper(
   // Save parameters to JSON file.
   saveParametersWrapper(inContext, inJSON, dataPath, inVerbose);
 
-  // Append free energy and iteration status to file.
-  saveFreeEnergy(inContext, dataPath, inVerbose, inIterationDataSaveFormat);
+  // Append convergence status to file.
+  saveConvergenceStatus(inContext, dataPath, inVerbose,
+                        inIterationDataSaveFormat);
 
   // Save order parameter and current to file.
   saveGridData(inContext, dataPath, inVerbose, inGridDataSaveFormat);
