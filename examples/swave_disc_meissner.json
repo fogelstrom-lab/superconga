@@ -11,9 +11,9 @@
   "num_ozaki_energies": 20,
   "num_polygon_edges": -1,
   "optimizer": {
-    "step_size": 1.5,
-    "inertia": 0.333,
-    "rank": 1
+    "step_size": 1.0,
+    "inertia": 0.1,
+    "rank": 10
   },
   "order_parameter": [
     {
@@ -24,7 +24,7 @@
       "symmetry": "s"
     }
   ],
-  "penetration_depth": -1.0,
+  "penetration_depth": 5.0,
   "save_data": false,
   "save_data_interval": 200,
   "solenoid": false,
