@@ -37,7 +37,7 @@ const double TEMPERATURE = 0.5;
 const double GRAIN_SIDE_LENGTH = 15.0 / (2.0 * M_PI);
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 5.0 * (2.0 * M_PI);
+const double POINTS_PER_COHERENCE_LENGTH = 10.0 * (2.0 * M_PI);
 
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 60;
@@ -46,7 +46,7 @@ const int NUM_ANGLES = 60;
 const int NUM_ENERGIES = 20;
 
 // Convergence criterion for order-parameter residual
-const double CONVERGENCE_CRITERION = 1E-5;
+const double CONVERGENCE_CRITERION = 1e-5;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
@@ -65,10 +65,10 @@ const double OPTIMIZER_STEP_SIZE = 2.0;
 const double OPTIMIZER_INERTIA = 0.5;
 
 // Which polygons to test.
-// TODO(niclas): We probably have some bug. Only disk and squares work. FIX
+// TODO(niclas): We probably have some bug. Only even polygons work. FIX
 // THIS!!! Add more polygons, solenoids, irregular polygons, and disjoint
 // polygons.
-const std::vector<int> NUM_VERTICES = {-1, 4};
+const std::vector<int> NUM_VERTICES = {-1, 4, 6};
 
 // The tolerance is this factor times the machine precision.
 const double EPSILON_TOLERANCE = 10.0;
