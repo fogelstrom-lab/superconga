@@ -14,6 +14,10 @@ if(NOT doctest_POPULATED)
   add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+set(LAPACK_BLAS_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+
 ###############################################################################
 # SOURCE FILES
 ###############################################################################
@@ -65,9 +69,8 @@ foreach(file ${SRC})
             GL
             GLU
             gfortran
-            lapack
-            blas
             jsoncpp_lib
+            ${LAPACK_BLAS_LIBRARIES}
             doctest::doctest)
 
   # Use C++17 since it is the lates standard CUDA supports
