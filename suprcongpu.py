@@ -486,13 +486,13 @@ def validate(simparams: dict) -> bool:
         "optimizer": {
             "type": dict,
             "sub": {
-                "step_size": {"type": float},
+                "anderson_always": {"type": bool},
                 "inertia": {"type": float},
-                "rank": {"type": int, "low": 0},
-                "replace_worst": {"type": bool},
-                "anderson_only_when_full": {"type": bool},
-                "min_mixing": {"type": float, "low": 0.0},
                 "max_mixing": {"type": float, "low": 0.0},
+                "min_mixing": {"type": float, "low": 0.0},
+                "rank": {"type": int, "low": 0},
+                "replace_oldest": {"type": bool},
+                "step_size": {"type": float},
             },
         },
         "order_parameter": {
