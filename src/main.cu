@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["optimizer"]["inertia"].asDouble());
   const std::size_t rank =
       static_cast<std::size_t>(simParams["optimizer"]["rank"].asInt());
-  const bool replaceOldest = simParams["optimizer"]["replace_worst"].asBool();
+  const bool replaceOldest = simParams["optimizer"]["replace_oldest"].asBool();
   const bool andersonAlways =
       simParams["optimizer"]["anderson_always"].asBool();
   const T minMixing =
