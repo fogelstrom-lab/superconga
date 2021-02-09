@@ -1,0 +1,38 @@
+{
+    "convergence_criterion": 1e-6,
+    "crystal_axes_rotation": 0.0,
+    "data_path": "data/swave_disc_vortex",
+    "external_flux_quanta": 1.0,
+    "grain_side_length": 50.0,
+    "points_per_coherence_length": 5.0,
+    "num_fermi_momenta": 60,
+    "num_iterations_max": 1000,
+    "num_iterations_min": 10,
+    "num_ozaki_energies": 20,
+    "num_polygon_edges": -1,
+    "optimizer": {
+        "anderson_always": true,
+        "inertia": 0.8,
+        "max_mixing": 1.0,
+        "min_mixing": 1.0,
+        "rank": 1,
+        "replace_oldest": true,
+        "step_size": 2
+    },
+    "order_parameter": [
+        {
+            "critical_temperature": 1.0,
+            "initial_phase_shift": 0.0,
+            "initial_phase_winding": 1.0,
+            "initial_random_phase_weight": 0.0,
+            "symmetry": "s"
+        }
+    ],
+    "penetration_depth": 5.0,
+    "save_data": false,
+    "save_data_interval": 200,
+    "solenoid": false,
+    "temperature": 0.5,
+    "verbose": true,
+    "visualize": true
+}
