@@ -295,7 +295,9 @@ def make_default_parser():
     # Save.
     group_save = parser.add_mutually_exclusive_group()
     group_save.add_argument(
-        "--save-data", action="store_true", help="Save data files to disk."
+        "--save-data",
+        action="store_true",
+        help="Save data files to disk. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
     )
     group_save.add_argument(
         "--no-save-data", action="store_true", help="Do not save data files to disk."
@@ -1130,7 +1132,8 @@ class MainWindow(QMainWindow):
         )
         self.register(self._points_per_coherence_length)
         simulationBoxLayout.addRow(
-            QLabel("Points per coherence length"), self._points_per_coherence_length,
+            QLabel("Points per coherence length"),
+            self._points_per_coherence_length,
         )
 
         # Number of Fermi momenta

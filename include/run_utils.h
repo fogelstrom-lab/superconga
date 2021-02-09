@@ -48,12 +48,15 @@ bool guiUserSaveData = false;
 
 inline std::string getFileExtension(Type::fileFormat format) {
   switch (format) {
-  case Type::binary:
+  case Type::binary: {
     return ".grd";
-  case Type::csv:
+  }
+  case Type::csv: {
     return ".csv";
-  default:
+  }
+  default: {
     return "";
+  }
   }
 }
 } // namespace internal
@@ -77,13 +80,14 @@ class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
 public:
   CSVIterationDataSaveStrategy() = default;
 
-  CSVIterationDataSaveStrategy(const std::string &delimiter,
-                               const int floatPrecision = 10)
-      : floatPrecision(floatPrecision), delimiter(delimiter) {}
+  CSVIterationDataSaveStrategy(const std::string &inDelimiter,
+                               const int inFloatPrecision = 10)
+      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
 
   bool save(const Context<T> *const inContext,
             const std::filesystem::path &inFilePath) override {
-
+    // Note, this class always appends data to the file. It never removes the
+    // file.
     if (!std::filesystem::exists(inFilePath)) {
       if (!appendHeader(inFilePath)) {
         return false;
@@ -93,14 +97,15 @@ public:
   }
 
 private:
-  const int floatPrecision = 10;
-  const std::string delimiter = ",";
+  const int m_floatPrecision = 10;
+  const std::string m_delimiter = ",";
 
   bool appendHeader(const std::filesystem::path &inFilePath) const {
     std::ostringstream oss;
-    oss << "iteration" << delimiter << "order_parameter_residual" << delimiter
-        << "free_energy_residual" << delimiter << "current_density_residual"
-        << delimiter << "vector_potential_residual" << delimiter
+    oss << "iteration" << m_delimiter << "order_parameter_residual"
+        << m_delimiter << "free_energy_residual" << m_delimiter
+        << "current_density_residual" << m_delimiter
+        << "vector_potential_residual" << m_delimiter
         << "free_energy_per_unit_area";
     return appendToFile(oss.str(), inFilePath);
   };
@@ -109,12 +114,12 @@ private:
                  const std::filesystem::path &inFilePath) const {
 
     std::ostringstream oss;
-    oss << inContext->getNumIterations() << delimiter
-        << inContext->getComputeOrderParameter()->getResidual() << delimiter
-        << inContext->getComputeFreeEnergy()->getResidual() << delimiter
-        << inContext->getComputeCurrent()->getResidual() << delimiter
-        << inContext->getComputeVectorPotential()->getResidual() << delimiter
-        << std::setprecision(floatPrecision)
+    oss << inContext->getNumIterations() << m_delimiter
+        << inContext->getComputeOrderParameter()->getResidual() << m_delimiter
+        << inContext->getComputeFreeEnergy()->getResidual() << m_delimiter
+        << inContext->getComputeCurrent()->getResidual() << m_delimiter
+        << inContext->getComputeVectorPotential()->getResidual() << m_delimiter
+        << std::setprecision(m_floatPrecision)
         << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
     return appendToFile(oss.str(), inFilePath);
   };
@@ -149,9 +154,9 @@ class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
 public:
   CSVGridDataSaveStrategy() = default;
 
-  CSVGridDataSaveStrategy(const std::string &delimiter,
-                          const int floatPrecision = 10)
-      : floatPrecision(floatPrecision), delimiter(delimiter) {}
+  CSVGridDataSaveStrategy(const std::string &inDelimiter,
+                          const int inFloatPrecision = 10)
+      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
 
   bool save(const GridGPU<T> *const inGridGPU,
             const std::vector<std::string> &inFieldTitles,
@@ -160,6 +165,9 @@ public:
     if (inFieldTitles.size() != inGridGPU->numFields()) {
       return false;
     }
+
+    // Remove the old file.
+    std::filesystem::remove(inFilePath);
 
     if (!std::filesystem::exists(inFilePath)) {
       if (!appendHeader(inFieldTitles, inGridGPU->isComplex(), inFilePath)) {
@@ -170,23 +178,23 @@ public:
   }
 
 private:
-  const int floatPrecision = 10;
-  const std::string delimiter = ",";
+  const int m_floatPrecision = 10;
+  const std::string m_delimiter = ",";
 
   bool appendHeader(const std::vector<std::string> &inColumnTitles,
                     const bool isComplex,
                     const std::filesystem::path &inFilePath) const {
     std::ostringstream oss;
-    oss << "x_idx" << delimiter << "y_idx" << delimiter;
+    oss << "x_idx" << m_delimiter << "y_idx" << m_delimiter;
     for (const auto &columnTitle : inColumnTitles) {
       oss << columnTitle;
 
       if (isComplex) {
-        oss << "_re" << delimiter << columnTitle << "_im";
+        oss << "_re" << m_delimiter << columnTitle << "_im";
       }
 
       if (columnTitle != inColumnTitles.back()) {
-        oss << delimiter;
+        oss << m_delimiter;
       }
     }
     return appendToFile(oss.str(), inFilePath);
@@ -216,11 +224,11 @@ private:
       for (int i = 0; i < dimX; ++i) {
         const int idx = j * dimX + i;
         std::ostringstream oss;
-        oss << i << delimiter << j << delimiter;
+        oss << i << m_delimiter << j << m_delimiter;
         for (auto &&fieldPtr : fieldPtrs) {
           oss << fieldPtr[idx];
           if (fieldPtr != fieldPtrs.back()) {
-            oss << delimiter;
+            oss << m_delimiter;
           }
         }
         if (!appendToFile(oss.str(), inFilePath)) {
@@ -617,7 +625,7 @@ template <typename T>
 void saveDataWrapper(
     const Context<T> *const inContext, const Json::Value &inJSON,
     const bool inVerbose,
-    const Type::fileFormat inGridDataSaveFormat = Type::binary,
+    const Type::fileFormat inGridDataSaveFormat = Type::csv,
     const Type::fileFormat inIterationDataSaveFormat = Type::csv) {
   // Construct full directory path.
   const std::filesystem::path dataBasePath(inJSON["data_path"].asString());
@@ -880,7 +888,7 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
                    const bool inSaveData = false,
                    const int inSaveDataInterval = 200,
                    const Json::Value &inJSON = {},
-                   const Type::fileFormat inGridDataSaveFormat = Type::binary) {
+                   const Type::fileFormat inGridDataSaveFormat = Type::csv) {
   Status status = Status::kContinue;
   bool quit = false;
 
