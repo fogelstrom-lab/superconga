@@ -367,9 +367,9 @@ template <typename T> void Context<T>::compute() {
     }
 
     // Compute the next order parameter and vector potential, but do not update.
-    m_optimizer->compute(*(m_computeOrderParameter->getOrderParameter()),
-                         *(m_computeVectorPotential->getResult()),
-                         *m_orderParameter, *m_inducedVectorPotential);
+    m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
+                         *(m_computeOrderParameter->getOrderParameter()),
+                         *(m_computeVectorPotential->getResult()));
 
     // Update the order parameter and vector potential.
     // TODO(niclas): Should we really update when we have reached convergence?
