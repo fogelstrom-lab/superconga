@@ -119,7 +119,11 @@ class Input(Serializable, QWidget, metaclass=QMeta):
         return self._jsonGroup
 
     def setValue(self, value):
-        self._input.setText(str(value))
+        # If value is None we want an empty string, not "None".
+        if value is None:
+            self._input.setText("")
+        else:
+            self._input.setText(str(value))
 
 
 class InputFloat(Input):
@@ -179,10 +183,19 @@ class InputInt(Input):
 
 class InputStr(Input):
     def __init__(
-        self, *, jsonKey, jsonGroup=None, errMsg="Invalid input!", parent=None
+        self,
+        *,
+        jsonKey,
+        jsonGroup=None,
+        validation=True,
+        errMsg="Invalid input!",
+        parent=None,
     ):
-        rx = QRegExp("^(?!\s*$).+")
-        validator = QRegExpValidator(rx)
+        if validation:
+            rx = QRegExp("^(?!\s*$).+")
+            validator = QRegExpValidator(rx)
+        else:
+            validator = None
         super().__init__(validator, jsonKey, jsonGroup, errMsg, parent)
 
     def json(self):
@@ -851,6 +864,20 @@ class runner_main_window(QMainWindow):
         self._data_path = InputStr(jsonKey="data_path")
         self.register(self._data_path)
         miscBoxLayout.addRow(QLabel("Data path"), self._data_path)
+
+        self._order_parameter_path = InputStr(
+            jsonKey="order_parameter_path", validation=False
+        )
+        self.register(self._order_parameter_path)
+        miscBoxLayout.addRow(QLabel("Order-parameter path"), self._order_parameter_path)
+
+        self._vector_potential_path = InputStr(
+            jsonKey="vector_potential_path", validation=False
+        )
+        self.register(self._vector_potential_path)
+        miscBoxLayout.addRow(
+            QLabel("Vector-potential path"), self._vector_potential_path
+        )
 
         # Save data
         self._save_data = CheckBox(jsonKey="save_data")

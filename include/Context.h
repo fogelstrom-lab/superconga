@@ -46,6 +46,17 @@ public:
     m_riccatiSolver = inRiccatiSolver;
   }
 
+  /// \brief Set the induced vector-potential.
+  ///
+  /// \param inInducedVectorPotential The induced vector-potential as a unique
+  /// pointer.
+  ///
+  /// \return Void.
+  // TODO(niclas): This is just grid. Perhaps too generic.
+  void set(std::unique_ptr<GridGPU<T>> &&inInducedVectorPotential) {
+    m_inducedVectorPotential = std::move(inInducedVectorPotential);
+  }
+
   /// \brief Set the optimizer.
   ///
   /// \param inOptimizer The optimizer as a unique pointer.
@@ -106,7 +117,7 @@ public:
   int getNumComputeObjects() const { return m_computeObjectList.size(); }
 
   GridGPU<T> *getInducedVectorPotential() const {
-    return m_inducedVectorPotential;
+    return m_inducedVectorPotential.get();
   }
 
   // Helpers
@@ -122,7 +133,7 @@ private:
   IntegrationIterator<T> *m_integrationIterator;
   FermiSurface<T> *m_fermiSurface;
 
-  GridGPU<T> *m_inducedVectorPotential;
+  std::unique_ptr<GridGPU<T>> m_inducedVectorPotential;
   std::unique_ptr<ComputeVectorPotential<T>> m_computeVectorPotential;
 
   // The optimizer. It is only used when computing the order parameter and/or
@@ -180,11 +191,6 @@ template <typename T> Context<T>::~Context() {
   if (m_fermiSurface) {
     delete m_fermiSurface;
     std::cout << "~Context(): Deleted FermiSurface\n";
-  }
-
-  if (m_inducedVectorPotential) {
-    delete m_inducedVectorPotential;
-    std::cout << "~Context(): Deleted vector potential\n";
   }
 
   deleteComputeObjects();
@@ -302,12 +308,15 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   // The induced vector potential.
   {
     std::cout << "Context::initialize() --> Initializing vector potential\n";
-    // Initialize the stored vector potential.
     const int gridResolution = m_parameters->getGridResolutionBase();
-    const int numSpatialDims = 2;
-    GridGPU<T>::initializeGrid(m_inducedVectorPotential, gridResolution,
-                               gridResolution, numSpatialDims, Type::real);
-    m_inducedVectorPotential->setZero();
+
+    if (!m_inducedVectorPotential.get()) {
+      // Initialize the stored vector potential.
+      const int numSpatialDims = 2;
+      m_inducedVectorPotential = std::make_unique<GridGPU<T>>(
+          gridResolution, gridResolution, numSpatialDims, Type::real);
+      m_inducedVectorPotential->setZero();
+    }
 
     // The physical side length of a lattice site.
     const T gridElementSize = m_parameters->getGridElementSize();

@@ -33,9 +33,11 @@
 #include "Type.h"                  // Custom types (real, complex, ...)
 #include "Visualization.h" // Live visualization of desired observables through OpenGL
 #include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
+#include "io/read_utils.h"
 #include "run_utils.h" // Commonly used functions in run files
 
 #include <cstdlib>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <json/json.h>
@@ -71,7 +73,7 @@ scg::Visualization<T> *gui;
 //*******************************************************
 int main(int argc, char *argv[]) {
   if (argc < 2) {
-    std::cerr << "Please provide config file.\n";
+    std::cerr << "-- Please provide config file." << std::endl;
     scg::run_utils::cleanup(context, gui);
     return 1;
   }
@@ -80,7 +82,8 @@ int main(int argc, char *argv[]) {
   // Check that provided config file actually exists and can be opened.
   std::ifstream ifile(filename);
   if (!ifile.good()) {
-    std::cerr << "Could not find/open parameter file: " << filename << "\n";
+    std::cerr << "-- Could not find/open parameter file '" << filename << "'."
+              << std::endl;
     scg::run_utils::cleanup(context, gui);
     return 1;
   }
@@ -93,6 +96,7 @@ int main(int argc, char *argv[]) {
     std::cout << errs << std::endl;
     return 1;
   }
+  std::cout << "-- Configuration parameters:" << std::endl;
   std::cout << simParams << std::endl;
 
   // TODO(niclas): Add sanity check of all parameters here!?
@@ -207,7 +211,7 @@ int main(int argc, char *argv[]) {
     } else if (symmetryStr == "g") {
       symmetry = scg::BasisFunctionSymmetry::GWAVE;
     } else {
-      std::cout << "Order parameter symmetry '" << symmetryStr
+      std::cerr << "-- Order parameter symmetry '" << symmetryStr
                 << "' not understood." << std::endl;
       scg::run_utils::cleanup(context, gui);
       return 1;
@@ -248,6 +252,46 @@ int main(int argc, char *argv[]) {
     orderParameter->add(orderParameterComponent);
   }
 
+  // Read the order parameter from file, if the path is not empty.
+  // TODO(niclas): This is a bit ugly perhaps. If the file contains data for a
+  // component, it is overwritten. If it does not, it is left untouched.
+  const std::string orderParameterFile =
+      std::filesystem::path(simParams["order_parameter_path"].asString());
+  if (!orderParameterFile.empty()) {
+    // Read the values from file.
+    const bool success =
+        scg::io::readOrderParameter(orderParameterFile, *orderParameter);
+
+    // Abort if not successful.
+    if (!success) {
+      scg::run_utils::cleanup(context, gui);
+      return 1;
+    }
+  }
+
+  //***************************************************
+  // SET INDUCED VECTOR-POTENTIAL
+  //***************************************************
+  // Read the vector potential from file, if the path is not empty.
+  const std::string vectorPotentialFile =
+      std::filesystem::path(simParams["vector_potential_path"].asString());
+  if (!vectorPotentialFile.empty()) {
+    // Create the placeholder grid.
+    const int gridResolution = parameters->getGridResolutionBase();
+    auto vectorPotential = std::make_unique<scg::GridGPU<T>>(
+        gridResolution, gridResolution, 2, scg::Type::real);
+
+    // Read the values from file.
+    const bool success = scg::io::readVectorPotential(vectorPotentialFile,
+                                                      *(vectorPotential.get()));
+
+    // Abort if not successful.
+    if (!success) {
+      scg::run_utils::cleanup(context, gui);
+      return 1;
+    }
+  }
+
   //***************************************************
   // CHOOSE FERMI SURFACE
   //***************************************************
@@ -279,8 +323,7 @@ int main(int argc, char *argv[]) {
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Order parameter compute object.
-  scg::ComputeOrderParameter<T> *computeOrderParameter =
-      new scg::ComputeOrderParameter<T>(context);
+  new scg::ComputeOrderParameter<T>(context);
   // Add current compute object.
   new scg::ComputeCurrent<T>(context);
   // Add free energy compute object.
