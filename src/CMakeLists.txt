@@ -10,11 +10,6 @@ get_filename_component(name ${SRC} NAME_WE)
 # Create command-line executable
 add_executable(${name} ${SRC})
 
-# Find BLAS and LAPACK
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-set(LAPACK_BLAS_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-
 # Include directories
 target_include_directories(
   ${name}
@@ -33,10 +28,10 @@ target_link_libraries(
           GLU
           gfortran
           jsoncpp_lib
-          ${LAPACK_BLAS_LIBRARIES})
+          ${LAPACK_LIBRARIES}
+          ${BLAS_LIBRARIES})
 
 # Use C++17 since it is the latest standard CUDA supports
-message(STATUS "Enable C++ standard: C++17")
 set_target_properties(${name} PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED
                                                           ON)
 set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED

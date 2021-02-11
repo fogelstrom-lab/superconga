@@ -14,10 +14,6 @@ if(NOT doctest_POPULATED)
   add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-set(LAPACK_BLAS_LIBRARIES ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-
 ###############################################################################
 # SOURCE FILES
 ###############################################################################
@@ -70,11 +66,11 @@ foreach(file ${SRC})
             GLU
             gfortran
             jsoncpp_lib
-            ${LAPACK_BLAS_LIBRARIES}
+            ${LAPACK_LIBRARIES}
+            ${BLAS_LIBRARIES}
             doctest::doctest)
 
   # Use C++17 since it is the lates standard CUDA supports
-  message(STATUS "Enable C++ standard: C++17")
   set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
                                            CUDA_STANDARD_REQUIRED ON)
   set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
