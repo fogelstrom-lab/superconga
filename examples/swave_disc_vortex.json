@@ -17,7 +17,7 @@
         "min_mixing": 1.0,
         "rank": 1,
         "replace_oldest": true,
-        "step_size": 2
+        "step_size": 2.0
     },
     "order_parameter": [
         {

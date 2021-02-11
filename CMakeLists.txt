@@ -38,6 +38,10 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+# Find BLAS and LAPACK
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+
 ###############################################################################
 # CUDA
 ###############################################################################
@@ -53,7 +57,7 @@ endif()
 # Fetch CUDA CMake-CUDA functionality. NOTE: FindCUDA is formally deprecated,
 # but no standalone alternative exists as of yet for automatic detection of
 # GPU architecture, so we use it.
-find_package(CUDA)
+find_package(CUDA REQUIRED)
 
 set(CUDA_ARCH
     ""

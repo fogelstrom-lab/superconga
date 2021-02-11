@@ -1,0 +1,76 @@
+{
+    "general": {
+        "data_path": "data/swave_abrikosov_square_vortex_lattice/T0.200000",
+        "gui": false
+    },
+    "current_density": {
+        "magnitude": {
+            "plot": true,
+            "colorbar_label": "$\\left|\\mathbf{j}\\right|/j_d$",
+            "colormap": "custom_red_1"
+        },
+        "x": {
+            "plot": true,
+            "colorbar_label": "$j_x/j_d$",
+            "colormap": "RdBu"
+        },
+        "y": {
+            "plot": true,
+            "colorbar_label": "$j_y/j_d$",
+            "colormap": "RdBu"
+        }
+    },
+    "magnetic_flux_density": {
+        "magnitude": {
+            "plot": true,
+            "colorbar_label": "$B_{\\mathrm{ind},z}/(\\Phi_0/\\xi_0^2)$",
+            "colormap": "RdBu"
+        }
+    },
+    "order_parameter": {
+        "magnitude": {
+            "plot": true,
+            "colorbar_label": "$\\left|\\Delta\\right|/k_{\\mathrm{B}}T_{\\mathrm{c}}$",
+            "colormap": "YlGnBu"
+        },
+        "phase": {
+            "plot": true,
+            "colorbar_label": "$\\chi/\\pi$",
+            "colormap": "twilight_shifted"
+        }
+    },
+    "superflow": {
+        "magnitude": {
+            "plot": false,
+            "colorbar_label": "$\\left|\\mathbf{p}_{\\mathrm{s}}\\right|/(k_{\\mathrm{B}}T_{\\mathrm{c}}/\\langle v_{\\mathrm{F}}\\rangle)$",
+            "colormap": "YlGnBu"
+        },
+        "x": {
+            "plot": false,
+            "colorbar_label": "$p_{\\mathrm{s,x}}/(k_{\\mathrm{B}}T_{\\mathrm{c}}/\\langle v_{\\mathrm{F}}\\rangle)|$",
+            "colormap": "RdBu"
+        },
+        "y": {
+            "plot": false,
+            "colorbar_label": "$p_{\\mathrm{s,y}}/(k_{\\mathrm{B}}T_{\\mathrm{c}}/\\langle v_{\\mathrm{F}}\\rangle)|$",
+            "colormap": "RdBu"
+        }
+    },
+    "vector_potential": {
+        "magnitude": {
+            "plot": true,
+            "colorbar_label": "$\\left|\\mathbf{A}\\right|/(\\Phi_0/\\xi_0)$",
+            "colormap": "YlGnBu"
+        },
+        "x": {
+            "plot": true,
+            "colorbar_label": "$A_x/(\\Phi_0/\\xi_0)$",
+            "colormap": "RdBu"
+        },
+        "y": {
+            "plot": true,
+            "colorbar_label": "$A_y/(\\Phi_0/\\xi_0)$",
+            "colormap": "RdBu"
+        }
+    }
+}
