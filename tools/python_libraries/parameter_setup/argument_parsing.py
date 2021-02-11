@@ -517,140 +517,51 @@ def add_plotter_arguments(parser) -> None:
 # HELPER FUNCTIONS
 # -----------------------------------------------------------------------------
 # Set value from command-line argument.
-# NOTE! list_idx starts on zero! Keep this in mind for multi-mode!
-# Defined behavior:
-# 1. group is set but not list_idx: value is set in a sub-dict sim_params[group] = {'key': value, ...}.
-# 2. group and list_idx are set: value is set in a list of dicts sim_params[group] = [{'key': value, ...}, {...}, ...].
-# 3. group is not set but list_dix is: undefined behavior. This exception is caught.
 def set_value(
-    sim_params: dict,
+    simparams: dict,
     key: str,
-    value: Union[int, float, list],
+    value: Union[dict, int, float, list],
     group: Optional[str] = None,
-    list_idx: Optional[int] = None,
 ) -> None:
     # If the value is None then it is not set in the command line arguments, so it should not be used.
     if value is not None:
         if group is None:
-            # Check for undefined behavior: list_idx should only be set when group is set.
-            if not list_idx is None:
-                print(
-                    "ERROR! in set_value() of argument_parsing.py! Undefined behavior: list_idx should only be set when group is set!"
-                )
-                sys.exit(1)
-
-            sim_params[key] = value
+            simparams[key] = value
         else:
-            # Create group if not existing.
-            if not (group in sim_params):
-                if list_idx is None:
-                    sim_params[group] = {}
+            if isinstance(value, list):
+                if group in simparams:
+                    # The group, e.g. 'order_parameter' already exists.
+                    # Check that the lengths of the lists agree.
+                    assert isinstance(simparams[group], list)
+                    assert len(value) == len(simparams[group])
+                    for i, elem in enumerate(value):
+                        # TODO(niclas): Add dummy value so one can only specify e.g. the second critical temperature.
+                        simparams[group][i][key] = elem
                 else:
-                    sim_params[group] = (list_idx + 1) * [{}]
+                    # The group, e.g. 'order_parameter' does not exist, so lets create a dict for every element of 'value'.
+                    tmp = []
+                    for elem in value:
+                        tmp.append({key: elem})
+                    simparams[group] = tmp
             else:
-                # Check if group exists but list does not (when list_idx is given).
-                if not list_idx is None:
-                    # Check that sim_params[group] is a list.
-                    if not isinstance(sim_params[group], list):
-                        print(
-                            "ERROR! in set_value() of argument_parsing.py! sim_params['%s'] should be a list but is '%s'!"
-                            % (group, type(sim_params[group]))
-                        )
-                        sys.exit(1)
-                    list_length = len(sim_params[group])
-
-                    # Check that existing elements are dicts.
-                    for l_idx in range(0, list_length):
-                        if not isinstance(sim_params[group][l_idx], dict):
-                            print(
-                                "ERROR! in set_value() of argument_parsing.py! sim_params['%s'] should be a list of dicts, but sim_params['%s'][%d] is '%s'!"
-                                % (group, group, l_idx, type(sim_params[group][l_idx]))
-                            )
-                            sys.exit(1)
-
-                    # Make sure that the number of elements in list is as least as long as list_idx, and that each element is an initialized dict.
-                    list_length = len(sim_params[group])
-                    if list_idx > (list_length - 1):
-                        for l_idx in range(list_length, list_idx + 1):
-                            sim_params[group].append({})
-
-            # Assign value to group.
-            if list_idx is None:
-                # Assign value to dict group.
-                sim_params[group][key] = value
-            else:
-                # Assign value to list of dicts.
-                sim_params[group][list_idx][key] = value
+                simparams[group][key] = value
 
 
 # Set value from command-line flag (on/off for true/false).
-# NOTE! list_idx starts on zero! Keep this in mind for multi-mode!
-# Defined behavior:
-# 1. group is set but not list_idx: value is set in a sub-dict sim_params[group] = {'key': value, ...}.
-# 2. group and list_idx are set: value is set in a list of dicts sim_params[group] = [{'key': value, ...}, {...}, ...].
-# 3. group is not set but list_dix is: undefined behavior. This exception is caught.
 def set_flag(
-    sim_params: dict,
+    simparams: dict,
     key: str,
     on: bool,
     off: bool,
     group: Optional[str] = None,
-    list_idx: Optional[int] = None,
 ) -> None:
     # The flags are mutually exclusive, so both cannot be true. If both are false then they have not been set in the command line arguments, and should therefore not be used.
     if on or off:
-        # Check if flag is to be added to a group.
+        # Off = True implies On = False and vice versa. So only the on value needs to be considered.
         if group is None:
-            # Check for undefined behavior: list_idx should only be set when group is set.
-            if not list_idx is None:
-                print(
-                    "ERROR! in set_flag() of argument_parsing.py! Undefined behavior: list_idx should only be set when group is set!"
-                )
-                sys.exit(1)
-
-            # Off = True implies On = False and vice versa. So only the on value needs to be considered.
-            sim_params[key] = on
+            simparams[key] = on
         else:
-            # Create group if not existing.
-            if not (group in sim_params):
-                if list_idx is None:
-                    sim_params[group] = {}
-                else:
-                    sim_params[group] = (list_idx + 1) * [{}]
-            else:
-                # Check if group exists but list does not (when list_idx is given).
-                if not list_idx is None:
-                    # Check that sim_params[group] is a list.
-                    if not isinstance(sim_params[group], list):
-                        print(
-                            "ERROR! in set_flag() of argument_parsing.py! sim_params['%s'] should be a list but is '%s'!"
-                            % (group, type(sim_params[group]))
-                        )
-                        sys.exit(1)
-                    list_length = len(sim_params[group])
-
-                    # Check that existing elements are dicts.
-                    for l_idx in range(0, list_length):
-                        if not isinstance(sim_params[group][l_idx], dict):
-                            print(
-                                "ERROR! in set_flag() of argument_parsing.py! sim_params['%s'] should be a list of dicts, but sim_params['%s'][%d] is '%s'!"
-                                % (group, group, l_idx, type(sim_params[group][l_idx]))
-                            )
-                            sys.exit(1)
-
-                    # Make sure that the number of elements in list is as least as long as list_idx, and that each element is an initialized dict.
-                    list_length = len(sim_params[group])
-                    if list_idx > (list_length - 1):
-                        for l_idx in range(list_length, list_idx + 1):
-                            sim_params[group].append({})
-
-            # Assign value to group.
-            if list_idx is None:
-                # Assign value to dict group.
-                sim_params[group][key] = on
-            else:
-                # Assign value to list of dicts.
-                sim_params[group][list_idx][key] = on
+            simparams[group][key] = on
 
 
 # -----------------------------------------------------------------------------
