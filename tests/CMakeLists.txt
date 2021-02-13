@@ -57,7 +57,7 @@ foreach(file ${SRC})
   target_include_directories(
     ${name}
     PRIVATE ${PROJECT_SOURCE_DIR}/include
-    SYSTEM ${PROJECT_SOURCE_DIR}/ext/armadillo/include)
+    SYSTEM ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
   # External libraries
   target_link_libraries(
     ${name}
