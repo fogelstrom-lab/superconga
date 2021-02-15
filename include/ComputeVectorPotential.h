@@ -345,6 +345,7 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
 
   // Clear filters.
   m_filters.clear();
+  m_positiveFilter.clear();
 
   // Construct the filter for C, which is trivial.
   if (std::abs(C) > 0.0) {
