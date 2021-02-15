@@ -14,7 +14,7 @@ add_executable(${name} ${SRC})
 target_include_directories(
   ${name}
   PRIVATE ${PROJECT_SOURCE_DIR}/include
-  SYSTEM ${PROJECT_SOURCE_DIR}/ext/armadillo/include)
+  SYSTEM ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
 
 # Build src binaries into build/bin/
 set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
