@@ -357,7 +357,7 @@ def add_runner_arguments(parser) -> None:
         "--save-data-interval",
         type=int,
         default=None,
-        help="How frequently to save data (every Nth iteration).",
+        help="How frequently to save data (every Nth iteration). Zero means not saving periodically.",
     )
 
     # Visualize.

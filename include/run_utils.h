@@ -610,9 +610,11 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 
   // Determine what to do.
   const bool quit = isConverged || patienceReached || internal::guiUserQuit;
-  const bool saveData = (internal::guiUserSaveData ||
-                         (numIterations % inSaveDataInterval == 0)) &&
-                        inSaveData;
+  const bool saveInterval = inSaveDataInterval > 0
+                                ? (numIterations % inSaveDataInterval == 0)
+                                : false;
+  const bool saveData =
+      (internal::guiUserSaveData || saveInterval) && inSaveData;
 
   // Set status.
   Status status;
