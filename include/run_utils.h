@@ -420,15 +420,34 @@ void saveDataWrapper(
 ///
 /// \return - void
 template <typename T> void printIterationStatus(Context<T> *inContext) {
+  // Get the number of iterations so far.
   const int numIterations = inContext->getNumIterations();
-  const T residual = inContext->getResidual();
-  const T freeEnergy =
-      inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
-  const T computeTime = inContext->getComputeTime();
 
-  std::cout << "Iteration = " << numIterations << ", Residual = " << residual
-            << ", Free Energy = " << freeEnergy
-            << ", Iteration time = " << computeTime << std::endl;
+  // Get the max residual.
+  const T maxResidual = inContext->getResidual();
+
+  // Get the computation time for this iteration.
+  const T computeTime = inContext->getComputeTime();
+  const T iterationsPerSecond = static_cast<T>(1) / computeTime;
+
+  // Get the free-energy computation object.
+  const ComputeFreeEnergy<T> *const computeFreeEnergy =
+      inContext->getComputeFreeEnergy();
+
+  if (computeFreeEnergy) {
+    // Get the free energy.
+    const T freeEnergy = computeFreeEnergy->getFreeEnergyPerUnitArea();
+
+    // Print values.
+    std::printf("Iteration = %d | Max Residual = %e | Free Energy = %f | "
+                "Iterations / Second = %f\n",
+                numIterations, maxResidual, freeEnergy, iterationsPerSecond);
+  } else {
+    // Print values.
+    std::printf(
+        "Iteration = %d | Max Residual = %e | Iterations / Second = %f\n",
+        numIterations, maxResidual, iterationsPerSecond);
+  }
 }
 
 /// \brief Create visualization object
