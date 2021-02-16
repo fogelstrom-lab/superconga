@@ -884,7 +884,7 @@ class runner_main_window(QMainWindow):
         self.register(self._save_data)
         miscBoxLayout.addRow(QLabel("Save data"), self._save_data)
 
-        # Save data interval
+        # Save data interval.
         self._save_data_interval = InputInt(jsonKey="save_data_interval")
         self.register(self._save_data_interval)
         miscBoxLayout.addRow(

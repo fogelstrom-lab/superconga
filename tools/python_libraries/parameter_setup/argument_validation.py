@@ -152,7 +152,7 @@ runner_checks = {
     },
     "penetration_depth": {"type": float},
     "save_data": {"type": bool},
-    "save_data_interval": {"type": int, "low": 0},
+    "save_data_interval": {"type": int},
     "solenoid": {"type": bool},
     "temperature": {"type": float, "low": 0.0},
     "verbose": {"type": bool},
