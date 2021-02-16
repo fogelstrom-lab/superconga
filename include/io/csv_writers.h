@@ -3,6 +3,7 @@
 
 #include "../Context.h"
 #include "../Grid.h"
+#include "../GridData.h"
 #include "../Type.h"
 #include <filesystem>
 #include <iostream>
@@ -21,7 +22,7 @@ namespace io {
 template <typename T> class IIterationDataSaveStrategy {
 public:
   virtual bool save(const Context<T> *const inContext,
-                    const std::filesystem::path &inFilePath) = 0;
+                    const std::filesystem::path &inFilePath) const = 0;
 
   virtual ~IIterationDataSaveStrategy() = default;
 };
@@ -29,14 +30,12 @@ public:
 template <typename T>
 class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
 public:
-  CSVIterationDataSaveStrategy() = default;
-
-  CSVIterationDataSaveStrategy(const std::string &inDelimiter,
+  CSVIterationDataSaveStrategy(const std::string &inDelimiter = ",",
                                const int inFloatPrecision = 10)
       : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
 
   bool save(const Context<T> *const inContext,
-            const std::filesystem::path &inFilePath) override {
+            const std::filesystem::path &inFilePath) const override {
     // Note, this class always appends data to the file. It never removes the
     // file.
     if (!std::filesystem::exists(inFilePath)) {
@@ -48,8 +47,8 @@ public:
   }
 
 private:
-  const int m_floatPrecision = 10;
-  const std::string m_delimiter = ",";
+  const int m_floatPrecision;
+  const std::string m_delimiter;
 
   bool appendHeader(const std::filesystem::path &inFilePath) const {
     std::ostringstream oss;
@@ -93,9 +92,13 @@ private:
 /// or different type of info to be stored).
 template <typename T> class ITextGridDataSaveStrategy {
 public:
-  virtual bool save(const GridGPU<T> *const inGridGPU,
+  virtual bool save(const GridGPU<T> &inGrid,
                     const std::vector<std::string> &inFieldTitles,
-                    const std::filesystem::path &inFilePath) = 0;
+                    const std::filesystem::path &inFilePath) const = 0;
+
+  virtual bool save(const GridCPU<T> &inGrid,
+                    const std::vector<std::string> &inFieldTitles,
+                    const std::filesystem::path &inFilePath) const = 0;
 
   virtual ~ITextGridDataSaveStrategy() = default;
 };
@@ -103,17 +106,36 @@ public:
 template <typename T>
 class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
 public:
-  CSVGridDataSaveStrategy() = default;
-
-  CSVGridDataSaveStrategy(const std::string &inDelimiter,
+  CSVGridDataSaveStrategy(const bool inWriteIndices = true,
+                          const std::string &inDelimiter = ",",
                           const int inFloatPrecision = 10)
-      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
+      : m_writeIndices(inWriteIndices), m_delimiter(inDelimiter),
+        m_floatPrecision(inFloatPrecision) {}
 
-  bool save(const GridGPU<T> *const inGridGPU,
+  bool save(const GridGPU<T> &inGrid,
             const std::vector<std::string> &inFieldTitles,
-            const std::filesystem::path &inFilePath) override {
+            const std::filesystem::path &inFilePath) const override {
+    const bool success = saveInternal(inGrid, inFieldTitles, inFilePath);
+    return success;
+  }
 
-    if (inFieldTitles.size() != inGridGPU->numFields()) {
+  bool save(const GridCPU<T> &inGrid,
+            const std::vector<std::string> &inFieldTitles,
+            const std::filesystem::path &inFilePath) const override {
+    const bool success = saveInternal(inGrid, inFieldTitles, inFilePath);
+    return success;
+  }
+
+private:
+  const std::string m_delimiter;
+  const bool m_writeIndices;
+  const int m_floatPrecision;
+
+  template <class Device>
+  bool saveInternal(const GridData<T, Device> &inGrid,
+                    const std::vector<std::string> &inFieldTitles,
+                    const std::filesystem::path &inFilePath) const {
+    if (inFieldTitles.size() != inGrid.numFields()) {
       return false;
     }
 
@@ -121,22 +143,20 @@ public:
     std::filesystem::remove(inFilePath);
 
     if (!std::filesystem::exists(inFilePath)) {
-      if (!appendHeader(inFieldTitles, inGridGPU->isComplex(), inFilePath)) {
+      if (!appendHeader(inFieldTitles, inGrid.isComplex(), inFilePath)) {
         return false;
       };
     }
-    return appendData(inGridGPU, inFilePath);
+    return appendData(inGrid, inFilePath);
   }
-
-private:
-  const int m_floatPrecision = 10;
-  const std::string m_delimiter = ",";
 
   bool appendHeader(const std::vector<std::string> &inColumnTitles,
                     const bool isComplex,
                     const std::filesystem::path &inFilePath) const {
     std::ostringstream oss;
-    oss << "x_idx" << m_delimiter << "y_idx" << m_delimiter;
+    if (m_writeIndices) {
+      oss << "x_idx" << m_delimiter << "y_idx" << m_delimiter;
+    }
     for (const auto &columnTitle : inColumnTitles) {
       oss << columnTitle;
 
@@ -151,31 +171,34 @@ private:
     return appendToFile(oss.str(), inFilePath);
   };
 
-  bool appendData(const GridGPU<T> *const inGridGPU,
+  template <class Device>
+  bool appendData(const GridData<T, Device> &inGrid,
                   const std::filesystem::path &inFilePath) const {
-    const thrust::host_vector<T> gridData = inGridGPU->getVector();
+    const thrust::host_vector<T> gridData = inGrid.getVector();
     const T *data = thrust::raw_pointer_cast(gridData.data());
 
-    const bool isComplex = inGridGPU->isComplex();
-    const int numFields = inGridGPU->numFields();
+    const bool isComplex = inGrid.isComplex();
+    const int numFields = inGrid.numFields();
     std::vector<const T *> fieldPtrs;
     fieldPtrs.reserve(numFields * (1 + int(isComplex)));
     for (int f = 0; f < numFields; ++f) {
       fieldPtrs.emplace_back(data +
-                             inGridGPU->getFieldComponentOffset(f, Type::real));
+                             inGrid.getFieldComponentOffset(f, Type::real));
       if (isComplex) {
-        fieldPtrs.emplace_back(
-            data + inGridGPU->getFieldComponentOffset(f, Type::imag));
+        fieldPtrs.emplace_back(data +
+                               inGrid.getFieldComponentOffset(f, Type::imag));
       }
     }
 
-    const int dimX = inGridGPU->dimX();
-    const int dimY = inGridGPU->dimY();
+    const int dimX = inGrid.dimX();
+    const int dimY = inGrid.dimY();
     for (int j = 0; j < dimY; ++j) {
       for (int i = 0; i < dimX; ++i) {
         const int idx = j * dimX + i;
         std::ostringstream oss;
-        oss << i << m_delimiter << j << m_delimiter;
+        if (m_writeIndices) {
+          oss << i << m_delimiter << j << m_delimiter;
+        }
         for (auto &&fieldPtr : fieldPtrs) {
           oss << fieldPtr[idx];
           if (fieldPtr != fieldPtrs.back()) {

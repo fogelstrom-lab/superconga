@@ -1,6 +1,6 @@
 {
     "general": {
-        "data_path": "data/swave_disc_abrikosov/T0.500000",
+        "data_path": "data/dwave_octagon/T0.500000",
         "gui": false
     },
     "current_density": {

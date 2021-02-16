@@ -3,6 +3,7 @@
 
 #include "../Type.h"
 #include "csv_writers.h"
+#include <json/json.h>
 #include <memory>
 #include <string>
 
@@ -54,6 +55,26 @@ getTextGridDataSaver(const Type::fileFormat format) {
     return std::make_unique<CSVGridDataSaveStrategy<T>>();
   }
   return nullptr;
+}
+
+/// \brief Save JSON to file.
+///
+/// \param inJSON JSON object with parameter values.
+/// \param inFile Full path and filename of file to save.
+/// \param inVerbose Whether or not to print when file is written.
+///
+/// \return Void.
+inline void writeJSON(const Json::Value &inJSON,
+                      const std::filesystem::path &inFile,
+                      const bool inVerbose = false) {
+
+  std::ofstream ofstreamJSON(inFile);
+  const int indentation = 4;
+  ofstreamJSON << std::setw(indentation) << inJSON << std::endl;
+
+  if (inVerbose) {
+    std::cout << "-- Wrote: " << inFile << std::endl;
+  }
 }
 } // namespace io
 } // namespace scg

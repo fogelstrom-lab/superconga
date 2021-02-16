@@ -174,10 +174,9 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
   context->initialize();
 
-  const bool visualize = false;
-  scg::run_utils::runSimulation(
-      context, visualize, simParams::PRINT_ITERATION_STATUS,
-      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
+  scg::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
+                                simParams::NUM_ITERATIONS_MIN,
+                                simParams::NUM_ITERATIONS_MAX);
 
   // Fetch the grain-summed current-density magnitude
   const scg::GridGPU<T> currentDensity =

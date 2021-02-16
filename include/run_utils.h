@@ -73,26 +73,6 @@ inline void myKeyboardFunc(const unsigned char inKey, const int inX,
   }
 }
 
-/// \brief Save simulation parameters to JSON file.
-///
-/// \param inJSON - JSON object with parameter values.
-/// \param inFile - Full path and filename of file to save.
-/// \param inVerbose - Whether or not to print when file is written.
-///
-/// \return - void
-inline void saveParameterFileJSON(const Json::Value &inJSON,
-                                  const std::filesystem::path &inFile,
-                                  const bool inVerbose = false) {
-
-  std::ofstream ofstreamJSON(inFile);
-  const int indentation = 4;
-  ofstreamJSON << std::setw(indentation) << inJSON << std::endl;
-
-  if (inVerbose) {
-    std::cout << "Wrote parameters to JSON file: " << inFile << std::endl;
-  }
-}
-
 /// \brief Save config params, internal params, and results to JSON files.
 ///
 /// This function saves three json files: one for config parameters, one for
@@ -133,7 +113,7 @@ void saveParametersWrapper(
       inDataPath / (inResultsFileName + ".json");
 
   // Save config parameters to JSON file.
-  saveParameterFileJSON(inJSON, fullPathConfigJSON, inVerbose);
+  io::writeJSON(inJSON, fullPathConfigJSON, inVerbose);
 
   // Number of lattice sites in grain.
   const int numGrainLatticeSites =
@@ -151,7 +131,7 @@ void saveParametersWrapper(
       static_cast<T>(numGrainLatticeSites);
 
   // Save various results to JSON file.
-  saveParameterFileJSON(resultsJSON, fullPathResultsJSON, inVerbose);
+  io::writeJSON(resultsJSON, fullPathResultsJSON, inVerbose);
 
   // Internal parameters useful for post-processing.
   Json::Value internalParamJSON;
@@ -168,8 +148,7 @@ void saveParametersWrapper(
       numLatticeSitesPerSide * numLatticeSitesPerSide;
 
   // Save internal parameters to JSON file.
-  saveParameterFileJSON(internalParamJSON, fullPathInternalParamsJSON,
-                        inVerbose);
+  io::writeJSON(internalParamJSON, fullPathInternalParamsJSON, inVerbose);
 }
 
 /// \brief Save convergence status (residuals vs iteration) to file.
@@ -238,12 +217,12 @@ void saveGridData(
   const std::string extension = io::getFileExtension(inGridDataSaveFormat);
 
   // Fetch order parameter.
-  GridGPU<T> *const orderParameterSave =
-      inContext->getComputeOrderParameter()->getResult();
+  GridGPU<T> &orderParameterSave =
+      *(inContext->getComputeOrderParameter()->getResult());
 
   // Set order parameter to zero outside simulation domain (non-zero values are
   // used for interpolation).
-  inContext->getGeometry()->zeroValuesOutsideDomainRef(orderParameterSave);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&orderParameterSave);
 
   // Construct full file name for order-parameter file.
   const std::filesystem::path orderParameterFile =
@@ -252,7 +231,7 @@ void saveGridData(
   // Try to save to file. Exit program if fail.
   bool success = false;
   if (inGridDataSaveFormat == Type::binary) {
-    success = orderParameterSave->write(orderParameterFile, parameters) == 0;
+    success = orderParameterSave.write(orderParameterFile, parameters) == 0;
   } else {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
@@ -274,11 +253,11 @@ void saveGridData(
   }
 
   // Fetch current density.
-  GridGPU<T> *const currentSave = inContext->getComputeCurrent()->getResult();
+  GridGPU<T> &currentSave = *(inContext->getComputeCurrent()->getResult());
 
   // Set current density to zero outside simulation domain (non-zero values
   // are used for interpolation).
-  inContext->getGeometry()->zeroValuesOutsideDomainRef(currentSave);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&currentSave);
 
   // Construct full file name for current density.
   const std::filesystem::path currentDensityFile =
@@ -287,7 +266,7 @@ void saveGridData(
   // Try to save to file. Exit program if fail.
   success = false;
   if (inGridDataSaveFormat == Type::binary) {
-    success = currentSave->write(currentDensityFile, parameters) == 0;
+    success = currentSave.write(currentDensityFile, parameters) == 0;
   } else {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
@@ -308,8 +287,8 @@ void saveGridData(
   }
 
   // Fetch the vector potential.
-  const GridGPU<T> *const vectorPotentialSave =
-      inContext->getInducedVectorPotential();
+  const GridGPU<T> &vectorPotentialSave =
+      *(inContext->getInducedVectorPotential());
 
   // Construct full file name for vector potential
   const std::filesystem::path vectorPotentialFile =
@@ -318,7 +297,7 @@ void saveGridData(
   // Try to save to file. Exit program if fail.
   success = false;
   if (inGridDataSaveFormat == Type::binary) {
-    success = vectorPotentialSave->write(vectorPotentialFile, parameters) == 0;
+    success = vectorPotentialSave.write(vectorPotentialFile, parameters) == 0;
   } else {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
@@ -343,7 +322,7 @@ void saveGridData(
 
   // The magnetic flux-density is simply the curl of the vector potential.
   const GridGPU<T> magneticFluxDensitySave =
-      vectorPotentialSave->curl(latticeSpacing);
+      vectorPotentialSave.curl(latticeSpacing);
 
   // Construct full file name.
   const std::filesystem::path fluxDensityFile =
@@ -359,7 +338,7 @@ void saveGridData(
 
     success =
         bool(textDataSaver) &&
-        textDataSaver->save(&magneticFluxDensitySave, {"b_z"}, fluxDensityFile);
+        textDataSaver->save(magneticFluxDensitySave, {"b_z"}, fluxDensityFile);
   }
   if (!success) {
     std::cout << "Could not save induced flux-density to file: "
@@ -655,10 +634,10 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 /// Wrapper for running the simulation until convergence.
 ///
 /// \param inOutContext - Context object for simulation.
-/// \param inVisualize - Run with graphics or in terminal mode.
 /// \param inPrintStatus - Print iteration status to terminal or not.
 /// \param inNumIterationsMin - The minimum number of iterations.
 /// \param inNumIterationsMax - The maximum number of iterations.
+/// \param inVisualize - Run with graphics or in terminal mode.
 /// \param inSaveData - Whether to save data or not.
 /// \param inSaveDataInterval - How frequently to save data.
 /// \param inGridDataSaveFormat - Enum specifying which format to save the
@@ -667,12 +646,12 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 ///
 /// \return - void.
 template <typename T>
-void runSimulation(Context<T> *inOutContext, const bool inVisualize,
-                   const bool inPrintStatus = true,
-                   const int inNumIterationsMin = 100,
+void runSimulation(Context<T> *inOutContext, const bool inPrintStatus = true,
+                   const int inNumIterationsMin = 1,
                    const int inNumIterationsMax = 1000,
+                   const bool inVisualize = false,
                    const bool inSaveData = false,
-                   const int inSaveDataInterval = 200,
+                   const int inSaveDataInterval = 0,
                    const Json::Value &inJSON = {},
                    const Type::fileFormat inGridDataSaveFormat = Type::csv) {
   Status status = Status::kContinue;
@@ -728,7 +707,7 @@ void runSimulation(Context<T> *inOutContext, const bool inVisualize,
 ///
 /// \return - void.
 template <typename T>
-void cleanup(Context<T> *inContext, Visualization<T> *inGUI = NULL) {
+void cleanup(Context<T> *inContext, Visualization<T> *inGUI = nullptr) {
   std::cout << "Cleaning up..." << std::endl;
   delete inGUI;
   delete inContext;
