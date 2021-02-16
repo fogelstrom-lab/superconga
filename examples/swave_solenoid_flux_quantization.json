@@ -33,6 +33,8 @@
   "save_data_interval": 200,
   "solenoid": true,
   "temperature": 0.5,
+  "order_parameter_path": null,
+  "vector_potential_path": null,
   "verbose": true,
   "visualize": true
 }

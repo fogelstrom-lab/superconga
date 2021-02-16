@@ -17,6 +17,8 @@
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "Type.h" // Custom types (real, complex, ...)
 #include "Visualization.h"
+#include "io/csv_writers.h"
+#include "io/write_utils.h"
 
 #include <chrono>
 #include <cmath>
@@ -45,245 +47,9 @@ namespace internal {
 // Constant used to check if user presses 'q' or 's' in the GUI to quit or save.
 bool guiUserQuit = false;
 bool guiUserSaveData = false;
-
-inline std::string getFileExtension(Type::fileFormat format) {
-  switch (format) {
-  case Type::binary: {
-    return ".grd";
-  }
-  case Type::csv: {
-    return ".csv";
-  }
-  default: {
-    return "";
-  }
-  }
-}
 } // namespace internal
 
-//===------------------------------ Classes ------------------------------===//
-/// \brief Interface for saving per-iteration data
-///
-/// Interface for a class which encapsulates data saving on a per-iteration
-/// basis. Should be implemented for each save strategy (e.g. new save format,
-/// or different type of info to be stored).
-template <typename T> class IIterationDataSaveStrategy {
-public:
-  virtual bool save(const Context<T> *const inContext,
-                    const std::filesystem::path &inFilePath) = 0;
-
-  virtual ~IIterationDataSaveStrategy() = default;
-};
-
-template <typename T>
-class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
-public:
-  CSVIterationDataSaveStrategy() = default;
-
-  CSVIterationDataSaveStrategy(const std::string &inDelimiter,
-                               const int inFloatPrecision = 10)
-      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
-
-  bool save(const Context<T> *const inContext,
-            const std::filesystem::path &inFilePath) override {
-    // Note, this class always appends data to the file. It never removes the
-    // file.
-    if (!std::filesystem::exists(inFilePath)) {
-      if (!appendHeader(inFilePath)) {
-        return false;
-      };
-    }
-    return appendRow(inContext, inFilePath);
-  }
-
-private:
-  const int m_floatPrecision = 10;
-  const std::string m_delimiter = ",";
-
-  bool appendHeader(const std::filesystem::path &inFilePath) const {
-    std::ostringstream oss;
-    oss << "iteration" << m_delimiter << "order_parameter_residual"
-        << m_delimiter << "free_energy_residual" << m_delimiter
-        << "current_density_residual" << m_delimiter
-        << "vector_potential_residual" << m_delimiter
-        << "free_energy_per_unit_area";
-    return appendToFile(oss.str(), inFilePath);
-  };
-
-  bool appendRow(const Context<T> *const inContext,
-                 const std::filesystem::path &inFilePath) const {
-
-    std::ostringstream oss;
-    oss << inContext->getNumIterations() << m_delimiter
-        << inContext->getComputeOrderParameter()->getResidual() << m_delimiter
-        << inContext->getComputeFreeEnergy()->getResidual() << m_delimiter
-        << inContext->getComputeCurrent()->getResidual() << m_delimiter
-        << inContext->getComputeVectorPotential()->getResidual() << m_delimiter
-        << std::setprecision(m_floatPrecision)
-        << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
-    return appendToFile(oss.str(), inFilePath);
-  };
-
-  bool appendToFile(const std::string &inLine,
-                    std::filesystem::path inFilePath) const {
-    std::ofstream outFile(inFilePath, std::ios_base::app);
-    if (!outFile.good()) {
-      return false;
-    }
-    outFile << inLine << std::endl;
-    return true;
-  }
-};
-
-/// \brief Interface for saving GridGPU data type in textual format
-///
-/// Interface for a class which encapsulates saving GridGPU instances.
-/// Should be implemented for each save strategy (e.g. new save format,
-/// or different type of info to be stored).
-template <typename T> class ITextGridDataSaveStrategy {
-public:
-  virtual bool save(const GridGPU<T> *const inGridGPU,
-                    const std::vector<std::string> &inFieldTitles,
-                    const std::filesystem::path &inFilePath) = 0;
-
-  virtual ~ITextGridDataSaveStrategy() = default;
-};
-
-template <typename T>
-class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
-public:
-  CSVGridDataSaveStrategy() = default;
-
-  CSVGridDataSaveStrategy(const std::string &inDelimiter,
-                          const int inFloatPrecision = 10)
-      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
-
-  bool save(const GridGPU<T> *const inGridGPU,
-            const std::vector<std::string> &inFieldTitles,
-            const std::filesystem::path &inFilePath) override {
-
-    if (inFieldTitles.size() != inGridGPU->numFields()) {
-      return false;
-    }
-
-    // Remove the old file.
-    std::filesystem::remove(inFilePath);
-
-    if (!std::filesystem::exists(inFilePath)) {
-      if (!appendHeader(inFieldTitles, inGridGPU->isComplex(), inFilePath)) {
-        return false;
-      };
-    }
-    return appendData(inGridGPU, inFilePath);
-  }
-
-private:
-  const int m_floatPrecision = 10;
-  const std::string m_delimiter = ",";
-
-  bool appendHeader(const std::vector<std::string> &inColumnTitles,
-                    const bool isComplex,
-                    const std::filesystem::path &inFilePath) const {
-    std::ostringstream oss;
-    oss << "x_idx" << m_delimiter << "y_idx" << m_delimiter;
-    for (const auto &columnTitle : inColumnTitles) {
-      oss << columnTitle;
-
-      if (isComplex) {
-        oss << "_re" << m_delimiter << columnTitle << "_im";
-      }
-
-      if (columnTitle != inColumnTitles.back()) {
-        oss << m_delimiter;
-      }
-    }
-    return appendToFile(oss.str(), inFilePath);
-  };
-
-  bool appendData(const GridGPU<T> *const inGridGPU,
-                  const std::filesystem::path &inFilePath) const {
-    const thrust::host_vector<T> gridData = *(inGridGPU->getVector());
-    const T *data = thrust::raw_pointer_cast(gridData.data());
-
-    const bool isComplex = inGridGPU->isComplex();
-    const int numFields = inGridGPU->numFields();
-    std::vector<const T *> fieldPtrs;
-    fieldPtrs.reserve(numFields * (1 + int(isComplex)));
-    for (int f = 0; f < numFields; ++f) {
-      fieldPtrs.emplace_back(data +
-                             inGridGPU->getFieldComponentOffset(f, Type::real));
-      if (isComplex) {
-        fieldPtrs.emplace_back(
-            data + inGridGPU->getFieldComponentOffset(f, Type::imag));
-      }
-    }
-
-    const int dimX = inGridGPU->dimX();
-    const int dimY = inGridGPU->dimY();
-    for (int j = 0; j < dimY; ++j) {
-      for (int i = 0; i < dimX; ++i) {
-        const int idx = j * dimX + i;
-        std::ostringstream oss;
-        oss << i << m_delimiter << j << m_delimiter;
-        for (auto &&fieldPtr : fieldPtrs) {
-          oss << fieldPtr[idx];
-          if (fieldPtr != fieldPtrs.back()) {
-            oss << m_delimiter;
-          }
-        }
-        if (!appendToFile(oss.str(), inFilePath)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  bool appendToFile(const std::string &inLine,
-                    std::filesystem::path inFilePath) const {
-    std::ofstream outFile(inFilePath, std::ios_base::app);
-    if (!outFile.good()) {
-      return false;
-    }
-    outFile << inLine << std::endl;
-    return true;
-  }
-};
-
 //===----------------------------- Functions -----------------------------===//
-/// \brief Get IIterationDataSaveStrategy<T>* for concrete implementation
-///
-/// Return a pointer to the singleton instace of the interface implementation.
-/// The implementation should be stateless in order to be used safely this way.
-///
-/// \param format - save format enum (see Type::fileFormat).
-///
-/// \return - IIterationDataSaveStrategy<T>*
-template <typename T>
-std::unique_ptr<IIterationDataSaveStrategy<T>>
-getIterationDataSaver(const Type::fileFormat format) {
-  if (format == Type::csv) {
-    return std::make_unique<CSVIterationDataSaveStrategy<T>>();
-  }
-  return nullptr;
-}
-
-/// \brief Get ITextGridDataSaveStrategy<T>* for concrete implementation
-///
-/// Return a pointer to the singleton instace of the interface implementation.
-/// The implementation should be stateless in order to be used safely this way.
-///
-/// \param format - save format enum (see Type::fileFormat).
-///
-/// \return - ITextGridDataSaveStrategy<T>*
-template <typename T>
-std::unique_ptr<ITextGridDataSaveStrategy<T>>
-getTextGridDataSaver(const Type::fileFormat format) {
-  if (format == Type::csv) {
-    return std::make_unique<CSVGridDataSaveStrategy<T>>();
-  }
-  return nullptr;
-}
 
 /// \brief Detect OpenGL key presses
 ///
@@ -424,10 +190,10 @@ void saveConvergenceStatus(
     const std::string &inDataFileName = "convergence") {
   const std::filesystem::path convergenceFile =
       inDataPath /
-      (inDataFileName + internal::getFileExtension(inIterationDataSaveFormat));
+      (inDataFileName + io::getFileExtension(inIterationDataSaveFormat));
 
-  std::unique_ptr<IIterationDataSaveStrategy<T>> iterationDataSaver =
-      getIterationDataSaver<T>(inIterationDataSaveFormat);
+  std::unique_ptr<io::IIterationDataSaveStrategy<T>> iterationDataSaver =
+      io::getIterationDataSaver<T>(inIterationDataSaveFormat);
 
   if (iterationDataSaver &&
       iterationDataSaver->save(inContext, convergenceFile)) {
@@ -469,8 +235,7 @@ void saveGridData(
   Parameters<T> *parameters = inContext->getParameters();
 
   // Set file extension.
-  const std::string extension =
-      internal::getFileExtension(inGridDataSaveFormat);
+  const std::string extension = io::getFileExtension(inGridDataSaveFormat);
 
   // Fetch order parameter.
   GridGPU<T> *const orderParameterSave =
@@ -489,8 +254,8 @@ void saveGridData(
   if (inGridDataSaveFormat == Type::binary) {
     success = orderParameterSave->write(orderParameterFile, parameters) == 0;
   } else {
-    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
-        getTextGridDataSaver<T>(inGridDataSaveFormat);
+    std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
+        io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
     success = bool(textDataSaver) &&
               textDataSaver->save(orderParameterSave,
@@ -524,8 +289,8 @@ void saveGridData(
   if (inGridDataSaveFormat == Type::binary) {
     success = currentSave->write(currentDensityFile, parameters) == 0;
   } else {
-    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
-        getTextGridDataSaver<T>(inGridDataSaveFormat);
+    std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
+        io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
     success =
         bool(textDataSaver) &&
@@ -555,8 +320,8 @@ void saveGridData(
   if (inGridDataSaveFormat == Type::binary) {
     success = vectorPotentialSave->write(vectorPotentialFile, parameters) == 0;
   } else {
-    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
-        getTextGridDataSaver<T>(inGridDataSaveFormat);
+    std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
+        io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
     success = bool(textDataSaver) &&
               textDataSaver->save(vectorPotentialSave, {"a_x", "a_y"},
@@ -589,8 +354,8 @@ void saveGridData(
   if (inGridDataSaveFormat == Type::binary) {
     success = magneticFluxDensitySave.write(fluxDensityFile, parameters) == 0;
   } else {
-    std::unique_ptr<ITextGridDataSaveStrategy<T>> textDataSaver =
-        getTextGridDataSaver<T>(inGridDataSaveFormat);
+    std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
+        io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
     success =
         bool(textDataSaver) &&

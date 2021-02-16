@@ -72,6 +72,20 @@ def add_runner_arguments(parser) -> None:
         help="Path to the C++ binary.",
     )
 
+    parser.add_argument(
+        "--op-path",
+        type=str,
+        default=None,
+        help="Path to order-parameter file. The simulation will start from this order parameter.",
+    )
+
+    parser.add_argument(
+        "--vp-path",
+        type=str,
+        default=None,
+        help="Path to vector-potential file. The simulation will start from this vector potential.",
+    )
+
     # =============== PHYSICS =============== #
 
     # Symmetry.
@@ -645,6 +659,9 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "temperature", args.temperature)
     set_flag(sim_params, "verbose", args.verbose, args.quiet)
     set_flag(sim_params, "visualize", args.visualize, args.no_visualize)
+
+    set_value(sim_params, "order_parameter_path", args.op_path)
+    set_value(sim_params, "vector_potential_path", args.vp_path)
 
 
 # Plotter: Override json dictionary with command-line input.
