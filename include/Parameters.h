@@ -34,7 +34,9 @@ public:
   int getGridResolutionDeltaRotated() const { return m_numGridCoherence; }
 
   T getGrainWidth() const { return m_grainWidth; }
-  T getGridElementSize() const { return m_gridElementSize; }
+  T getGridElementSize() const {
+    return static_cast<T>(1) / m_pointsPerCoherenceLength;
+  }
   T getGrainFraction() const { return m_grainFraction; }
   int getAngularResolution() const { return m_numAngles; }
   T getAngleIncrement() const;
@@ -123,9 +125,6 @@ private:
   // The number of lattice points per coherence length.
   T m_pointsPerCoherenceLength;
 
-  // Width of one grid element.
-  T m_gridElementSize;
-
   // The fraction of the simulation lattice maximally used for the grain.
   T m_grainFraction;
 
@@ -179,8 +178,8 @@ private:
 
 template <typename T>
 Parameters<T>::Parameters(Context<T> *const inOutContext)
-    : m_grainWidth(static_cast<T>(5)),
-      m_pointsPerCoherenceLength(static_cast<T>(20)), m_numAngles(64),
+    : m_grainWidth(static_cast<T>(20)),
+      m_pointsPerCoherenceLength(static_cast<T>(5)), m_numAngles(64),
       m_energyCutoff(static_cast<T>(10)), m_temperature(static_cast<T>(0.5)),
       m_magneticFieldStrength(static_cast<T>(0)),
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
@@ -239,7 +238,6 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
   m_grainFraction = inOther.m_grainFraction;
   m_grainWidth = inOther.m_grainWidth;
   m_pointsPerCoherenceLength = inOther.m_pointsPerCoherenceLength;
-  m_gridElementSize = inOther.m_gridElementSize;
 
   m_numGridBase = inOther.m_numGridBase;
   m_numGridCoherence = inOther.m_numGridCoherence;
@@ -298,22 +296,21 @@ void Parameters<T>::setPointsPerCoherenceLength(
 template <typename T>
 void Parameters<T>::setLatticeResolution(const T inGrainWidth,
                                          const T inPointsPerCoherenceLength) {
-  // The number lattice points required for the grain itself, excluding safety
-  // margin.
-  const int numPointsGrain =
-      static_cast<int>(std::round(inGrainWidth * inPointsPerCoherenceLength));
+  // The fractional number of lattice points required for the grain itself,
+  // excluding safety margin.
+  const T fracPointsGrain = inGrainWidth * inPointsPerCoherenceLength;
 
   // The total number of required points, including safety margin.
-  const int numPointsTotal = numPointsGrain + 2 * constants::GRAIN_SIZE_MARGIN;
+  const int numPointsTotal = static_cast<int>(std::ceil(fracPointsGrain)) +
+                             2 * constants::GRAIN_SIZE_MARGIN;
 
   // The fraction of points for the grain.
-  m_grainFraction =
-      static_cast<T>(numPointsGrain) / static_cast<T>(numPointsTotal);
+  m_grainFraction = fracPointsGrain / static_cast<T>(numPointsTotal);
 
-  // The side length of a lattice site.
-  m_gridElementSize = inGrainWidth / static_cast<T>(numPointsGrain);
-
+  // Set the number of points per side in the simulation.
   m_numGridBase = numPointsTotal;
+
+  // Set the number of points per side with rotational margin.
   m_numGridCoherence = computeGridResolutionRotated(numPointsTotal);
 }
 
@@ -386,7 +383,8 @@ int Parameters<T>::computeGridResolutionRotated(const int inNumGridBase) const {
 template <typename T> void Parameters<T>::print() const {
   std::cout << "Grain Resolution Base: " << m_numGridBase << std::endl;
   std::cout << "Grain Width: " << m_grainWidth << std::endl;
-  std::cout << "Grain Element Size: " << m_gridElementSize << std::endl;
+  std::cout << "Points per coherence length: " << m_pointsPerCoherenceLength
+            << std::endl;
   std::cout << "Angular Resolution: " << m_numAngles << std::endl;
   std::cout << "Temperature: " << m_temperature << std::endl;
   std::cout << "Magnetic Field Strength: " << m_magneticFieldStrength
