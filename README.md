@@ -13,30 +13,41 @@ The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics
 For detailed instructions on installation and compilation, see: [https://suprcongpu.gitlab.io/suprcongpu-doc/install.html](https://suprcongpu.gitlab.io/suprcongpu-doc/install.html)
 
 
-## Basic usage
-The code is most easily run via its Python(3) front-end, either in terminal mode
-```python
-python suprcongpu.py
-```
-or with a GUI
-```python
-python suprcongpu.py --gui
-```
-It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the s-wave Abrikosov example:
-```python
-python suprcongpu.py --gui --file examples/swave_abrikosov_vortex_lattice.json
-```
-These example files can easily be copied/modified with a text editor or the GUI, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
-```python
-python suprcongpu.py --help
-```
-or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
-
-
 ## Documentation
 A user manual with tutorials, examples and additional information can be found in the official documentation: [https://suprcongpu.gitlab.io/suprcongpu-doc/](https://suprcongpu.gitlab.io/suprcongpu-doc/)
 
 This documentation is built from the following development repository: [https://gitlab.com/suprcongpu/suprcongpu-doc](https://gitlab.com/suprcongpu/suprcongpu-doc)
+
+
+## Basic usage
+The code is most easily run via its Python(3) front-end, either in terminal mode
+```shell
+python suprcongpu.py
+```
+or with a GUI
+```shell
+python suprcongpu.py --gui
+```
+It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the s-wave Abrikosov example:
+```shell
+python suprcongpu.py --gui --file examples/swave_abrikosov_mesoscopic_vortex_lattice.json
+```
+These example files can easily be copied/modified with a text editor or the GUI, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
+```shell
+python suprcongpu.py --help
+```
+or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
+
+## Data post-processing and visualization
+Simulation data can be saved to file by running the program with the `--save-data` flag
+```shell
+python suprcongpu.py --save-data --file examples/swave_abrikosov_mesoscopic_vortex_lattice.json
+```
+This saves data in the path specified by the `"data_path"` option in the .json-file (which can also be overriden via command-line with the argument `--data-path`). Whatever data path was used, will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. tabular Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/swave_abrikosov_mesoscopic_vortex_lattice/T0.200000/`, use the `--data-path` argument:
+```shell
+python plotter.py --data-path data/swave_abrikosov_mesoscopic_vortex_lattice/T0.200000
+```
+To see further usage instructions, run `python plotter.py --help`, or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
 
 
 ## Contribute
