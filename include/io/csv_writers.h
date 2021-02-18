@@ -153,7 +153,7 @@ private:
 
   bool appendData(const GridGPU<T> *const inGridGPU,
                   const std::filesystem::path &inFilePath) const {
-    const thrust::host_vector<T> gridData = *(inGridGPU->getVector());
+    const thrust::host_vector<T> gridData = inGridGPU->getVector();
     const T *data = thrust::raw_pointer_cast(gridData.data());
 
     const bool isComplex = inGridGPU->isComplex();

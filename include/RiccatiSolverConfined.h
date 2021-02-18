@@ -39,16 +39,20 @@ public:
 };
 
 namespace internal {
+// TODO(niclas): Put parameters in order (in, inout, out).
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionTemplate_new_kernel(
     const T h, const T fermiSpeed, const int N, const int Ne,
     const int energyIdx_offset, const int idx_x_min, const int idx_x_max,
     const int idx_y_min, const int idx_y_max, const int angleIdx, const T B,
-    T *energies_re, T *energies_im, T *energy_shift, T *gamma_real,
-    T *gamma_imag, T *delta_real, T *delta_imag, char *domainLabel,
-    T *domainNormals_x, T *domainNormals_y, T *boundaryDistance,
-    int *idx_in_gamma, int *idx_out_gamma, T *bnd_in_gamma_real,
-    T *bnd_in_gamma_imag, T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
+    const T *const energies_re, const T *const energies_im,
+    const T *const energy_shift, T *gamma_real, T *gamma_imag,
+    const T *const delta_real, const T *const delta_imag,
+    const char *const domainLabel, const T *const domainNormals_x,
+    const T *const domainNormals_y, const T *const boundaryDistance,
+    const int *const idx_in_gamma, const int *const idx_out_gamma,
+    const T *const bnd_in_gamma_real, const T *const bnd_in_gamma_imag,
+    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
   const int x =
       blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;   // x-coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y; // energy coordinate
@@ -162,15 +166,20 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 /////////////////////////////////////////////
 ////////////////////////////////////////////
 ////////////////////////////////////////////
+// TODO(niclas): This function does not need all of these input parameters!
 template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const T h, const int N, const int Ne, const int energyIdx_offset,
-    const int idx_x_offset, const int angleIdx, const T B, T *energies_re,
-    T *energies_im, T *energy_shift, T *gamma_real, T *gamma_imag,
-    T *delta_real, T *delta_imag, char *domainLabel, T *domainNormals_x,
-    T *domainNormals_y, T *boundaryDistance, int *idx_in_gamma,
-    int *idx_out_gamma, T *bnd_in_gamma_real, T *bnd_in_gamma_imag,
-    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
+    const int idx_x_offset, const int angleIdx, const T B,
+    const T *const energies_re, const T *const energies_im,
+    const T *const energy_shift, const T *const gamma_real,
+    const T *const gamma_imag, const T *const delta_real,
+    const T *const delta_imag, const char *const domainLabel,
+    const T *const domainNormals_x, const T *const domainNormals_y,
+    const T *const boundaryDistance, const int *const idx_in_gamma,
+    const int *const idx_out_gamma, const T *const bnd_in_gamma_real,
+    const T *const bnd_in_gamma_imag, T *bnd_out_gamma_real,
+    T *bnd_out_gamma_imag) {
   const int x =
       blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset; // x-coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;  // energy coordinate

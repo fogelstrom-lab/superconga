@@ -14,20 +14,20 @@ template <typename T, template <typename> class GREENS>
 struct GreensFunctionStatic {
   // Greens function functions
   static void computeGreens(GridGPU<T> *result,
-                            const ParameterIterator<int> *iter,
-                            const GridGPU<T> *gamma,
-                            const GridGPU<T> *gammabar);
+                            const ParameterIterator<int> *const iter,
+                            const GridGPU<T> *const gamma,
+                            const GridGPU<T> *const gammabar);
 
   static void computeGreensSumEnergy(GridGPU<T> *result,
-                                     const ParameterIterator<int> *iter,
-                                     const GridGPU<T> *gamma,
-                                     const GridGPU<T> *gammabar);
+                                     const ParameterIterator<int> *const iter,
+                                     const GridGPU<T> *const gamma,
+                                     const GridGPU<T> *const gammabar);
 
   static void computeGreensSumEnergy(GridGPU<T> *result,
-                                     const ParameterIterator<int> *iter,
-                                     const GridGPU<T> *summandFactor,
-                                     const GridGPU<T> *gamma,
-                                     const GridGPU<T> *gammabar);
+                                     const ParameterIterator<int> *const iter,
+                                     const GridGPU<T> *const summandFactor,
+                                     const GridGPU<T> *const gamma,
+                                     const GridGPU<T> *const gammabar);
 
   // Helper functions
   static void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
@@ -36,9 +36,10 @@ struct GreensFunctionStatic {
 
 namespace internal {
 template <typename T, template <typename> class GREENS>
-__global__ void computeGreens_kernel(const int N, T *greens_re, T *greens_im,
-                                     T *gamma_re, T *gamma_im, T *gammabar_re,
-                                     T *gammabar_im) {
+__global__ void
+computeGreens_kernel(const int N, T *greens_re, T *greens_im,
+                     const T *const gamma_re, const T *const gamma_im,
+                     const T *const gammabar_re, const T *const gammabar_im) {
   const int x = blockIdx.x * blockDim.x + threadIdx.x; // x index
   const int y = blockIdx.y * blockDim.y + threadIdx.y; // y index
   const int e_idx = blockIdx.z;                        // energy index
@@ -59,8 +60,10 @@ __global__ void computeGreens_kernel(const int N, T *greens_re, T *greens_im,
 template <typename T, template <typename> class GREENS>
 __global__ void computeGreensSumEnergy_kernel(const int N, const int Ne,
                                               T *greens_re, T *greens_im,
-                                              T *gamma_re, T *gamma_im,
-                                              T *gammabar_re, T *gammabar_im) {
+                                              const T *const gamma_re,
+                                              const T *const gamma_im,
+                                              const T *const gammabar_re,
+                                              const T *const gammabar_im) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
@@ -90,10 +93,10 @@ __global__ void computeGreensSumEnergy_kernel(const int N, const int Ne,
 }
 
 template <typename T, template <typename> class GREENS>
-__global__ void
-computeGreensSumEnergy_kernel(const int N, const int Ne, const T *summandFactor,
-                              T *greens_re, T *greens_im, T *gamma_re,
-                              T *gamma_im, T *gammabar_re, T *gammabar_im) {
+__global__ void computeGreensSumEnergy_kernel(
+    const int N, const int Ne, const T *const summandFactor, T *greens_re,
+    T *greens_im, const T *const gamma_re, const T *const gamma_im,
+    const T *const gammabar_re, const T *const gammabar_im) {
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
@@ -169,9 +172,9 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
 // Compute greens function for all energies and integrate (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
-    GridGPU<T> *result, const ParameterIterator<int> *iter,
-    const GridGPU<T> *summandFactor, const GridGPU<T> *gamma,
-    const GridGPU<T> *gammabar) {
+    GridGPU<T> *result, const ParameterIterator<int> *const iter,
+    const GridGPU<T> *const summandFactor, const GridGPU<T> *const gamma,
+    const GridGPU<T> *const gammabar) {
   int numEnergies = iter->getNumInterval();
 
   dim3 bpg, tpb;

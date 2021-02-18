@@ -322,9 +322,9 @@ __global__ void geomOpRemove_kernel(char *dom0, char *dom1, const int Nx) {
 // real valued.
 template <typename T>
 __global__ void extendValuesAtBoundary_kernel( // complex
-    char *dom_ptr, T *grid_real, T *grid_imag, int Nx_geom, int Ny_geom,
-    int Nx_target, int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
-    const int numExtend) {
+    const char *const dom_ptr, T *grid_real, T *grid_imag, int Nx_geom,
+    int Ny_geom, int Nx_target, int Ny_target, int Nx_geom_offset,
+    int Ny_geom_offset, const int numExtend) {
   int tx = blockIdx.x * blockDim.x + threadIdx.x;
   int ty = blockIdx.y * blockDim.y + threadIdx.y;
   int tf = blockIdx.z;
@@ -371,8 +371,8 @@ __global__ void extendValuesAtBoundary_kernel( // complex
 
 template <typename T>
 __global__ void extendValuesAtBoundary_kernel( // real
-    char *dom_ptr, T *grid_real, int Nx_geom, int Ny_geom, int Nx_target,
-    int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
+    const char *const dom_ptr, T *grid_real, int Nx_geom, int Ny_geom,
+    int Nx_target, int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
     const int numExtend) {
   int tx = blockIdx.x * blockDim.x + threadIdx.x;
   int ty = blockIdx.y * blockDim.y + threadIdx.y;
@@ -745,7 +745,7 @@ int GeometryGroup<T>::computeNumGrainLatticeSites(
   const int numY = inDomainLabels.dimY();
 
   // Copy the domain to the CPU.
-  const thrust::host_vector<char> domainCPU = *(inDomainLabels.getVector());
+  const thrust::host_vector<char> domainCPU = inDomainLabels.getVector();
 
   // Get the Pointer.
   const char *const domainPtr = thrust::raw_pointer_cast(domainCPU.data());
@@ -788,7 +788,7 @@ cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
   const T angle = static_cast<T>(0);
   create(angle);
 
-  VectorCPU<T> vec_cpu = *(_domainLabels->getVector());
+  VectorCPU<T> vec_cpu = _domainLabels->getVector();
   GridCPU<T> data_cpu = *data;
 
   const int complex = data->isComplex();

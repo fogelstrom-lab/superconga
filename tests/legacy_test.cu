@@ -139,7 +139,7 @@ void computeVectorPotential(scg::GridGPU<T> &inOutVectorPotential,
   const int N = inOutVectorPotential.dimX();
 
   // Get the thrust-vector from the domain labels, and copy to the CPU.
-  const thrust::host_vector<char> domainLabelsCPU = *inDomainLabels.getVector();
+  const thrust::host_vector<char> domainLabelsCPU = inDomainLabels.getVector();
   const char *const domainLabelsPtr =
       thrust::raw_pointer_cast(domainLabelsCPU.data());
 

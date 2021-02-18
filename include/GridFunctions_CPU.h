@@ -246,7 +246,7 @@ template <typename T>
 template <typename T2>
 void GridFunctions<T, thrust::host_vector<T>>::typeConvert(
     GridData<T2, thrust::device_vector<T2>> &other) const {
-  *(other.getVector()) = *(grid->getVector());
+  other.getVector() = grid->getVector();
 }
 
 template <typename T>
@@ -659,9 +659,7 @@ void GridFunctions<T, thrust::host_vector<T>>::resample(const int nx_new,
     }
   }
 
-  // Free old vector and reassign
-  delete grid->_data;
-  grid->_data = vec_tmp;
+  grid->m_vector = vec_tmp;
 
   // Change affected class member variables
   grid->_dimX = nx_new;
@@ -675,17 +673,13 @@ template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::minmax(
     const GridData<T, thrust::host_vector<T>> &grid, T &minv, T &maxv,
     int field, Type::type part) {
-  thrust::host_vector<T> &vec = *(grid.getVector());
+  const thrust::host_vector<T> &vec = grid.getVector();
 
-  size_t start = grid.getFieldComponentOffset(field, part);
-  size_t end = start + grid.dimX() * grid.dimY();
+  const size_t start = grid.getFieldComponentOffset(field, part);
+  const size_t end = start + grid.dimX() * grid.dimY();
 
-  typedef typename thrust::detail::normal_iterator<T *> iter;
-
-  iter begin = vec.begin();
-
-  thrust::pair<iter, iter> result =
-      thrust::minmax_element(begin + start, begin + end);
+  const auto result =
+      thrust::minmax_element(vec.begin() + start, vec.begin() + end);
 
   minv = *result.first;
   maxv = *result.second;
