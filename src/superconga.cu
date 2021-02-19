@@ -139,6 +139,20 @@ int main(int argc, char *argv[]) {
   const int chargeSign = simParams["physics"]["charge_sign"].asInt();
   parameters->setChargeSign(chargeSign);
 
+  // Set which norm to use when computing residuals.
+  const std::string residualNorm(simParams["accuracy"]["norm"].asString());
+  if (residualNorm == "L1") {
+    parameters->setResidualNormType(conga::ResidualNorm::L1);
+  } else if (residualNorm == "L2") {
+    parameters->setResidualNormType(conga::ResidualNorm::L2);
+  } else if (residualNorm == "LInf") {
+    parameters->setResidualNormType(conga::ResidualNorm::LInf);
+  } else {
+    std::cerr << "-- ERROR! Norm type, " << residualNorm << ", not understod"
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
   //***************************************************
   // CREATE GEOMETRY
   //***************************************************

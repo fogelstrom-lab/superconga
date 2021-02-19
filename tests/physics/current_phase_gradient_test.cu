@@ -41,6 +41,7 @@ template <typename T> void testPhaseGradient() {
   const T phaseWinding = static_cast<T>(1);
   const T numFluxQuanta = static_cast<T>(0);
   const int chargeSign = -1;
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
 
   // Create context.
   conga::Context<T> context;
@@ -55,6 +56,7 @@ template <typename T> void testPhaseGradient() {
   parameters->setEnergyCutoff(energyCutoff);
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setChargeSign(chargeSign);
+  parameters->setResidualNormType(normType);
 
   // Create disc geometry.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

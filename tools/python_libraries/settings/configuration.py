@@ -25,6 +25,7 @@ from typing import Optional, Union
 # -----------------------------------------------------------------------------
 # Valid order parameter symmetries.
 valid_symmetries = ["s", "dx2-y2", "dxy", "g"]
+valid_norms = ["L1", "L2", "LInf"]
 valid_accelerators = [
     "Adaptive-Ball",
     "AB",

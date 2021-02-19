@@ -99,11 +99,12 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   parameters->setGrainWidth(grainWidth);
   parameters->setPointsPerCoherenceLength(static_cast<T>(5));
   parameters->setAngularResolution(16);
-  parameters->setConvergenceCriterion(static_cast<T>(1e-5));
+  parameters->setConvergenceCriterion(static_cast<T>(1e-3));
   parameters->setTemperature(static_cast<T>(0.1));
   parameters->setEnergyCutoff(static_cast<T>(16));
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
+  parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();

@@ -178,7 +178,9 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     }
 
     // Compute residual.
-    const T residual = computeResidual(ldosIntervalOld, *m_ldosInterval);
+    const ResidualNorm normType = C::getParameters()->getResidualNormType();
+    const T residual =
+        computeResidual(ldosIntervalOld, *m_ldosInterval, normType);
     ComputeProperty<T>::setResidual(residual);
 
     // Check convergence.

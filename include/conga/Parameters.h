@@ -13,6 +13,7 @@
 #define CONGA_PARAMETERS_H_
 
 #include "ContextModule.h"
+#include "compute/ComputeResidual.h"
 #include "defines.h"
 #include "utils.h"
 
@@ -61,6 +62,8 @@ public:
   T getNumFluxQuanta() const { return m_numFluxQuanta; }
   int getChargeSign() const { return m_chargeSign; }
 
+  ResidualNorm getResidualNormType() const { return m_residualNormType; }
+
   T getConvergenceCriterion() const { return m_convergenceCriterion; }
 
   T getEnergyCutoff() const { return m_energyCutoff; }
@@ -100,6 +103,10 @@ public:
 
   void setChargeSign(const int inChargeSign) {
     m_chargeSign = utils::sign(inChargeSign);
+  }
+
+  void setResidualNormType(const ResidualNorm inNormType) {
+    m_residualNormType = inNormType;
   }
 
   void setEnergyRange(const T inEnergyMin, const T inEnergyMax,
@@ -160,6 +167,9 @@ private:
 
   // The sign of the carrier charge.
   int m_chargeSign;
+
+  // The norm to use when computing residuals.
+  ResidualNorm m_residualNormType;
 
   // The number of Ozaki energies.
   T m_numOzakiEnergies;
@@ -271,7 +281,8 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
       m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
       m_smearingFactor(static_cast<T>(0.05)), m_numOzakiEnergies(1),
-      m_penetrationDepth(-static_cast<T>(1)) {
+      m_penetrationDepth(-static_cast<T>(1)),
+      m_residualNormType(ResidualNorm::L2) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
   setLatticeResolution(m_grainWidth, m_pointsPerCoherenceLength);

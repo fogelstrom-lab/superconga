@@ -13,45 +13,79 @@
 #ifndef CONGA_COMPUTE_RESIDUAL_H_
 #define CONGA_COMPUTE_RESIDUAL_H_
 
-#include "../grid.h"
+#include "../grid/GridData.h"
 
+#include <cassert>
 #include <cmath>
+#include <limits>
 
 namespace conga {
-namespace compute_residual_internal {
-template <typename T> T getGoodEpsilon(const int inNumElements) {
-  // This is taken from a hat... we need something though.
-  const T epsilon = static_cast<T>(1e-4) * static_cast<T>(inNumElements);
-  return epsilon;
+namespace internal {
+/// \brief Compute the residual as numer / max(denom, epsilon).
+///
+/// \param inNumer The numerator.
+/// \param inDenom The denominator.
+///
+/// \return The residual.
+template <typename T>
+inline T computeResidual(const T inNumer, const T inDenom) {
+  // What epsilon should be is up for debate.
+  const T epsilon = static_cast<T>(1e-4);
+  return inNumer / std::max(inDenom, epsilon);
 }
-} // namespace compute_residual_internal
+} // namespace internal
 
-template <typename T> T computeResidual(const T inOld, const T inNew) {
-  const int numElements = 1;
-  const T epsilon = compute_residual_internal::getGoodEpsilon<T>(numElements);
-  return std::abs(inNew - inOld) / std::max(std::abs(inOld), epsilon);
+/// \brief Enum class for residual norm.
+enum class ResidualNorm { L1, L2, LInf };
+
+/// \brief Compute the residual given old and new values.
+///
+/// \param inOld The old value.
+/// \param inNew The new value.
+///
+/// \return The residual.
+template <typename T> inline T computeResidual(const T inOld, const T inNew) {
+  const T numer = std::abs(inOld - inNew);
+  const T denom = std::abs(inOld);
+  return internal::computeResidual(numer, denom);
 }
 
-template <typename T, typename DEV>
-T computeResidual(const GridData<T, DEV> &inOld,
-                  const GridData<T, DEV> &inNew) {
-  if (inOld != inNew) {
-#ifndef NDEBUG
-    std::cout << "computeResidual: Error: Grids have different "
-                 "dimensions.\n";
-#endif
-    // TODO(niclas): Raise exception instead!?
-    return static_cast<T>(1e6);
+/// \brief Compute the residual given old and new values.
+///
+/// \param inOld The old values.
+/// \param inNew The new values.
+/// \param inNormType The which norm to use.
+///
+/// \return The residual.
+template <typename T, typename Device>
+inline T computeResidual(const GridData<T, Device> &inOld,
+                         const GridData<T, Device> &inNew,
+                         const ResidualNorm inNormType) {
+  // Sanity check.
+  assert(inOld.numElements() == inNew.numElements());
+  assert(inOld.isComplex() == inNew.isComplex());
+
+  // Compute.
+  T numer = static_cast<T>(0);
+  T denom = static_cast<T>(0);
+  switch (inNormType) {
+  case ResidualNorm::L1: {
+    numer = (inOld - inNew).L1Norm();
+    denom = inOld.L1Norm();
+    break;
   }
-
-  const T diff = (inOld - inNew).L2Norm();
-  const T old = inOld.L2Norm();
-
-  const int numElements = inOld.numElements();
-  const T epsilon = compute_residual_internal::getGoodEpsilon<T>(numElements);
-
-  // We are interested in the relative error, hence the division.
-  return diff / std::max(old, epsilon);
+  case ResidualNorm::L2: {
+    numer = (inOld - inNew).L2Norm();
+    denom = inOld.L2Norm();
+    break;
+  }
+  case ResidualNorm::LInf: {
+    numer = (inOld - inNew).LInfNorm();
+    denom = inOld.LInfNorm();
+    break;
+  }
+  }
+  return internal::computeResidual(numer, denom);
 }
 } // namespace conga
 

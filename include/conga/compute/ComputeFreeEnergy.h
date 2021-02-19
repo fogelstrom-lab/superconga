@@ -379,18 +379,10 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     // Set residual and convergence.
     const T residual =
         computeResidual(m_freeEnergyPerUnitArea, totalFreeEnergyPerUnitArea);
+    ComputeProperty<T>::setResidual(residual);
     const bool isConverged =
         residual < C::getParameters()->getConvergenceCriterion();
     ComputeProperty<T>::setConverged(isConverged);
-    const int iterationIdx = ContextModule<T>::getContext()->getNumIterations();
-    if (iterationIdx > 0) {
-      ComputeProperty<T>::setResidual(residual);
-    } else {
-      // If this is the first iteration the residual is massive. Which to the
-      // user, probably indicates that something is really wrong. So lets set
-      // the residual to zero, but to non-converged.
-      ComputeProperty<T>::setResidual(static_cast<T>(0));
-    }
 
     // Update member variables.
     m_freeEnergy = totalFreeEnergy;

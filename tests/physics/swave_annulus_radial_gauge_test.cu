@@ -367,11 +367,12 @@ template <typename T> void testSWaveAnnulusRadial() {
   const T grainWidth = static_cast<T>(2) * R;
   const T pointsPerCoherenceLength = static_cast<T>(6.2);
   const int numMomenta = 32;
-  const T convergenceCriterion = static_cast<T>(1e-5);
+  const T convergenceCriterion = static_cast<T>(1e-4);
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
   const T stepSize = static_cast<T>(1);
   const T vectorPotentialError = static_cast<T>(1e-3);
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
 
   // Create context.
   conga::Context<T> context;
@@ -387,6 +388,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
   parameters->setChargeSign(chargeSign);
+  parameters->setResidualNormType(normType);
 
   // Create annulus geometry.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

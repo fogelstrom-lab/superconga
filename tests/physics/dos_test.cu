@@ -96,6 +96,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
                              static_cast<T>(simParams::ENERGY_MAX),
                              simParams::NUM_ENERGIES,
                              static_cast<T>(simParams::ENERGY_SMEARING));
+  parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
@@ -216,14 +217,14 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
 TEST_CASE("Test DOS - s-wave (float)") {
   const float tolerance = 1e-5f;
-  const float convergenceCriterion = 1e-6f;
+  const float convergenceCriterion = 1e-4f;
   const bool useSwave = true;
   helper::testDensityOfStates<float>(tolerance, useSwave, convergenceCriterion);
 }
 
 TEST_CASE("Test DOS - s-wave (double)") {
   const double tolerance = 1e-8;
-  const double convergenceCriterion = 1e-10;
+  const double convergenceCriterion = 1e-8;
   const bool useSwave = true;
   helper::testDensityOfStates<double>(tolerance, useSwave,
                                       convergenceCriterion);
@@ -233,14 +234,14 @@ TEST_CASE("Test DOS - s-wave (double)") {
 
 TEST_CASE("Test DOS - d-wave (float)") {
   const float tolerance = 1e-5f;
-  const float convergenceCriterion = 1e-6f;
+  const float convergenceCriterion = 1e-4f;
   const bool useSwave = false;
   helper::testDensityOfStates<float>(tolerance, useSwave, convergenceCriterion);
 }
 
 TEST_CASE("Test DOS - d-wave (double)") {
   const double tolerance = 1e-8;
-  const double convergenceCriterion = 1e-10;
+  const double convergenceCriterion = 1e-8;
   const bool useSwave = false;
   helper::testDensityOfStates<double>(tolerance, useSwave,
                                       convergenceCriterion);

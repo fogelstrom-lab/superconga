@@ -270,12 +270,12 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
 
   conga::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
 
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
   const T residual =
-      conga::computeResidual(vectorPotential, expVectorPotential);
+      conga::computeResidual(vectorPotential, expVectorPotential, normType);
 
   // Compare results.
-  const T expResidual = static_cast<T>(0);
-  CHECK(residual == doctest::Approx(expResidual).epsilon(inTolerance));
+  CHECK(residual < inTolerance);
 }
 } // namespace helper
 
@@ -320,7 +320,7 @@ TEST_CASE("Test legacy::computeOrderParameterBulkSWave<double>") {
 // ================== Test computeVectorPotential ================== //
 
 TEST_CASE("Test legacy::testComputeVectorPotential<float>") {
-  const float tolerance = 1e-6F;
+  const float tolerance = 1e-5F;
   helper::testComputeVectorPotential(tolerance);
 }
 
