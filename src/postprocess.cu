@@ -380,7 +380,7 @@ int main(int argc, char *argv[]) {
     const scg::Type::fileFormat dataFormat = scg::Type::csv;
     const std::string extension = scg::io::getFileExtension(dataFormat);
 
-    // Save DOS.
+    // Save the DOS.
     {
       // Create CSV writer.
       const bool writeIndices = false;
@@ -402,21 +402,20 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // Save zero-energy LDOS.
+    // Save the LDOS.
     {
       // Create CSV writer.
       const scg::io::CSVGridDataSaveStrategy<T> writer;
 
       // Create filename.
       const std::filesystem::path ldosFileName =
-          dataPath / ("ldos_min_energy" + extension);
+          dataPath / ("ldos" + extension);
 
-      // Get the LDOS corresponding to the lowest energy.
-      const scg::GridGPU<T> &ldosMinEnergy =
-          (*(context.getComputeLDOS()->getResult()))[0];
+      // Get the LDOS.
+      const scg::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
 
       // Write data.
-      const bool success = writer.save(ldosMinEnergy, {"ldos"}, ldosFileName);
+      const bool success = writer.save(ldos, {"ldos"}, ldosFileName);
 
       if (!success) {
         std::cout << "-- ERROR! Could not save: " << ldosFileName << std::endl;

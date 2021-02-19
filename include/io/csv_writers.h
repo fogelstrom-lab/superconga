@@ -135,27 +135,45 @@ private:
   bool saveInternal(const GridData<T, Device> &inGrid,
                     const std::vector<std::string> &inFieldTitles,
                     const std::filesystem::path &inFilePath) const {
+    bool fieldsAsIndex = false;
     if (inFieldTitles.size() != inGrid.numFields()) {
-      return false;
+      if (inFieldTitles.size() == 1) {
+        // If one field title is provided, put the fields in the grid as a third
+        // dimension.
+        fieldsAsIndex = true;
+      } else {
+        // Otherwise, this does not make sense.
+        return false;
+      }
     }
 
     // Remove the old file.
     std::filesystem::remove(inFilePath);
 
-    if (!std::filesystem::exists(inFilePath)) {
-      if (!appendHeader(inFieldTitles, inGrid.isComplex(), inFilePath)) {
-        return false;
-      };
+    // If it still exists, something has gone wrong.
+    if (std::filesystem::exists(inFilePath)) {
+      return false;
     }
-    return appendData(inGrid, inFilePath);
+
+    if (!appendHeader(inFieldTitles, inGrid.isComplex(), inFilePath,
+                      fieldsAsIndex)) {
+      return false;
+    }
+
+    return appendData(inGrid, inFilePath, fieldsAsIndex);
   }
 
   bool appendHeader(const std::vector<std::string> &inColumnTitles,
                     const bool isComplex,
-                    const std::filesystem::path &inFilePath) const {
+                    const std::filesystem::path &inFilePath,
+                    const bool inFieldsAsIndex) const {
     std::ostringstream oss;
     if (m_writeIndices) {
       oss << "x_idx" << m_delimiter << "y_idx" << m_delimiter;
+      if (inFieldsAsIndex) {
+        // TODO(niclas): Should this be called "e_idx" for all grids?
+        oss << "e_idx" << m_delimiter;
+      }
     }
     for (const auto &columnTitle : inColumnTitles) {
       oss << columnTitle;
@@ -173,43 +191,97 @@ private:
 
   template <class Device>
   bool appendData(const GridData<T, Device> &inGrid,
-                  const std::filesystem::path &inFilePath) const {
+                  const std::filesystem::path &inFilePath,
+                  const bool inFieldsAsIndex) const {
     const thrust::host_vector<T> &gridData = inGrid.getVector();
     const T *data = thrust::raw_pointer_cast(gridData.data());
 
     const bool isComplex = inGrid.isComplex();
     const int numFields = inGrid.numFields();
-    std::vector<const T *> fieldPtrs;
-    fieldPtrs.reserve(numFields * (1 + int(isComplex)));
-    for (int f = 0; f < numFields; ++f) {
-      fieldPtrs.emplace_back(data +
-                             inGrid.getFieldComponentOffset(f, Type::real));
-      if (isComplex) {
-        fieldPtrs.emplace_back(data +
-                               inGrid.getFieldComponentOffset(f, Type::imag));
-      }
-    }
 
     const int dimX = inGrid.dimX();
     const int dimY = inGrid.dimY();
-    for (int j = 0; j < dimY; ++j) {
-      for (int i = 0; i < dimX; ++i) {
-        const int idx = j * dimX + i;
-        std::ostringstream oss;
-        if (m_writeIndices) {
-          oss << i << m_delimiter << j << m_delimiter;
-        }
-        for (auto &&fieldPtr : fieldPtrs) {
-          oss << fieldPtr[idx];
-          if (fieldPtr != fieldPtrs.back()) {
-            oss << m_delimiter;
+
+    if (inFieldsAsIndex) {
+      for (int z = 0; z < numFields; ++z) {
+        // Get the pointers to the real/imag parts for this field.
+        const T *const dataReal =
+            data + inGrid.getFieldComponentOffset(z, Type::real);
+        const T *const dataImag =
+            isComplex ? data + inGrid.getFieldComponentOffset(z, Type::imag)
+                      : nullptr;
+
+        // Loop over spatial coordinates.
+        for (int y = 0; y < dimY; ++y) {
+          for (int x = 0; x < dimX; ++x) {
+            // Create stream.
+            std::ostringstream oss;
+
+            // Write indices.
+            if (m_writeIndices) {
+              oss << x << m_delimiter << y << m_delimiter << z << m_delimiter;
+            }
+            // Linear index.
+            const int idx = y * dimX + x;
+
+            // Write real part to stream.
+            oss << dataReal[idx];
+
+            // Write imag part to stream.
+            if (isComplex) {
+              oss << m_delimiter << dataImag[idx];
+            }
+
+            // Write to file.
+            if (!appendToFile(oss.str(), inFilePath)) {
+              return false;
+            }
           }
         }
-        if (!appendToFile(oss.str(), inFilePath)) {
-          return false;
+      }
+    } else {
+      // Create a vector of pointer to the real/imag parts of each field.
+      std::vector<const T *> fieldPtrs;
+      fieldPtrs.reserve(numFields * (1 + int(isComplex)));
+      for (int f = 0; f < numFields; ++f) {
+        fieldPtrs.emplace_back(data +
+                               inGrid.getFieldComponentOffset(f, Type::real));
+        if (isComplex) {
+          fieldPtrs.emplace_back(data +
+                                 inGrid.getFieldComponentOffset(f, Type::imag));
+        }
+      }
+
+      // Loop over spatial coordinates.
+      for (int y = 0; y < dimY; ++y) {
+        for (int x = 0; x < dimX; ++x) {
+          // Create stream.
+          std::ostringstream oss;
+
+          // Write indices.
+          if (m_writeIndices) {
+            oss << x << m_delimiter << y << m_delimiter;
+          }
+
+          // Linear index.
+          const int idx = y * dimX + x;
+
+          // Loop over all pointers, adn write to stream.
+          for (auto &&fieldPtr : fieldPtrs) {
+            oss << fieldPtr[idx];
+            if (fieldPtr != fieldPtrs.back()) {
+              oss << m_delimiter;
+            }
+          }
+
+          // Write to file.
+          if (!appendToFile(oss.str(), inFilePath)) {
+            return false;
+          }
         }
       }
     }
+
     return true;
   }
 
