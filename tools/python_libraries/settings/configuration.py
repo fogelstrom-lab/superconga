@@ -65,7 +65,7 @@ grid_field_types = {
 temp_config_file_name = ".tmp_config.json"
 
 # Default config file for plot parameters.
-default_plot_config = "examples/plotting/plot_default.json"
+default_plot_config = "tools/python_libraries/plotting/plot_default.json"
 
 # Mask color: color "outside" grain.
 mask_color = "#c0c0c0"
