@@ -21,8 +21,8 @@ template <typename T>
 T computeRelativeFrobeniusNorm(const scg::GridCPU<T> &inTest,
                                const scg::GridCPU<T> &inRef) {
 
-  T *const testPtr = inTest.getDataPointer();
-  T *const refPtr = inRef.getDataPointer();
+  const T *const testPtr = inTest.getDataPointer();
+  const T *const refPtr = inRef.getDataPointer();
 
   const int numX = inTest.dimX();
   const int numY = inRef.dimY();

@@ -94,7 +94,7 @@ public:
   // operator() is identical to getDataPointer()
   T *operator()(const int field = 0,
                 Type::type representation = Type::real) const {
-    return thrust::raw_pointer_cast(_data->data()) +
+    return thrust::raw_pointer_cast(m_vector.data()) +
            getFieldComponentOffset(field, representation);
   }
 
@@ -112,10 +112,17 @@ public:
 
   bool isComplex() const { return _representation == Type::complex; }
 
-  DEV *getVector() const { return _data; }
+  const DEV &getVector() const { return m_vector; }
+  DEV &getVector() { return m_vector; }
+
+  const T *getDataPointer(const int field = 0,
+                          Type::type representation = Type::real) const {
+    return thrust::raw_pointer_cast(m_vector.data()) +
+           getFieldComponentOffset(field, representation);
+  }
   T *getDataPointer(const int field = 0,
-                    Type::type representation = Type::real) const {
-    return thrust::raw_pointer_cast(_data->data()) +
+                    Type::type representation = Type::real) {
+    return thrust::raw_pointer_cast(m_vector.data()) +
            getFieldComponentOffset(field, representation);
   }
 
@@ -382,9 +389,9 @@ private:
 
   // DEV can be thrust::host_vector<T> or thrust::device_vector<T>. Contains
   // data array.
-  DEV *_data;
+  DEV m_vector;
 
-  // Total allocated memory for ALL instantiated Grid<T>::DEV objects
+  // The total memory for ALL grid objects.
   static size_t _allocatedMemTotal;
 
   // Swap function implemented according to the copy-and-swap c++ idiom (very
@@ -393,30 +400,28 @@ private:
   friend void swap(GridData<S, DEVS> &grid1, GridData<S, DEVS> &grid2);
 };
 
+// Initialize allocated memory to zero.
+// TODO(niclas): This is a bit ugly!
 template <typename T, typename DEV>
 size_t GridData<T, DEV>::_allocatedMemTotal = 0;
 
 template <typename T, typename DEV>
 GridData<T, DEV>::GridData()
-    : GridFunctions<T, DEV>(this), _dimX(0), _dimY(0), _numFields(0), _data(0) {
-}
+    : GridFunctions<T, DEV>(this), _dimX(0), _dimY(0), _numFields(0) {}
 
 template <typename T, typename DEV>
 GridData<T, DEV>::GridData(const GridData<T, DEV> &other)
     : GridFunctions<T, DEV>(this), _representation(other._representation),
       _dimX(other._dimX), _dimY(other._dimY), _numFields(other._numFields),
-      _data(0) {
-  if (other._data)
-    _data = new DEV(*other._data);
-
+      m_vector(other.m_vector) {
   _allocatedMemTotal += numElements() * sizeof(T);
 }
 
 template <typename T, typename DEV>
 GridData<T, DEV>::GridData(const GridData<T, DEV> &other, const int numFields)
     : GridFunctions<T, DEV>(this), _representation(other._representation),
-      _dimX(other._dimX), _dimY(other._dimY), _numFields(numFields), _data(0) {
-  _data = new DEV(numElements());
+      _dimX(other._dimX), _dimY(other._dimY), _numFields(numFields),
+      m_vector(numElements()) {
   _allocatedMemTotal += numElements() * sizeof(T);
 }
 
@@ -424,16 +429,13 @@ template <typename T, typename DEV>
 GridData<T, DEV>::GridData(int nx, int ny, int numFields,
                            Type::type representation)
     : GridFunctions<T, DEV>(this), _representation(representation), _dimX(nx),
-      _dimY(ny), _numFields(numFields), _data(0) {
-  _data = new DEV(numElements());
+      _dimY(ny), _numFields(numFields), m_vector(numElements()) {
   _allocatedMemTotal += numElements() * sizeof(T);
 }
 
 template <typename T, typename DEV> GridData<T, DEV>::~GridData() {
-  if (_data) {
-    delete _data;
     _allocatedMemTotal -= numElements() * sizeof(T);
-  }
+  
 }
 
 template <typename T, typename DEV>
@@ -475,8 +477,8 @@ GridData<T, DEV> &GridData<T, DEV>::operator=(const T right) {
 template <typename T, typename DEV>
 void GridData<T, DEV>::operator+=(const GridData<T, DEV> &right) {
   if (*this == right) {
-    thrust::transform(_data->begin(), _data->end(), right._data->begin(),
-                      _data->begin(), thrust::plus<T>());
+    thrust::transform(m_vector.begin(), m_vector.end(), right.m_vector.begin(),
+                      m_vector.begin(), thrust::plus<T>());
   }
 }
 
@@ -489,14 +491,14 @@ void GridData<T, DEV>::operator+=(const cplx<T> right) {
     for (int c = 0; c < numFields(); ++c) {
       thrust::for_each(
           thrust::make_zip_iterator(thrust::make_tuple(
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::real, Type::begin),
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::imag, Type::begin))),
           thrust::make_zip_iterator(thrust::make_tuple(
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::real, Type::end),
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::imag, Type::end))),
           addComplexScalarFunctor(right));
     }
@@ -510,8 +512,8 @@ template <typename T, typename DEV>
 void GridData<T, DEV>::operator+=(const T right) {
   if (!isComplex()) {
     thrust::constant_iterator<T> value(right);
-    thrust::transform(value, value + _data->size(), _data->begin(),
-                      _data->begin(), thrust::plus<T>());
+    thrust::transform(value, value + m_vector.size(), m_vector.begin(),
+                      m_vector.begin(), thrust::plus<T>());
   } else {
     cplx<T> temp_cplx;
     temp_cplx.x = right;
@@ -523,8 +525,8 @@ void GridData<T, DEV>::operator+=(const T right) {
 template <typename T, typename DEV>
 void GridData<T, DEV>::operator-=(const GridData<T, DEV> &right) {
   if (*this == right) {
-    thrust::transform(_data->begin(), _data->end(), right._data->begin(),
-                      _data->begin(), thrust::minus<T>());
+    thrust::transform(m_vector.begin(), m_vector.end(), right.m_vector.begin(),
+                      m_vector.begin(), thrust::minus<T>());
   }
 }
 
@@ -547,29 +549,30 @@ void GridData<T, DEV>::operator*=(const GridData<T, DEV> &right) {
       for (int c = 0; c < numFields(); ++c) {
         thrust::for_each(
             thrust::make_zip_iterator(thrust::make_tuple(
-                _data->begin() +
+                m_vector.begin() +
                     getFieldComponentOffset(c, Type::real, Type::begin),
-                _data->begin() +
+                m_vector.begin() +
                     getFieldComponentOffset(c, Type::imag, Type::begin),
-                right._data->begin() +
+                right.m_vector.begin() +
                     right.getFieldComponentOffset(c, Type::real, Type::begin),
-                right._data->begin() +
+                right.m_vector.begin() +
                     right.getFieldComponentOffset(c, Type::imag, Type::begin))),
             thrust::make_zip_iterator(thrust::make_tuple(
-                _data->begin() +
+                m_vector.begin() +
                     getFieldComponentOffset(c, Type::real, Type::end),
-                _data->begin() +
+                m_vector.begin() +
                     getFieldComponentOffset(c, Type::imag, Type::end),
-                right._data->begin() +
+                right.m_vector.begin() +
                     right.getFieldComponentOffset(c, Type::real, Type::end),
-                right._data->begin() +
+                right.m_vector.begin() +
                     right.getFieldComponentOffset(c, Type::imag, Type::end))),
             complexVectorProductFunctor());
       }
     } else {
       // Real valued multiplication
-      thrust::transform(_data->begin(), _data->end(), right._data->begin(),
-                        _data->begin(), thrust::multiplies<T>());
+      thrust::transform(m_vector.begin(), m_vector.end(),
+                        right.m_vector.begin(), m_vector.begin(),
+                        thrust::multiplies<T>());
     }
   }
 }
@@ -581,14 +584,14 @@ void GridData<T, DEV>::operator*=(const cplx<T> right) {
     for (int c = 0; c < numFields(); ++c) {
       thrust::for_each(
           thrust::make_zip_iterator(thrust::make_tuple(
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::real, Type::begin),
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::imag, Type::begin))),
           thrust::make_zip_iterator(thrust::make_tuple(
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::real, Type::end),
-              _data->begin() +
+              m_vector.begin() +
                   getFieldComponentOffset(c, Type::imag, Type::end))),
           scaleComplexVectorFunctor(right));
     }
@@ -603,8 +606,8 @@ void GridData<T, DEV>::operator*=(const T right) {
   // This will be valid even if the calling object is complex, because re and im
   // scale the same with real scalar
   thrust::constant_iterator<T> value(right);
-  thrust::transform(value, value + _data->size(), _data->begin(),
-                    _data->begin(), thrust::multiplies<T>());
+  thrust::transform(value, value + m_vector.size(), m_vector.begin(),
+                    m_vector.begin(), thrust::multiplies<T>());
 }
 
 template <typename T, typename DEV>
@@ -703,7 +706,7 @@ template <typename T, typename DEV>
 template <typename T2, typename DEV2>
 GridData<T, DEV>::operator GridData<T2, DEV2>() {
   GridData<T2, DEV2> other(_dimX, _dimY, _numFields, _representation);
-  *(other.getVector()) = *_data;
+  other.getVector() = m_vector;
   return other;
 }
 
@@ -722,41 +725,40 @@ void swap(GridData<T, DEV> &grid1, GridData<T, DEV> &grid2) {
   std::swap(grid1._dimX, grid2._dimX);
   std::swap(grid1._dimY, grid2._dimY);
   std::swap(grid1._numFields, grid2._numFields);
-  std::swap(grid1._data, grid2._data);
+  std::swap(grid1.m_vector, grid2.m_vector);
 }
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::setValue(const T val, Type::type part, const int field) {
-  if (_data) // Make sure we don't try to set elements when no memory is
-             // allocated
-  {
+  // Make sure we don't try to set elements when no memory is allocated.
+  if (!m_vector.empty()) {
     if (field == -1) {
       // Set all elements
       if (part == Type::complex)
-        thrust::fill(_data->begin(), _data->end(), val);
+        thrust::fill(m_vector.begin(), m_vector.end(), val);
       else {
         // Set real or imag parts for all fields
         for (int c = 0; c < _numFields; ++c) {
           thrust::fill(
-              _data->begin() + getFieldComponentOffset(c, part, Type::begin),
-              _data->begin() + getFieldComponentOffset(c, part, Type::end),
+              m_vector.begin() + getFieldComponentOffset(c, part, Type::begin),
+              m_vector.begin() + getFieldComponentOffset(c, part, Type::end),
               val);
         }
       }
     } else {
       // Set real part, if requested, for specified field
       if (part == Type::real || part == Type::complex)
-        thrust::fill(_data->begin() + getFieldComponentOffset(field, Type::real,
-                                                              Type::begin),
-                     _data->begin() +
+        thrust::fill(m_vector.begin() + getFieldComponentOffset(
+                                            field, Type::real, Type::begin),
+                     m_vector.begin() +
                          getFieldComponentOffset(field, Type::real, Type::end),
                      val);
 
       // Set imag part, if requested and if existing, for specified field
       if (isComplex() && (part == Type::imag || part == Type::complex))
-        thrust::fill(_data->begin() + getFieldComponentOffset(field, Type::imag,
-                                                              Type::begin),
-                     _data->begin() +
+        thrust::fill(m_vector.begin() + getFieldComponentOffset(
+                                            field, Type::imag, Type::begin),
+                     m_vector.begin() +
                          getFieldComponentOffset(field, Type::imag, Type::end),
                      val);
     }
@@ -777,10 +779,11 @@ int GridData<T, DEV>::setData(const T *p_host_data, size_t numElements) {
   thrust::host_vector<T> data_tmp(numElements);
   T *data_ptr = thrust::raw_pointer_cast(data_tmp.data());
 
-  for (size_t i = 0; i < numElements; ++i)
+  for (size_t i = 0; i < numElements; ++i) {
     data_ptr[i] = p_host_data[i];
+  }
 
-  *_data = data_tmp;
+  m_vector = data_tmp;
 
   return 0;
 }
@@ -789,11 +792,13 @@ template <typename T, typename DEV>
 GridData<T, DEV> &GridData<T, DEV>::conjugate() {
   if (isComplex()) {
     for (int i = 0; i < numFields(); ++i) {
-      thrust::transform(
-          _data->begin() + getFieldComponentOffset(i, Type::imag, Type::begin),
-          _data->begin() + getFieldComponentOffset(i, Type::imag, Type::end),
-          _data->begin() + getFieldComponentOffset(i, Type::imag, Type::begin),
-          thrust::negate<T>());
+      thrust::transform(m_vector.begin() +
+                            getFieldComponentOffset(i, Type::imag, Type::begin),
+                        m_vector.begin() +
+                            getFieldComponentOffset(i, Type::imag, Type::end),
+                        m_vector.begin() +
+                            getFieldComponentOffset(i, Type::imag, Type::begin),
+                        thrust::negate<T>());
     }
   }
   return *this;
@@ -805,7 +810,7 @@ GridData<T, DEV> &GridData<T, DEV>::transpose(const int field) {
 }
 
 template <typename T, typename DEV> GridData<T, DEV> &GridData<T, DEV>::sqrt() {
-  thrust::for_each_n(_data->begin(), numElements(),
+  thrust::for_each_n(m_vector.begin(), numElements(),
                      GridFunctors::squareRoot<T>());
   return *this;
 }
@@ -818,7 +823,7 @@ GridData<T, DEV> GridData<T, DEV>::abs() const {
     result = complexMagnitudeSq().sqrt();
   else {
     result = *this;
-    thrust::for_each_n(result.getVector()->begin(), result.numElements(),
+    thrust::for_each_n(result.getVector().begin(), result.numElements(),
                        GridFunctors::absVal<T>());
   }
 
@@ -844,18 +849,18 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
     for (int fieldIdx = 0; fieldIdx < _numFields; ++fieldIdx) {
       // Pointers to iterator start and end for real part
       const auto realPartIteratorBegin =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(fieldIdx, Type::real, Type::begin);
       const auto realPartIteratorEnd =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(fieldIdx, Type::real, Type::end);
 
       // Pointers to iterator start and end points for imaginary part
       const auto imagPartIteratorBegin =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(fieldIdx, Type::imag, Type::begin);
       const auto imagPartIteratorEnd =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(fieldIdx, Type::imag, Type::end);
 
       // Make zip iterators of real/imaginary parts (transform_reduce takes a
@@ -877,10 +882,10 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
     // Pointers to iterator start and end for the first component
     const int xComponentOffsetIdx = 0;
     const auto xComponentIteratorBegin =
-        _data->begin() +
+        m_vector.begin() +
         getFieldComponentOffset(xComponentOffsetIdx, Type::real, Type::begin);
     const auto xComponentIteratorEnd =
-        _data->begin() +
+        m_vector.begin() +
         getFieldComponentOffset(xComponentOffsetIdx, Type::real, Type::end);
 
     // Check the kind of field: scalar, vector, unknown
@@ -894,10 +899,10 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
       // Pointer to start and end points for y-component
       const int yComponentOffsetIdx = 1;
       const auto yComponentIteratorBegin =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(yComponentOffsetIdx, Type::real, Type::begin);
       const auto yComponentIteratorEnd =
-          _data->begin() +
+          m_vector.begin() +
           getFieldComponentOffset(yComponentOffsetIdx, Type::real, Type::end);
 
       // Make zip iterators of (x,y)-components (transform_reduce takes a
@@ -941,10 +946,10 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumSquare() const {
   thrust::plus<T> binaryOperatorPlus;
 
   // Start iterator: pointer to the first element of the first field
-  const auto startIterator = _data->begin();
+  const auto startIterator = m_vector.begin();
 
   // Start iterator: pointer to the last element of the last field
-  const auto endIterator = _data->end();
+  const auto endIterator = m_vector.end();
 
   const T resultSum =
       thrust::transform_reduce(startIterator, endIterator, unaryOperatorSquare,
@@ -962,10 +967,10 @@ template <typename T, typename DEV> T GridData<T, DEV>::L1Norm() const {
   thrust::plus<T> binaryOperatorPlus;
 
   // Start iterator: pointer to the first element of the first field
-  const auto startIterator = _data->begin();
+  const auto startIterator = m_vector.begin();
 
   // Start iterator: pointer to the last element of the last field
-  const auto endIterator = _data->end();
+  const auto endIterator = m_vector.end();
 
   const T resultNorm = thrust::transform_reduce(
       startIterator, endIterator, absFunctor(), initValue, binaryOperatorPlus);
@@ -1114,8 +1119,9 @@ GridData<T, DEV> GridData<T, DEV>::sumFieldComponents() const {
 template <typename T, typename DEV>
 T GridData<T, DEV>::sumField(const int field) const {
   T sum = thrust::reduce(
-      _data->begin() + getFieldComponentOffset(field, Type::real, Type::begin),
-      _data->begin() + getFieldComponentOffset(field, Type::real, Type::end),
+      m_vector.begin() +
+          getFieldComponentOffset(field, Type::real, Type::begin),
+      m_vector.begin() + getFieldComponentOffset(field, Type::real, Type::end),
       (T)0, thrust::plus<T>());
   return sum;
 }
@@ -1123,15 +1129,17 @@ T GridData<T, DEV>::sumField(const int field) const {
 template <typename T, typename DEV>
 void GridData<T, DEV>::sumField(T &sum_re, T &sum_im, const int field) const {
   sum_re = thrust::reduce(
-      _data->begin() + getFieldComponentOffset(field, Type::real, Type::begin),
-      _data->begin() + getFieldComponentOffset(field, Type::real, Type::end),
+      m_vector.begin() +
+          getFieldComponentOffset(field, Type::real, Type::begin),
+      m_vector.begin() + getFieldComponentOffset(field, Type::real, Type::end),
       (T)0, thrust::plus<T>());
 
   if (isComplex()) {
     sum_im = thrust::reduce(
-        _data->begin() +
+        m_vector.begin() +
             getFieldComponentOffset(field, Type::imag, Type::begin),
-        _data->begin() + getFieldComponentOffset(field, Type::imag, Type::end),
+        m_vector.begin() +
+            getFieldComponentOffset(field, Type::imag, Type::end),
         (T)0, thrust::plus<T>());
   }
 }
@@ -1203,8 +1211,8 @@ void GridData<T, DEV>::copyFieldTo(GridData<T, DEV> *target, int thisField,
     size_t src_end = getFieldComponentOffset(thisField + 1);
     size_t dst_begin = getFieldComponentOffset(otherField);
 
-    thrust::copy(_data->begin() + src_begin, _data->begin() + src_end,
-                 target->getVector()->begin() + dst_begin);
+    thrust::copy(m_vector.begin() + src_begin, m_vector.begin() + src_end,
+                 target->getVector().begin() + dst_begin);
   } else
     std::cout << "GridData<T,DEV>::copyFieldTo(): ERROR: x and y dimensions "
                  "are not equal, or field out of range.\n";
@@ -1289,7 +1297,7 @@ void GridData<T, DEV>::minmax(const GridData<T, DEV> &grid, T &minv, T &maxv,
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::print(int field, Type::type representation) const {
-  thrust::host_vector<T> vec = *_data;
+  thrust::host_vector<T> vec = m_vector;
 
   T *p_data = thrust::raw_pointer_cast(vec.data()) +
               getFieldComponentOffset(field, representation);
@@ -1422,14 +1430,11 @@ int GridData<T, DEV>::read(const std::filesystem::path &filename,
     file.close();
     std::cout << "Read: " << filename << "\n";
 
-    if (param)
+    if (param) {
       *param = param_read;
+    }
 
-    if (_data)
-      delete _data;
-    _data = new DEV(numElements());
-
-    *_data = data_tmp;
+    m_vector = data_tmp;
 
     return 0;
   } else {
@@ -1463,7 +1468,7 @@ int GridData<T, DEV>::write(const std::filesystem::path &filename,
 
   if (file.is_open()) {
     // copyDataToCPU();
-    thrust::host_vector<T> data_tmp = *_data;
+    thrust::host_vector<T> data_tmp = m_vector;
     T *data_ptr = thrust::raw_pointer_cast(data_tmp.data());
 
     int sizeOfDatatype = sizeof(T);
@@ -1611,7 +1616,8 @@ int GridData<T, DEV>::readNumpyArray(const std::filesystem::path &filename,
 
   fin.close();
 
-  *_data = data_tmp;
+  m_vector = data_tmp;
+
   GridData<T, DEV>::_allocatedMemTotal -= numBytesData_old;
   GridData<T, DEV>::_allocatedMemTotal += numElements() * sizeof(T);
 

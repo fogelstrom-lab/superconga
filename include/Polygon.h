@@ -109,7 +109,7 @@ template <typename T> Polygon<T> &Polygon<T>::operator=(Polygon<T> inOther) {
 template <typename T>
 void Polygon<T>::setVertices(const T *const inVerticesX,
                              const T *const inVerticesY) {
-  VectorGPU<T> &vertices = *(m_vertices->getVector());
+  VectorGPU<T> &vertices = m_vertices->getVector();
   const int offset = m_vertices->getFieldComponentOffset(1);
 
   for (int i = 0; i < m_numVertices; ++i) {

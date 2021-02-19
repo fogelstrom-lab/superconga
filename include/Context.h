@@ -194,16 +194,6 @@ template <typename T> Context<T>::~Context() {
   }
 
   deleteComputeObjects();
-
-  GridCPU<float>::printAllocatedMemTotal();
-  GridCPU<double>::printAllocatedMemTotal();
-  GridCPU<int>::printAllocatedMemTotal();
-  GridCPU<char>::printAllocatedMemTotal();
-
-  GridGPU<float>::printAllocatedMemTotal();
-  GridGPU<double>::printAllocatedMemTotal();
-  GridGPU<int>::printAllocatedMemTotal();
-  GridGPU<char>::printAllocatedMemTotal();
 }
 
 template <typename T> void Context<T>::deleteComputeObjects() {

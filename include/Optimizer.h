@@ -668,7 +668,7 @@ void Optimizer<T>::split(const GridGPU<T> &inSrc,
     const int imagIdx = realIdx + 1;
 
     // Get the order parameter component.
-    const GridGPU<T> *const component =
+    GridGPU<T> *const component =
         inOutOrderParameter.getOrderParameterComponentField(i);
 
     opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(

@@ -867,12 +867,12 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
   const int numElements = nx_new * ny_new * numFields * (1 + isComplex);
 
   // Allocate vector for new grid
-  thrust::device_vector<T> *vec_tmp = new thrust::device_vector<T>(numElements);
+  thrust::device_vector<T> vec_tmp(numElements);
 
   const int nx = grid->dimX();
   const int ny = grid->dimY();
 
-  T *data_tmp = thrust::raw_pointer_cast(vec_tmp->data());
+  T *data_tmp = thrust::raw_pointer_cast(vec_tmp.data());
 
   // Kernel launch
   dim3 threadsPerBlock, blocksPerGrid;
@@ -893,9 +893,7 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
     }
   }
 
-  // Free old vector and reassign
-  delete grid->_data;
-  grid->_data = vec_tmp;
+  grid->m_vector = vec_tmp;
 
   // Change affected class member variables
   grid->_dimX = nx_new;
@@ -939,7 +937,7 @@ template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::minmax(
     const GridData<T, thrust::device_vector<T>> &grid, T &minv, T &maxv,
     int field, Type::type part) {
-  thrust::device_vector<T> &vec = *(grid.getVector());
+  thrust::device_vector<T> &vec = grid.getVector();
 
   size_t start = grid.getFieldComponentOffset(field, part);
   size_t end = start + grid.dimX() * grid.dimY();
