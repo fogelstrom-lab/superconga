@@ -745,7 +745,7 @@ int GeometryGroup<T>::computeNumGrainLatticeSites(
   const int numY = inDomainLabels.dimY();
 
   // Copy the domain to the CPU.
-  const thrust::host_vector<char> domainCPU = inDomainLabels.getVector();
+  const thrust::host_vector<char> &domainCPU = inDomainLabels.getVector();
 
   // Get the Pointer.
   const char *const domainPtr = thrust::raw_pointer_cast(domainCPU.data());
@@ -788,7 +788,7 @@ cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
   const T angle = static_cast<T>(0);
   create(angle);
 
-  VectorCPU<T> vec_cpu = _domainLabels->getVector();
+  const VectorCPU<T> &vec_cpu = _domainLabels->getVector();
   GridCPU<T> data_cpu = *data;
 
   const int complex = data->isComplex();

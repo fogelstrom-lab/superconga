@@ -174,7 +174,7 @@ private:
   template <class Device>
   bool appendData(const GridData<T, Device> &inGrid,
                   const std::filesystem::path &inFilePath) const {
-    const thrust::host_vector<T> gridData = inGrid.getVector();
+    const thrust::host_vector<T> &gridData = inGrid.getVector();
     const T *data = thrust::raw_pointer_cast(gridData.data());
 
     const bool isComplex = inGrid.isComplex();
