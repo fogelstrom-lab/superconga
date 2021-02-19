@@ -72,32 +72,37 @@ scg::Visualization<T> *gui;
 // MAIN
 //*******************************************************
 int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    std::cerr << "-- Please provide config file." << std::endl;
-    scg::run_utils::cleanup(context, gui);
-    return 1;
-  }
-  const std::string filename = argv[1];
-
-  // Check that provided config file actually exists and can be opened.
-  std::ifstream ifile(filename);
-  if (!ifile.good()) {
-    std::cerr << "-- Could not find/open parameter file '" << filename << "'."
-              << std::endl;
-    scg::run_utils::cleanup(context, gui);
-    return 1;
-  }
-
-  // Parse JSON.
+  //*******************************************************
+  // PARSE SIMULATION CONFIG FILE
+  //*******************************************************
   Json::Value simParams;
-  Json::CharReaderBuilder builder;
-  JSONCPP_STRING errs;
-  if (!parseFromStream(builder, ifile, &simParams, &errs)) {
-    std::cout << errs << std::endl;
-    return 1;
+  {
+    if (argc < 2) {
+      std::cerr << "-- ERROR! Please provide a config file." << std::endl;
+      scg::run_utils::cleanup(context, gui);
+      return 1;
+    }
+    const std::string filename = argv[1];
+
+    // Check that provided config file actually exists and can be opened.
+    std::ifstream ifile(filename);
+    if (!ifile.good()) {
+      std::cerr << "-- ERROR! Could not find/open config file '" << filename
+                << "'." << std::endl;
+      scg::run_utils::cleanup(context, gui);
+      return 1;
+    }
+
+    // Parse JSON.
+    Json::CharReaderBuilder builder;
+    JSONCPP_STRING errs;
+    if (!parseFromStream(builder, ifile, &simParams, &errs)) {
+      std::cout << errs << std::endl;
+      return 1;
+    }
+    std::cout << "-- Configuration parameters:" << std::endl;
+    std::cout << simParams << std::endl;
   }
-  std::cout << "-- Configuration parameters:" << std::endl;
-  std::cout << simParams << std::endl;
 
   // TODO(niclas): Add sanity check of all parameters here!?
 
@@ -139,6 +144,7 @@ int main(int argc, char *argv[]) {
   const T convergenceCriterion =
       static_cast<T>(simParams["convergence_criterion"].asDouble());
   parameters->setConvergenceCriterion(convergenceCriterion);
+
   // Set penetration depth.
   parameters->setPenetrationDepth(
       static_cast<T>(simParams["penetration_depth"].asDouble()));
@@ -392,10 +398,11 @@ int main(int argc, char *argv[]) {
   //***********************************************
   const scg::Type::fileFormat dataFormat = scg::Type::csv;
   scg::run_utils::runSimulation(
-      context, simParams["visualize"].asBool(), simParams["verbose"].asBool(),
+      context, simParams["verbose"].asBool(),
       simParams["num_iterations_min"].asInt(),
-      simParams["num_iterations_max"].asInt(), simParams["save_data"].asBool(),
-      simParams["save_data_interval"].asInt(), simParams, dataFormat);
+      simParams["num_iterations_max"].asInt(), simParams["visualize"].asBool(),
+      simParams["save_data"].asBool(), simParams["save_data_interval"].asInt(),
+      simParams, dataFormat);
 
   //***********************************************
   // POST-PROCESSING

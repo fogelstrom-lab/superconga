@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Note, this script is meant to be executed from the root folder of the project.
-# ./examples/sweeps/swave_disc_meissner_kappa_sweep.sh
+# ./examples/parameter_sweeps/swave_disc_meissner_kappa_sweep.sh
 
 # The configuration file to use.
-CONFIG="examples/swave_disc_meissner.json"
+CONFIG="examples/swave_disc_meissner/config.json"
 
 # Base path to save the data to.
 DATA_PATH="data/swave_disc_meissner_kappa_sweep"

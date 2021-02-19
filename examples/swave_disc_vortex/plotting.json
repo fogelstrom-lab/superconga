@@ -1,6 +1,6 @@
 {
     "general": {
-        "data_path": "data",
+        "data_path": "data/swave_disc_vortex/T0.500000",
         "gui": false
     },
     "current_density": {
@@ -29,7 +29,7 @@
     },
     "order_parameter": {
         "magnitude": {
-            "plot": false,
+            "plot": true,
             "colorbar_label": "$\\left|\\Delta\\right|/k_{\\mathrm{B}}T_{\\mathrm{c}}$",
             "colormap": "YlGnBu"
         },

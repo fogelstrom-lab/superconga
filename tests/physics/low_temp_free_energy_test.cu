@@ -157,10 +157,9 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   // Initialize simulation
   context->initialize();
 
-  const bool visualize = false;
-  scg::run_utils::runSimulation(
-      context, visualize, simParams::PRINT_ITERATION_STATUS,
-      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX);
+  scg::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
+                                simParams::NUM_ITERATIONS_MIN,
+                                simParams::NUM_ITERATIONS_MAX);
 
   // Remove all spurious values outside actual grain
   context->getGeometry()->zeroValuesOutsideDomainRef(

@@ -171,11 +171,9 @@ inline bool readOrderParameter(const std::filesystem::path &inFileName,
     const bool keyImagExists = csvReader.contains(keyImag);
 
     if (!(keyRealExists && keyImagExists)) {
-      // TODO(niclas): Should this be a warning or an error? It is an error for
-      // the vector potential.
-      std::cerr << "-- WARNING! The file does not contain the columns, '"
+      std::cerr << "-- ERROR! The file does not contain the columns, '"
                 << keyReal << "' and '" << keyImag << "'." << std::endl;
-      continue;
+      return false;
     }
 
     // Get the vectors.

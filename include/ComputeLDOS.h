@@ -3,6 +3,7 @@
 
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
+#include "Grid.h"
 #include "IntegrationIteratorKeldysh.h"
 
 namespace scg {
