@@ -118,13 +118,20 @@ runner_checks = {
     "crystal_axes_rotation": {"type": float},
     "data_path": {"type": str},
     "external_flux_quanta": {"type": float},
+    "geometry": {
+        "type": dict,
+        "fields": {
+            "num_outer_edges": {"type": int, "excluded": [0, 1, 2]},
+            "num_inner_edges": {"type": int, "excluded": [0, 1, 2]},
+            "hole_scale": {"type": float},
+        },
+    },
     "grain_side_length": {"type": float, "low": 0.0},
     "points_per_coherence_length": {"type": float, "low": 0.0},
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
     "num_iterations_min": {"type": int, "low": 0},
     "num_ozaki_energies": {"type": int, "low": 0},
-    "num_polygon_edges": {"type": int, "excluded": [0, 1, 2]},
     "optimizer": {
         "type": dict,
         "fields": {
@@ -153,7 +160,6 @@ runner_checks = {
     "penetration_depth": {"type": float},
     "save_data": {"type": bool},
     "save_data_interval": {"type": int},
-    "solenoid": {"type": bool},
     "temperature": {"type": float, "low": 0.0},
     "verbose": {"type": bool},
     "visualize": {"type": bool},

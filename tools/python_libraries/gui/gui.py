@@ -732,20 +732,36 @@ class runner_main_window(QMainWindow):
             QLabel("Grain side length [\u03BE\u2080]"), self._grain_side_length
         )
 
-        # Number of polygon edges
-        self._num_polygon_edges = Geometry(jsonKey="num_polygon_edges")
-        self.register(self._num_polygon_edges)
-        physicsBoxLayout.addRow(QLabel("System geometry"), self._num_polygon_edges)
-
-        # Solenoid
-        self._solenoid = CheckBox(jsonKey="solenoid")
-        self.register(self._solenoid)
-        physicsBoxLayout.addRow(QLabel("Solenoid"), self._solenoid)
-
         # Order parameter
         self._order_parameter = OrderParameter(jsonKey="order_parameter")
         self.register(self._order_parameter)
         physicsBoxLayout.addRow(QLabel("Order parameter"), self._order_parameter)
+
+        # --------------------- #
+        # Geometry Parameters #
+        # --------------------- #
+        geometrybox = QGroupBox("Geometry Parameters")
+        geometryBoxLayout = QFormLayout(geometrybox)
+        geometryBoxLayout.setLabelAlignment(Qt.AlignLeft)
+
+        # Number of outer polygon edges
+        self._num_outer_edges = Geometry(
+            jsonKey="num_outer_edges", jsonGroup="geometry"
+        )
+        self.register(self._num_outer_edges)
+        geometryBoxLayout.addRow(QLabel("Outer edges"), self._num_outer_edges)
+
+        # Number of inner polygon edges
+        self._num_inner_edges = Geometry(
+            jsonKey="num_inner_edges", jsonGroup="geometry"
+        )
+        self.register(self._num_inner_edges)
+        geometryBoxLayout.addRow(QLabel("Inner edges"), self._num_inner_edges)
+
+        # Hole scale.
+        self._hole_scale = InputFloat(jsonKey="hole_scale", jsonGroup="geometry")
+        self.register(self._hole_scale)
+        geometryBoxLayout.addRow(QLabel("Hole scale"), self._hole_scale)
 
         # --------------------- #
         # Simulation Parameters #
@@ -934,6 +950,7 @@ class runner_main_window(QMainWindow):
         # Main widget layout
         layout = QVBoxLayout(mainWidget)
         layout.addWidget(physicsBox)
+        layout.addWidget(geometrybox)
         layout.addWidget(simulationBox)
         layout.addWidget(optimizerBox)
         layout.addWidget(miscBox)
