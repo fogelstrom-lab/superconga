@@ -3,13 +3,17 @@
   "crystal_axes_rotation": 0.0,
   "data_path": "data/dwave_plus_swave",
   "external_flux_quanta": 0.0,
+  "geometry": {
+    "num_outer_edges": -1,
+    "num_inner_edges": -1,
+    "hole_scale": -1.0
+  },
   "grain_side_length": 30.0,
   "points_per_coherence_length": 6.7,
   "num_fermi_momenta": 55,
   "num_iterations_max": 1000,
   "num_iterations_min": 20,
   "num_ozaki_energies": 20,
-  "num_polygon_edges": -1,
   "optimizer": {
     "anderson_always": true,
     "inertia": 0.333,
@@ -38,7 +42,6 @@
   "penetration_depth": -1.0,
   "save_data": false,
   "save_data_interval": 200,
-  "solenoid": false,
   "temperature": 0.5,
   "order_parameter_path": null,
   "vector_potential_path": null,

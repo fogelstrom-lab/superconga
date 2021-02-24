@@ -186,22 +186,22 @@ def add_runner_arguments(parser) -> None:
 
     # Geometry.
     parser.add_argument(
-        "-z",
-        "--num-polygon-edges",
+        "--num-outer-edges",
         type=int,
         default=None,
         help="Number edges of the grain polygon. Negative values yield a circle.",
     )
-
-    # Solenoid.
-    group_solenoid = parser.add_mutually_exclusive_group()
-    group_solenoid.add_argument(
-        "--solenoid",
-        action="store_true",
-        help="Set up a solenoid, and use solenoid gauge for the external field.",
+    parser.add_argument(
+        "--num-inner-edges",
+        type=int,
+        default=None,
+        help="Number edges of the hole polygon. Negative values yield a circle.",
     )
-    group_solenoid.add_argument(
-        "--no-solenoid", action="store_true", help="Do not set up a solenoid."
+    parser.add_argument(
+        "--hole-scale",
+        type=float,
+        default=None,
+        help="The scale of the hole. Negative values yield no hole.",
     )
 
     # =============== ACCURACY =============== #
@@ -609,6 +609,13 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "crystal_axes_rotation", args.crystal_axes_rotation)
     set_value(sim_params, "data_path", args.data_path)
     set_value(sim_params, "external_flux_quanta", args.external_flux_quanta)
+
+    # Geometry.
+    group = "geometry"
+    set_value(sim_params, "num_outer_edges", args.num_outer_edges, group)
+    set_value(sim_params, "num_inner_edges", args.num_inner_edges, group)
+    set_value(sim_params, "hole_scale", args.hole_scale, group)
+
     set_value(sim_params, "grain_side_length", args.grain_side_length)
     set_value(
         sim_params, "points_per_coherence_length", args.points_per_coherence_length
@@ -617,7 +624,6 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "num_iterations_max", args.num_iterations_max)
     set_value(sim_params, "num_iterations_min", args.num_iterations_min)
     set_value(sim_params, "num_ozaki_energies", args.num_ozaki_energies)
-    set_value(sim_params, "num_polygon_edges", args.num_polygon_edges)
 
     group = "optimizer"
     set_value(sim_params, "step_size", args.opt_step_size, group)
@@ -655,7 +661,6 @@ def set_runner_arguments_from_cli(
 
     set_flag(sim_params, "save_data", args.save_data, args.no_save_data)
     set_value(sim_params, "save_data_interval", args.save_data_interval)
-    set_flag(sim_params, "solenoid", args.solenoid, args.no_solenoid)
     set_value(sim_params, "temperature", args.temperature)
     set_flag(sim_params, "verbose", args.verbose, args.quiet)
     set_flag(sim_params, "visualize", args.visualize, args.no_visualize)
