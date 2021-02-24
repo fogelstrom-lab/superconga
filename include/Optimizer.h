@@ -233,9 +233,6 @@ private:
   // The iteration counter.
   std::size_t m_iterationIdx;
 
-  // The predicted residual, i.e. |minF|, from the Anderson step.
-  T m_predictedResidual;
-
   // The storage of the differences f(x) = g(x) - x, where x is the order
   // parameter and the vector potential concatenated.
   std::vector<GridGPU<T>> m_F;
@@ -264,8 +261,7 @@ Optimizer<T>::Optimizer(const T inStepSize, const T inInertia,
                         const T inMaxMixing)
     : m_stepSize(inStepSize), m_inertia(inInertia), m_rank(inRank),
       m_replaceOldest(inReplaceOldest), m_andersonAlways(inAndersonAlways),
-      m_minMixing(inMinMixing), m_maxMixing(inMaxMixing), m_iterationIdx(0),
-      m_predictedResidual(static_cast<T>(0)) {}
+      m_minMixing(inMinMixing), m_maxMixing(inMaxMixing), m_iterationIdx(0) {}
 
 template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
@@ -375,10 +371,9 @@ void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
         }
 
         // Compute the mixing factor.
-        const T residual = F.L1Norm();
-        const T factorP = (minX - X).L1Norm() / residual;
-        const T factorQ =
-            std::min(static_cast<T>(1), m_predictedResidual / residual);
+        const T residual = F.L2Norm();
+        const T factorP = (minX - X).L2Norm() / residual;
+        const T factorQ = std::min(static_cast<T>(1), minF.L2Norm() / residual);
         const T mix = std::clamp(factorP * factorQ, m_minMixing, m_maxMixing);
 
         // Compute the resulting G.
@@ -386,9 +381,6 @@ void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
 
         // Compute the next step.
         computeNext(X, minG, m_next);
-
-        // Update the predicted residual.
-        m_predictedResidual = minF.L1Norm();
       } else {
         // Take a step using G.
         computeNext(X, G, m_next);
@@ -594,7 +586,6 @@ template <typename T> void Optimizer<T>::reset() {
   m_squaredResiduals.clear();
   m_indices.clear();
   m_iterationIdx = 0;
-  m_predictedResidual = static_cast<T>(0);
 }
 
 template <typename T> T Optimizer<T>::sumGrid(const GridGPU<T> &inGrid) const {
