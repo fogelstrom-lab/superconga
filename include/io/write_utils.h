@@ -67,7 +67,6 @@ getTextGridDataSaver(const Type::fileFormat format) {
 inline void writeJSON(const Json::Value &inJSON,
                       const std::filesystem::path &inFile,
                       const bool inVerbose = false) {
-
   std::ofstream ofstreamJSON(inFile);
   const int indentation = 4;
   ofstreamJSON << std::setw(indentation) << inJSON << std::endl;

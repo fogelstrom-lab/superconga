@@ -377,7 +377,7 @@ int main(int argc, char *argv[]) {
     // a way around this if possible.
     context->initialize();
 
-    // External field in fux quanta per unit area.
+    // External field in flux quanta per unit area.
     const T externalMagneticFluxDensity = externalFluxQuanta / geometry->area();
 
     parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
@@ -389,7 +389,8 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  if (simParams["visualize"].asBool()) {
+  const bool visualize = simParams["visualize"].asBool();
+  if (visualize) {
     gui = scg::run_utils::createVisualization(context);
     scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
                 gui->getNumPixelsWindowY());
@@ -398,23 +399,54 @@ int main(int argc, char *argv[]) {
   }
 
   //***********************************************
+  // CREATE DIRECTORIES AND SAVE PARAMETERS
+  //***********************************************
+  // Construct full directory path.
+  const std::filesystem::path dataBasePath(simParams["data_path"].asString());
+  const std::filesystem::path dataPath =
+      dataBasePath /
+      ("T" + std::to_string(simParams["temperature"].asDouble()));
+
+  const bool saveData = simParams["save_data"].asBool();
+  const bool verbose = simParams["verbose"].asBool();
+  if (saveData) {
+    // Create directories.
+    std::filesystem::create_directories(dataPath);
+
+    // Save config parameters to JSON file.
+    const std::filesystem::path configFileName = dataPath / "config.json";
+    scg::io::writeJSON(simParams, configFileName, verbose);
+
+    // TODO(niclas): Write internal parameters here as well? They do not change
+    // during the simulation.
+
+    // Save domain.
+    const std::filesystem::path domainFileName = dataPath / "domain.csv";
+    const scg::GridGPU<char> &domain = *(geometry->getDomainGrid());
+    const scg::io::CSVGridDataSaveStrategy<char> writer;
+    const bool success = writer.save(domain, {"domain"}, domainFileName);
+    if (!success) {
+      std::cout << "-- ERROR! Could not save: " << domainFileName << std::endl;
+    } else {
+      std::cout << "-- Wrote: " << domainFileName << std::endl;
+    }
+  }
+
+  //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
   const scg::Type::fileFormat dataFormat = scg::Type::csv;
   scg::run_utils::runSimulation(
-      context, simParams["verbose"].asBool(),
-      simParams["num_iterations_min"].asInt(),
-      simParams["num_iterations_max"].asInt(), simParams["visualize"].asBool(),
-      simParams["save_data"].asBool(), simParams["save_data_interval"].asInt(),
-      simParams, dataFormat);
+      context, verbose, simParams["num_iterations_min"].asInt(),
+      simParams["num_iterations_max"].asInt(), visualize, dataPath, saveData,
+      simParams["save_data_interval"].asInt(), dataFormat);
 
   //***********************************************
-  // POST-PROCESSING
+  // SAVE RESULTS
   //***********************************************
   // Save at the very end.
-  if (simParams["save_data"].asBool()) {
-    scg::run_utils::saveDataWrapper(context, simParams,
-                                    simParams["verbose"].asBool(), dataFormat);
+  if (saveData) {
+    scg::run_utils::saveDataWrapper(context, dataPath, verbose, dataFormat);
   }
 
   // Cleanup dynamically allocated memory.

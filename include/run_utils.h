@@ -75,45 +75,29 @@ inline void myKeyboardFunc(const unsigned char inKey, const int inX,
 
 /// \brief Save config params, internal params, and results to JSON files.
 ///
-/// This function saves three json files: one for config parameters, one for
-/// internal parameters, and one for scalar results.
-/// Motivation: It is useful to have the exact config parameters saved, so that
-/// a run can be resumed/continued/post-processed. These config parameters are
-/// saved to a JSON file. Furthermore, there are some internal parameters that
-/// are not possible to infer without running the program (the exact number of
-/// lattice points inside the grain), these are very useful to have access to
-/// when post-processing (e.g. for doing area normalization). Finally, there are
-/// some scalar results (e.g. area-averaged quantities) that are more
-/// appropriate and convenient to have in json rather than csv.
+/// This function saves two json files: one for internal parameters, and one for
+/// scalar results. Motivation, there are some internal parameters that are not
+/// possible to infer without running the program (the exact number of lattice
+/// points inside the grain), these are very useful to have access to when
+/// post-processing (e.g. for doing area normalization). Finally, there are some
+/// scalar results (e.g. area-averaged quantities) that are more appropriate and
+/// convenient to have in json rather than csv.
 ///
 /// \param inContext - Context object for simulation.
-/// \param inJSON - JSON object with parameter values.
 /// \param inDataPath - Directory where to put JSON files.
-/// \param inConfigFileName - Filename for config parameters.
-/// \param inInternalParametersFileName - Filename for internal parameters.
-/// \param inResultsFileName - Filename for scalar results.
 ///
 /// \return - void
 template <typename T>
-void saveParametersWrapper(
-    const Context<T> *const inContext, const Json::Value &inJSON,
-    const std::filesystem::path &inDataPath, const bool inVerbose = true,
-    const std::string &inConfigFileName = "config",
-    const std::string &inInternalParametersFileName = "internal_parameters",
-    const std::string &inResultsFileName = "results") {
+void saveParametersWrapper(const Context<T> *const inContext,
+                           const std::filesystem::path &inDataPath,
+                           const bool inVerbose = true) {
   //***************************************************
   // CONFIG PARAMETERS
   //***************************************************
   // Construct full filepath to JSON-file.
-  const std::filesystem::path fullPathConfigJSON =
-      inDataPath / (inConfigFileName + ".json");
   const std::filesystem::path fullPathInternalParamsJSON =
-      inDataPath / (inInternalParametersFileName + ".json");
-  const std::filesystem::path fullPathResultsJSON =
-      inDataPath / (inResultsFileName + ".json");
-
-  // Save config parameters to JSON file.
-  io::writeJSON(inJSON, fullPathConfigJSON, inVerbose);
+      inDataPath / "internal_parameters.json";
+  const std::filesystem::path fullPathResultsJSON = inDataPath / "results.json";
 
   // Number of lattice sites in grain.
   const int numGrainLatticeSites =
@@ -158,18 +142,16 @@ void saveParametersWrapper(
 /// \param inVerbose - Print success to terminal.
 /// \param inIterationDataSaveFormat - Enum specifying which format to save the
 /// per-iteration data in (see Type::fileFormat).
-/// \param inDataFileName - Name of file to write.
 ///
 /// \return - void
 template <typename T>
 void saveConvergenceStatus(
     const Context<T> *const inContext, const std::filesystem::path &inDataPath,
     const bool inVerbose = true,
-    const Type::fileFormat inIterationDataSaveFormat = Type::csv,
-    const std::string &inDataFileName = "convergence") {
+    const Type::fileFormat inIterationDataSaveFormat = Type::csv) {
   const std::filesystem::path convergenceFile =
       inDataPath /
-      (inDataFileName + io::getFileExtension(inIterationDataSaveFormat));
+      ("convergence" + io::getFileExtension(inIterationDataSaveFormat));
 
   std::unique_ptr<io::IIterationDataSaveStrategy<T>> iterationDataSaver =
       io::getIterationDataSaver<T>(inIterationDataSaveFormat);
@@ -195,21 +177,13 @@ void saveConvergenceStatus(
 /// \param inVerbose - Print success to terminal.
 /// \param inGridDataSaveFormat - Enum specifying which format to save the
 /// GridData in (see Type::fileFormat).
-/// \param inOrderParameterFileName - File name of order-parameter file.
-/// \param inCurrentDensityFileName - File name of current-density file.
-/// \param inVectorPotentialFileName - File name of current-density file.
-/// \param inFluxDensityFileName - File name of current-density file.
 ///
 /// \return - void
 template <typename T>
-void saveGridData(
-    const Context<T> *const inContext, const std::filesystem::path &inDataPath,
-    const bool inVerbose = true,
-    const Type::fileFormat inGridDataSaveFormat = Type::binary,
-    const std::string &inOrderParameterFileName = "order_parameter",
-    const std::string &inCurrentDensityFileName = "current_density",
-    const std::string &inVectorPotentialFileName = "vector_potential",
-    const std::string &inFluxDensityFileName = "magnetic_flux_density") {
+void saveGridData(const Context<T> *const inContext,
+                  const std::filesystem::path &inDataPath,
+                  const bool inVerbose = true,
+                  const Type::fileFormat inGridDataSaveFormat = Type::csv) {
   // Fetch run parameters from context.
   Parameters<T> *parameters = inContext->getParameters();
 
@@ -226,7 +200,7 @@ void saveGridData(
 
   // Construct full file name for order-parameter file.
   const std::filesystem::path orderParameterFile =
-      inDataPath / (inOrderParameterFileName + extension);
+      inDataPath / ("order_parameter" + extension);
 
   // Try to save to file. Exit program if fail.
   bool success = false;
@@ -261,7 +235,7 @@ void saveGridData(
 
   // Construct full file name for current density.
   const std::filesystem::path currentDensityFile =
-      inDataPath / (inCurrentDensityFileName + extension);
+      inDataPath / ("current_density" + extension);
 
   // Try to save to file. Exit program if fail.
   success = false;
@@ -292,7 +266,7 @@ void saveGridData(
 
   // Construct full file name for vector potential
   const std::filesystem::path vectorPotentialFile =
-      inDataPath / (inVectorPotentialFileName + extension);
+      inDataPath / ("vector_potential" + extension);
 
   // Try to save to file. Exit program if fail.
   success = false;
@@ -326,7 +300,7 @@ void saveGridData(
 
   // Construct full file name.
   const std::filesystem::path fluxDensityFile =
-      inDataPath / (inFluxDensityFileName + extension);
+      inDataPath / ("magnetic_flux_density" + extension);
 
   // Try to save to file. Exit program if fail.
   success = false;
@@ -358,7 +332,7 @@ void saveGridData(
 /// observables to file.
 ///
 /// \param inContext - Context object for simulation.
-/// \param inJSON - JSON object with parameter values.
+/// \param inDataPath - The path to data directory.
 /// \param inGridDataSaveFormat - Enum specifying which format to save the
 /// GridData in (see Type::fileFormat).
 /// \param inIterationDataSaveFormat - Enum specifying which format to save the
@@ -367,28 +341,21 @@ void saveGridData(
 /// \return - void
 template <typename T>
 void saveDataWrapper(
-    const Context<T> *const inContext, const Json::Value &inJSON,
+    const Context<T> *const inContext, const std::filesystem::path inDataPath,
     const bool inVerbose,
     const Type::fileFormat inGridDataSaveFormat = Type::csv,
     const Type::fileFormat inIterationDataSaveFormat = Type::csv) {
-  // Construct full directory path.
-  const std::filesystem::path dataBasePath(inJSON["data_path"].asString());
-  const std::filesystem::path dataPath =
-      dataBasePath / ("T" + std::to_string(inJSON["temperature"].asDouble()));
-
-  // Create directories.
-  std::filesystem::create_directories(dataPath);
 
   // Save parameters to JSON file.
-  saveParametersWrapper(inContext, inJSON, dataPath, inVerbose);
+  saveParametersWrapper(inContext, inDataPath, inVerbose);
 
   // Append convergence status to file.
-  saveConvergenceStatus(inContext, dataPath, inVerbose,
+  saveConvergenceStatus(inContext, inDataPath, inVerbose,
                         inIterationDataSaveFormat);
 
   // Save order parameter, current density, induced vector-potential, and
   // induced magnetic flux-density, to file.
-  saveGridData(inContext, dataPath, inVerbose, inGridDataSaveFormat);
+  saveGridData(inContext, inDataPath, inVerbose, inGridDataSaveFormat);
 }
 
 /// \brief Print iteration status.
@@ -569,7 +536,7 @@ enum class Status { kContinue, kQuit, kSave };
 /// Wrapper for running one iteration without plotting results.
 ///
 /// \param inOutContext - Context object for simulation.
-/// \param inPrintStatus - Print iteration status to terminal or not.
+/// \param inVerbose - Print iteration status to terminal or not.
 /// \param inNumIterationsMin - The minimum number of iterations.
 /// \param inNumIterationsMax - The maximum number of iterations.
 /// \param inSaveData - Whether to save data or not.
@@ -577,16 +544,16 @@ enum class Status { kContinue, kQuit, kSave };
 ///
 /// \return - Simulation status.
 template <typename T>
-Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
-                    const int inNumIterationsMin = 100,
-                    const int inNumIterationsMax = 1000,
+Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
+                    const int inNumIterationsMin = 0,
+                    const int inNumIterationsMax = 10000,
                     const bool inSaveData = false,
-                    const int inSaveDataInterval = 200) {
+                    const int inSaveDataInterval = 0) {
   // Solve equations for all compute objects.
   inOutContext->compute();
 
   // Output iteration status to the terminal.
-  if (inPrintStatus) {
+  if (inVerbose) {
     printIterationStatus<T>(inOutContext);
   }
 
@@ -633,26 +600,26 @@ Status runIteration(Context<T> *inOutContext, const bool inPrintStatus = true,
 ///
 /// Wrapper for running the simulation until convergence.
 ///
-/// \param inOutContext - Context object for simulation.
-/// \param inPrintStatus - Print iteration status to terminal or not.
-/// \param inNumIterationsMin - The minimum number of iterations.
-/// \param inNumIterationsMax - The maximum number of iterations.
-/// \param inVisualize - Run with graphics or in terminal mode.
-/// \param inSaveData - Whether to save data or not.
-/// \param inSaveDataInterval - How frequently to save data.
-/// \param inGridDataSaveFormat - Enum specifying which format to save the
+/// \param inOutContext Context object for simulation.
+/// \param inVerbose Verbosity.
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVisualize Run with graphics or in terminal mode.
+/// \param inDataPath Path to data directory.
+/// \param inSaveData Whether to save data or not.
+/// \param inSaveDataInterval How frequently to save data.
+/// \param inGridDataSaveFormat Enum specifying which format to save the
 /// GridData in (see Type::fileFormat).
-/// \param inJSON - JSON object with parameter values.
 ///
 /// \return - void.
 template <typename T>
-void runSimulation(Context<T> *inOutContext, const bool inPrintStatus = true,
-                   const int inNumIterationsMin = 1,
-                   const int inNumIterationsMax = 1000,
+void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
+                   const int inNumIterationsMin = 0,
+                   const int inNumIterationsMax = 10000,
                    const bool inVisualize = false,
+                   const std::filesystem::path &inDataPath = {},
                    const bool inSaveData = false,
                    const int inSaveDataInterval = 0,
-                   const Json::Value &inJSON = {},
                    const Type::fileFormat inGridDataSaveFormat = Type::csv) {
   Status status = Status::kContinue;
   bool quit = false;
@@ -660,19 +627,12 @@ void runSimulation(Context<T> *inOutContext, const bool inPrintStatus = true,
   while (!quit) {
     if (status != Status::kQuit) {
       // Run one iteration.
-      status = runIteration(inOutContext, inPrintStatus, inNumIterationsMin,
+      status = runIteration(inOutContext, inVerbose, inNumIterationsMin,
                             inNumIterationsMax, inSaveData, inSaveDataInterval);
 
       if (status == Status::kSave) {
-        if (inJSON.empty()) {
-          std::cout
-              << "ERROR! Attempting to save data, but JSON parameter "
-                 "object was empty! (call to runSimulation() in run_utils.h)"
-              << std::endl;
-        } else {
-          saveDataWrapper(inOutContext, inJSON, inPrintStatus,
-                          inGridDataSaveFormat);
-        }
+        saveDataWrapper(inOutContext, inDataPath, inVerbose,
+                        inGridDataSaveFormat);
       }
     } else {
       // When no computation is done it is unnecessary to update the window as
