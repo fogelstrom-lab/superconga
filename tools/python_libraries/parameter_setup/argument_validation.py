@@ -212,6 +212,15 @@ plotter_checks = {
     "vector_potential": plotter_checks_vector_field,
 }
 
+# Validation checks for DOS plotter: a dict with the checks needed for all parameters.
+ldos_plotter_checks = {
+    # General plotting parameters.
+    "general": {
+        "type": dict,
+        "fields": {"data_path": {"type": str}},
+    }
+}
+
 # ------------------------------------------------------------------------------
 # FRONTEND-SPECIFIC VALIDATION
 # ------------------------------------------------------------------------------
@@ -384,6 +393,82 @@ def validate_plotter_arguments(
     return success
 
 
+# Specific checks for plotter.
+def validate_ldos_plotter_arguments(
+    plot_params: dict,
+) -> bool:
+    success = True
+
+    # Check that path is valid and contains data files.
+    data_path = Path(plot_params["general"]["data_path"])
+
+    if not utils.check_dir(data_path, verbose=False, exit_on_failure=False):
+        print(f"Error! Invalid data path: '{data_path}'")
+        success = False
+        return success
+
+    # Check that parameter file exists.
+    config_file = data_path / configuration.filenames["config"]
+    if not utils.check_file(config_file, verbose=False, exit_on_failure=False):
+        print(
+            f"Error: No valid config file found in specified data path: '{config_file}'."
+        )
+        success = False
+        return success
+
+    # Check that internal parameter file exists.
+    internal_param_file = data_path / configuration.filenames["internal_parameters"]
+    if not utils.check_file(internal_param_file, verbose=False, exit_on_failure=False):
+        print(
+            f"Error: No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
+        )
+        success = False
+        return success
+
+    # Check that results file exists.
+    results_file = data_path / configuration.filenames["results"]
+    if not utils.check_file(results_file, verbose=False, exit_on_failure=False):
+        print(
+            f"Error: No valid 'scalar results' file found in specified data path: '{results_file}'."
+        )
+        success = False
+        return success
+
+    # Check that convergence file exists.
+    convergence_file = data_path / configuration.filenames["convergence"]
+    if not utils.check_file(convergence_file, verbose=False, exit_on_failure=False):
+        print(
+            f"Error: No valid convergence file found in specified data path: '{convergence_file}'."
+        )
+        success = False
+        return success
+
+    # Check that post-processing file exists.
+    post_processing_file = data_path / configuration.filenames["post_processing"]
+    if not utils.check_file(post_processing_file, verbose=False, exit_on_failure=False):
+        print(
+            f"Error: No valid post-processing file found in specified data path: '{post_processing_file}'."
+        )
+        success = False
+        return success
+
+    # Check that LDOS file exists.
+    ldos_file = data_path / configuration.filenames["ldos"]
+    if not utils.check_file(ldos_file, verbose=False, exit_on_failure=False):
+        print(f"Error: No valid LDOS file found in specified data path: '{ldos_file}'.")
+        success = False
+        return success
+
+    # Check that DOS file exists.
+    dos_file = data_path / configuration.filenames["dos"]
+    if not utils.check_file(dos_file, verbose=False, exit_on_failure=False):
+        print(f"Error: No valid DOS file found in specified data path: '{dos_file}'.")
+        success = False
+        return success
+
+    return success
+
+
 # ------------------------------------------------------------------------------
 # VALIDATION WRAPPER
 # ------------------------------------------------------------------------------
@@ -405,6 +490,12 @@ def validate_arguments(
 
         # Specific checks.
         success &= validate_plotter_arguments(arguments_dict)
+    elif frontend == "ldos_plotter":
+        # General checks against dictionary.
+        success = check_dict(arguments_dict, ldos_plotter_checks)
+
+        # Specific checks.
+        success &= validate_ldos_plotter_arguments(arguments_dict)
     else:
         print(f"ERROR validate_arguments(): Unknown frontend: '{frontend}'.")
         status_code = 1

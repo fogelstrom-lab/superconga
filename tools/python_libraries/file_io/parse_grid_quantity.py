@@ -27,12 +27,6 @@ from python_libraries.settings import configuration
 # -----------------------------------------------------------------------------
 # Parse 2D grid observable/quantity from csv to pandas DataFrame object.
 def parse_field_pandas(base_path: str, field_name: str) -> pd.DataFrame:
-    # Check if field name is valid.
-    if not field_name in configuration.grid_field_types:
-        print(
-            f"ERROR in parse_grid_quantity.py! The field name {field_name} is invalid. Valid field names are: {configuration.get_field_types.keys()}"
-        )
-
     # Construct full file path.
     data_path = Path(base_path) / configuration.filenames[field_name]
 
@@ -116,7 +110,7 @@ def parse_field_numpy(base_path: str, field_name: str) -> dict:
 
 
 # Wrapper to parse all observables/quantities indicated by plot_parameters.
-def parse_all_fields(base_path: str, as_numpy: bool = True) -> dict:
+def parse_all_fields(base_path: str, as_numpy: bool = True):
     # Data storage as dictionary.
     data_dict = {}
 
@@ -133,6 +127,41 @@ def parse_all_fields(base_path: str, as_numpy: bool = True) -> dict:
                 base_path=base_path,
                 field_name=field_name,
             )
+
+    # Return all data in easily parseable dictionary.
+    return data_dict
+
+
+# Parse LDOS data.
+def parse_ldos(base_path: str, internal_parameters: dict) -> dict:
+    # Data storage as dictionary.
+    data_dict = {}
+
+    field_name = "ldos"
+
+    # Parse CSV with pandas.
+    data_pandas = parse_field_pandas(base_path=base_path, field_name=field_name)
+
+    # Get the lattice side length.
+    num_lattice_points = internal_parameters["num_lattice_points"]
+    points_per_side = int(np.sqrt(num_lattice_points))
+
+    assert points_per_side ** 2 == num_lattice_points
+
+    # Convert to NumPy arrays.
+    x = np.reshape(
+        data_pandas["x_idx"].tolist(), [-1, points_per_side, points_per_side]
+    )
+    y = np.reshape(
+        data_pandas["y_idx"].tolist(), [-1, points_per_side, points_per_side]
+    )
+    data_dict["ldos"] = np.reshape(
+        data_pandas["ldos"].tolist(), [-1, points_per_side, points_per_side]
+    )
+
+    # The x/y-coordinates are the same for every energy. So we can extract them for a single energy.
+    data_dict["x"] = x[0, :, :]
+    data_dict["y"] = y[0, :, :]
 
     # Return all data in easily parseable dictionary.
     return data_dict

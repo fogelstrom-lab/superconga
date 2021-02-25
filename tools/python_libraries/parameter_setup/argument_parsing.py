@@ -37,6 +37,8 @@ def make_default_parser(
         add_runner_arguments(parser)
     elif frontend == "plotter":
         add_plotter_arguments(parser)
+    elif frontend == "ldos_plotter":
+        add_ldos_plotter_arguments(parser)
     else:
         print(f"ERROR make_default_parser(): Unknown frontend: '{frontend}'.")
         status_code = 1
@@ -528,6 +530,30 @@ def add_plotter_arguments(parser) -> None:
 
 
 # -----------------------------------------------------------------------------
+# ARGUMENT SPECIFICATION: DENSITY OF STATES PLOTTER
+# -----------------------------------------------------------------------------
+# Add arguments specific for the LDOS plotter.
+def add_ldos_plotter_arguments(parser) -> None:
+    # Path to data.
+    parser.add_argument(
+        "-p",
+        "--data-path",
+        type=str,
+        default=None,
+        help="Path to data folder.",
+    )
+
+    # Plotting configuration file.
+    parser.add_argument(
+        "-f",
+        "--file",
+        type=str,
+        default=None,
+        help="Path to JSON file with parameters specifying the plot settings.",
+    )
+
+
+# -----------------------------------------------------------------------------
 # HELPER FUNCTIONS
 # -----------------------------------------------------------------------------
 # Set value from command-line argument.
@@ -593,6 +619,8 @@ def set_arguments_from_cli(
         set_runner_arguments_from_cli(sim_params, args)
     elif frontend == "plotter":
         set_plotter_arguments_from_cli(sim_params, args)
+    elif frontend == "ldos_plotter":
+        set_ldos_plotter_arguments_from_cli(sim_params, args)
     else:
         print(f"ERROR set_from_cli(): Unknown frontend: '{frontend}'.")
         status_code = 1
@@ -936,6 +964,16 @@ def set_plotter_arguments_from_cli(
     plot_params["vector_potential"]["plot"] = plot_vector_potential
 
 
+# LDOS Plotter: Override json dictionary with command-line input.
+def set_ldos_plotter_arguments_from_cli(
+    plot_params,
+    args,
+) -> None:
+    # General plot settings.
+    group = "general"
+    set_value(plot_params, "data_path", args.data_path, group)
+
+
 # -----------------------------------------------------------------------------
 # WRAPPER: PARSE ARGUMENTS
 # -----------------------------------------------------------------------------
@@ -989,6 +1027,9 @@ def parse_command_line_arguments(
 
         # Parse the JSON file.
         sim_params = json.loads(data)
+    elif (args.file is None) and (frontend == "ldos_plotter"):
+        # Set default dict structure.
+        sim_params = {"general": {}}
 
     set_arguments_from_cli(
         sim_params,
