@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <thrust/host_vector.h>
+#include <type_traits>
 #include <vector>
 
 namespace scg {
@@ -225,11 +226,21 @@ private:
             const int idx = y * dimX + x;
 
             // Write real part to stream.
-            oss << dataReal[idx];
+            const T real = dataReal[idx];
+            if (std::is_integral<T>::value) {
+              oss << static_cast<int>(real);
+            } else {
+              oss << real;
+            }
 
             // Write imag part to stream.
             if (isComplex) {
-              oss << m_delimiter << dataImag[idx];
+              const T imag = dataImag[idx];
+              if (std::is_integral<T>::value) {
+                oss << m_delimiter << static_cast<int>(imag);
+              } else {
+                oss << m_delimiter << imag;
+              }
             }
 
             // Write to file.
@@ -268,7 +279,13 @@ private:
 
           // Loop over all pointers, adn write to stream.
           for (auto &&fieldPtr : fieldPtrs) {
-            oss << fieldPtr[idx];
+            const T val = fieldPtr[idx];
+            if (std::is_integral<T>::value) {
+              oss << static_cast<int>(val);
+            } else {
+              oss << val;
+            }
+
             if (fieldPtr != fieldPtrs.back()) {
               oss << m_delimiter;
             }
