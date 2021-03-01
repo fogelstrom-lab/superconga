@@ -59,3 +59,22 @@ def parse_convergence_csv_as_dict(base_path: str) -> dict:
         convergence_data[column_name] = raw_data[:, col_idx]
 
     return convergence_data
+
+
+# Parse Density of States file and return dictionary. The keys of the
+# dictionary are energy and dos: dos_data["energy"], dos_data["dos"]
+def parse_dos(base_path: str) -> dict:
+    dos_data = {}
+
+    # Check that DOS file exists and is readable: exit on failure.
+    dos_data_path = Path(base_path) / configuration.filenames["dos"]
+    utils.check_file(dos_data_path)
+
+    # Read CSV file.
+    pandas_data = pd.read_csv(dos_data_path, header=0)
+
+    # Convert to NumPy arrays.
+    dos_data["energy"] = np.array(pandas_data["energy"].tolist())
+    dos_data["dos"] = np.array(pandas_data["dos"].tolist())
+
+    return dos_data

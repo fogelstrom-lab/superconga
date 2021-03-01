@@ -96,22 +96,3 @@ def parse_general_csv(file_path: str) -> pd.DataFrame:
     data = pd.read_csv(file_path)
 
     return data
-
-
-# -----------------------------------------------------------------------------
-# FILE PARSING: JSON
-# -----------------------------------------------------------------------------
-# General parser for json files: return result as dictionary.
-def parse_general_json(file_path: str) -> dict:
-    # Check that file exists and is readable: exit on failure.
-    check_file(file_path)
-
-    # Storage for data dict.
-    data = {}
-
-    # Attempt to parse JSON file.
-    with open(file_path) as json_file:
-        data_string_json = json_file.read()
-        data = json.loads(data_string_json)
-
-    return data
