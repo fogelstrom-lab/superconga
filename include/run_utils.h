@@ -64,8 +64,10 @@ bool guiUserSaveData = false;
 /// \return - void
 inline void myKeyboardFunc(const unsigned char inKey, const int inX,
                            const int inY) {
+#ifndef NDEBUG
   std::cout << "key pressed: " << inKey << ", at (" << inX << ", " << inY
             << ")\n";
+#endif
   if (inKey == 'q' || inKey == 'Q') {
     internal::guiUserQuit = true;
   } else if (inKey == 's' || inKey == 'S') {
@@ -689,10 +691,16 @@ void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
 /// \return - void.
 template <typename T>
 void cleanup(Context<T> *inContext, Visualization<T> *inGUI = nullptr) {
+#ifndef NDEBUG
   std::cout << "Cleaning up..." << std::endl;
+#endif
+
   delete inGUI;
   delete inContext;
+
+#ifndef NDEBUG
   std::cout << "Done!" << std::endl;
+#endif
 }
 } // namespace run_utils
 } // namespace scg

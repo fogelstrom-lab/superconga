@@ -65,16 +65,22 @@ template <typename T>
 IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki(
     Context<T> *const inOutContext, int inNumEnergiesPerBlock)
     : IntegrationIterator<T>(inOutContext, inNumEnergiesPerBlock) {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorOzaki<T>()\n";
+#endif
   inOutContext->set(this);
 }
 
 template <typename T> IntegrationIteratorOzaki<T>::~IntegrationIteratorOzaki() {
+#ifndef NDEBUG
   std::cout << "~IntegrationIteratorOzaki()\n";
+#endif
 }
 
 template <typename T> int IntegrationIteratorOzaki<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorOzaki::initialize()\n";
+#endif
   IntegrationIterator<T>::initialize();
 
   initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
@@ -86,9 +92,11 @@ template <typename T>
 void IntegrationIteratorOzaki<T>::computeOzakiPoles(const int inNumOzakiPoles,
                                                     T *const outPoles,
                                                     T *const outResidues) {
+#ifndef NDEBUG
   std::cout
       << "IntegrationIteratorOzaki<T>::computeOzakiPoles( inNumOzakiPoles: "
       << inNumOzakiPoles << ", ... )\n";
+#endif
   // Dimension of matrices is 2*poles due to positive and negative poles
   int64_t N = 2 * inNumOzakiPoles;
 
@@ -183,9 +191,10 @@ void IntegrationIteratorOzaki<T>::initIterators(
 
   ParameterIterator<int> *iter = new ParameterIterator<int>(0, numEnergies);
   I::setEnergyIterator(iter);
-
+#ifndef NDEBUG
   std::cout << "Initializing ozaki iterator with Ne = " << numEnergies
             << ", NeBlock = " << inNumEnergiesPerBlock << "\n";
+#endif
 
   if (inNumEnergiesPerBlock < 1) {
     iter->setIncrement(numEnergies);
@@ -193,12 +202,14 @@ void IntegrationIteratorOzaki<T>::initIterators(
     iter->setIncrement(inNumEnergiesPerBlock);
   }
 
+#ifndef NDEBUG
   for (iter->begin(); !iter->isDone(); iter->next()) {
     std::cout << "min = " << iter->getMin() << "\n";
     std::cout << "max = " << iter->getMax() << "\n";
     std::cout << "inc = " << iter->getIncrement() << "\n";
     std::cout << "num = " << iter->getNumInterval() << "\n\n";
   }
+#endif
 
   iter->begin();
 }
@@ -215,8 +226,10 @@ int IntegrationIteratorOzaki<T>::getEnergyIdxOffset_boundaryStorage() {
 
 template <typename T>
 void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorOzaki<T>::setBoundaryInitialCondition(): "
                "Begin...\n";
+#endif
 
   typedef IntegrationIterator<T> I;
 
@@ -257,8 +270,10 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
     }
   }
 
+#ifndef NDEBUG
   std::cout
       << "IntegrationIteratorOzaki<T>::setBoundaryInitialCondition(): Done!\n";
+#endif
 
   // Print CUDA error, if any
   ContextModule<T>::checkCudaError(

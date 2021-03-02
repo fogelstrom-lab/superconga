@@ -63,12 +63,16 @@ FermiSurfaceCircle<T>::FermiSurfaceCircle()
     : FermiSurface<T>(), m_systemAngles(0), m_systemAnglesGPU(0) {}
 
 template <typename T> FermiSurfaceCircle<T>::~FermiSurfaceCircle() {
+#ifndef NDEBUG
   std::cout << "~FermiSurfaceCircle<T>\n";
+#endif
 }
 
 template <typename T>
 void FermiSurfaceCircle<T>::initialize(const int inNumAngles) {
+#ifndef NDEBUG
   std::cout << "FermiSurfaceCircle<T>::initialize()\n";
+#endif
 
   // The base class needs to know the number of angles.
   FermiSurface<T>::initialize(inNumAngles);

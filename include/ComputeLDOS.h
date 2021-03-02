@@ -102,13 +102,14 @@ template <typename T> int ComputeLDOS<T>::initialize() {
   GridGPU<T>::initializeGrid(m_ldosAll, N0, N0, numEnergies, Type::real);
   // Field 0 of m_dos contains E, field 1 contains DOS.
   GridCPU<T>::initializeGrid(m_dos, numEnergies, 1, 2, Type::real);
+  m_dos->setZero();
 
+#ifndef NDEBUG
   const int memoryLDOS =
       (m_ldosAll->numElements() + m_ldosInterval->numElements()) *
       static_cast<int>(sizeof(T));
   std::cout << "LDOS memory: " << memoryLDOS << "\n";
-
-  m_dos->setZero();
+#endif
 
   ComputeProperty<T>::initGreensAngle(N1, numEnergiesInterval);
   return 0;

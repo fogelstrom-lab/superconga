@@ -69,7 +69,9 @@ ComputeOrderParameter<T>::ComputeOrderParameter(Context<T> *ctx)
 }
 
 template <typename T> ComputeOrderParameter<T>::~ComputeOrderParameter() {
+#ifndef NDEBUG
   std::cout << "~ComputeOrderParameter<T>\n";
+#endif
   if (_delta) {
     delete _delta;
   }
@@ -82,7 +84,9 @@ template <typename T> ComputeOrderParameter<T>::~ComputeOrderParameter() {
 }
 
 template <typename T> int ComputeOrderParameter<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "ComputeOrderParameter<T>::initialize()\n";
+#endif
   typedef ContextModule<T> C;
 
   // Make a local copy of order parameter, store new order parameter in this.

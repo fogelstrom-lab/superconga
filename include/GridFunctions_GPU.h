@@ -535,8 +535,10 @@ template <typename T>
 GridData<T, thrust::device_vector<T>> &
 GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
   if (grid->_dimX != grid->_dimY) {
+#ifndef NDEBUG
     std::cout << "GridFunctions<T,thrust::device_vector<T> >::transpose(): "
                  "Error, dimensions not equal\n";
+#endif
     return *grid;
   }
 
@@ -802,7 +804,9 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGridAdditive(
     fieldStart = field;
     fieldEnd = field + 1;
   } else {
+#ifndef NDEBUG
     std::cout << "GridData() : Field out of bounds, operation terminated.\n";
+#endif
     return;
   }
 

@@ -75,7 +75,9 @@ template <typename T> ComputeCurrent<T>::~ComputeCurrent() {
 }
 
 template <typename T> int ComputeCurrent<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "ComputeCurrent<T>::initialize()\n";
+#endif
   typedef ContextModule<T> C;
 
   // Get resolution

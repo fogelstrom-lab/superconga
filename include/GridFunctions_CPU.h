@@ -507,8 +507,10 @@ void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGridAdditive(
     fieldStart = field;
     fieldEnd = field + 1;
   } else {
+#ifndef NDEBUG
     std::cout << "GridData()::insertRotatedGridAdditive : Field out of bounds, "
                  "operation terminated.\n";
+#endif
     return;
   }
 

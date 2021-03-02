@@ -113,8 +113,10 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
     break;
   }
   default: {
+#ifndef NDEBUG
     // TODO(niclas): Raise exception instead!?
     std::cout << "ERROR! Basis-function symmetry not implemented!" << std::endl;
+#endif
   }
   }
   return str;
@@ -154,9 +156,11 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
       break;
     }
     default: {
+#ifndef NDEBUG
       // TODO(niclas): Raise exception instead!?
       std::cout << "ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
+#endif
       basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
     }
     }
@@ -185,9 +189,11 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
       break;
     }
     default: {
+#ifndef NDEBUG
       // TODO(niclas): Raise exception instead!?
       std::cout << "ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
+#endif
       basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
     }
     }

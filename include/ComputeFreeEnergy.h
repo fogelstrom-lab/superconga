@@ -167,8 +167,9 @@ template <typename T> ComputeFreeEnergy<T>::~ComputeFreeEnergy() {
 }
 
 template <typename T> int ComputeFreeEnergy<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "ComputeFreeEnergy<T>::initialize()\n";
-
+#endif
   typedef ComputeProperty<T> C;
 
   // Get resolution

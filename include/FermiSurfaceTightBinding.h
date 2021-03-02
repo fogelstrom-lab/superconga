@@ -176,11 +176,13 @@ vector2d<T> computeFermiMomentum(
   const vector2d<T> momentumB = utils::multAdd(kB, unitVector, inOriginOffset);
   T eB = inDispersion.evaluate(momentumB);
 
+#ifndef NDEBUG
   // TODO(niclas): Make sure that the signs of eA and eB differ. Exit gracefully
   // otherwise.
   if (utils::sign(eA) == utils::sign(eB)) {
     std::cout << "ERROR! Failure of the bisection method." << std::endl;
   }
+#endif
 
   // Initial guess.
   T k = static_cast<T>(0.5) * (kA + kB);
@@ -217,7 +219,9 @@ vector2d<T> computeFermiMomentum(
 
       // Make sure that the signs of eA and eB differ.
       if (utils::sign(eA) == utils::sign(eB)) {
+#ifndef NDEBUG
         std::cout << "ERROR! Failure of the bisection method." << std::endl;
+#endif
         break;
       }
 
@@ -258,15 +262,21 @@ vector2d<T> computeFermiMomentum(
 
   // TODO(niclas): Raise exception instead!
   if (!isConverged) {
+#ifndef NDEBUG
     std::cout << "ERROR! The Fermi momentum did not converge!" << std::endl;
+#endif
   }
   if (!isSane) {
+#ifndef NDEBUG
     std::cout << "ERROR! The Fermi momentum magnitude is negative!"
               << std::endl;
+#endif
   }
   if (!isWithinBZ) {
+#ifndef NDEBUG
     std::cout << "ERROR! The Fermi momentum is outside of Brillouin zone!"
               << std::endl;
+#endif
   }
 
   // Form the momentum.
@@ -333,20 +343,26 @@ FermiSurfaceTightBinding<T>::FermiSurfaceTightBinding(
       m_avgFermiSpeed(0.0), m_dispersion(inDispersion) {}
 
 template <typename T> FermiSurfaceTightBinding<T>::~FermiSurfaceTightBinding() {
+#ifndef NDEBUG
   std::cout << "~FermiSurfaceTightBinding<T>\n";
+#endif
 }
 
 template <typename T>
 void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
+#ifndef NDEBUG
   std::cout << "FermiSurfaceTightBinding<T>::initialize()" << std::endl;
+#endif
 
   // The base class needs to know the number of angles.
   FermiSurface<T>::initialize(inNumAngles);
 
   // Compute momentum offset.
   m_originOffset = tightbinding_internal::computeMomentumOffset(m_dispersion);
+#ifndef NDEBUG
   std::cout << "Fermi Surface Origin: (x, y) = (" << m_originOffset[0] << ", "
             << m_originOffset[1] << ")" << std::endl;
+#endif
 
   // Clear all arrays on the CPU.
   m_fermiMomentumX.clear();
@@ -401,9 +417,11 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
   // The average Fermi momentum and speed.
   m_avgFermiMomentum = fermiMomentumSum / integrandFactorSum;
   m_avgFermiSpeed = fermiSpeedSum / integrandFactorSum;
+#ifndef NDEBUG
   std::cout << "<|vF|>/(ta) = " << m_avgFermiSpeed
             << ", 1/(a<|kF|>) = " << static_cast<T>(1.0) / m_avgFermiMomentum
             << std::endl;
+#endif
 
   // Normalize the Fermi velocity and integrand factor.
   for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {

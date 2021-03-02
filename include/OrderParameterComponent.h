@@ -176,8 +176,10 @@ void OrderParameterComponent<T>::initCouplingConstant(const T *energies,
   m_couplingConstant = (piT / (std::log(T_Tc / _Tcthis_Tc) + energySum));
   m_isCouplingConstantInitialized = true;
 
+#ifndef NDEBUG
   // Print the value.
   std::cout << "m_couplingConstant: " << m_couplingConstant << "\n";
+#endif
 }
 
 template <typename T> void OrderParameterComponent<T>::applyCouplingConstant() {

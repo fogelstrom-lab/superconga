@@ -167,7 +167,9 @@ BoundaryStorage<T>::BoundaryStorage()
       _numEnergies(0) {}
 
 template <typename T> BoundaryStorage<T>::~BoundaryStorage() {
+#ifndef NDEBUG
   std::cout << "BoundaryStorage::~BoundaryStorage()\n";
+#endif
 
   if (_index_sparse_in_gamma)
     delete _index_sparse_in_gamma;
@@ -217,8 +219,10 @@ BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> *geom,
       _boundary_out_gammabar(0), _trajectoryRange_x(0), _trajectoryRange_y(0),
       _trajectoryRangeAllStart_y(0), _trajectoryRangeAllEnd_y(0),
       _numEnergies(0) {
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::BoundaryStorage(GeometryGroup<T> * geom, "
                "FermiSurface<T> *fermiSurface)\n";
+#endif
 
   _geom = geom;
   _fermiSurface = fermiSurface;
@@ -228,19 +232,25 @@ template <typename T>
 void BoundaryStorage<T>::initialize(const int numTrajectoriesPerAngle,
                                     const int numEnergies,
                                     const int numAngles) {
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::initialize(): numTrajectoriesPerAngle = "
             << numTrajectoriesPerAngle << ", numEnergies = " << numEnergies
             << ", numAngles = " << numAngles << "\n";
+#endif
 
   if (_index_sparse_in_gamma &&
       _index_sparse_in_gamma->dimX() == numTrajectoriesPerAngle &&
       _index_sparse_in_gamma->numFields() == numAngles &&
       _numEnergies == numEnergies) {
+#ifndef NDEBUG
     std::cout << "Existing sparse storage identical to input parameters, not "
                  "initializing\n";
+#endif
   } else {
+#ifndef NDEBUG
     std::cout << "BoundaryStorage<T>::initialize(): Parameters changed, "
                  "initializing new grids.\n";
+#endif
 
     _numEnergies = numEnergies;
     _numAngles = numAngles;
@@ -274,8 +284,9 @@ void BoundaryStorage<T>::initialize(const int numTrajectoriesPerAngle,
 
 template <typename T>
 void BoundaryStorage<T>::computeIntersectingTrajectories(const int numAngles) {
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::computeIntersectingTrajectories()\n";
-
+#endif
   int numPossibleTrajectories = _index_sparse_in_gamma->dimX();
 
   GridCPU<int>::initializeGrid(_trajectoryRange_x, numAngles, 1, 2, Type::real);
@@ -416,8 +427,10 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
 
   GridCPU<char> dom_cpu;
 
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::computeSparseIndices(): Nx,Ny = " << Nx
             << " " << Ny << "\n";
+#endif
 
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Current angle in radians
@@ -458,10 +471,11 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   *_num_bnd_intersect_gamma = num_bnd_intersect_gamma;
   *_num_bnd_intersect_gammabar = num_bnd_intersect_gammabar;
 
-  // Initialize and allocate memory for sparse storage
+// Initialize and allocate memory for sparse storage
+#ifndef NDEBUG
   printf("%d, %d, %d, %d, %d\n\n\n\n", sum_idx_in_gamma, sum_idx_out_gamma,
          sum_idx_in_gammabar, sum_idx_out_gammabar, numEnergies);
-
+#endif
   allocMemSparseStorage(sum_idx_in_gamma, sum_idx_out_gamma,
                         sum_idx_in_gammabar, sum_idx_out_gammabar, numEnergies);
 
@@ -495,8 +509,9 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
 
   *_coord_bnd_intersect_gamma = coord_bnd_intersect_gamma;
   *_coord_bnd_intersect_gammabar = coord_bnd_intersect_gammabar;
-
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::computeSparseIndices(): Done!\n";
+#endif
 }
 
 template <typename T>
@@ -505,8 +520,9 @@ void BoundaryStorage<T>::allocMemSparseStorage(const int numElemGammaIn,
                                                const int numElemGammaBarIn,
                                                const int numElemGammaBarOut,
                                                const int numEnergies) {
+#ifndef NDEBUG
   std::cout << "BoundaryStorage<T>::allocMemSparseStorage():\n";
-
+#endif
   // Initialize sparse storage
   _numSparseIn_gamma = numElemGammaIn;
   _numSparseOut_gamma = numElemGammaOut;
@@ -531,7 +547,7 @@ void BoundaryStorage<T>::allocMemSparseStorage(const int numElemGammaIn,
                              1, Type::complex);
   GridGPU<T>::initializeGrid(_boundary_out_gammabar, numStorage_out_gammabar, 1,
                              1, Type::complex);
-
+#ifndef NDEBUG
   // Print some info
   std::cout << "\nSparse storage num energies = " << numEnergies << "\n";
   std::cout << "numStorage_in_gamma = " << numStorage_in_gamma << "\n";
@@ -545,6 +561,7 @@ void BoundaryStorage<T>::allocMemSparseStorage(const int numElemGammaIn,
                  2 * sizeof(T);
 
   std::cout << "Boundary storage data: " << bytes << " bytes.\n\n";
+#endif
 }
 
 template <typename T> void BoundaryStorage<T>::setBoundaryZero() {

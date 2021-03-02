@@ -136,7 +136,9 @@ __global__ void labelEntryExit_Kernel(char *oldLabels_p, char *newLabels_p,
 template <typename T>
 GeometryComponent<T>::GeometryComponent()
     : _param(0), _domainLabels(0), _normals(0), _boundaryDistance(0) {
+#ifndef NDEBUG
   std::cout << "GeometryComponent()\n";
+#endif
 }
 
 template <typename T>
@@ -152,7 +154,9 @@ GeometryComponent<T>::GeometryComponent(const GeometryComponent<T> &other)
 }
 
 template <typename T> GeometryComponent<T>::~GeometryComponent() {
+#ifndef NDEBUG
   std::cout << "~GeometryComponent()\n";
+#endif
   freeMem();
 }
 
@@ -166,11 +170,13 @@ void swap(GeometryComponent<T> &A, GeometryComponent<T> &B) {
 
 template <typename T> void GeometryComponent<T>::allocateMem() {
   int N;
-  if (_param)
+  if (_param) {
     N = _param->getGridResolutionDeltaRotated();
-  else {
+  } else {
+#ifndef NDEBUG
     std::cout << "GeometryComponent<T>::allocateMem(): Error: No Parameters<T> "
                  "object!\n";
+#endif
     return;
   }
 
@@ -210,8 +216,10 @@ void GeometryComponent<T>::getGridDimensions(int &Nx, int &Ny) const {
     Nx = _domainLabels->dimX();
     Ny = _domainLabels->dimY();
   } else {
+#ifndef NDEBUG
     std::cout << "GeometryComponent<T>::getGridDimensions() Error: "
                  "_domainLabels not initialized.\n";
+#endif
     Nx = 0;
     Ny = 0;
   }

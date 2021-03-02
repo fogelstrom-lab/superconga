@@ -216,9 +216,12 @@ Parameters<T>::operator Parameters<T2>() const {
 template <typename T>
 template <typename T2>
 Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
-  if (m_version != inOther.getVersion())
+#ifndef NDEBUG
+  if (m_version != inOther.getVersion()) {
     std::cout << "Parameters<T>::operator=(): Warning, differing versions of "
                  "Parameters class\n";
+  }
+#endif
 
   m_grainWidth = inOther.getGrainWidth();
   m_numAngles = inOther.getAngularResolution();

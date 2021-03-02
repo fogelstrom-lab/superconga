@@ -484,7 +484,9 @@ template <typename T>
 GeometryGroup<T>::GeometryGroup(Context<T> *ctx)
     : ContextModule<T>(ctx), _domainLabels(0), _normals(0),
       _boundaryDistance(0), _domain_ref(0), _geomOpList(0) {
+#ifndef NDEBUG
   std::cout << "GeometryGroup<T>::GeometryGroup( Context<T>* )\n";
+#endif
 
   ctx->set(this);
 
@@ -493,7 +495,9 @@ GeometryGroup<T>::GeometryGroup(Context<T> *ctx)
 }
 
 template <typename T> GeometryGroup<T>::~GeometryGroup() {
+#ifndef NDEBUG
   std::cout << "~GeometryGroup()\n";
+#endif
 
   if (_domainLabels) {
     delete _domainLabels;
@@ -538,7 +542,9 @@ template <typename T> void swap(GeometryGroup<T> &A, GeometryGroup<T> &B) {
 }
 
 template <typename T> int GeometryGroup<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "GeometryGroup<T>::initialize()\n";
+#endif
   const int N =
       ContextModule<T>::getParameters()->getGridResolutionDeltaRotated();
 
@@ -654,8 +660,10 @@ void GeometryGroup<T>::set(GeometryComponent<T> *newComponent,
     _geomComponentList[geomIdx] = newComponent;
     _geomOpList[geomIdx] = int(operation);
   } else {
+#ifndef NDEBUG
     std::cout << "GeometryGroup<T>::setGeometryComponent(): Nothing added, "
                  "index out of range\n";
+#endif
   }
 }
 
@@ -756,11 +764,13 @@ int GeometryGroup<T>::computeNumGrainLatticeSites(
     for (int x = 0; x < numX; ++x) {
       const int idx = y * numX + x;
       const char node = domainPtr[idx];
+#ifndef NDEBUG
       if (node < 0 || node > m_maxValidLabel) {
         // TODO(niclas): Raise exception instead?
         std::cerr << "WARNING: Domain label, " << static_cast<int>(node)
                   << ", not understood!" << std::endl;
       }
+#endif
 
       if (node > 0) {
         numGrainLatticeSites++;

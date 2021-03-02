@@ -47,7 +47,9 @@ template <typename T>
 IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh(
     Context<T> *ctx, int numEnergiesPerBlock)
     : IntegrationIterator<T>(ctx, numEnergiesPerBlock) {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>()\n";
+#endif
   ctx->set(this);
 
   m_lastEnergyIndex = -1;
@@ -55,11 +57,16 @@ IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh(
 
 template <typename T>
 IntegrationIteratorKeldysh<T>::~IntegrationIteratorKeldysh() {
+#ifndef NDEBUG
   std::cout << "~IntegrationIteratorKeldysh()\n";
+#endif
 }
 
 template <typename T> int IntegrationIteratorKeldysh<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh::initialize()\n";
+#endif
+
   IntegrationIterator<T>::initialize();
 
   initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
@@ -67,7 +74,9 @@ template <typename T> int IntegrationIteratorKeldysh<T>::initialize() {
 }
 
 template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>::initEnergies()\n";
+#endif
 
   const Parameters<T> *const param = ContextModule<T>::getParameters();
 
@@ -77,8 +86,10 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
 
   const int numEnergies = param->getNumEnergies();
 
+#ifndef NDEBUG
   std::cout << "eMin = " << eMin << ", eMax = " << eMax
             << ", numE = " << numEnergies << "\n";
+#endif
 
   // Generate energy array
   GridCPU<T> energies_cpu(numEnergies, 1);
@@ -102,7 +113,9 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
 
 template <typename T>
 void IntegrationIteratorKeldysh<T>::initIterators(int numEnergiesPerBlock) {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>::initIterators()\n";
+#endif
 
   typedef IntegrationIterator<T> I;
 
@@ -112,9 +125,10 @@ void IntegrationIteratorKeldysh<T>::initIterators(int numEnergiesPerBlock) {
 
   ParameterIterator<int> *iter = new ParameterIterator<int>(0, numEnergies);
   I::setEnergyIterator(iter);
-
+#ifndef NDEBUG
   std::cout << "Initializing keldysh iterator with Ne = " << numEnergies
             << ", NeBlock = " << numEnergiesPerBlock << "\n";
+#endif
 
   if (numEnergiesPerBlock == -1) {
     // TODO(niclas): This should be default parameter?
@@ -123,12 +137,14 @@ void IntegrationIteratorKeldysh<T>::initIterators(int numEnergiesPerBlock) {
     iter->setIncrement(numEnergiesPerBlock);
   }
 
+#ifndef NDEBUG
   for (iter->begin(); !iter->isDone(); iter->next()) {
     std::cout << "min = " << iter->getMin() << "\n";
     std::cout << "max = " << iter->getMax() << "\n";
     std::cout << "inc = " << iter->getIncrement() << "\n";
     std::cout << "num = " << iter->getNumInterval() << "\n\n";
   }
+#endif
 
   iter->begin();
 }
@@ -145,7 +161,9 @@ int IntegrationIteratorKeldysh<T>::getEnergyIdxOffset_boundaryStorage() {
 
 template <typename T>
 void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
+#ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition()\n";
+#endif
 
   typedef IntegrationIterator<T> I;
   typedef ContextModule<T> C;
@@ -191,8 +209,10 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   // Check if there are any energies left. If not, then just return without
   // doing anything.
   if (energyIterator->isDone()) {
+#ifndef NDEBUG
     std::cout << "IntegrationIteratorKeldysh<T>::compute(): Iterator done"
               << std::endl;
+#endif
     return;
   }
 
@@ -204,8 +224,10 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
   // Check that the energy is sane. If not, the return without doing anything.
   if (currentEnergyIndex >= numEnergies) {
-    // TODO(niclas): This should never happen. Raise exception instead!?
+// TODO(niclas): This should never happen. Raise exception instead!?
+#ifndef NDEBUG
     std::cout << "ERROR! Energy index out of bounds." << std::endl;
+#endif
     return;
   }
 
@@ -307,10 +329,11 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
       for (int i = 0; i < numComputeObjects; ++i) {
         C::getComputeObject(i)->setConverged(true);
       }
-
+#ifndef NDEBUG
       std::cout << "IntegrationIteratorKeldysh<T>::compute(): All intervals "
                    "converged"
                 << std::endl;
+#endif
     }
   }
 

@@ -251,7 +251,9 @@ template <typename T, template <typename> class GAMMA,
 RiccatiSolverConfined<T, GAMMA, POTENTIAL>::RiccatiSolverConfined(
     Context<T> *ctx)
     : RiccatiSolver<T>(ctx) {
+#ifndef NDEBUG
   std::cout << "RiccatiSolverConfined::RiccatiSolverConfined( Context<T>* )\n";
+#endif
   ctx->set(this);
 }
 
