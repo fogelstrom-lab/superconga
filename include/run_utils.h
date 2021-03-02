@@ -103,15 +103,36 @@ void saveParametersWrapper(const Context<T> *const inContext,
   const int numGrainLatticeSites =
       inContext->getGeometry()->getNumGrainLatticeSites();
 
-  // Various results.
+  // Json for various results.
   Json::Value resultsJSON;
+
+  // Free energy per unit area.
   resultsJSON["free_energy_per_unit_area"] =
       inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+
+  // Average order-parameter magnitude.
+  // TODO(niclas): Is this correct for multi-component OP?
   resultsJSON["order_parameter_average_magnitude"] =
       inContext->getComputeOrderParameter()->getResult()->sumMagnitude() /
       static_cast<T>(numGrainLatticeSites);
+
+  // Average current-density magnitude.
   resultsJSON["current_density_average_magnitude"] =
       inContext->getComputeCurrent()->getResult()->sumMagnitude() /
+      static_cast<T>(numGrainLatticeSites);
+
+  // Average vector-potential magnitude.
+  // TODO(niclas): Should this be computed outside of the grain?
+  GridGPU<T> vectorPotential = *(inContext->getInducedVectorPotential());
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&vectorPotential);
+  resultsJSON["vector_potential_average_magnitude"] =
+      vectorPotential.sumMagnitude() / static_cast<T>(numGrainLatticeSites);
+
+  // Average flux density.
+  // TODO(niclas): Should this be computed outside of the grain?
+  const T latticeElementSize = inContext->getParameters()->getGridElementSize();
+  resultsJSON["flux_density_average"] =
+      vectorPotential.curl(latticeElementSize).sumField() /
       static_cast<T>(numGrainLatticeSites);
 
   // Save various results to JSON file.
