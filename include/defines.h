@@ -47,6 +47,9 @@ const double D_WAVE_BULK =
 // The value of the Riemann zeto function evaluated at 3, i.e. Apery's constant
 // = zeta(3).
 const double APERY = std::riemann_zeta(3);
+
+// The sign of the elementary charge 'e', i.e. SIGN_E = e / |e|.
+const double SIGN_E = -1.0;
 } // namespace constants
 } // namespace scg
 

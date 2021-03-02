@@ -1,6 +1,7 @@
 #ifndef VECTOR_POTENTIAL_KERNEL_H_
 #define VECTOR_POTENTIAL_KERNEL_H_
 
+#include "defines.h"
 #include <cuda.h>
 #include <math.h>
 
@@ -36,9 +37,9 @@ __global__ void computeEnergyShiftOnlyExternalKernel(
 
     // Compute energy shift.
     // The factor pi comes from our choice of coordinates.
-    outEnergyShift[idx] =
-        static_cast<T>(M_PI) * (inFermiVelocityX * vectorPotentialX +
-                                inFermiVelocityY * vectorPotentialY);
+    outEnergyShift[idx] = -static_cast<T>(constants::SIGN_E * M_PI) *
+                          (inFermiVelocityX * vectorPotentialX +
+                           inFermiVelocityY * vectorPotentialY);
   }
 }
 
@@ -80,9 +81,9 @@ __global__ void computeEnergyShiftKernel(
 
     // Compute energy shift.
     // The factor pi comes from our choice of coordinates.
-    outEnergyShift[idx] =
-        static_cast<T>(M_PI) * (inFermiVelocityX * vectorPotentialX +
-                                inFermiVelocityY * vectorPotentialY);
+    outEnergyShift[idx] = -static_cast<T>(constants::SIGN_E * M_PI) *
+                          (inFermiVelocityX * vectorPotentialX +
+                           inFermiVelocityY * vectorPotentialY);
   }
 }
 } // namespace scg

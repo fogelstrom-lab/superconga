@@ -5,6 +5,7 @@
 #include "ComputeResidual.h"
 #include "Grid.h"
 #include "IntegrationIteratorOzaki.h"
+#include "defines.h"
 #include "utils.h"
 
 namespace scg {
@@ -168,12 +169,13 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
   typedef ComputeProperty<T> C;
 
   if (C::doCompute()) {
-    const T T_Tc = C::getParameters()->getTemperature();
-
     GridGPU<T> current_old = *_current_real;
 
     _current_real->insertGrid(_current);
-    *_current_real *= T_Tc;
+
+    const T T_Tc = C::getParameters()->getTemperature();
+    const T factor = -static_cast<T>(constants::SIGN_E) * T_Tc;
+    *_current_real *= factor;
 
     // Set the current to zero outside of the grain.
     ContextModule<T>::getContext()->getGeometry()->zeroValuesOutsideDomainRef(
