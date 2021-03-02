@@ -17,44 +17,52 @@ template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
   ComputeFreeEnergy();
-  virtual ~ComputeFreeEnergy();
+  ~ComputeFreeEnergy();
 
   ComputeFreeEnergy(Context<T> *const inOutContext);
 
-  virtual GridGPU<T> *getResult() { return m_freeEnergyGrid; }
+  GridGPU<T> *getResult() override { return m_freeEnergyGrid; }
   T getFreeEnergy() const { return m_freeEnergy; }
   T getFreeEnergyPerUnitArea() const { return m_freeEnergyPerUnitArea; }
+  T getMagneticFreeEnergy() const { return m_magneticFreeEnergy; }
+  T getMagneticFreeEnergyPerUnitArea() const {
+    return m_magneticFreeEnergyPerUnitArea;
+  }
 
-  virtual int initialize();
-  virtual IntegrationIterator<T> *
-  createIntegrationIterator(const int inNumEnergiesPerBlock = -1);
+  int initialize() override;
+  IntegrationIterator<T> *
+  createIntegrationIterator(const int inNumEnergiesPerBlock = -1) override;
 
   // This should be called once for every iteration, before any integration
   // takes place.
-  virtual void initializeIteration(const int inNumFields = 1);
+  void initializeIteration(const int inNumFields = 1) override;
 
   // This should be called once for every angle, before any integration takes
   // place.
-  virtual void initializeGreensAngle();
+  void initializeGreensAngle() override;
 
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
-                                  GridGPU<T> *inGamma, GridGPU<T> *inGammabar);
+  void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
+                          GridGPU<T> *inGamma, GridGPU<T> *inGammabar) override;
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *inGeometryGroup,
-                                    const int inAngleIdx);
+  void integrateGreensAngle(GeometryGroup<T> *inGeometryGroup,
+                            const int inAngleIdx) override;
 
   // Compute physical property from greens function.
-  virtual void computePropertyFromGreens();
+  void computePropertyFromGreens() override;
 
 private:
-  // Total free energy
+  // Total free energy.
   T m_freeEnergy;
   T m_freeEnergyPerUnitArea;
+
+  // Magnetic part of the free energy.
+  T m_magneticFreeEnergy;
+  T m_magneticFreeEnergyPerUnitArea;
 
   GridGPU<T> *m_freeEnergyGrid;
 };
@@ -136,17 +144,26 @@ __global__ void computeFreeEnergy_Kernel(
 
 template <typename T>
 ComputeFreeEnergy<T>::ComputeFreeEnergy()
-    : ComputeProperty<T>(), m_freeEnergyGrid(0) {}
+    : ComputeProperty<T>(), m_freeEnergy(static_cast<T>(0)),
+      m_freeEnergyPerUnitArea(static_cast<T>(0)),
+      m_magneticFreeEnergy(static_cast<T>(0)),
+      m_magneticFreeEnergyPerUnitArea(static_cast<T>(0)),
+      m_freeEnergyGrid(nullptr) {}
 
 template <typename T>
 ComputeFreeEnergy<T>::ComputeFreeEnergy(Context<T> *const inOutContext)
-    : ComputeProperty<T>(inOutContext), m_freeEnergyGrid(0) {
+    : ComputeProperty<T>(inOutContext), m_freeEnergy(static_cast<T>(0)),
+      m_freeEnergyPerUnitArea(static_cast<T>(0)),
+      m_magneticFreeEnergy(static_cast<T>(0)),
+      m_magneticFreeEnergyPerUnitArea(static_cast<T>(0)),
+      m_freeEnergyGrid(nullptr) {
   inOutContext->add(this);
 }
 
 template <typename T> ComputeFreeEnergy<T>::~ComputeFreeEnergy() {
-  if (m_freeEnergyGrid)
+  if (m_freeEnergyGrid) {
     delete m_freeEnergyGrid;
+  }
 }
 
 template <typename T> int ComputeFreeEnergy<T>::initialize() {
@@ -185,8 +202,10 @@ void ComputeFreeEnergy<T>::initializeIteration(const int inNumFields) {
 }
 
 template <typename T> void ComputeFreeEnergy<T>::initializeGreensAngle() {
-  if (ComputeProperty<T>::doCompute())
-    ComputeProperty<T>::initializeGreensAngle(); // Sets to zero
+  if (ComputeProperty<T>::doCompute()) {
+    // Set to zero.
+    ComputeProperty<T>::initializeGreensAngle();
+  }
 }
 
 // Computes the free-energy kernel 'I' for current angle, for every spatial grid
@@ -255,51 +274,54 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
-    // Get properties
+    // This variables will contain the (unnormalized) magnetic, and
+    // non-magnetic, parts of the free energy.
+    T magneticSum = static_cast<T>(0);
+    T nonMagneticSum = static_cast<T>(0);
+
+    // Get properties.
     const T latticeElementSize = C::getParameters()->getGridElementSize();
     const T temperature = C::getParameters()->getTemperature();
     const int numGrainLatticeSites =
         C::getGeometry()->getNumGrainLatticeSites();
 
-    // Compute second term of free energy not involving angle integration
+    // Compute second term of free energy not involving angle integration.
     GridCPU<T> ozakiEnergies = *(C::getIntegrationIterator()->getEnergies());
     GridCPU<T> ozakiResidues = *(C::getIntegrationIterator()->getResidues());
 
     const T *ozakiEnergies_im = ozakiEnergies.getDataPointer(0, Type::imag);
     const T *ozakiResidues_re = ozakiResidues.getDataPointer(0, Type::real);
 
-    int numEnergies = ozakiEnergies.dimX();
+    const int numEnergies = ozakiEnergies.dimX();
     T sumInverseEnergy = 0.0;
-
     for (int ozakiIdx = 0; ozakiIdx < numEnergies; ++ozakiIdx) {
       sumInverseEnergy +=
           ozakiResidues_re[ozakiIdx] / ozakiEnergies_im[ozakiIdx];
     }
+    sumInverseEnergy *= static_cast<T>(2.0 * M_PI) * temperature;
 
-    // Compute free energy new way
+    // Get the part of the free energy from 'I'.
     T energySummedKernelI_re = 0.0, energySummedKernelI_im = 0.0;
     C::getGeometry()->zeroValuesOutsideDomainRef(m_freeEnergyGrid);
     m_freeEnergyGrid->sumField(energySummedKernelI_re, energySummedKernelI_im);
 
-    // Compute total free energy
-    const T freeEnergyPerunitArea_old = m_freeEnergyPerUnitArea;
+    // Update the non-magnetic sum.
+    nonMagneticSum +=
+        static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
 
+    // TODO(niclas): This part is incorrect. The components should not be added
+    // together.
     OrderParameter<T> *orderParameter = C::getOrderParameter();
     GridGPU<T> deltaField(*(orderParameter->getOrderParameterField()));
     C::getGeometry()->zeroValuesOutsideDomainRef(&deltaField);
-
-    m_freeEnergyPerUnitArea =
-        static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
-    sumInverseEnergy *= static_cast<T>(2.0 * M_PI) * temperature;
 
     for (int fieldIdx = 0; fieldIdx < deltaField.numFields(); ++fieldIdx) {
       const T relativeTc =
           orderParameter->getOrderParameterComponent(fieldIdx)->getRelativeTc();
       const T integrandFactor =
           std::log(temperature / relativeTc) + sumInverseEnergy;
-      m_freeEnergyPerUnitArea +=
-          deltaField[fieldIdx].complexMagnitudeSq().sumField() *
-          integrandFactor;
+      nonMagneticSum += deltaField[fieldIdx].complexMagnitudeSq().sumField() *
+                        integrandFactor;
     }
 
     // The Ginzburg-Landau parameter.
@@ -331,25 +353,38 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       const T magneticFactor = static_cast<T>(0.5 * M_PI * M_PI) *
                                penetrationDepth * penetrationDepth;
 
-      const T magneticFreeEnergy = magneticFactor * magneticField.sumSquare();
-      m_freeEnergyPerUnitArea += magneticFreeEnergy;
+      // Update the magnetic sum.
+      magneticSum += magneticFactor * magneticField.sumSquare();
     }
 
-    m_freeEnergy =
-        m_freeEnergyPerUnitArea * latticeElementSize * latticeElementSize;
-    m_freeEnergyPerUnitArea *=
-        static_cast<T>(1.0) / static_cast<T>(numGrainLatticeSites);
+    // For convenience.
+    const T latticeElementArea = latticeElementSize * latticeElementSize;
 
-    // Set residual and convergence
+    // Free energy (area integrated).
+    const T magneticFreeEnergy = magneticSum * latticeElementArea;
+    const T totalFreeEnergy =
+        (nonMagneticSum + magneticSum) * latticeElementArea;
+
+    // Free energy (normalized).
+    const T magneticFreeEnergyPerUnitArea =
+        magneticSum / static_cast<T>(numGrainLatticeSites);
+    const T totalFreeEnergyPerUnitArea =
+        (nonMagneticSum + magneticSum) / static_cast<T>(numGrainLatticeSites);
+
+    // Set residual and convergence.
     const T residual =
-        computeResidual(freeEnergyPerunitArea_old, m_freeEnergyPerUnitArea);
+        computeResidual(m_freeEnergyPerUnitArea, totalFreeEnergyPerUnitArea);
     ComputeProperty<T>::setResidual(residual);
-
     const bool isConverged =
         residual < C::getParameters()->getConvergenceCriterion();
     ComputeProperty<T>::setConverged(isConverged);
+
+    // Update member variables.
+    m_freeEnergy = totalFreeEnergy;
+    m_freeEnergyPerUnitArea = totalFreeEnergyPerUnitArea;
+    m_magneticFreeEnergy = magneticFreeEnergy;
+    m_magneticFreeEnergyPerUnitArea = magneticFreeEnergyPerUnitArea;
   } else {
-    m_freeEnergy = static_cast<T>(0.0);
     ComputeProperty<T>::setConverged(false);
   }
 }
