@@ -73,8 +73,9 @@ template <typename T> CoherenceFunctions<T>::~CoherenceFunctions() {
 
 // This had no return type before, not even void-
 template <typename T> int CoherenceFunctions<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "CoherenceFunctions<T>::initialize()\n";
-
+#endif
   typedef ContextModule<T> C;
 
   const int N1 = C::getParameters()->getGridResolutionCoherence();
@@ -89,10 +90,11 @@ template <typename T> int CoherenceFunctions<T>::initialize() {
     _pos[i]->setZero();
     _neg[i]->setZero();
   }
-
+#ifndef NDEBUG
   long long bytes = N1 * N1 * Ne * 2 * sizeof(T) * 2 * components;
   std::cout << "Coherence functions storage data: " << bytes << " bytes.\n";
   std::cout << "numFields = " << Ne << "\n\n";
+#endif
   return 0;
 }
 } // namespace scg

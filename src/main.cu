@@ -100,8 +100,10 @@ int main(int argc, char *argv[]) {
       std::cout << errs << std::endl;
       return 1;
     }
+#ifndef NDEBUG
     std::cout << "-- Configuration parameters:" << std::endl;
     std::cout << simParams << std::endl;
+#endif
   }
 
   // TODO(niclas): Add sanity check of all parameters here!?

@@ -89,8 +89,10 @@ int main(int argc, char *argv[]) {
       std::cout << errs << std::endl;
       return EXIT_FAILURE;
     }
+#ifndef NDEBUG
     std::cout << "-- Post-process configuration parameters:" << std::endl;
     std::cout << postProcessConfig << std::endl;
+#endif
   }
 
   // Extract the data path for convenience.
@@ -120,8 +122,10 @@ int main(int argc, char *argv[]) {
       std::cout << errs << std::endl;
       return EXIT_FAILURE;
     }
+#ifndef NDEBUG
     std::cout << "-- Simulation configuration parameters:" << std::endl;
     std::cout << simParams << std::endl;
+#endif
   }
 
   // TODO(niclas): Add sanity check of all parameters here!?

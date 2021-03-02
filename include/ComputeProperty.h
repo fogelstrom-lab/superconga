@@ -150,7 +150,9 @@ ComputeProperty<T>::ComputeProperty(Context<T> *ctx)
       m_isPartiallyConverged(false), m_doCompute(true) {}
 
 template <typename T> ComputeProperty<T>::~ComputeProperty() {
+#ifndef NDEBUG
   std::cout << "~ComputeProperty()\n";
+#endif
   if (_greensCurrentAngle) {
     delete _greensCurrentAngle;
   }

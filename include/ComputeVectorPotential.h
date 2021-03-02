@@ -145,7 +145,9 @@ public:
 
   /// \brief Destructor.
   ~ComputeVectorPotential() {
+#ifndef NDEBUG
     std::cout << "~ComputeVectorPotential<T>\n";
+#endif
     delete m_vectorPotential;
   }
 
@@ -332,10 +334,12 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
   arma::Col<double> eigValQ;
   arma::Mat<double> eigVecQ;
   const bool success = arma::eig_sym(eigValQ, eigVecQ, Q);
+#ifndef NDEBUG
   if (!success) {
     // TODO(niclas): Raise exception instead?
     std::cerr << "ERROR! Eigen decomposition failed." << std::endl;
   }
+#endif
 
   // In order to scale the filters to more appropriate values. The final result
   // is then scaled as well, undoing this scaling.
@@ -373,11 +377,13 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
 
     // The squared relative error, |Q - approxQ|^2 / |Q|^2.
     const double errorSquared = 1.0 - partialNormSquared / normSquared;
+#ifndef NDEBUG
     if (errorSquared < 0.0) {
       std::cerr << "WARNING! Squared error < 0, i.e. catastrophic cancellation "
                    "occurred."
                 << std::endl;
     }
+#endif
 
     // The relative error, |Q - approxQ| / |Q|.
     const double error = std::sqrt(std::max(errorSquared, 0.0));

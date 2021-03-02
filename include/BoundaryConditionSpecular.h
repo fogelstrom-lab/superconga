@@ -332,7 +332,9 @@ __global__ void boundaryConditionSpecularKernel(
           boundaryInCoherenceImag[idx_sparse_in] = interpImag / totalWeight;
         } else {
           // This should never happen.
+#ifndef NDEBUG
           printf("WARNING! Specular boundary condition failed.");
+#endif
           boundaryInCoherenceReal[idx_sparse_in] = static_cast<T>(0.0);
           boundaryInCoherenceImag[idx_sparse_in] = static_cast<T>(0.0);
         }

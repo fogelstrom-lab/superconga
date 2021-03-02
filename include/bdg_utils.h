@@ -233,11 +233,13 @@ std::pair<bool, T> computeCriticalTemperature(
     x += update;
   }
 
+#ifndef NDEBUG
   // TODO(niclas): Raise exception instead!?
   if (!isConverged) {
-    std::cout << "WARNING! The BdG bulk critical temperature did not converge!"
+    std::cerr << "WARNING! The BdG bulk critical temperature did not converge!"
               << std::endl;
   }
+#endif
 
   // Form the critical temperature.
   const T Tc = internal::softplus(x);

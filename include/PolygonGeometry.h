@@ -277,12 +277,14 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
                                     const T *const inVerticesY)
     : GeometryComponent<T>() {
 
+#ifndef NDEBUG
   if (inNumVertices < 3) {
     // Todo(patric): Raise exception
     std::cerr << "ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
                  "inNumVertices = "
               << inNumVertices << std::endl;
   }
+#endif
 
   T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
   T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
@@ -293,6 +295,7 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
     const T vertexX = inVerticesX[vertexIdx];
     const T vertexY = inVerticesY[vertexIdx];
 
+#ifndef NDEBUG
     // Check that vertex coordinates are reasonable
     if ((std::abs(vertexX) > static_cast<T>(constants::MAXIMUM_COORDINATE)) ||
         (std::abs(vertexY) > static_cast<T>(constants::MAXIMUM_COORDINATE))) {
@@ -302,6 +305,7 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
                 << constants::MAXIMUM_COORDINATE << ", "
                 << constants::MAXIMUM_COORDINATE << "]." << std::endl;
     }
+#endif
 
     scaledVerticesX[vertexIdx] = vertexX * inGrainFraction;
     scaledVerticesY[vertexIdx] = vertexY * inGrainFraction;

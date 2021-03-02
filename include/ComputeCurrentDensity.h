@@ -125,12 +125,12 @@ template <typename T> int ComputeCurrentDensity<T>::initialize() {
   _current->setZero();
 
   ComputeProperty<T>::initGreensAngle(N1, numEnergiesInterval);
-
+#ifndef NDEBUG
   std::cout << "CurrentDensity mem: "
             << (_lcurrent_all->numElements() + 3 * _lcurrent_x->numElements()) *
                    sizeof(T)
             << "\n";
-
+#endif
   return 0;
 }
 

@@ -168,7 +168,9 @@ RiccatiSolver<T>::RiccatiSolver(Context<T> *ctx)
       _orderParameterMult(1.0) {}
 
 template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
+#ifndef NDEBUG
   std::cout << "~RiccatiSolver()\n";
+#endif
   if (_gamma)
     delete _gamma;
   if (_gammabar)
@@ -183,7 +185,9 @@ template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
 }
 
 template <typename T> int RiccatiSolver<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "RiccatiSolver<T>::initialize()\n";
+#endif
   initializeCoherenceFunctions();
 
   const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
@@ -224,9 +228,11 @@ template <typename T> void RiccatiSolver<T>::initializeCoherenceFunctions() {
   _gamma->setZero();
   _gammabar->setZero();
 
+#ifndef NDEBUG
   long long bytes = N * N * numFields * 2 * sizeof(T) * 2;
   std::cout << "Gamma storage data: " << bytes << " bytes.\n";
   std::cout << "numFields = " << numFields << "\n\n";
+#endif
 }
 
 template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
@@ -240,7 +246,9 @@ template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
       getBoundaryCondition(i)->computeBoundaryCondition(
           ContextModule<T>::getContext());
   } else {
+#ifndef NDEBUG
     std::cout << "WARNING: No boundary conditions specified!\n";
+#endif
   }
 }
 

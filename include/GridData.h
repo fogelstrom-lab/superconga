@@ -434,8 +434,7 @@ GridData<T, DEV>::GridData(int nx, int ny, int numFields,
 }
 
 template <typename T, typename DEV> GridData<T, DEV>::~GridData() {
-    _allocatedMemTotal -= numElements() * sizeof(T);
-  
+  _allocatedMemTotal -= numElements() * sizeof(T);
 }
 
 template <typename T, typename DEV>
@@ -461,10 +460,12 @@ GridData<T, DEV> &GridData<T, DEV>::operator=(const cplx<T> right) {
   if (isComplex()) {
     setValue(right.x, Type::real);
     setValue(right.y, Type::imag);
-  } else
+  } else {
+#ifndef NDEBUG
     std::cout << "Warning: Attempted to fill a real valued grid to a complex "
                  "valued constant! Ignored.\n";
-
+#endif
+  }
   return *this;
 }
 
@@ -503,8 +504,10 @@ void GridData<T, DEV>::operator+=(const cplx<T> right) {
           addComplexScalarFunctor(right));
     }
   } else {
+#ifndef NDEBUG
     std::cout << "Warning: Attempted to add real valued grid with complex "
                  "valued constant! Ignored.\n";
+#endif
   }
 }
 
@@ -596,8 +599,10 @@ void GridData<T, DEV>::operator*=(const cplx<T> right) {
           scaleComplexVectorFunctor(right));
     }
   } else {
+#ifndef NDEBUG
     std::cout << "Warning: Attempted to multiply real valued grid with complex "
                  "valued constant! Ignored.\n";
+#endif
   }
 }
 
@@ -920,12 +925,14 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
 
       return resultSum;
     } else {
+#ifndef NDEBUG
       // Unknown field: Print warning and return 0.
       // TODO(patric): Raise exception
       std::cout << "WARNING! No defined behavior for sumMagnitude for real "
                    "field with "
                 << _numFields << " number of fields. Function call ignored."
                 << std::endl;
+#endif
       return static_cast<T>(0.0);
     }
   }
@@ -986,11 +993,14 @@ template <typename T, typename DEV> T GridData<T, DEV>::L2Norm() const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::complexMagnitudeSq(GridData<T, DEV> *result) const {
-  if (GridData<T, DEV>::dimEq(*this, *result) && isComplex())
+  if (GridData<T, DEV>::dimEq(*this, *result) && isComplex()) {
     GridFunctions<T, DEV>::complexMagnitudeSq(result);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::complexMagnitudeSq() ERROR: Grids not of equal "
                  "dimensions, or source field not complex.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1002,11 +1012,14 @@ GridData<T, DEV> GridData<T, DEV>::complexMagnitudeSq() const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::complexPhase(GridData<T, DEV> *result) const {
-  if (GridData<T, DEV>::dimEq(*this, *result) && isComplex())
+  if (GridData<T, DEV>::dimEq(*this, *result) && isComplex()) {
     GridFunctions<T, DEV>::complexPhase(result);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::complexPhase(): ERROR: Grids not of equal "
                  "dimensions, or source grid not complex\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1020,11 +1033,14 @@ template <typename T, typename DEV>
 void GridData<T, DEV>::complexPhaseGradient(GridData<T, DEV> *result,
                                             const T h) const {
   if (GridData<T, DEV>::dimEq(*this, *result) && isComplex() &&
-      result->numFields() == 2)
+      result->numFields() == 2) {
     GridFunctions<T, DEV>::complexPhaseGradient(result, h);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::complexPhaseGradient(): ERROR: Grids not of equal "
                  "dimensions, or source grid not complex\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1036,11 +1052,14 @@ GridData<T, DEV> GridData<T, DEV>::complexPhaseGradient(const T h) const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::fieldMagnitude(GridData<T, DEV> *result) const {
-  if (GridData<T, DEV>::dimEq(*this, *result))
+  if (GridData<T, DEV>::dimEq(*this, *result)) {
     GridFunctions<T, DEV>::fieldMagnitude(result);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
                  "dimensions.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1052,11 +1071,14 @@ GridData<T, DEV> GridData<T, DEV>::fieldMagnitude() const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::div(GridData<T, DEV> *result, const T h) const {
-  if (GridData<T, DEV>::dimEq(*this, *result) && _numFields == 2)
+  if (GridData<T, DEV>::dimEq(*this, *result) && _numFields == 2) {
     GridFunctions<T, DEV>::div(result, h);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
                  "dimensions.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1069,11 +1091,14 @@ GridData<T, DEV> GridData<T, DEV>::div(const T h) const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::curl(GridData<T, DEV> *result, const T h) const {
-  if (GridData<T, DEV>::dimEq(*this, *result) && _numFields == 2)
+  if (GridData<T, DEV>::dimEq(*this, *result) && _numFields == 2) {
     GridFunctions<T, DEV>::curl(result, h);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
                  "dimensions.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1085,11 +1110,14 @@ GridData<T, DEV> GridData<T, DEV>::curl(const T h) const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::del2(GridData<T, DEV> *result, const T h) const {
-  if (GridData<T, DEV>::dimEq(*this, *result))
+  if (GridData<T, DEV>::dimEq(*this, *result)) {
     GridFunctions<T, DEV>::del2(result, h);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
                  "dimensions.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1102,11 +1130,14 @@ GridData<T, DEV> GridData<T, DEV>::del2(const T h) const {
 template <typename T, typename DEV>
 void GridData<T, DEV>::sumFieldComponents(GridData<T, DEV> *result) const {
   if (GridData<T, DEV>::dimEq(*this, *result) &&
-      isComplex() == result->isComplex())
+      isComplex() == result->isComplex()) {
     GridFunctions<T, DEV>::sumFieldComponents(result);
-  else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData::sumFieldComponents() ERROR: Grids not of equal "
                  "dimensions.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1213,9 +1244,12 @@ void GridData<T, DEV>::copyFieldTo(GridData<T, DEV> *target, int thisField,
 
     thrust::copy(m_vector.begin() + src_begin, m_vector.begin() + src_end,
                  target->getVector().begin() + dst_begin);
-  } else
+  } else {
+#ifndef NDEBUG
     std::cout << "GridData<T,DEV>::copyFieldTo(): ERROR: x and y dimensions "
                  "are not equal, or field out of range.\n";
+#endif
+  }
 }
 
 template <typename T, typename DEV>
@@ -1264,8 +1298,10 @@ template <typename T, typename DEV>
 T GridData<T, DEV>::differenceMagnitude(const GridData<T, DEV> &A,
                                         const GridData<T, DEV> &B) {
   if (A != B) {
+#ifndef NDEBUG
     std::cout << "GridData::differenceMagnitude(): Error: Grids have different "
                  "dimensions.\n";
+#endif
     return 1000000.0;
   }
 

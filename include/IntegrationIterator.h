@@ -120,12 +120,16 @@ IntegrationIterator<T>::IntegrationIterator(Context<T> *ctx,
     : ContextModule<T>(ctx), _energies(0), _energy_iter(0),
       _numEnergiesPerBlock(numEnergiesPerBlock), _numIter(0),
       _debug_store_grid(0), _debug_store_angle(-1), _residues(0) {
+#ifndef NDEBUG
   std::cout
       << "IntegrationIterator<T>::IntegrationIterator( Context<T>* context )\n";
+#endif
 }
 
 template <typename T> IntegrationIterator<T>::~IntegrationIterator() {
+#ifndef NDEBUG
   std::cout << "~IntegrationIterator()\n";
+#endif
 
   if (_debug_store_grid)
     delete _debug_store_grid;
@@ -138,7 +142,9 @@ template <typename T> IntegrationIterator<T>::~IntegrationIterator() {
 }
 
 template <typename T> int IntegrationIterator<T>::initialize() {
+#ifndef NDEBUG
   std::cout << "IntegrationIterator::initialize()\n";
+#endif
   initIterators();
   return 0;
 }

@@ -166,31 +166,43 @@ Context<T>::Context()
       m_optimizer(std::make_unique<Optimizer<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
+#ifndef NDEBUG
   std::cout << "~Context()\n";
+#endif
 
   if (m_parameters) {
     delete m_parameters;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted Parameters\n";
+#endif
   }
 
   if (m_geometry) {
     delete m_geometry;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted Geometry\n";
+#endif
   }
 
   if (m_orderParameter) {
     delete m_orderParameter;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted OrderParameter\n";
+#endif
   }
 
   if (m_riccatiSolver) {
     delete m_riccatiSolver;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted RiccatiSolver\n";
+#endif
   }
 
   if (m_fermiSurface) {
     delete m_fermiSurface;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted FermiSurface\n";
+#endif
   }
 
   deleteComputeObjects();
@@ -199,13 +211,17 @@ template <typename T> Context<T>::~Context() {
 template <typename T> void Context<T>::deleteComputeObjects() {
   for (int i = 0; i < getNumComputeObjects(); ++i) {
     delete m_computeObjectList[i];
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted ComputeObject " << i << "\n";
+#endif
   }
   m_computeObjectList.clear();
 
   if (m_integrationIterator) {
     delete m_integrationIterator;
+#ifndef NDEBUG
     std::cout << "~Context(): Deleted IntegrationIterator\n";
+#endif
   }
 }
 
@@ -245,7 +261,9 @@ template <typename T> void Context<T>::add(ComputeLDOS<T> *inComputeLDOS) {
 
 template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   if (getNumComputeObjects() > 0) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Creating IntegrationIterator\n";
+#endif
     // Note, this sets m_integrationIterator member.
     m_integrationIterator =
         m_computeObjectList[0]->createIntegrationIterator(numEnergiesPerBlock);
@@ -254,27 +272,35 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   }
 
   if (m_geometry) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing Geometry\n";
+#endif
     m_geometry->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): GeometryGroup");
   }
 
   if (m_fermiSurface) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing FermiSurface\n";
+#endif
     const int numAngles = m_parameters->getAngularResolution();
     m_fermiSurface->initialize(numAngles);
     ContextModule<T>::checkCudaError("Context<T>::initialize(): FermiSurface");
   }
 
   if (m_orderParameter) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing OrderParameter\n";
+#endif
     m_orderParameter->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): OrderParameter");
   }
 
   if (m_integrationIterator) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing IntegrationIterator\n";
+#endif
     m_integrationIterator->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): IntegrationIterator");
@@ -282,14 +308,18 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   // RiccatiSolver requires IntegrationIterator to be initialized first
   if (m_riccatiSolver) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing RiccatiSolver\n";
+#endif
     m_riccatiSolver->initialize();
     ContextModule<T>::checkCudaError("Context<T>::initialize(): RiccatiSolver");
   }
 
   for (int i = 0; i < getNumComputeObjects(); ++i) {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing ComputeObject " << i
               << ":\n";
+#endif
     m_computeObjectList[i]->initialize();
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): ComputeProperty");
@@ -297,7 +327,9 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   // The induced vector potential.
   {
+#ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing vector potential\n";
+#endif
     const int gridResolution = m_parameters->getGridResolutionBase();
 
     if (!m_inducedVectorPotential.get()) {
@@ -325,6 +357,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
 
   m_numIterations = 0;
 
+#ifndef NDEBUG
   std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
 
   GridCPU<float>::printAllocatedMemTotal();
@@ -336,6 +369,7 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
   GridGPU<double>::printAllocatedMemTotal();
   GridGPU<int>::printAllocatedMemTotal();
   GridGPU<char>::printAllocatedMemTotal();
+#endif
 
   return 0;
 }
