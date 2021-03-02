@@ -136,6 +136,7 @@ runner_checks = {
     "optimizer": {
         "type": dict,
         "fields": {
+            "adaptive": {"type": bool},
             "anderson_always": {"type": bool},
             "inertia": {"type": float},
             "max_mixing": {"type": float, "low": 0.0},

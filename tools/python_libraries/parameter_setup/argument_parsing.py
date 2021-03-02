@@ -238,6 +238,17 @@ def add_runner_arguments(parser) -> None:
         default=None,
         help="The inertia of the optimizer.",
     )
+    group_optimiser_adaptive = parser.add_mutually_exclusive_group()
+    group_optimiser_adaptive.add_argument(
+        "--opt-adaptive",
+        action="store_true",
+        help="Change the step size and inertia adaptively each iteration.",
+    )
+    group_optimiser_adaptive.add_argument(
+        "--opt-no-adaptive",
+        action="store_true",
+        help="Do not change the step size and inertia adaptively each iteration.",
+    )
     parser.add_argument(
         "--opt-rank",
         type=int,
@@ -820,6 +831,13 @@ def set_runner_arguments_from_cli(
     group = "optimizer"
     set_value(sim_params, "step_size", args.opt_step_size, group)
     set_value(sim_params, "inertia", args.opt_inertia, group)
+    set_flag(
+        sim_params,
+        "adaptive",
+        args.opt_adaptive,
+        args.opt_no_adaptive,
+        group,
+    )
     set_value(sim_params, "rank", args.opt_rank, group)
     set_value(sim_params, "min_mixing", args.opt_min_mixing, group)
     set_value(sim_params, "max_mixing", args.opt_max_mixing, group)

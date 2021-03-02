@@ -836,6 +836,11 @@ class runner_main_window(QMainWindow):
         optimizerBoxLayout = QFormLayout(optimizerBox)
         optimizerBoxLayout.setLabelAlignment(Qt.AlignLeft)
 
+        # Use adaptive step size.
+        self._adaptive = CheckBox(jsonKey="adaptive", jsonGroup="optimizer")
+        self.register(self._adaptive)
+        optimizerBoxLayout.addRow(QLabel("Adaptive step size and inertia"), self._adaptive)
+
         # Use Anderson all the time.
         self._anderson_always = CheckBox(
             jsonKey="anderson_always", jsonGroup="optimizer"

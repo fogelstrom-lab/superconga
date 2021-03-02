@@ -1,6 +1,7 @@
 #ifndef GRID_FUNCTIONS_GPU_H_
 #define GRID_FUNCTIONS_GPU_H_
 
+#include "Type.h"
 #include "utils.h"
 #include <cmath>
 #include <thrust/device_vector.h>
@@ -941,17 +942,13 @@ template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::minmax(
     const GridData<T, thrust::device_vector<T>> &grid, T &minv, T &maxv,
     int field, Type::type part) {
-  thrust::device_vector<T> &vec = grid.getVector();
+  const thrust::device_vector<T> &vec = grid.getVector();
 
-  size_t start = grid.getFieldComponentOffset(field, part);
-  size_t end = start + grid.dimX() * grid.dimY();
+  const size_t start = grid.getFieldComponentOffset(field, part);
+  const size_t end = start + grid.dimX() * grid.dimY();
 
-  typedef typename thrust::detail::normal_iterator<thrust::device_ptr<T>> iter;
-
-  iter begin = vec.begin();
-
-  thrust::pair<iter, iter> result =
-      thrust::minmax_element(begin + start, begin + end);
+  const auto result =
+      thrust::minmax_element(vec.begin() + start, vec.begin() + end);
 
   minv = *result.first;
   maxv = *result.second;

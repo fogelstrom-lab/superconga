@@ -15,6 +15,7 @@
 	"num_iterations_min": 10,
 	"num_ozaki_energies": 20,
 	"optimizer": {
+		"adaptive": true,
 		"anderson_always": true,
 		"inertia": 0.8,
 		"max_mixing": 1.0,
