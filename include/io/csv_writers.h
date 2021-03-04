@@ -57,8 +57,7 @@ private:
         << m_delimiter << "free_energy_residual" << m_delimiter
         << "current_density_residual" << m_delimiter
         << "vector_potential_residual" << m_delimiter
-        << "free_energy_per_unit_area" << m_delimiter
-        << "magnetic_free_energy_per_unit_area";
+        << "free_energy_per_unit_area";
     return appendToFile(oss.str(), inFilePath);
   };
 
@@ -72,10 +71,7 @@ private:
         << inContext->getComputeCurrent()->getResidual() << m_delimiter
         << inContext->getComputeVectorPotential()->getResidual() << m_delimiter
         << std::setprecision(m_floatPrecision)
-        << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea()
-        << m_delimiter
-        << inContext->getComputeFreeEnergy()
-               ->getMagneticFreeEnergyPerUnitArea();
+        << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
     return appendToFile(oss.str(), inFilePath);
   };
 

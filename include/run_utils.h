@@ -111,6 +111,8 @@ void saveParametersWrapper(const Context<T> *const inContext,
   // Free energy per unit area.
   resultsJSON["free_energy_per_unit_area"] =
       inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+  resultsJSON["magnetic_free_energy_per_unit_area"] =
+      inContext->getComputeFreeEnergy()->getMagneticFreeEnergyPerUnitArea();
 
   // Average order-parameter magnitude.
   // TODO(niclas): Is this correct for multi-component OP?
