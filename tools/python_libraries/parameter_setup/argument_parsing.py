@@ -188,12 +188,14 @@ def add_runner_arguments(parser) -> None:
 
     # Geometry.
     parser.add_argument(
+        "-Z",
         "--num-outer-edges",
         type=int,
         default=None,
         help="Number edges of the grain polygon. Negative values yield a circle.",
     )
     parser.add_argument(
+        "-z",
         "--num-inner-edges",
         type=int,
         default=None,
