@@ -1,8 +1,11 @@
-###############################################################################
+# ##############################################################################
 # SOURCE FILES
-###############################################################################
+# ##############################################################################
 # Define the main set of source files
 set(SRC main.cu postprocess.cu)
+
+# Set compiler options, i.e. #defines.
+option(APPROX_STEP "Use approximate steps for the coherence functions." OFF)
 
 foreach(file ${SRC})
   # string( REPLACE ".cu" "" name ${file})
@@ -36,6 +39,12 @@ foreach(file ${SRC})
                                            CUDA_STANDARD_REQUIRED ON)
   set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
                                                            ON)
+
+  # Apply compiler options.
+  if(APPROX_STEP)
+    message("-- APPROX_STEP ON")
+    target_compile_definitions(${name} PUBLIC APPROX_STEP)
+  endif()
 
   # Set DEBUG compile flags
   target_compile_options(

@@ -40,7 +40,8 @@ public:
 
 namespace internal {
 // TODO(niclas): Put parameters in order (in, inout, out).
-template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
+template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
+          int DIRECTION>
 __global__ void computeGammaFunctionTemplate_new_kernel(
     const T h, const T fermiSpeed, const int N, const int Ne,
     const int energyIdx_offset, const int idx_x_min, const int idx_x_max,
@@ -53,112 +54,194 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
     const int *const idx_in_gamma, const int *const idx_out_gamma,
     const T *const bnd_in_gamma_real, const T *const bnd_in_gamma_imag,
     T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
-  const int x =
-      blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;   // x-coordinate
-  const int e_idx = blockDim.y * blockIdx.y + threadIdx.y; // energy coordinate
+  // x-coordinate
+  const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;
+  // energy coordinate
+  const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  cplx<T> g, g0((T)0.0, (T)0.0), g_bnd, energy;
-  cplx<T> delta, D2, D_bnd;
-
-  int idx, gamma_idx, idx_sparse;
-  char nodeType;
-
-  const T step = h / fermiSpeed;
-
+  // TODO(niclas): Shouldn't we check that energy coordinate is within bounds as
+  // well?
   if (x <= idx_x_max) {
-    energy.x = energies_re[e_idx];
-    energy.y = energies_im[e_idx];
-
+    // Read the energy.
+    cplx<T> energy(energies_re[e_idx], energies_im[e_idx]);
     const T energy_zeroPotential = energy.x;
 
+    // In order to read/write values from/to the boundary coherence functions,
+    // we need to keep track of how many boundaries we have encountered along
+    // the trajectory.
     int boundary_entry_count = 0;
     int boundary_exit_count = 0;
 
+    // Which y-coordinate to start from is determined by whether we are solving
+    // for gamma or gammatilde (which is codified by DIRECTION.
     const int y_start =
-        idx_y_min * (int)(DIR == 1) + idx_y_max * (int)(DIR == -1);
-    int y;
+        idx_y_min * (int)(DIRECTION == 1) + idx_y_max * (int)(DIRECTION == -1);
+
+    // The value of the coherence function at the entry edge of the current
+    // lattice site. It is updated as we traverse the trajectory.
+    cplx<T> gEntry(static_cast<T>(0), static_cast<T>(0));
+
+    // The step from the entry edge to the exit edge of the lattice site.
+    const T step = h / fermiSpeed;
+
+    // The step from the center to and edge (entry or exit) of the lattice site.
+    const T halfStep = static_cast<T>(0.5) * step;
 
     // OPTIMIZATION: PRECOMPUTE Y_MIN AND Y_MAX FOR EACH ROTATIONAL FRAME
     // Compute gamma along trajectory
     for (int i = 0; i <= (idx_y_max - idx_y_min); ++i) {
-      y = y_start + DIR * i;
+      const int y = y_start + DIRECTION * i;
 
       // Index to 2d-grids (Delta)
-      idx = y * N + x;
+      const int idx = y * N + x;
 
       // Add energy shift from vector potential
       energy.x = energy_zeroPotential + energy_shift[idx];
 
       // Index to gamma grid (for all energies)
-      gamma_idx = e_idx * 2 * N * N + y * N + x;
+      const int gamma_idx = e_idx * 2 * N * N + y * N + x;
 
       // What type of node are we on?
-      nodeType = domainLabel[idx];
+      const char nodeType = domainLabel[idx];
 
       // Read order parameter
-      delta.x = delta_real[idx];
-      delta.y = delta_imag[idx];
+      const cplx<T> delta(delta_real[idx], delta_imag[idx]);
 
-      g.x = (T)0.0;
-      g.y = (T)0.0;
+      if (nodeType == 1) {
+        // Inside domain:
 
-      if (nodeType == 1) // Inside domain:
-      {
-        GAMMA::computeGamma_local(delta, g0, energy, step, 1, g);
-      } else if (nodeType == ENTRY) // Domain boundary entry:
-      {
-        // Read gamma from boundary storage, and calc first gamma to grid,
-        // using fractional step.
-        idx_sparse = BoundaryStorage<T>::getSparseIndex(
+#ifdef APPROX_STEP
+        // Take a step from the entry edge to the exit edge of the lattice
+        // site.
+        const cplx<T> gExit = GAMMA::computeStep(delta, energy, gEntry, step);
+
+        // Approximate the value of the coherence function at the center of the
+        // lattice site by the mean of the entry and exit values.
+        const cplx<T> gCenter = static_cast<T>(0.5) * (gEntry + gExit);
+#else
+        // Take a step from the entry edge to the center of the lattice site.
+        const cplx<T> gCenter =
+            GAMMA::computeStep(delta, energy, gEntry, halfStep);
+
+        // Take a step from the center to the exit edge of the lattice site.
+        const cplx<T> gExit =
+            GAMMA::computeStep(delta, energy, gCenter, halfStep);
+#endif
+
+        // Store coherence function.
+        gamma_real[gamma_idx] = gCenter.x;
+        gamma_imag[gamma_idx] = gCenter.y;
+
+        // For the next lattice site, the current exit value is the entry.
+        gEntry = gExit;
+      } else if (nodeType == DOMAIN_ENTRY) {
+        // Domain boundary entry:
+
+        // Read boundary coherence function value.
+        const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
             angleIdx, e_idx + energyIdx_offset, x, boundary_entry_count, Ne, N,
             idx_in_gamma);
+        const cplx<T> gBoundary(bnd_in_gamma_real[idx_sparse],
+                                bnd_in_gamma_imag[idx_sparse]);
 
-        g0.x = bnd_in_gamma_real[idx_sparse];
-        g0.y = bnd_in_gamma_imag[idx_sparse];
-
-        // Distance to exact boundary location
+        // Distance to exact boundary location from the center of the lattice
+        // site.
         const T distance = abs(boundaryDistance[idx]);
-        const T fractionalStep = distance * step;
+        const T boundaryToCenterStep = distance * step;
 
-        // Extrapolate delta at boundary from domain values
-        D2.x = delta_real[(y + DIR) * N + x];
-        D2.y = delta_imag[(y + DIR) * N + x];
+#ifdef APPROX_STEP
+        // We're taking a step from the grain boundary to the exit edge of the
+        // lattice site, so we must add half a lattice site distance.
+        const T boundaryToEdgeStep = boundaryToCenterStep + halfStep;
 
-        D_bnd = delta - (D2 - delta) * distance;
+        // Take a step from the grain boundary to the exit edge of the lattice
+        // site.
+        const cplx<T> gExit =
+            GAMMA::computeStep(delta, energy, gBoundary, boundaryToEdgeStep);
 
-        // Compute gamma at current grid point, using exact distance to boundary
-        GAMMA::computeGamma_local(D_bnd, g0, energy, fractionalStep, 1, g);
+        // Approximate the value of the coherence function at the center of the
+        // lattice site by the weighted mean of the boundary and exit edge
+        // values.
+        const T weightBoundary = halfStep / boundaryToEdgeStep;
+        const T weightExit = static_cast<T>(1) - weightBoundary;
+        const cplx<T> gCenter =
+            (gBoundary * weightBoundary + gExit * weightExit);
+#else
+        // Take a step from the grain boundary to the center of the lattice
+        // site.
+        const cplx<T> gCenter =
+            GAMMA::computeStep(delta, energy, gBoundary, boundaryToCenterStep);
 
+        // Take a step from the center to the exit edge of the lattice site.
+        const cplx<T> gExit =
+            GAMMA::computeStep(delta, energy, gCenter, halfStep);
+#endif
+
+        // Store coherence function.
+        gamma_real[gamma_idx] = gCenter.x;
+        gamma_imag[gamma_idx] = gCenter.y;
+
+        // For the next lattice site, the current exit value is the entry.
+        gEntry = gExit;
+
+        // Increase entry counter.
         boundary_entry_count++;
-      } else if (nodeType == EXIT) // Domain boundary exit:
-      {
-        // Calc gamma to current grid node, then calc gamma with fractional
-        // step at exact boundary location, and save in boundary storage.
-        GAMMA::computeGamma_local(delta, g0, energy, step, 1, g);
+      } else if (nodeType == DOMAIN_EXIT) {
+        // Domain boundary exit:
 
-        // Distance to exact boundary location
-        const T fractionalStep = abs(boundaryDistance[idx]) * step;
+        // Distance to exact boundary location from the center of the lattice
+        // site.
+        const T distance = abs(boundaryDistance[idx]);
+        const T centerToBoundaryStep = distance * step;
 
-        // Calc at exact boundary location
-        GAMMA::computeGamma_local(delta, g0, energy, step + fractionalStep, 1,
-                                  g_bnd);
+#ifdef APPROX_STEP
+        // We're taking a step from the entry edge of thelattice site to the
+        // grain boundary, so we must add half a lattice site distance.
+        const T edgeToBoundaryStep = centerToBoundaryStep + halfStep;
 
-        // Store boundary gammas
-        idx_sparse = BoundaryStorage<T>::getSparseIndex(
+        // Take a step from the entry edge of the lattice site to the grain
+        // boundary.
+        const cplx<T> gBoundary =
+            GAMMA::computeStep(delta, energy, gEntry, edgeToBoundaryStep);
+
+        // Approximate the center value by the weighted mean.
+        const T weightEntry = centerToBoundaryStep / edgeToBoundaryStep;
+        const T weightBoundary = static_cast<T>(1) - weightEntry;
+        const cplx<T> gCenter =
+            (gEntry * weightEntry + gBoundary * weightBoundary);
+#else
+        // Take a step from the entry edge to the center of the lattice site.
+        const cplx<T> gCenter =
+            GAMMA::computeStep(delta, energy, gEntry, halfStep);
+
+        // Take a step from the center of the lattice site to the grain
+        // boundary.
+        const cplx<T> gBoundary =
+            GAMMA::computeStep(delta, energy, gCenter, centerToBoundaryStep);
+#endif
+
+        // Store coherence function.
+        gamma_real[gamma_idx] = gCenter.x;
+        gamma_imag[gamma_idx] = gCenter.y;
+
+        // There is no exit edge value to set it to, because we hit a
+        // boundary. So the next lattice site is outside of the domain.
+        gEntry = cplx<T>(static_cast<T>(0), static_cast<T>(0));
+
+        // Store boundary gamma.
+        const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
             angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
             idx_out_gamma);
+        bnd_out_gamma_real[idx_sparse] = gBoundary.x;
+        bnd_out_gamma_imag[idx_sparse] = gBoundary.y;
 
-        bnd_out_gamma_real[idx_sparse] = g_bnd.x;
-        bnd_out_gamma_imag[idx_sparse] = g_bnd.y;
-
+        // Increase exit counter.
         boundary_exit_count++;
+      } else {
+        // Outside the domain.
+        gamma_real[gamma_idx] = static_cast<T>(0);
+        gamma_imag[gamma_idx] = static_cast<T>(0);
       }
-
-      // Store gammas
-      gamma_real[gamma_idx] = g.x;
-      gamma_imag[gamma_idx] = g.y;
-
-      g0 = g;
     }
   }
 }
@@ -167,7 +250,8 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 ////////////////////////////////////////////
 ////////////////////////////////////////////
 // TODO(niclas): This function does not need all of these input parameters!
-template <typename T, typename GAMMA, int ENTRY, int EXIT, int DIR>
+template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
+          int DIRECTION>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const T h, const int N, const int Ne, const int energyIdx_offset,
     const int idx_x_offset, const int angleIdx, const T B,
@@ -180,55 +264,46 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const int *const idx_out_gamma, const T *const bnd_in_gamma_real,
     const T *const bnd_in_gamma_imag, T *bnd_out_gamma_real,
     T *bnd_out_gamma_imag) {
-  const int x =
-      blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset; // x-coordinate
-  const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;  // energy coordinate
-
-  cplx<T> delta, g_bnd, energy;
-
-  int idx, idx_sparse;
-  char nodeType;
+  // x-coordinate
+  const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset;
+  // energy coordinate
+  const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
   if (x < N) {
-    energy.x = energies_re[e_idx];
-    energy.y = energies_im[e_idx];
-
+    cplx<T> energy(energies_re[e_idx], energies_im[e_idx]);
     const T energy_zeroPotential = energy.x;
 
     int boundary_exit_count = 0;
 
-    const int yStart = (N - 1) * (int)(DIR == -1);
-    int y;
+    const int yStart = (N - 1) * (int)(DIRECTION == -1);
 
     // Compute gamma along trajectory
     for (int i = 0; i < N; ++i) {
-      y = yStart + DIR * i;
+      const int y = yStart + DIRECTION * i;
 
       // Index to 2d-grids (Delta)
-      idx = y * N + x;
+      const int idx = y * N + x;
 
       // Add energy shift from vector potential
       energy.x = energy_zeroPotential + energy_shift[idx];
 
       // What type of node are we on?
-      nodeType = domainLabel[idx];
+      const char nodeType = domainLabel[idx];
 
-      if (nodeType == EXIT) {
+      if (nodeType == DOMAIN_EXIT) {
         // Read order parameter
-        delta.x = delta_real[idx];
-        delta.y = delta_imag[idx];
+        const cplx<T> delta(delta_real[idx], delta_imag[idx]);
 
         // Compute gammas and store
-        idx_sparse = BoundaryStorage<T>::getSparseIndex(
+        const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
             angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
             idx_out_gamma);
 
         // Compute gamma at current grid point
-        GAMMA::computeGamma_local(delta, cplx<T>(0.0, 0.0), energy, (T)0.0, 0,
-                                  g_bnd);
+        const cplx<T> gBoundary = GAMMA::computeHomogeneous(delta, energy);
 
-        bnd_out_gamma_real[idx_sparse] = g_bnd.x;
-        bnd_out_gamma_imag[idx_sparse] = g_bnd.y;
+        bnd_out_gamma_real[idx_sparse] = gBoundary.x;
+        bnd_out_gamma_imag[idx_sparse] = gBoundary.y;
 
         boundary_exit_count++;
       }
@@ -292,25 +367,25 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   dim3 blocksPerGrid, threadsPerBlock;
 
-  int numEnergiesCurrentBlock = energy_iter.getNumInterval();
-  int energyIdxOffset = energy_iter.getCurrentValue();
+  const int numEnergiesCurrentBlock = energy_iter.getNumInterval();
+  const int energyIdxOffset = energy_iter.getCurrentValue();
 
-  int numEnergies_storage =
+  const int numEnergies_storage =
       C::getIntegrationIterator()->getNumEnergiesInterval();
-  int energyIdxOffset_storage =
+  const int energyIdxOffset_storage =
       C::getIntegrationIterator()->getEnergyIdxOffset_boundaryStorage();
 
   R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
                               numEnergiesCurrentBlock, current_angle_idx);
 
-  int idx_x_min =
+  const int idx_x_min =
       (storage->getTrajectoryRangeX()->getDataPointer(0))[current_angle_idx];
-  int idx_x_max =
+  const int idx_x_max =
       (storage->getTrajectoryRangeX()->getDataPointer(1))[current_angle_idx];
 
-  int idx_y_min =
+  const int idx_y_min =
       (storage->getTrajectoryRangeY()->getDataPointer(0))[current_angle_idx];
-  int idx_y_max =
+  const int idx_y_max =
       (storage->getTrajectoryRangeY()->getDataPointer(1))[current_angle_idx];
 
   // Gives 10-15% speedup with streams

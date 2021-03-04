@@ -19,93 +19,101 @@ namespace Gamma {
 // New method with unified template kernel for both gamma and gammabar
 template <typename T> struct General {
   struct Gamma {
-    _HD_ static void computeGamma_local(const cplx<T> &D, const cplx<T> &g0,
-                                        const cplx<T> &e, const T h,
-                                        const int y, cplx<T> &g);
+    _HD_ static cplx<T> computeStep(const cplx<T> &inOrderParameter,
+                                    const cplx<T> &inEnergy,
+                                    const cplx<T> &inGammaInitial,
+                                    const T inStep);
+    _HD_ static cplx<T> computeHomogeneous(const cplx<T> &inOrderParameter,
+                                           const cplx<T> &inEnergy);
   };
 
   struct Gammabar {
-    _HD_ static void computeGamma_local(const cplx<T> &D, const cplx<T> &g0,
-                                        const cplx<T> &e, const T h,
-                                        const int y, cplx<T> &g);
+    _HD_ static cplx<T> computeStep(const cplx<T> &inOrderParameter,
+                                    const cplx<T> &inEnergy,
+                                    const cplx<T> &inGammaTildeInitial,
+                                    const T inStep);
+    _HD_ static cplx<T> computeHomogeneous(const cplx<T> &inOrderParameter,
+                                           const cplx<T> &inEnergy);
   };
 };
-
-template <typename T> struct Debug {
-  struct Gamma {
-    _HD_ static void computeGamma_local(const cplx<T> &D, const cplx<T> &g0,
-                                        const cplx<T> &e, const T h,
-                                        const int y, cplx<T> &g);
-  };
-
-  struct Gammabar {
-    _HD_ static void computeGamma_local(const cplx<T> &D, const cplx<T> &g0,
-                                        const cplx<T> &e, const T h,
-                                        const int y, cplx<T> &g);
-  };
-};
-
 } // namespace Gamma
 
 template <typename T>
-_HD_ void Gamma::General<T>::Gamma::computeGamma_local(const cplx<T> &D,
-                                                       const cplx<T> &g0,
-                                                       const cplx<T> &e,
-                                                       const T h, const int y,
-                                                       cplx<T> &g) {
-  // Create complex variables
-  cplx<T> Omega, iOmega, C, Cexp;
+_HD_ cplx<T> Gamma::General<T>::Gamma::computeStep(
+    const cplx<T> &inOrderParameter, const cplx<T> &inEnergy,
+    const cplx<T> &inGammaInitial, const T inStep) {
+  // References to make the math more readable.
+  const cplx<T> &D = inOrderParameter;
+  const cplx<T> &z = inEnergy;
 
-  // Compute gamma
-  Omega = cplx<T>::csqrt(D.cabsSq() - e * e);
-  iOmega = cplx<T>::i() * Omega;
+  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
+  const cplx<T> iOmega = cplx<T>::i() * Omega;
 
-  g = -D / (e + iOmega);
+  const cplx<T> gammaHomogeneous = -D / (z + iOmega);
 
-  if (y > 0) {
-    C = (g0 - g) / ((T)2.0 * iOmega + D.conj() * (g0 - g));
-    Cexp = C * cplx<T>::cexp((-(T)2.0 * h) * Omega);
+  const cplx<T> diff = (inGammaInitial - gammaHomogeneous);
 
-    g += ((T)2.0 * iOmega * Cexp) / ((T)1.0 - D.conj() * Cexp);
-  }
+  const cplx<T> C = diff / (static_cast<T>(2) * iOmega + D.conj() * diff);
+  const cplx<T> Cexp = C * cplx<T>::cexp((-static_cast<T>(2) * inStep) * Omega);
+
+  const cplx<T> gammaStep =
+      gammaHomogeneous + (static_cast<T>(2) * iOmega * Cexp) /
+                             (static_cast<T>(1) - D.conj() * Cexp);
+  return gammaStep;
 }
 
 template <typename T>
-_HD_ void Gamma::General<T>::Gammabar::computeGamma_local(
-    const cplx<T> &D, const cplx<T> &g0, const cplx<T> &e, const T h,
-    const int y, cplx<T> &g) {
-  // Create complex variables
-  cplx<T> Omega, iOmega, C, Cexp;
+_HD_ cplx<T>
+Gamma::General<T>::Gamma::computeHomogeneous(const cplx<T> &inOrderParameter,
+                                             const cplx<T> &inEnergy) {
+  // References to make the math more readable.
+  const cplx<T> &D = inOrderParameter;
+  const cplx<T> &z = inEnergy;
 
-  // Compute gammabar
-  Omega = cplx<T>::csqrt(D.cabsSq() - e * e);
-  iOmega = cplx<T>::i() * Omega;
+  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
+  const cplx<T> iOmega = cplx<T>::i() * Omega;
 
-  g = D.conj() / (e + iOmega);
-
-  if (y > 0) {
-    C = (g0 - g) / ((T)2.0 * iOmega - D * (g0 - g));
-    Cexp = C * cplx<T>::cexp((-(T)2.0 * h) * Omega);
-
-    g += ((T)2.0 * iOmega * Cexp) / ((T)1.0 + D * Cexp);
-  }
+  const cplx<T> gammaHomogeneous = -D / (z + iOmega);
+  return gammaHomogeneous;
 }
 
 template <typename T>
-_HD_ void
-Gamma::Debug<T>::Gamma::computeGamma_local(const cplx<T> &D, const cplx<T> &g0,
-                                           const cplx<T> &e, const T h,
-                                           const int y, cplx<T> &g) {
-  g = g0 * 0.999;
+_HD_ cplx<T> Gamma::General<T>::Gammabar::computeStep(
+    const cplx<T> &inOrderParameter, const cplx<T> &inEnergy,
+    const cplx<T> &inGammaTildeInitial, const T inStep) {
+  // References to make the math more readable.
+  const cplx<T> &D = inOrderParameter;
+  const cplx<T> &z = inEnergy;
+
+  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
+  const cplx<T> iOmega = cplx<T>::i() * Omega;
+
+  const cplx<T> gammaTildeHomogeneous = D.conj() / (z + iOmega);
+
+  const cplx<T> diff = (inGammaTildeInitial - gammaTildeHomogeneous);
+
+  const cplx<T> C = diff / (static_cast<T>(2) * iOmega - D * diff);
+  const cplx<T> Cexp = C * cplx<T>::cexp((-static_cast<T>(2) * inStep) * Omega);
+
+  const cplx<T> gammaTildeStep =
+      gammaTildeHomogeneous +
+      (static_cast<T>(2) * iOmega * Cexp) / (static_cast<T>(1) + D * Cexp);
+  return gammaTildeStep;
 }
 
 template <typename T>
-_HD_ void Gamma::Debug<T>::Gammabar::computeGamma_local(const cplx<T> &D,
-                                                        const cplx<T> &g0,
-                                                        const cplx<T> &e,
-                                                        const T h, const int y,
-                                                        cplx<T> &g) {
-  Gamma::computeGamma_local(D, g0, e, h, y, g);
+_HD_ cplx<T>
+Gamma::General<T>::Gammabar::computeHomogeneous(const cplx<T> &inOrderParameter,
+                                                const cplx<T> &inEnergy) {
+  // References to make the math more readable.
+  const cplx<T> &D = inOrderParameter;
+  const cplx<T> &z = inEnergy;
+
+  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
+  const cplx<T> iOmega = cplx<T>::i() * Omega;
+
+  const cplx<T> gammaTildeHomogeneous = D.conj() / (z + iOmega);
+  return gammaTildeHomogeneous;
 }
 } // namespace scg
 
