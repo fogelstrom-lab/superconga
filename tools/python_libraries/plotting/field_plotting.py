@@ -81,7 +81,7 @@ def plot_2D_imshow(
     if norm_in == None:
         cax_out = ax_in.imshow(
             data_in,
-            cmap=colormap_in,
+            cmap=colormap,
             vmax=max_value_in,
             vmin=min_value_in,
             extent=extent_in,
@@ -92,7 +92,7 @@ def plot_2D_imshow(
     else:
         cax_out = ax_in.imshow(
             data_in,
-            cmap=colormap_in,
+            cmap=colormap,
             extent=extent_in,
             interpolation=interpolation_in,
             aspect=aspect_in,
@@ -114,28 +114,31 @@ def plot_2D_imshow(
     # --------------------------------------------------
     # COLORBAR SETTINGS
     # --------------------------------------------------
-    # Create colorbar.
-    cbar_out = fig_in.colorbar(
-        cax_out,
-        cax=cbar_ax_in,
-        orientation=cbar_orientation_in,
-        ticks=cbar_ticks_in,
-    )
-    # Set colorbar ticks and tick labels.
-    cbar_out.set_ticks(cbar_ticks_in)
-    cbar_out.set_ticklabels(cbar_tick_labels_in)
-    # Set colorbar label.
-    cbar_out.set_label(
-        cbar_label_in,
-        fontsize=PP.font_size,
-        labelpad=cbar_label_pad_in,
-    )
-    # Adjust ticks and font size of tick labels.
-    cbar_out.ax.tick_params(axis="both", which="major", labelsize=PP.cbar_size)
-    cbar_out.ax.xaxis.set_ticks_position("top")
-    cbar_out.ax.xaxis.set_label_position("top")
-    # Make the colorbar appear nicer in vectorized representation.
-    cbar_out.solids.set_edgecolor("face")
+    if cbar_ax_in != None:
+        # Create colorbar.
+        cbar_out = fig_in.colorbar(
+            cax_out,
+            cax=cbar_ax_in,
+            orientation=cbar_orientation_in,
+            ticks=cbar_ticks_in,
+        )
+        # Set colorbar ticks and tick labels.
+        cbar_out.set_ticks(cbar_ticks_in)
+        cbar_out.set_ticklabels(cbar_tick_labels_in)
+        # Set colorbar label.
+        cbar_out.set_label(
+            cbar_label_in,
+            fontsize=PP.font_size,
+            labelpad=cbar_label_pad_in,
+        )
+        # Adjust ticks and font size of tick labels.
+        cbar_out.ax.tick_params(axis="both", which="major", labelsize=PP.cbar_size)
+        cbar_out.ax.xaxis.set_ticks_position("top")
+        cbar_out.ax.xaxis.set_label_position("top")
+        # Make the colorbar appear nicer in vectorized representation.
+        cbar_out.solids.set_edgecolor("face")
+    else:
+        cbar_out = None
 
     return cax_out, cbar_out
 

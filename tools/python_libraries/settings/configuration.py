@@ -32,7 +32,7 @@ filenames = {
     "convergence": "convergence.csv",
     "current_density": "current_density.csv",
     "dos": "dos.csv",
-    "geometry": "geometry.csv",
+    "geometry": "domain.csv",
     "internal_parameters": "internal_parameters.json",
     "ldos": "ldos.csv",
     "magnetic_flux_density": "magnetic_flux_density.csv",

@@ -59,7 +59,7 @@ cbar_size = 18
 # COLOR DEFINITIONS
 # --------------------------------------------------
 # Gray color, used e.g. to mask what is "outside" the grain.
-gray_color = "#c0c0c0"
+gray_color = "#D0D0D0"
 mask_color = gray_color
 
 # --------------------------------------------------
