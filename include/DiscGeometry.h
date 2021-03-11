@@ -40,6 +40,26 @@ private:
     std::swap(inDiscA.m_disc, inDiscB.m_disc);
   }
 
+  /// \brief Convert a (fractional) coordinate in [-MAX, MAX], to actual grid
+  /// coordinate.
+  ///
+  /// \param inFractionalCoordinate Coordinate in [-MAX, MAX] of the simulation
+  /// space. \param inSimulationLatticeSideLength The number of lattice sites
+  /// per side length of the simulation space.
+  /// \param inGridLatticeSideLength The number of elements per side length of
+  /// the grid.
+  ///
+  /// \return The converted coordinate.
+  T convertCoordinate(const T inFractionalCoordinate,
+                      const int inSimulationLatticeSideLength,
+                      const int inGridLatticeSideLength) const {
+    const int diff = inGridLatticeSideLength - inSimulationLatticeSideLength;
+    const T halfDiff = static_cast<T>(0.5) * static_cast<T>(diff);
+    return static_cast<T>(inSimulationLatticeSideLength - 1) *
+               (inFractionalCoordinate + constants::MAXIMUM_COORDINATE) +
+           halfDiff;
+  }
+
   Disc<T> *m_disc;
 };
 
@@ -256,12 +276,9 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   int numX, numY;
   G::getGridDimensions(numX, numY);
 
-  const T offsetX =
-      static_cast<T>(numX - 1) * (rotatedCenterX + static_cast<T>(0.5));
-  const T offsetY =
-      static_cast<T>(numY - 1) * (rotatedCenterY + static_cast<T>(0.5));
-
   const int N = G::getParameters()->getGridResolutionBase();
+  const T offsetX = convertCoordinate(rotatedCenterX, N, numX);
+  const T offsetY = convertCoordinate(rotatedCenterY, N, numY);
   const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
 
   dim3 bpg, tpb;
@@ -285,15 +302,10 @@ DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
   const T centerX = m_disc->getPosX();
   const T centerY = m_disc->getPosY();
 
-  // Compute the offsets needed for cordinate transformations.
-  const T offsetX =
-      static_cast<T>(inLatticeSideLength - 1) * (centerX + static_cast<T>(0.5));
-  const T offsetY =
-      static_cast<T>(inLatticeSideLength - 1) * (centerY + static_cast<T>(0.5));
-
-  // The radius in pixels.
-  const T radius =
-      m_disc->getRadius() * static_cast<T>(inLatticeSideLength - 1);
+  const int N = GeometryComponent<T>::getParameters()->getGridResolutionBase();
+  const T offsetX = convertCoordinate(centerX, N, inLatticeSideLength);
+  const T offsetY = convertCoordinate(centerY, N, inLatticeSideLength);
+  const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
 
   // Get the required kernel dimensions.
   dim3 bpg, tpb;
