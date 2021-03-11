@@ -33,6 +33,29 @@ def parse_field_pandas(base_path: str, field_name: str) -> pd.DataFrame:
     return utils.parse_general_csv(data_path)
 
 
+# Parse 2D grid of geometry mask from csv to dict of numpy arrays, with a
+# structure which is appropriate for i.e. matplotlib.pyplot.imshow().
+def parse_geometry_numpy(base_path: str) -> dict:
+    field_name = "geometry"
+
+    # Parse CSV with pandas.
+    data_pandas = parse_field_pandas(base_path=base_path, field_name=field_name)
+
+    # Convert to numpy data.
+    data_numpy = data_pandas.to_numpy()
+
+    # Get number of points per side in grid. Assuming uniform grid.
+    x_coordinate_grid = data_numpy[:, 0]
+    points_per_side = int(np.sqrt(len(x_coordinate_grid)))
+
+    # Storage for return data.
+    out_data_dict = {}
+
+    out_data_dict["mask"] = data_numpy[:, 2].reshape(points_per_side, points_per_side)
+
+    return out_data_dict
+
+
 # Parse 2D grid observable/quantity from csv to dict of numpy arrays, with a
 # structure which is appropriate for i.e. matplotlib.pyplot.imshow().
 def parse_field_numpy(base_path: str, field_name: str) -> dict:
