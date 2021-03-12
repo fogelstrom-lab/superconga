@@ -15,7 +15,14 @@ message(
 include(CTest)
 
 ###############################################################################
-# EXTERNAL LIBRARIES
+# INCLUDE DEPENDENCIES WITH FIND_PACKAGE()
+###############################################################################
+# Find BLAS and LAPACK
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+
+###############################################################################
+# FETCH EXTERNAL LIBRARIES WITH FETCHCONTENT(): JSON
 ###############################################################################
 # So we can download libs at build time.
 include(FetchContent)
@@ -37,10 +44,6 @@ if(NOT json_POPULATED)
       CACHE BOOL "Do not build tests." FORCE)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
-
-# Find BLAS and LAPACK
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
 
 ###############################################################################
 # CUDA
@@ -67,12 +70,23 @@ if(CUDA_ARCH)
   set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
 else()
   # Autodetect architecture and fetch architecture version.
-  CUDA_DETECT_INSTALLED_GPUS(CUDA_ARCH)
-  string(REPLACE "." "" CUDA_ARCH "${CUDA_ARCH}")
-  string(REPLACE " " "" CUDA_ARCH "${CUDA_ARCH}")
+  CUDA_DETECT_INSTALLED_GPUS(DETECTED_CUDA_ARCH)
+  # Convert to number valid in architecture flags: remove dots.
+  string(REPLACE "." "" CUDA_ARCH "${DETECTED_CUDA_ARCH}")
+
+  # Remove leading and trailing whitespaces.
+  string(STRIP ${CUDA_ARCH} CUDA_ARCH)
+
+  # Choose first architecture in list for one or more GPUs.
+  # TODO(patric): Fix issue if GPUs have different architecture levels.
+  string(REPLACE " " ";" CUDA_ARCH_LIST "${CUDA_ARCH}")
+  list(GET CUDA_ARCH_LIST 0 CUDA_ARCH)
 
   # Atuodetect compilation flags.
   cuda_select_nvcc_arch_flags(ARCH_FLAGS Auto)
+
+  message(STATUS "Detected CUDA architectures: ${CUDA_ARCH}")
+  message(STATUS "Detected CUDA architecture flags: ${ARCH_FLAGS}")
 endif()
 
 # Format architecture flags for compiler.
