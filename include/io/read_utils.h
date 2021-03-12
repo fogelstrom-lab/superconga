@@ -44,6 +44,43 @@ __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc1,
     outDst2[idx] = inSrc2[idx];
   }
 }
+
+/// \brief Copy two vectors to a grid. If the grid is complex it will be the
+/// real/imag parts. Otherwise the first/second channel.
+///
+/// \param inSrc1 The first vector.
+/// \param inSrc2 The second vector.
+/// \param inOutDst The grid to copy the vectors into.
+template <typename T>
+void copy(const std::vector<T> inSrc1, const std::vector<T> inSrc2,
+          GridGPU<T> &inOutDst) {
+  // Copy to the GPU.
+  const thrust::device_vector<T> src1 = inSrc1;
+  const thrust::device_vector<T> src2 = inSrc2;
+
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  inOutDst.getKernelDimensions(numBlocks, numThreadsPerBlock);
+
+  const int dimX = inOutDst.dimX();
+  const int dimY = inOutDst.dimY();
+  const bool isComplex = inOutDst.isComplex();
+
+  // Call CUDA kernel.
+  if (isComplex) {
+    copy<<<numBlocks, numThreadsPerBlock>>>(
+        dimX, dimY, thrust::raw_pointer_cast(src1.data()),
+        thrust::raw_pointer_cast(src2.data()),
+        inOutDst.getDataPointer(0, Type::real),
+        inOutDst.getDataPointer(0, Type::imag));
+  } else {
+    copy<<<numBlocks, numThreadsPerBlock>>>(
+        dimX, dimY, thrust::raw_pointer_cast(src1.data()),
+        thrust::raw_pointer_cast(src2.data()), inOutDst.getDataPointer(0),
+        inOutDst.getDataPointer(1));
+  }
+}
 } // namespace internal
 
 template <typename T>
@@ -101,30 +138,31 @@ inline bool readVectorPotential(const std::filesystem::path &inFileName,
   const std::vector<T> &cpuY = map.at(keyY);
 
   // Sanity check the sizes.
-  // TODO(niclas): This is not necessary. We can resample the grid.
   const std::size_t expectedSize = static_cast<std::size_t>(dimX * dimY);
   if ((cpuX.size() != expectedSize) || (cpuY.size() != expectedSize)) {
-    std::cerr << "-- ERROR! The vector-potential does not have the expected "
-                 "dimensions."
-              << std::endl;
-    return false;
+    // Get the actual lattice side-length in the read data.
+    const int N = static_cast<int>(std::sqrt(static_cast<T>(cpuX.size())));
+
+    // Check if it is a square.
+    if (N * N != static_cast<int>(cpuX.size())) {
+      std::cerr << "-- ERROR! The data is not square." << std::endl;
+      return false;
+    }
+
+    // Resize the vector potential.
+    inOutVectorPotential = GridGPU<T>(N, N, numFields, representation);
+
+    // Copy data.
+    internal::copy(cpuX, cpuY, inOutVectorPotential);
+
+    // Resize (via interpolation), to the desired size.
+    // TODO(niclas): There is an undesired effect of zeros outside of the grain
+    // leaking in.
+    inOutVectorPotential.resample(dimX, dimY);
+  } else {
+    // Copy data.
+    internal::copy(cpuX, cpuY, inOutVectorPotential);
   }
-
-  // Copy to the GPU.
-  const thrust::device_vector<T> gpuX = cpuX;
-  const thrust::device_vector<T> gpuY = cpuY;
-
-  // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutVectorPotential.getKernelDimensions(numBlocks, numThreadsPerBlock);
-
-  // Call CUDA kernel.
-  internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, thrust::raw_pointer_cast(gpuX.data()),
-      thrust::raw_pointer_cast(gpuY.data()),
-      inOutVectorPotential.getDataPointer(0),
-      inOutVectorPotential.getDataPointer(1));
 
   return true;
 }
@@ -183,30 +221,33 @@ inline bool readOrderParameter(const std::filesystem::path &inFileName,
     const std::vector<T> &cpuImag = map.at(keyImag);
 
     // Sanity check the sizes.
-    // TODO(niclas): This is not necessary. We can resample the grid.
     const std::size_t expectedSize = static_cast<std::size_t>(dimX * dimY);
     if ((cpuReal.size() != expectedSize) || (cpuImag.size() != expectedSize)) {
-      std::cerr << "-- ERROR! The order-parameter does not have the expected "
-                   "dimensions."
-                << std::endl;
-      return false;
+      // Get the actual lattice side-length in the read data.
+      const int N = static_cast<int>(std::sqrt(static_cast<T>(cpuReal.size())));
+
+      // Check if it is a square.
+      if (N * N != static_cast<int>(cpuReal.size())) {
+        std::cerr << "-- ERROR! The data is not square." << std::endl;
+        return false;
+      }
+
+      // Resize the component.
+      const T numFields = 1;
+      const Type::type representation = Type::complex;
+      component = GridGPU<T>(N, N, numFields, representation);
+
+      // Copy data.
+      internal::copy(cpuReal, cpuImag, component);
+
+      // Resize (via interpolation), to the desired size.
+      // TODO(niclas): There is an undesired effect of zeros outside of the
+      // grain leaking in.
+      component.resample(dimX, dimY);
+    } else {
+      // Copy data.
+      internal::copy(cpuReal, cpuImag, component);
     }
-
-    // Copy to the GPU.
-    const thrust::device_vector<T> gpuReal = cpuReal;
-    const thrust::device_vector<T> gpuImag = cpuImag;
-
-    // Kernel parameters.
-    dim3 numBlocks;
-    dim3 numThreadsPerBlock;
-    component.getKernelDimensions(numBlocks, numThreadsPerBlock);
-
-    // Call CUDA kernel.
-    internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, thrust::raw_pointer_cast(gpuReal.data()),
-        thrust::raw_pointer_cast(gpuImag.data()),
-        component.getDataPointer(0, Type::real),
-        component.getDataPointer(0, Type::imag));
   }
 
   return true;
