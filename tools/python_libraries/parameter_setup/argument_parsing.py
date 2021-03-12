@@ -757,7 +757,7 @@ def set_arguments_from_cli(
     # Update parameters from command-line input.
     if frontend == "runner":
         set_runner_arguments_from_cli(sim_params, args)
-    if frontend == "postprocess":
+    elif frontend == "postprocess":
         set_postprocess_arguments_from_cli(sim_params, args)
     elif frontend == "plotter":
         set_plotter_arguments_from_cli(sim_params, args)
