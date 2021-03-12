@@ -35,6 +35,8 @@ def make_default_parser(
 
     if frontend == "runner":
         add_runner_arguments(parser)
+    elif frontend == "postprocess":
+        add_postprocess_arguments(parser)
     elif frontend == "plotter":
         add_plotter_arguments(parser)
     elif frontend == "ldos_plotter":
@@ -375,6 +377,142 @@ def add_runner_arguments(parser) -> None:
 
 
 # -----------------------------------------------------------------------------
+# ARGUMENT SPECIFICATION: POSTPROCESS
+# -----------------------------------------------------------------------------
+# Add arguments specific for the postprocess.
+def add_postprocess_arguments(parser) -> None:
+    # Config file.
+    parser.add_argument(
+        "-f",
+        "--file",
+        type=str,
+        default=None,
+        help="Path to JSON file with parameters specifying the simulation settings.",
+    )
+
+    # C++ binary.
+    parser.add_argument(
+        "-b",
+        "--cpp-binary",
+        type=str,
+        default="build/release/bin/postprocess",
+        help="Path to the C++ binary.",
+    )
+
+    # Convergence criterion.
+    parser.add_argument(
+        "-c",
+        "--convergence-criterion",
+        type=float,
+        default=None,
+        help="Convergence criteron for self-consistency.",
+    )
+
+    # Data path.
+    parser.add_argument(
+        "-p",
+        "--data-path",
+        type=str,
+        default=None,
+        help="Base folder for input/output (data and parameter files).",
+    )
+
+    # Energy max.
+    parser.add_argument(
+        "--energy-max",
+        type=float,
+        default=None,
+        help="The maximum energy.",
+    )
+
+    # Energy min.
+    parser.add_argument(
+        "--energy-min",
+        type=float,
+        default=None,
+        help="The minimum energy.",
+    )
+
+    # Energy smearing.
+    parser.add_argument(
+        "--energy-smearing",
+        type=float,
+        default=None,
+        help="The energy smearing.",
+    )
+
+    # Num energies.
+    parser.add_argument(
+        "-e",
+        "--num-energies",
+        type=int,
+        default=None,
+        help="Number of energies.",
+    )
+
+    # Num energies per block.
+    parser.add_argument(
+        "-E",
+        "--num-energies-per-block",
+        type=int,
+        default=None,
+        help="Number of energies per block.",
+    )
+
+    # Num iterations max.
+    parser.add_argument(
+        "-M",
+        "--num-iterations-max",
+        type=int,
+        default=None,
+        help="Maximum number of self-consistent iterations to run.",
+    )
+
+    # Num iterations min.
+    parser.add_argument(
+        "-m",
+        "--num-iterations-min",
+        type=int,
+        default=None,
+        help="Minimum number of self-consistent iterations to run.",
+    )
+
+    # Num Fermi momenta.
+    parser.add_argument(
+        "--num-fermi-momenta",
+        type=int,
+        default=None,
+        help="Number of angles in Fermi-surface average.",
+    )
+
+    # Save.
+    group_save = parser.add_mutually_exclusive_group()
+    group_save.add_argument(
+        "--save-data",
+        action="store_true",
+        help="Save data files to disk. If files already exist, they will be overwritten.",
+    )
+    group_save.add_argument(
+        "--no-save-data", action="store_true", help="Do not save data files to disk."
+    )
+
+    # Verbose.
+    group_verbose = parser.add_mutually_exclusive_group()
+    group_verbose.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print iteration status and other output to terminal.",
+    )
+    group_verbose.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Do not print iteration status and other output to terminal.",
+    )
+
+
+# -----------------------------------------------------------------------------
 # ARGUMENT SPECIFICATION: PLOTTER
 # -----------------------------------------------------------------------------
 # Add arguments specific for the plotter.
@@ -619,6 +757,8 @@ def set_arguments_from_cli(
     # Update parameters from command-line input.
     if frontend == "runner":
         set_runner_arguments_from_cli(sim_params, args)
+    if frontend == "postprocess":
+        set_postprocess_arguments_from_cli(sim_params, args)
     elif frontend == "plotter":
         set_plotter_arguments_from_cli(sim_params, args)
     elif frontend == "ldos_plotter":
@@ -697,6 +837,26 @@ def set_runner_arguments_from_cli(
 
     set_value(sim_params, "order_parameter_path", args.op_path)
     set_value(sim_params, "vector_potential_path", args.vp_path)
+
+
+# Postprocess: Override json dictionary with command-line input.
+def set_postprocess_arguments_from_cli(
+    sim_params,
+    args,
+) -> None:
+    # Override values from the command line.
+    set_value(sim_params, "convergence_criterion", args.convergence_criterion)
+    set_value(sim_params, "data_path", args.data_path)
+    set_value(sim_params, "energy_max", args.energy_max)
+    set_value(sim_params, "energy_min", args.energy_min)
+    set_value(sim_params, "energy_smearing", args.energy_smearing)
+    set_value(sim_params, "num_energies", args.num_energies)
+    set_value(sim_params, "num_energies_per_block", args.num_energies_per_block)
+    set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
+    set_value(sim_params, "num_iterations_max", args.num_iterations_max)
+    set_value(sim_params, "num_iterations_min", args.num_iterations_min)
+    set_flag(sim_params, "save_data", args.save_data, args.no_save_data)
+    set_flag(sim_params, "verbose", args.verbose, args.quiet)
 
 
 # Plotter: Override json dictionary with command-line input.

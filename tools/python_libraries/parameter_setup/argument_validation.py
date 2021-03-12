@@ -165,6 +165,21 @@ runner_checks = {
     "visualize": {"type": bool},
 }
 
+postprocess_checks = {
+    "convergence_criterion": {"type": float, "low": 0.0},
+    "data_path": {"type": str},
+    "energy_max": {"type": float, "low": 0.0},
+    "energy_min": {"type": float, "low": 0.0},
+    "energy_smearing": {"type": float, "low": 0.0},
+    "num_energies": {"type": int, "low": 0},
+    "num_energies_per_block": {"type": int, "low": 0},
+    "num_fermi_momenta": {"type": int, "low": 0},
+    "num_iterations_max": {"type": int, "low": 0},
+    "num_iterations_min": {"type": int, "low": 0},
+    "save_data": {"type": bool},
+    "verbose": {"type": bool},
+}
+
 # General fields and parameters for scalar field.
 plotter_checks_scalar_field = {
     "type": dict,
@@ -248,6 +263,25 @@ def validate_runner_arguments(
         >= sim_params["optimizer"]["min_mixing"]
     ):
         print("--'max_mixing' must be larger than, or equal to, 'min_mixing'.")
+        success = False
+
+    return success
+
+
+# Specific checks for postprocess.
+def validate_postprocess_arguments(
+    sim_params: dict,
+) -> bool:
+    success = True
+
+    # Check that the minimum number of iterations is smaller than the maximum.
+    if not (sim_params["num_iterations_max"] >= sim_params["num_iterations_min"]):
+        print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
+        success = False
+
+    # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
+    if not sim_params["energy_max"] >= sim_params["energy_min"]:
+        print("--'energy_max' must be larger than, or equal to, 'energy_min'.")
         success = False
 
     return success
@@ -484,6 +518,12 @@ def validate_arguments(
 
         # Specific checks.
         success &= validate_runner_arguments(arguments_dict)
+    elif frontend == "postprocess":
+        # General checks against dictionary.
+        success = check_dict(arguments_dict, postprocess_checks)
+
+        # Specific checks.
+        success &= validate_postprocess_arguments(arguments_dict)
     elif frontend == "plotter":
         # General checks against dictionary.
         success = check_dict(arguments_dict, plotter_checks)
