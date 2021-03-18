@@ -127,6 +127,7 @@ runner_checks = {
         },
     },
     "grain_side_length": {"type": float, "low": 0.0},
+    "gauge_solenoid": {"type": bool},
     "points_per_coherence_length": {"type": float, "low": 0.0},
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},

@@ -332,8 +332,9 @@ int main(int argc, char *argv[]) {
   scg::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
-  // with a solenoid gague.
-  if (isSolenoid) {
+  // with a solenoid gauge.
+  const bool solenoidGuage = simParams["gauge_solenoid"].asBool();
+  if (solenoidGuage) {
     riccatiSolver = new scg::RiccatiSolverConfined<
         T, scg::Gamma::General, scg::VectorPotential::Solenoid>(&context);
   } else {
