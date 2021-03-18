@@ -51,8 +51,8 @@ swave_disc_meissner
 ## S-Wave Disc: The Meissner Effect with Vortex
 
 A simulation of an s-wave superconductor in a disc-shaped grain. 
-A magnetic field of a single flux-quanta is applied, resulting in circulating Meissner currents,
-along the edge, and a vortex in the middle.
+A magnetic field of one and a half flux-quanta is applied, resulting in
+circulating Meissner currents, along the edge, and a vortex in the middle.
 
 Folder:
 ```
