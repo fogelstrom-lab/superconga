@@ -162,29 +162,6 @@ template <typename T>
 void ComputeProperty<T>::initGreensAngle(const int N, const int numFields) {
   GridGPU<T>::initializeGrid(_greensCurrentAngle, N, N, numFields);
 }
-
-template <typename T>
-GridGPU<T> ComputeProperty<T>::computeSFMomentum(Parameters<T> *param,
-                                                 OrderParameter<T> *delta) {
-  const int N = param->getGridResolutionBase();
-  const T h = param->getGridElementSize();
-  const T Phi = param->getMagneticFieldStrength();
-
-  GridGPU<T> *delta_grid = delta->getOrderParameterField();
-
-  GridGPU<T> phaseGradient = delta_grid->phaseGradient(h);
-  phaseGradient *= 0.5;
-
-  // Add gauge
-  dim3 bpg, tpb;
-  phaseGradient.getKernelDimensions(bpg, tpb);
-
-  compute_property_internal::addGauge_Kernel<<<bpg, tpb>>>(
-      phaseGradient.getDataPointer(0), phaseGradient.getDataPointer(1), h, Phi,
-      N);
-
-  return phaseGradient;
-}
 } // namespace scg
 
 #endif // COMPUTE_PROPERTY_H_

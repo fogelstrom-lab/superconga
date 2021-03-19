@@ -43,7 +43,7 @@ public:
 
   int getNumMatsubaraEnergies() const;
   T getTemperature() const { return m_temperature; }
-  T getMagneticFieldStrength() const { return m_magneticFieldStrength; }
+  T getNumFluxQuanta() const { return m_numFluxQuanta; }
 
   T getConvergenceCriterion() const { return m_convergenceCriterion; }
 
@@ -78,8 +78,8 @@ public:
   }
 
   void setTemperature(const T inTemperature) { m_temperature = inTemperature; }
-  void setMagneticFieldStrength(const T inMagneticFieldStrength) {
-    m_magneticFieldStrength = inMagneticFieldStrength;
+  void setNumFluxQuanta(const T inNumFluxQuanta) {
+    m_numFluxQuanta = inNumFluxQuanta;
   }
 
   void setEnergyRange(const T inEnergyMin, const T inEnergyMax,
@@ -142,8 +142,8 @@ private:
   // Temperature in units of Tc.
   T m_temperature;
 
-  // Magnetic field.
-  T m_magneticFieldStrength;
+  // The number of external flux-quanta.
+  T m_numFluxQuanta;
 
   // The penetration depth used when solving for the vector potential.
   T m_penetrationDepth;
@@ -181,7 +181,7 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
     : m_grainWidth(static_cast<T>(20)),
       m_pointsPerCoherenceLength(static_cast<T>(5)), m_numAngles(64),
       m_energyCutoff(static_cast<T>(10)), m_temperature(static_cast<T>(0.5)),
-      m_magneticFieldStrength(static_cast<T>(0)),
+      m_numFluxQuanta(static_cast<T>(0)),
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
       m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
       m_smearingFactor(static_cast<T>(0.05)), m_numMatsubaraEnergies(20),
@@ -227,7 +227,7 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
   m_numAngles = inOther.getAngularResolution();
   m_energyCutoff = inOther.getCutOff();
   m_temperature = inOther.getTemperature();
-  m_magneticFieldStrength = inOther.getMagneticFieldStrength();
+  m_numFluxQuanta = inOther.getNumFluxQuanta();
   m_convergenceCriterion = inOther.getConvergenceCriterion();
   m_numEnergies = inOther.getNumEnergies();
   m_energyMin = inOther.getEnergyMin();
@@ -390,8 +390,7 @@ template <typename T> void Parameters<T>::print() const {
             << std::endl;
   std::cout << "Angular Resolution: " << m_numAngles << std::endl;
   std::cout << "Temperature: " << m_temperature << std::endl;
-  std::cout << "Magnetic Field Strength: " << m_magneticFieldStrength
-            << std::endl;
+  std::cout << "Flux quanta: " << m_numFluxQuanta << std::endl;
   std::cout << "Spectral energy range: (" << m_energyMin << ", " << m_energyMax
             << ")" << std::endl;
   std::cout << "Spectral energy levels: " << m_numEnergies << std::endl;

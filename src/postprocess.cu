@@ -186,6 +186,11 @@ int main(int argc, char *argv[]) {
   parameters->setPenetrationDepth(
       static_cast<T>(simParams["penetration_depth"].asDouble()));
 
+  // Set external magnetic field strength.
+  const T externalFluxQuanta =
+      static_cast<T>(simParams["external_flux_quanta"].asDouble());
+  parameters->setNumFluxQuanta(externalFluxQuanta);
+
   //***************************************************
   // CREATE GEOMETRY
   //***************************************************
@@ -347,26 +352,6 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // INITIALIZE SIMULATION
   //***************************************************
-
-  // Set external magnetic field strength.
-  const T externalFluxQuanta =
-      static_cast<T>(simParams["external_flux_quanta"].asDouble());
-  if (isSolenoid) {
-    // External field in flux quanta.
-    parameters->setMagneticFieldStrength(externalFluxQuanta);
-  } else {
-    // Todo(patric): The field is set after the first initialization since we
-    // cannot get geometry->area() without having initialized the geometry. Find
-    // a way around this if possible.
-    context.initialize(numEnergiesPerBlock);
-
-    // External field in fux quanta per unit area.
-    const T externalMagneticFluxDensity = externalFluxQuanta / geometry->area();
-
-    parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
-  }
-
-  // Initialize.
   context.initialize(numEnergiesPerBlock);
 
   //***********************************************

@@ -126,7 +126,9 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   // Add contribution from external magnetic field
   const int N0 = parameters->getGridResolutionBase();
   const int N1 = parameters->getGridResolutionCoherence();
-  const T B = parameters->getMagneticFieldStrength();
+  const T numFluxQuanta = parameters->getNumFluxQuanta();
+  const T area = inContextModule->getGeometry()->area();
+  const T fluxDensity = numFluxQuanta / area;
   const T h = parameters->getGridElementSize();
 
   const T systemAngle =
@@ -146,14 +148,15 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
     vectorPotentialRotated.setZero();
     vectorPotentialRotated.insertRotatedGrid(inVectorPotential, -systemAngle);
 
-    computeEnergyShiftKernel<T, VP><<<bpg, tpb>>>(
-        vectorPotentialRotated.getDataPointer(0),
-        vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
-        fermiVelocityY, systemAngle, B, N1, h, inEnergyShift->getDataPointer());
+    computeEnergyShiftKernel<T, VP>
+        <<<bpg, tpb>>>(vectorPotentialRotated.getDataPointer(0),
+                       vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
+                       fermiVelocityY, systemAngle, fluxDensity, area, N1, h,
+                       inEnergyShift->getDataPointer());
   } else {
     computeEnergyShiftOnlyExternalKernel<T, VP>
-        <<<bpg, tpb>>>(fermiVelocityX, fermiVelocityY, systemAngle, B, N1, h,
-                       inEnergyShift->getDataPointer());
+        <<<bpg, tpb>>>(fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity,
+                       area, N1, h, inEnergyShift->getDataPointer());
   }
 }
 

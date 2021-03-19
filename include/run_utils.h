@@ -148,8 +148,6 @@ void saveParametersWrapper(const Context<T> *const inContext,
   internalParamJSON["internal_lattice_points"] = numGrainLatticeSites;
   internalParamJSON["gauge"] =
       inContext->getRiccatiSolver()->getVectorPotentialType();
-  internalParamJSON["external_flux_density"] =
-      inContext->getParameters()->getMagneticFieldStrength();
   internalParamJSON["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
   const int numLatticeSitesPerSide =
       inContext->getParameters()->getGridResolutionBase();
