@@ -73,6 +73,9 @@ def main() -> None:
         base_path=plot_config_parameters["general"]["data_path"]
     )
 
+    # Get geometry mask.
+    geometry = parse_grid_quantity.parse_geometry_numpy(base_path=plot_config_parameters["general"]["data_path"])
+
     # Parse "internal parameters" from json, get result as dictionary.
     internal_parameters = parse_json_files.parse_internal_parameters(
         base_path=plot_config_parameters["general"]["data_path"]
@@ -90,11 +93,6 @@ def main() -> None:
         base_path=plot_config_parameters["general"]["data_path"]
     )
 
-    pprint.pprint(simulation_parameters)
-    pprint.pprint(internal_parameters)
-    pprint.pprint(post_processing_parameters)
-    pprint.pprint(plot_config_parameters)
-
     # Parse LDOS data as a dictionary with numpy 2D and 3D arrays. The LDOS
     # data is accessible as: ldos_data["ldos"][energy_idx,y_idx,x_idx], where
     # y_idx and x_idx are the discrete indices for data at x- and y-coordinates
@@ -110,11 +108,18 @@ def main() -> None:
         internal_parameters=internal_parameters,
     )
 
+    # Mask region outside grain with a false color, to more easily
+    # distinguish grain boundaries.
+    (num_energies, num_y, num_x) = np.shape(ldos_data["ldos"])
+    for energy_idx in range(0, num_energies):
+        ldos_data["ldos"][energy_idx, geometry["mask"] == 0] = np.nan
+
     # ======================================================================#
     #                               PLOT DATA                               #
     # ======================================================================#
-    # Plot DOS and LDOS with matplotlib.
-    field_plotting.plot_ldos(
+    # Plot DOS and LDOS with matplotlib. Get reference to energy slider to
+    # prevent garbage collector from breaking plot interactivity.
+    energy_slider = field_plotting.plot_ldos(
         ldos_data=ldos_data,
         dos_data=dos_data,
         plot_parameters=plot_config_parameters,
