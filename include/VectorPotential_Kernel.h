@@ -9,7 +9,7 @@ namespace scg {
 template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShiftOnlyExternalKernel(
     const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
-    const T inMagneticFieldStrength, const int inGridResolution,
+    const T inFluxDensity, const T inArea, const int inGridResolution,
     const T inGridElementSize, T *const outEnergyShift) {
   // XY-coordinate indices.
   const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -30,7 +30,7 @@ __global__ void computeEnergyShiftOnlyExternalKernel(
     T vectorPotentialX;
     T vectorPotentialY;
     POTENTIAL<T>::computeVectorPotential_local(
-        inMagneticFieldStrength, x, y, vectorPotentialX, vectorPotentialY);
+        inFluxDensity, inArea, x, y, vectorPotentialX, vectorPotentialY);
 
     // Linear index.
     const int idx = yIdx * inGridResolution + xIdx;
@@ -47,7 +47,7 @@ template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShiftKernel(
     const T *const inVectorPotentialX, const T *const inVectorPotentialY,
     const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
-    const T inMagneticFieldStrength, const int inGridResolution,
+    const T inFluxDensity, const T inArea, const int inGridResolution,
     const T inGridElementSize, T *const outEnergyShift) {
   // XY-coordinate indices.
   const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -68,9 +68,8 @@ __global__ void computeEnergyShiftKernel(
     // External vector potential.
     T extVectorPotentialX;
     T extVectorPotentialY;
-    POTENTIAL<T>::computeVectorPotential_local(inMagneticFieldStrength, x, y,
-                                               extVectorPotentialX,
-                                               extVectorPotentialY);
+    POTENTIAL<T>::computeVectorPotential_local(
+        inFluxDensity, inArea, x, y, extVectorPotentialX, extVectorPotentialY);
 
     // Linear index.
     const int idx = yIdx * inGridResolution + xIdx;

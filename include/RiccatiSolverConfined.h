@@ -45,7 +45,7 @@ template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
 __global__ void computeGammaFunctionTemplate_new_kernel(
     const T h, const T fermiSpeed, const int N, const int Ne,
     const int energyIdx_offset, const int idx_x_min, const int idx_x_max,
-    const int idx_y_min, const int idx_y_max, const int angleIdx, const T B,
+    const int idx_y_min, const int idx_y_max, const int angleIdx,
     const T *const energies_re, const T *const energies_im,
     const T *const energy_shift, T *gamma_real, T *gamma_imag,
     const T *const delta_real, const T *const delta_imag,
@@ -254,16 +254,15 @@ template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
           int DIRECTION>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const T h, const int N, const int Ne, const int energyIdx_offset,
-    const int idx_x_offset, const int angleIdx, const T B,
-    const T *const energies_re, const T *const energies_im,
-    const T *const energy_shift, const T *const gamma_real,
-    const T *const gamma_imag, const T *const delta_real,
-    const T *const delta_imag, const char *const domainLabel,
-    const T *const domainNormals_x, const T *const domainNormals_y,
-    const T *const boundaryDistance, const int *const idx_in_gamma,
-    const int *const idx_out_gamma, const T *const bnd_in_gamma_real,
-    const T *const bnd_in_gamma_imag, T *bnd_out_gamma_real,
-    T *bnd_out_gamma_imag) {
+    const int idx_x_offset, const int angleIdx, const T *const energies_re,
+    const T *const energies_im, const T *const energy_shift,
+    const T *const gamma_real, const T *const gamma_imag,
+    const T *const delta_real, const T *const delta_imag,
+    const char *const domainLabel, const T *const domainNormals_x,
+    const T *const domainNormals_y, const T *const boundaryDistance,
+    const int *const idx_in_gamma, const int *const idx_out_gamma,
+    const T *const bnd_in_gamma_real, const T *const bnd_in_gamma_imag,
+    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
   // x-coordinate
   const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset;
   // energy coordinate
@@ -354,7 +353,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // Determine some scalars
   const T h = param->getGridElementSize();
-  const T B = param->getMagneticFieldStrength();
   const int N = param->getGridResolutionCoherence();
   const int numAngles = param->getAngularResolution();
 
@@ -415,7 +413,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
       <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
           // Model parameters and energy values
           h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
-          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx, B,
+          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -443,7 +441,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
           h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
-          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx, B,
+          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -501,7 +499,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
 
   // Determine some scalars
   const T h = param->getGridElementSize();
-  const T B = param->getMagneticFieldStrength();
   const int N = param->getGridResolutionCoherence();
   const int numAngles = param->getAngularResolution();
 
@@ -536,7 +533,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
       T, typename GAMMA<T>::Gamma, 2, 3, 1><<<blocksPerGrid, threadsPerBlock>>>(
       // Model parameters and energy values
       h, N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
-      current_angle_idx, B,
+      current_angle_idx,
       energies->getDataPointer(0, Type::real) + energyIdxOffset,
       energies->getDataPointer(0, Type::imag) + energyIdxOffset,
       eShift->getDataPointer(),
@@ -564,7 +561,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
       <<<blocksPerGrid, threadsPerBlock>>>(
           // Model parameters and energy values
           h, N, numEnergies_storage, energyIdxOffset_storage,
-          trajectoryIdx_start, current_angle_idx, B,
+          trajectoryIdx_start, current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),

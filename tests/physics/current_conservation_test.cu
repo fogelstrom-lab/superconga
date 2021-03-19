@@ -103,6 +103,9 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *inOutContext) {
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
 
+  // External flux-quanta.
+  parameters->setNumFluxQuanta(static_cast<T>(simParams::EXTERNAL_FLUX_QUANTA));
+
   return parameters;
 }
 
@@ -167,11 +170,6 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   context->set(std::move(optimizer));
 
   // =================== ACT ==================== //
-  context->initialize();
-  // External field in fux quanta per unit area.
-  const T externalMagneticFluxDensity =
-      static_cast<T>(simParams::EXTERNAL_FLUX_QUANTA) / geometry->area();
-  parameters->setMagneticFieldStrength(externalMagneticFluxDensity);
   context->initialize();
 
   scg::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,

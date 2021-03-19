@@ -798,8 +798,7 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
     int i;
 
     char txt[256];
-    sprintf(txt,
-            "Discrete width = %d,   Discrete angles = %d,   Ozaki Poles = %d",
+    sprintf(txt, "Discrete width = %d,   Momenta = %d,   Ozaki Poles = %d",
             param->getGridResolutionBase(), param->getAngularResolution(),
             param->getNumMatsubaraEnergies());
 
@@ -807,9 +806,9 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
 
     glRasterPos2f(posX, posY - 36.0f / getNumPixelsWindowY());
-    sprintf(txt, "Physical width = %f c.l.,  \nB = %f,   T/T_c = %f",
+    sprintf(txt, "Physical width = %f c.l.,  \nFlux quanta = %f,   T/T_c = %f",
             (param->getGridResolutionBase() - 1) * param->getGridElementSize(),
-            param->getMagneticFieldStrength(), param->getTemperature());
+            param->getNumFluxQuanta(), param->getTemperature());
 
     for (i = 0; txt[i]; i++)
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
