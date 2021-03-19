@@ -56,14 +56,14 @@ def plot_2D_imshow(
     origin_in="lower",
     cbar_orientation_in="vertical",
     cbar_label_pad_in=0,
-    mask_nan=True,
+    mask_nan_in=True,
     norm_in=None,
 ):
     # Mask the exterior of the grain by using a separate color.
     # Matplotlib gives warnings/errors if editing a colormap directly, and
     # suggests to use copy.copy() to edit the colormap.
     colormap = copy.copy(mpl.cm.get_cmap(colormap_in))
-    if mask_nan:
+    if mask_nan_in:
         # Use separate color for NaN entries.
         colormap.set_bad(PP.mask_color, 1.0)
 
@@ -148,7 +148,7 @@ def plot_2D_imshow(
 # -----------------------------------------------------------------------------
 # Plot imshow collage of all observables/quantities indicated by plot_parameters.
 # data is a dict of 2D numpy ndarrays (imshow expects the latter).
-def plot_all(data: dict, plot_parameters: dict, simulation_parameters: dict) -> None:
+def plot_all(data: dict, geometry: dict, plot_parameters: dict, simulation_parameters: dict) -> None:
     # --------------------------------------------------
     # FIX PLOT LAYOUT: GRID OF IMSHOW PLOTS
     # --------------------------------------------------
@@ -252,6 +252,11 @@ def plot_all(data: dict, plot_parameters: dict, simulation_parameters: dict) -> 
                 y_max = y_num / simulation_parameters["points_per_coherence_length"]
                 extent = [x_min, x_max, y_min, y_max]
 
+                # Mask data points outside grain for quantities that are
+                # undefined there.
+                if field_name in ["order_parameter", "current_density", "superflow"]:
+                    data[field_name][component_name][geometry["mask"] == 0] = np.nan
+
                 # Draw 2D plot with imshow.
                 plot_2D_imshow(
                     fig_in=fig,
@@ -292,7 +297,8 @@ def plot_ldos(
     plot_parameters: dict,
     simulation_parameters: dict,
     post_processing_parameters: dict,
-) -> None:
+    mask_nan_in=True,
+):
     # --------------------------------------------------
     # FIGURE SETUP
     # --------------------------------------------------
@@ -362,6 +368,7 @@ def plot_ldos(
         "cbar_tick_labels_in": cbar_tick_labels,
         "cbar_label_in": r"$N / 2N_{\mathrm{F}}$",
         "cbar_label_pad_in": -20,
+        "mask_nan_in": mask_nan_in,
     }
     cax_LDOS, cbar_LDOS = plot_2D_imshow(
         data_in=ldos_data["ldos"][LDOS_energy_idx], **ldos_kwargs
@@ -446,7 +453,7 @@ def plot_ldos(
     LDOS_text = ax_LDOS.text(
         0.02,
         1.01,
-        r"$\text{LDOS},\, \epsilon=%2.1fk_{\mathrm{B}}T_{\mathrm{c}}$"
+        r"$\text{(a)\, LDOS},\, \epsilon=%2.1fk_{\mathrm{B}}T_{\mathrm{c}}$"
         % (dos_data["energy"][LDOS_energy_idx]),
         horizontalalignment="left",
         verticalalignment="bottom",
@@ -473,7 +480,7 @@ def plot_ldos(
     ax_DOS.text(
         0.02,
         1.01,
-        r"$\text{DOS}$",
+        r"$\text{(b)\, DOS}$",
         horizontalalignment="left",
         verticalalignment="bottom",
         transform=ax_DOS.transAxes,
@@ -598,5 +605,9 @@ def plot_ldos(
     # --------------------------------------------------
 
     fig.subplots_adjust(
-        top=0.955, bottom=0.0, left=0.0, right=0.99, hspace=0.2, wspace=0.2
+        top=0.95, bottom=0.0, left=0.0, right=0.99, hspace=0.2, wspace=0.2
     )
+
+    # Return reference to energy slider. This is to prevent object to be
+    # garbage collected, rendering the slider inactive.
+    return energy_slider

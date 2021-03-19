@@ -76,6 +76,11 @@ def main() -> None:
     # To see all available parameters, print with e.g.:
     # pprint.pprint(simulation_parameters)
 
+    # Get geometry mask.
+    geometry = parse_grid_quantity.parse_geometry_numpy(
+        base_path=plot_config_parameters["general"]["data_path"]
+    )
+
     # Parse "internal parameters" from json, get result as dictionary.
     # Internal parameters are calculated by the framework, as opposed to
     # "simulation parameters" set by the user before simulation. Example:
@@ -134,6 +139,7 @@ def main() -> None:
     # a collage of 2D heatmaps, via matplotlibs imshow() method.
     field_plotting.plot_all(
         data=data,
+        geometry=geometry,
         plot_parameters=plot_config_parameters,
         simulation_parameters=simulation_parameters,
     )
