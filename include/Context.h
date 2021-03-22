@@ -3,6 +3,8 @@
 
 #include "ComputeVectorPotential.h"
 #include "ContextModule.h"
+#include "FermiSurface.h"
+#include "FermiSurfaceCircle.h"
 #include "Grid.h"
 #include "Optimizer.h"
 #include <chrono>
@@ -16,8 +18,6 @@ template <typename> class ComputeFreeEnergy;
 template <typename> class ComputeLDOS;
 template <typename> class ComputeOrderParameter;
 template <typename> class ComputeProperty;
-template <typename> class Context;
-template <typename> class FermiSurface;
 template <typename> class GeometryGroup;
 template <typename> class IntegrationIterator;
 template <typename> class OrderParameter;
@@ -33,7 +33,9 @@ public:
   ~Context();
 
   // Setters non-compute objects.
-  void set(FermiSurface<T> *inFermiSurface) { m_fermiSurface = inFermiSurface; }
+  void set(std::unique_ptr<FermiSurface<T>> &&inFermiSurface) {
+    m_fermiSurface = std::move(inFermiSurface);
+  }
   void set(GeometryGroup<T> *inGeometry) { m_geometry = inGeometry; }
   void set(IntegrationIterator<T> *inIntegrationIterator) {
     m_integrationIterator = inIntegrationIterator;
@@ -79,7 +81,7 @@ public:
   void compute();
 
   // Getters of non-compute objects.
-  FermiSurface<T> *getFermiSurface() const { return m_fermiSurface; }
+  FermiSurface<T> *getFermiSurface() const { return m_fermiSurface.get(); }
   GeometryGroup<T> *getGeometry() const { return m_geometry; }
   IntegrationIterator<T> *getIntegrationIterator() const {
     return m_integrationIterator;
@@ -131,7 +133,7 @@ private:
   OrderParameter<T> *m_orderParameter;
   RiccatiSolver<T> *m_riccatiSolver;
   IntegrationIterator<T> *m_integrationIterator;
-  FermiSurface<T> *m_fermiSurface;
+  std::unique_ptr<FermiSurface<T>> m_fermiSurface;
 
   std::unique_ptr<GridGPU<T>> m_inducedVectorPotential;
   std::unique_ptr<ComputeVectorPotential<T>> m_computeVectorPotential;
@@ -157,10 +159,10 @@ template <typename T>
 Context<T>::Context()
     : m_parameters(nullptr), m_geometry(nullptr), m_orderParameter(nullptr),
       m_riccatiSolver(nullptr), m_integrationIterator(nullptr),
-      m_fermiSurface(nullptr), m_inducedVectorPotential(nullptr),
-      m_computeCurrent(nullptr), m_computeCurrentDensity(nullptr),
-      m_computeFreeEnergy(nullptr), m_computeOrderParameter(nullptr),
-      m_computeLDOS(nullptr),
+      m_fermiSurface(std::make_unique<FermiSurfaceCircle<T>>()),
+      m_inducedVectorPotential(nullptr), m_computeCurrent(nullptr),
+      m_computeCurrentDensity(nullptr), m_computeFreeEnergy(nullptr),
+      m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
       m_computeVectorPotential(std::make_unique<ComputeVectorPotential<T>>()),
       m_computeTime(static_cast<T>(0.0)), m_numIterations(0),
       m_optimizer(std::make_unique<Optimizer<T>>()) {}
@@ -195,13 +197,6 @@ template <typename T> Context<T>::~Context() {
     delete m_riccatiSolver;
 #ifndef NDEBUG
     std::cout << "~Context(): Deleted RiccatiSolver\n";
-#endif
-  }
-
-  if (m_fermiSurface) {
-    delete m_fermiSurface;
-#ifndef NDEBUG
-    std::cout << "~Context(): Deleted FermiSurface\n";
 #endif
   }
 
