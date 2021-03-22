@@ -41,18 +41,16 @@ private:
 
 template <typename T>
 IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh()
-    : IntegrationIterator<T>() {}
+    : IntegrationIterator<T>(), m_lastEnergyIndex(-1) {}
 
 template <typename T>
 IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh(
     Context<T> *ctx, int numEnergiesPerBlock)
-    : IntegrationIterator<T>(ctx, numEnergiesPerBlock) {
+    : IntegrationIterator<T>(ctx, numEnergiesPerBlock), m_lastEnergyIndex(-1) {
 #ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>()\n";
 #endif
   ctx->set(this);
-
-  m_lastEnergyIndex = -1;
 }
 
 template <typename T>
@@ -239,6 +237,17 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
   // Check if we are on a new energy interval.
   if (m_lastEnergyIndex != currentEnergyIndex) {
+    // Print some info to the user, so they know why the residual suddenly
+    // increases (a lot).
+    const T startFraction =
+        static_cast<T>(currentEnergyIndex) / static_cast<T>(numEnergies);
+    const T stopFraction =
+        static_cast<T>(currentEnergyIndex + numEnergiesCurrentBlock) /
+        static_cast<T>(numEnergies);
+    const T toPercent = static_cast<T>(100);
+    std::printf("-- Energy block %.2f%% --> %.2f%%.\n",
+                startFraction * toPercent, stopFraction * toPercent);
+
     // This is a new energy interval, so everything needs to be initialized.
 
     // Intialize the Riccati solver.
