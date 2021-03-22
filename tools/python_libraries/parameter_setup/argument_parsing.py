@@ -161,6 +161,19 @@ def add_runner_arguments(parser) -> None:
         help="External magnetic field, perpendicular to sample, in units of flux quanta. For non-solenoid field, it is distributed uniformly over the sample.",
     )
 
+    # Gauge.
+    group_guage = parser.add_mutually_exclusive_group()
+    group_guage.add_argument(
+        "--gauge-radial",
+        action="store_true",
+        help="Use the radial gauge, A = 0.5 * B * (-y, x).",
+    )
+    group_guage.add_argument(
+        "--gauge-solenoid",
+        action="store_true",
+        help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
+    )
+
     # Grain side length.
     parser.add_argument(
         "-s",
@@ -787,6 +800,7 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "hole_scale", args.hole_scale, group)
 
     set_value(sim_params, "grain_side_length", args.grain_side_length)
+    set_flag(sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial)
     set_value(
         sim_params, "points_per_coherence_length", args.points_per_coherence_length
     )

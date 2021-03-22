@@ -9,6 +9,7 @@
     "hole_scale": 0.2
   },
   "grain_side_length": 50.0,
+  "gauge_solenoid": true,
   "points_per_coherence_length": 8.02,
   "num_fermi_momenta": 55,
   "num_iterations_max": 1000,
