@@ -35,12 +35,15 @@ private:
 
   // Radius of disc
   T m_radius;
+
   // Center of disc, stored in centered coordinates -0.5 < x,y < 0.5
   T m_centerX, m_centerY;
 };
 
 template <typename T>
-Disc<T>::Disc() : m_radius(0.5), m_centerX(0.0), m_centerY(0.0) {}
+Disc<T>::Disc()
+    : m_radius(static_cast<T>(0.5)), m_centerX(static_cast<T>(0.0)),
+      m_centerY(static_cast<T>(0.0)) {}
 
 template <typename T>
 Disc<T>::Disc(const T inRadius, const T inCenterX, const T inCenterY)

@@ -22,7 +22,7 @@ public:
                const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
   DiscGeometry(const DiscGeometry &inOther);
-  ~DiscGeometry();
+  ~DiscGeometry() {}
 
   DiscGeometry &operator=(DiscGeometry inOther);
 
@@ -31,7 +31,8 @@ public:
   void create(const T inAngle) override;
   GridGPU<char> *createDomain(const int inLatticeSideLength) const override;
 
-  Disc<T> *getDisc() const { return m_disc; }
+  Disc<T> &getDisc() { return m_disc; }
+  const Disc<T> &getDisc() const { return m_disc; }
 
 private:
   friend void swap(DiscGeometry &inDiscA, DiscGeometry &inDiscB) {
@@ -60,7 +61,7 @@ private:
            halfDiff;
   }
 
-  Disc<T> *m_disc;
+  Disc<T> m_disc;
 };
 
 namespace internal {
@@ -230,10 +231,7 @@ __global__ void generateDisc_Kernel(const int inNumX, const int inNumY,
 
 template <typename T>
 DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &inOther)
-    : GeometryComponent<T>(inOther), m_disc(nullptr) {
-  if (inOther.m_disc)
-    m_disc = new Disc<T>(*inOther.m_disc);
-}
+    : GeometryComponent<T>(inOther), m_disc() {}
 
 template <typename T>
 DiscGeometry<T>::DiscGeometry(const T inGrainFraction, const T inDiameter,
@@ -246,13 +244,7 @@ DiscGeometry<T>::DiscGeometry(const T inGrainFraction, const T inDiameter,
   // Apply scaling and margin to center coordinates
   const T centerPaddedX = inCenterX * inGrainFraction;
   const T centerPaddedY = inCenterY * inGrainFraction;
-  m_disc = new Disc<T>(discRadiusPadded, centerPaddedX, centerPaddedY);
-}
-
-template <typename T> DiscGeometry<T>::~DiscGeometry() {
-  if (m_disc) {
-    delete m_disc;
-  }
+  m_disc = Disc<T>(discRadiusPadded, centerPaddedX, centerPaddedY);
 }
 
 template <typename T>
@@ -266,8 +258,8 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
 
   G::allocateMem();
 
-  const T centerX = m_disc->getPosX();
-  const T centerY = m_disc->getPosY();
+  const T centerX = m_disc.getPosX();
+  const T centerY = m_disc.getPosY();
 
   T rotatedCenterX;
   T rotatedCenterY;
@@ -279,7 +271,7 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   const int N = G::getParameters()->getGridResolutionBase();
   const T offsetX = convertCoordinate(rotatedCenterX, N, numX);
   const T offsetY = convertCoordinate(rotatedCenterY, N, numY);
-  const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
+  const T radius = m_disc.getRadius() * static_cast<T>(N - 1);
 
   dim3 bpg, tpb;
   G::getKernelDimensions(bpg, tpb);
@@ -299,13 +291,13 @@ DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
   dom_component->setZero();
 
   // Get the center of the disc.
-  const T centerX = m_disc->getPosX();
-  const T centerY = m_disc->getPosY();
+  const T centerX = m_disc.getPosX();
+  const T centerY = m_disc.getPosY();
 
   const int N = GeometryComponent<T>::getParameters()->getGridResolutionBase();
   const T offsetX = convertCoordinate(centerX, N, inLatticeSideLength);
   const T offsetY = convertCoordinate(centerY, N, inLatticeSideLength);
-  const T radius = m_disc->getRadius() * static_cast<T>(N - 1);
+  const T radius = m_disc.getRadius() * static_cast<T>(N - 1);
 
   // Get the required kernel dimensions.
   dim3 bpg, tpb;
