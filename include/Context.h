@@ -33,7 +33,7 @@ public:
   ~Context();
 
   // Setters non-compute objects.
-  void set(std::unique_ptr<FermiSurface<T>> &&inFermiSurface) {
+  void set(std::unique_ptr<FermiSurface<T>> inFermiSurface) {
     m_fermiSurface = std::move(inFermiSurface);
   }
   void set(GeometryGroup<T> *inGeometry) { m_geometry = inGeometry; }
@@ -55,7 +55,7 @@ public:
   ///
   /// \return Void.
   // TODO(niclas): This is just grid. Perhaps too generic.
-  void set(std::unique_ptr<GridGPU<T>> &&inInducedVectorPotential) {
+  void set(std::unique_ptr<GridGPU<T>> inInducedVectorPotential) {
     m_inducedVectorPotential = std::move(inInducedVectorPotential);
   }
 
@@ -64,7 +64,7 @@ public:
   /// \param inOptimizer The optimizer as a unique pointer.
   ///
   /// \return Void.
-  void set(std::unique_ptr<Optimizer<T>> &&inOptimizer) {
+  void set(std::unique_ptr<Optimizer<T>> inOptimizer) {
     m_optimizer = std::move(inOptimizer);
   }
 
