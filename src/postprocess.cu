@@ -313,6 +313,9 @@ int main(int argc, char *argv[]) {
     if (!success) {
       return EXIT_FAILURE;
     }
+
+    // Set the vector potential in context.
+    context.set(std::move(vectorPotential));
   }
 
   //***************************************************
