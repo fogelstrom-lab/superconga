@@ -307,6 +307,9 @@ int main(int argc, char *argv[]) {
       scg::run_utils::cleanup(context, gui);
       return 1;
     }
+
+    // Set the vector potential in context.
+    context->set(std::move(vectorPotential));
   }
 
   //***************************************************
