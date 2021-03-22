@@ -6,7 +6,6 @@
 #include "ComputeOrderParameter.h"
 #include "Context.h"
 #include "DiscGeometry.h"
-#include "FermiSurfaceCircle.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
 #include "OrderParameter.h"
@@ -158,10 +157,6 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   new scg::ComputeCurrent<T>(context);
   // Add free energy compute object.
   new scg::ComputeFreeEnergy<T>(context);
-
-  // Choose FermiSurface
-  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-  context->set(fermiSurface);
 
   // Set optimizer.
   const T stepSize = static_cast<T>(simParams::OPTIMIZER_STEP_SIZE);

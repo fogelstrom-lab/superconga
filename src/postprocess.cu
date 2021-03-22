@@ -24,7 +24,6 @@
 #include "ComputeLDOS.h"
 #include "Context.h"
 #include "DiscGeometry.h"
-#include "FermiSurfaceCircle.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
 #include "Optimizer.h"
@@ -317,12 +316,6 @@ int main(int argc, char *argv[]) {
     // Set the vector potential in context.
     context.set(std::move(vectorPotential));
   }
-
-  //***************************************************
-  // CHOOSE FERMI SURFACE
-  //***************************************************
-  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-  context.set(fermiSurface);
 
   //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE

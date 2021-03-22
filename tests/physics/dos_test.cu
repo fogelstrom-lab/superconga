@@ -133,10 +133,6 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
-  // Choose FermiSurface
-  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-  context->set(fermiSurface);
-
   // Add LDOS compute object.
   new scg::ComputeLDOS<T>(context);
 
@@ -160,12 +156,16 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   const T *const dos = dosObject->getDataPointer(1);
 
   // =================== ASSERT ==================== //
+  // Make circular Fermi surface.
+  scg::FermiSurfaceCircle<T> fermiSurface;
+  fermiSurface.initialize(simParams::NUM_ANGLES);
+
   // In order to compute the expected DOS we need the bulk order parameter and
   // the normalization factor for the basis function.
   // TODO(niclas): The basis functions should return normalized values.
   const T orderParameterBulk = orderParameterComponent->deltaBulk();
   scg::BasisFunction<T> basisFunction(symmetry);
-  basisFunction.normalize(fermiSurface);
+  basisFunction.normalize(&fermiSurface);
 
   // Loop over energies and check the DOS for each.
   for (int energyIdx = 0; energyIdx < simParams::NUM_ENERGIES; ++energyIdx) {
@@ -173,7 +173,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
     for (int angleIdx = 0; angleIdx < simParams::NUM_ANGLES; ++angleIdx) {
       T fermiMomentumX;
       T fermiMomentumY;
-      fermiSurface->getFermiMomentum(angleIdx, fermiMomentumX, fermiMomentumY);
+      fermiSurface.getFermiMomentum(angleIdx, fermiMomentumX, fermiMomentumY);
 
       // Construct the complex valued order parameter.
       // Strictly speaking it unnecessary to have it complex valued when we only
@@ -192,7 +192,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
       const T dosAngle = (energy / Omega).imag();
 
       // Accumulate angle integral.
-      const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
+      const T integrandFactor = fermiSurface.getIntegrandFactor(angleIdx);
       expectedDOS += integrandFactor * dosAngle;
     }
     const T testDOS = dos[energyIdx];

@@ -2,8 +2,6 @@
 #define ORDER_PARAMETER_BASIS_H_
 
 #include "FermiSurface.h"
-#include "FermiSurfaceCircle.h"
-#include "FermiSurfaceTightBinding.h"
 #include "cplx.h"
 #include "defines.h"
 #include <cmath>

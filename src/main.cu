@@ -19,8 +19,7 @@
 #include "ComputeFreeEnergy.h"     // Compute the (Eilenberger) free energy
 #include "ComputeOrderParameter.h" // Compute order parameter
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
-#include "DiscGeometry.h" // Used to constructed simulated grain from discs
-#include "FermiSurfaceCircle.h" // Standard circle Fermi surface
+#include "DiscGeometry.h"  // Used to constructed simulated grain from discs
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "Optimizer.h"
 #include "OrderParameter.h" // Container class for order parameter components
@@ -311,12 +310,6 @@ int main(int argc, char *argv[]) {
     // Set the vector potential in context.
     context->set(std::move(vectorPotential));
   }
-
-  //***************************************************
-  // CHOOSE FERMI SURFACE
-  //***************************************************
-  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-  context->set(fermiSurface);
 
   //***************************************************
   // OPTIMIZER

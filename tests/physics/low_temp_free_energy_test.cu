@@ -5,8 +5,7 @@
 #include "ComputeFreeEnergy.h" // Compute the free energy (using the Eilenberger functional)
 #include "ComputeOrderParameter.h" // Compute order parameter
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
-#include "DiscGeometry.h" // Used to constructed simulated grain from discs
-#include "FermiSurfaceCircle.h" // Standard circle Fermi surface
+#include "DiscGeometry.h"  // Used to constructed simulated grain from discs
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
 #include "OrderParameter.h" // Container class for order parameter components
 #include "OrderParameterBasis.h"
@@ -148,10 +147,6 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   scg::ComputeFreeEnergy<T> *computeFreeEnergy =
       new scg::ComputeFreeEnergy<T>(context);
   scg::ComputeCurrent<T> *computeCurrent = new scg::ComputeCurrent<T>(context);
-
-  // Choose FermiSurface
-  scg::FermiSurfaceCircle<T> *fermiSurface = new scg::FermiSurfaceCircle<T>();
-  context->set(fermiSurface);
 
   // =================== ACT ==================== //
   // Initialize simulation
