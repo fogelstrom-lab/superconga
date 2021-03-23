@@ -18,6 +18,7 @@
 #include "ComputeCurrent.h"        // Compute the total charge current density
 #include "ComputeFreeEnergy.h"     // Compute the (Eilenberger) free energy
 #include "ComputeOrderParameter.h" // Compute order parameter
+#include "ComputeVectorPotential.h"
 #include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
 #include "DiscGeometry.h"  // Used to constructed simulated grain from discs
 #include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
@@ -147,8 +148,9 @@ int main(int argc, char *argv[]) {
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
-  parameters->setPenetrationDepth(
-      static_cast<T>(simParams["penetration_depth"].asDouble()));
+  const T penetrationDepth =
+      static_cast<T>(simParams["penetration_depth"].asDouble());
+  parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
   const T externalFluxQuanta =
@@ -341,6 +343,15 @@ int main(int argc, char *argv[]) {
   new scg::ComputeCurrent<T>(context);
   // Add free energy compute object.
   new scg::ComputeFreeEnergy<T>(context);
+
+  // Add vector-potential compute object.
+  if (penetrationDepth > static_cast<T>(0)) {
+    const T maxError =
+        static_cast<T>(simParams["vector_potential_error"].asDouble());
+    auto computeVectorPotential =
+        std::make_unique<scg::ComputeVectorPotential<T>>(maxError);
+    context->add(std::move(computeVectorPotential));
+  }
 
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS

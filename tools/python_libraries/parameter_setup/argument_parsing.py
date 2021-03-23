@@ -334,6 +334,14 @@ def add_runner_arguments(parser) -> None:
         help="Number of Ozaki energies (similar to Matsubara energies, see the documentation).",
     )
 
+    # Green's function accuracy.
+    parser.add_argument(
+        "--vp-error",
+        type=float,
+        default=None,
+        help="The maximum error (relative Frobenious norm) of the Green's function used when computing the induced vector-potential.",
+    )
+
     # =============== MISC =============== #
 
     # Data path.
@@ -850,6 +858,7 @@ def set_runner_arguments_from_cli(
     set_flag(sim_params, "visualize", args.visualize, args.no_visualize)
 
     set_value(sim_params, "order_parameter_path", args.op_path)
+    set_value(sim_params, "vector_potential_error", args.vp_error)
     set_value(sim_params, "vector_potential_path", args.vp_path)
 
 

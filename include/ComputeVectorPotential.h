@@ -24,6 +24,10 @@ private:
   // TODO(niclas): Use unique_ptr.
   GridGPU<T> *m_vectorPotential;
 
+  // The full 2D filter. It is only non-empty is the maximum tolerated error is
+  // zero.
+  thrust::device_vector<T> m_filter2D;
+
   // The eigen decomposition of a matrix is given by A = VDV^T. We store a few
   // of the eigenvectors. They are called filters as they are used for
   // cross-correlation.
@@ -139,9 +143,9 @@ public:
   /// function, or a simpler approximation.
   /// \param inEnforceCurrentConservation Whether to enforce current
   /// conservation by sutracting the mean before computing the vector potential.
-  ComputeVectorPotential(const T inMaxError = static_cast<T>(1e-6),
-                         const bool inAnalytical = true,
-                         const bool inEnforceCurrentConservation = true);
+  explicit ComputeVectorPotential(
+      const T inMaxError = static_cast<T>(1e-6), const bool inAnalytical = true,
+      const bool inEnforceCurrentConservation = true);
 
   /// \brief Destructor.
   ~ComputeVectorPotential() {
@@ -206,7 +210,7 @@ ComputeVectorPotential<T>::ComputeVectorPotential(
     : m_vectorPotential(nullptr), m_maxError(static_cast<double>(inMaxError)),
       m_analytical(inAnalytical),
       m_enforceCurrentConservation(inEnforceCurrentConservation),
-      m_residual(static_cast<T>(0)), m_isInitialized(false), m_scale(0.0),
+      m_residual(static_cast<T>(0)), m_isInitialized(false), m_scale(1.0),
       m_latticeSiteArea(static_cast<T>(0.0)) {}
 
 template <typename T>
@@ -330,66 +334,88 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
   makeFilter2D(inGridResolution, static_cast<double>(inGridCellLength),
                m_analytical, Q, C);
 
-  // Compute eigen decomposition of Q.
-  arma::Col<double> eigValQ;
-  arma::Mat<double> eigVecQ;
-  const bool success = arma::eig_sym(eigValQ, eigVecQ, Q);
+  if (m_maxError > 0.0) {
+    // Compute eigen decomposition of Q.
+    arma::Col<double> eigValQ;
+    arma::Mat<double> eigVecQ;
+    const bool success = arma::eig_sym(eigValQ, eigVecQ, Q);
 #ifndef NDEBUG
-  if (!success) {
-    // TODO(niclas): Raise exception instead?
-    std::cerr << "ERROR! Eigen decomposition failed." << std::endl;
-  }
-#endif
-
-  // In order to scale the filters to more appropriate values. The final result
-  // is then scaled as well, undoing this scaling.
-  const double maxEigValQ = arma::abs(eigValQ).max();
-  const double maxEigValC = std::abs(C);
-  m_scale = 0.5 * (maxEigValQ + maxEigValC);
-
-  // Clear filters.
-  m_filters.clear();
-  m_positiveFilter.clear();
-
-  // Construct the filter for C, which is trivial.
-  if (std::abs(C) > 0.0) {
-    const double val = C;
-    const arma::Col<double> vec(inGridResolution, arma::fill::ones);
-    addFilter1D(vec, val, m_scale);
-  }
-
-  // Compute the indices of the eigenvalues sorted by absolute value.
-  const arma::uvec indices = arma::sort_index(arma::abs(eigValQ), "descend");
-
-  // The squared Frobenius norm of the Q matrix.
-  const double norm = arma::norm(eigValQ);
-  const double normSquared = norm * norm;
-
-  double partialNormSquared = 0.0;
-  for (const auto i : indices) {
-    // Add the filter.
-    const double val = eigValQ(i);
-    const arma::Col<double> vec = eigVecQ.col(i);
-    addFilter1D(vec, val, m_scale);
-
-    // The squared Frobenius norm of the approximation.
-    partialNormSquared += val * val;
-
-    // The squared relative error, |Q - approxQ|^2 / |Q|^2.
-    const double errorSquared = 1.0 - partialNormSquared / normSquared;
-#ifndef NDEBUG
-    if (errorSquared < 0.0) {
-      std::cerr << "WARNING! Squared error < 0, i.e. catastrophic cancellation "
-                   "occurred."
-                << std::endl;
+    if (!success) {
+      // TODO(niclas): Raise exception instead?
+      std::cerr << "ERROR! Eigen decomposition failed." << std::endl;
     }
 #endif
 
-    // The relative error, |Q - approxQ| / |Q|.
-    const double error = std::sqrt(std::max(errorSquared, 0.0));
-    if (error < m_maxError) {
-      break;
+    // In order to scale the filters to more appropriate values. The final
+    // result is then scaled as well, undoing this scaling.
+    const double maxEigValQ = arma::abs(eigValQ).max();
+    const double maxEigValC = std::abs(C);
+    m_scale = 0.5 * (maxEigValQ + maxEigValC);
+
+    // Clear filters.
+    m_filters.clear();
+    m_positiveFilter.clear();
+
+    // Construct the filter for C, which is trivial.
+    if (std::abs(C) > 0.0) {
+      const double val = C;
+      const arma::Col<double> vec(inGridResolution, arma::fill::ones);
+      addFilter1D(vec, val, m_scale);
     }
+
+    // Compute the indices of the eigenvalues sorted by absolute value.
+    const arma::uvec indices = arma::sort_index(arma::abs(eigValQ), "descend");
+
+    // The squared Frobenius norm of the Q matrix.
+    const double norm = arma::norm(eigValQ);
+    const double normSquared = norm * norm;
+
+    double partialNormSquared = 0.0;
+    for (const auto i : indices) {
+      // Add the filter.
+      const double val = eigValQ(i);
+      const arma::Col<double> vec = eigVecQ.col(i);
+      addFilter1D(vec, val, m_scale);
+
+      // The squared Frobenius norm of the approximation.
+      partialNormSquared += val * val;
+
+      // The squared relative error, |Q - approxQ|^2 / |Q|^2.
+      const double errorSquared = 1.0 - partialNormSquared / normSquared;
+#ifndef NDEBUG
+      if (errorSquared < 0.0) {
+        std::cerr
+            << "WARNING! Squared error < 0, i.e. catastrophic cancellation "
+               "occurred."
+            << std::endl;
+      }
+#endif
+
+      // The relative error, |Q - approxQ| / |Q|.
+      const double error = std::sqrt(std::max(errorSquared, 0.0));
+      if (error < m_maxError) {
+        break;
+      }
+    }
+  } else {
+    // TODO(niclas): Perhaps not do the separation into Q and C to begin with.
+    Q += C;
+
+    // For convenience.
+    const int N = inGridResolution;
+
+    std::vector<T> filter2D;
+    for (int j = -N + 1; j < N; ++j) {
+      for (int i = -N + 1; i < N; ++i) {
+        const int idx = N * std::abs(j) + std::abs(i);
+        const double elem = Q(idx);
+        filter2D.push_back(static_cast<T>(elem));
+      }
+    }
+    assert(filter2D.size() == static_cast<std::size_t>(4 * N * (N - 1) + 1));
+
+    // Copy to the GPU.
+    m_filter2D = filter2D;
   }
 }
 
@@ -414,9 +440,9 @@ namespace cvp_internal {
 /// \return void.
 template <typename T>
 __global__ void
-crossCorrelateTranspose(const int inGridResolution, const int inDimension,
-                        const T *const inSrc, const T *const inFilter,
-                        T *const outDst) {
+crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
+                          const T *const inSrc, const T *const inFilter,
+                          T *const outDst) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -429,12 +455,11 @@ crossCorrelateTranspose(const int inGridResolution, const int inDimension,
     // Note that the filter offset depends on the spatial coordinate x, whereas
     // the source offset depends on the spatial coordinate y.
     const int offsetFilter = inGridResolution - 1 - x;
-    const int offsetSrc =
-        d * inGridResolution * inGridResolution + y * inGridResolution;
+    const int offsetSrc = inGridResolution * (d * inGridResolution + y);
 
     // Compute the dot product between each spatial column of the source and the
     // filter.
-    T sum = static_cast<T>(0);
+    double sum = 0.0;
     for (int i = 0; i < inGridResolution; ++i) {
       const int idxFilter = i + offsetFilter;
       const T filterVal = inFilter[idxFilter];
@@ -442,7 +467,7 @@ crossCorrelateTranspose(const int inGridResolution, const int inDimension,
       const int idxSrc = i + offsetSrc;
       const T srcVal = inSrc[idxSrc];
 
-      sum += srcVal * filterVal;
+      sum += static_cast<double>(srcVal * filterVal);
     }
 
     // Destination index. Note the we write the transposed result, i.e. swapped
@@ -450,7 +475,66 @@ crossCorrelateTranspose(const int inGridResolution, const int inDimension,
     const int idxDst = inGridResolution * (d * inGridResolution + x) + y;
 
     // Write result.
-    outDst[idxDst] = sum;
+    outDst[idxDst] = static_cast<T>(sum);
+  }
+}
+
+/// \brief CUDA kernel for cross-correlation of a n-dimensional source, on a
+/// square lattice, with a 2D filter.
+///
+/// The x- and y-coordinates of the kernal call correspond to spatial
+/// coordinates of the source, whereas the z-coordinate corresponds to the
+/// dimension. The memory layout of the source is assumed to be all elements
+/// corresponding to the first dimension, followed by the second and third etc.
+///
+/// \param inGridResolution The number of lattice sites per side of the source,
+/// denoted N.
+/// \param inDimension The dimension of the source, e.g. 2 for a 2D current,
+/// denoted d.
+/// \param inSrc The source, an array with d * N^2 elements.
+/// \param inFilter The filter to cross-correlate the source with, an array with
+/// (2N - 1)^2 elements.
+/// \param outDst The result, an array with d * N^2 elements.
+///
+/// \return void.
+template <typename T>
+__global__ void crossCorrelate2D(const int inGridResolution,
+                                 const int inDimension, const T *const inSrc,
+                                 const T *const inFilter, T *const outDst) {
+  // Indices of spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  // Index of component, e.g. x ==> 0 or y ==> 1.
+  const int d = blockIdx.z * blockDim.z + threadIdx.z;
+
+  if (x < inGridResolution && y < inGridResolution && d < inDimension) {
+    // Index offsets for the filter and the source.
+    const int offsetFilterX = inGridResolution - 1 - x;
+    const int offsetFilterY = inGridResolution - 1 - y;
+    const int offsetSrc = d * inGridResolution * inGridResolution;
+
+    double sum = 0.0;
+    for (int j = 0; j < inGridResolution; ++j) {
+      double partialSum = 0.0;
+      for (int i = 0; i < inGridResolution; ++i) {
+        const int idxFilter = (2 * inGridResolution - 1) * (j + offsetFilterY) +
+                              (i + offsetFilterX);
+        const T filterVal = inFilter[idxFilter];
+
+        const int idxSrc = offsetSrc + inGridResolution * j + i;
+        const T srcVal = inSrc[idxSrc];
+
+        partialSum += static_cast<double>(srcVal * filterVal);
+      }
+      sum += partialSum;
+    }
+
+    // Destination index.
+    const int idxDst = inGridResolution * (d * inGridResolution + y) + x;
+
+    // Write result.
+    outDst[idxDst] = static_cast<T>(sum);
   }
 }
 
@@ -552,45 +636,57 @@ void ComputeVectorPotential<T>::solveInternal(
   const int gridResolution = inCurrentDensity.dimX();
   const int dimension = inCurrentDensity.numFields();
 
-  // The number of filters.
-  assert(m_filters.size() == m_positiveFilter.size());
-  const std::size_t numFilters = m_filters.size();
-
-  // Set to zero because we will add stuff to it.
-  m_vectorPotential->setZero();
-
-  // Temporary grids.
-  GridGPU<T> tmp0(gridResolution, gridResolution, dimension, Type::real);
-  GridGPU<T> tmp1(gridResolution, gridResolution, dimension, Type::real);
-
   // Kernel parameters.
   dim3 numBlocks;
   dim3 numThreadsPerBlock;
   m_vectorPotential->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
-  // Loop over filters.
-  for (std::size_t i = 0; i < numFilters; ++i) {
-    // Get filter pointer.
-    const T *const filter = thrust::raw_pointer_cast(m_filters[i].data());
+  if (m_maxError > 0.0) {
+    // Set to zero because we will add stuff to it.
+    m_vectorPotential->setZero();
 
-    // Cross-correlate the current with the filter, and transpose the result.
-    cvp_internal::crossCorrelateTranspose<<<numBlocks, numThreadsPerBlock>>>(
-        gridResolution, dimension, inCurrentDensity.getDataPointer(), filter,
-        tmp0.getDataPointer());
+    // Temporary grids.
+    GridGPU<T> tmp0(gridResolution, gridResolution, dimension, Type::real);
+    GridGPU<T> tmp1(gridResolution, gridResolution, dimension, Type::real);
 
-    // Cross-correlate the previous result with the filter, and transpose the
-    // result.
-    cvp_internal::crossCorrelateTranspose<<<numBlocks, numThreadsPerBlock>>>(
-        gridResolution, dimension, tmp0.getDataPointer(), filter,
-        tmp1.getDataPointer());
+    // The number of filters.
+    assert(m_filters.size() == m_positiveFilter.size());
+    const std::size_t numFilters = m_filters.size();
 
-    // Accumulate.
-    const bool isPositive = m_positiveFilter[i];
-    if (isPositive) {
-      *m_vectorPotential += tmp1;
-    } else {
-      *m_vectorPotential -= tmp1;
+    // Loop over filters.
+    for (std::size_t i = 0; i < numFilters; ++i) {
+      // Get filter pointer.
+      const T *const filter = thrust::raw_pointer_cast(m_filters[i].data());
+
+      // Cross-correlate the current with the filter, and transpose the result.
+      cvp_internal::
+          crossCorrelate1DTranspose<<<numBlocks, numThreadsPerBlock>>>(
+              gridResolution, dimension, inCurrentDensity.getDataPointer(),
+              filter, tmp0.getDataPointer());
+
+      // Cross-correlate the previous result with the filter, and transpose the
+      // result.
+      cvp_internal::
+          crossCorrelate1DTranspose<<<numBlocks, numThreadsPerBlock>>>(
+              gridResolution, dimension, tmp0.getDataPointer(), filter,
+              tmp1.getDataPointer());
+
+      // Accumulate.
+      const bool isPositive = m_positiveFilter[i];
+      if (isPositive) {
+        *m_vectorPotential += tmp1;
+      } else {
+        *m_vectorPotential -= tmp1;
+      }
     }
+  } else {
+    // Get filter pointer.
+    const T *const filter = thrust::raw_pointer_cast(m_filter2D.data());
+
+    // Cross-correlate the current density with the Green function.
+    cvp_internal::crossCorrelate2D<<<numBlocks, numThreadsPerBlock>>>(
+        gridResolution, dimension, inCurrentDensity.getDataPointer(), filter,
+        m_vectorPotential->getDataPointer());
   }
 
   // Factor from the equation itself.

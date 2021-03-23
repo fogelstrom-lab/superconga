@@ -38,6 +38,7 @@
   "save_data_interval": 200,
   "temperature": 0.5,
   "order_parameter_path": null,
+  "vector_potential_error": 1e-6,
   "vector_potential_path": null,
   "verbose": true,
   "visualize": true

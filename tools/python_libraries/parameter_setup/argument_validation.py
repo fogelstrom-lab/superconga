@@ -158,6 +158,7 @@ runner_checks = {
             },
         },
     },
+    "vector_potential_error": {"type": float},
     "penetration_depth": {"type": float},
     "save_data": {"type": bool},
     "save_data_interval": {"type": int},

@@ -11,6 +11,16 @@
 #include <thrust/host_vector.h>
 
 namespace helper {
+// All float/double tests use the same tolerances.
+// TODO(niclas): Why must the float symmetry-tolerance be so large?
+const float FLOAT_TOLERANCE = 1e-3f;
+const float FLOAT_SYMMETRY_TOLERANCE = 1e-3;
+const double DOUBLE_TOLERANCE = 1e-4;
+const double DOUBLE_SYMMETRY_TOLERANCE = 1e-8;
+
+// When the max error is non-zero, this is the value used.
+const double MAX_ERROR = 1e-6;
+
 /// \brief Compute the relative Frobenius norm given two grids.
 ///
 /// \param inTest The computed vector potential.
@@ -93,14 +103,18 @@ void testSymmetry(const scg::GridCPU<T> &inVectorPotential,
 /// \brief Test vector-potential computations against analytical solution on a
 /// disk.
 ///
-/// \param inTolerance The tolerance for the relative Frobenius norm between the
-/// analytical, and the computed, solutions.
+/// \param inAnalytical Whether to use the analytical expression for the Green
+/// function matrix-elements.
+/// \param inMaxError Max error in Frobenious norm of the Green function.
+/// \param inTolerance The tolerance for the relative
+/// Frobenius norm between the analytical, and the computed, solutions.
 /// \param inSymmetryTolerance The relative tolerance when testing that the
 /// solution is symmetric.
 ///
 /// \return Void.
 template <typename T>
-void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
+void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
+                            const T inTolerance, const T inSymmetryTolerance) {
   // =================== ARRANGE ==================== //
   // The number of lattice sites per side.
   const int N = 555;
@@ -187,7 +201,8 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
 
   // =================== ACT ==================== //
   // Compute the induced vector potential.
-  scg::ComputeVectorPotential<T> computeVectorPotential;
+  scg::ComputeVectorPotential<T> computeVectorPotential(inMaxError,
+                                                        inAnalytical);
   computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
   computeVectorPotential.solve(currenDensityGPU, penetrationDepth);
 
@@ -206,19 +221,66 @@ void testMagnetoStaticsDisc(const T inTolerance, const T inSymmetryTolerance) {
 }
 } // namespace helper
 
-// ================= Test magnetostatics ================= //
+// === Test magnetostatics - analytical, non-zero max-error === //
 
-TEST_CASE("Test magnetostatics (float)") {
-  const float tolerance = 1e-3f;
-  // TODO(niclas): Why do the tolerance need to be this large for float?
-  // Investigate! Reverse the order of the filters, so that the smallest eigen
-  // value comes first?
-  const float symmetryTolerance = 1e-3f;
-  helper::testMagnetoStaticsDisc(tolerance, symmetryTolerance);
+TEST_CASE("Test magnetostatics - analytical, non-zero max-error (float)") {
+  const bool analytical = true;
+  helper::testMagnetoStaticsDisc(
+      analytical, static_cast<float>(helper::MAX_ERROR),
+      helper::FLOAT_TOLERANCE, helper::FLOAT_SYMMETRY_TOLERANCE);
 }
 
-TEST_CASE("Test magnetostatics (double)") {
-  const double tolerance = 1e-4;
-  const double symmetryTolerance = 1e-8;
-  helper::testMagnetoStaticsDisc(tolerance, symmetryTolerance);
+TEST_CASE("Test magnetostatics - analytical, non-zero max-error (double)") {
+  const bool analytical = true;
+  helper::testMagnetoStaticsDisc(analytical, helper::MAX_ERROR,
+                                 helper::DOUBLE_TOLERANCE,
+                                 helper::DOUBLE_SYMMETRY_TOLERANCE);
+}
+
+// === Test magnetostatics - non-analytical, non-zero max-error === //
+
+TEST_CASE("Test magnetostatics - non-analytical, non-zero max-error (float)") {
+  const bool analytical = false;
+  helper::testMagnetoStaticsDisc(
+      analytical, static_cast<float>(helper::MAX_ERROR),
+      helper::FLOAT_TOLERANCE, helper::FLOAT_SYMMETRY_TOLERANCE);
+}
+
+TEST_CASE("Test magnetostatics - non-analytical, non-zero max-error (double)") {
+  const bool analytical = false;
+  helper::testMagnetoStaticsDisc(analytical, helper::MAX_ERROR,
+                                 helper::DOUBLE_TOLERANCE,
+                                 helper::DOUBLE_SYMMETRY_TOLERANCE);
+}
+
+// === Test magnetostatics - analytical, zero max-error === //
+
+TEST_CASE("Test magnetostatics - analytical, zero max-error (float)") {
+  const bool analytical = true;
+  const float maxError = 0.0f;
+  helper::testMagnetoStaticsDisc(analytical, maxError, helper::FLOAT_TOLERANCE,
+                                 helper::FLOAT_SYMMETRY_TOLERANCE);
+}
+
+TEST_CASE("Test magnetostatics - analytical, zero max-error (double)") {
+  const bool analytical = true;
+  const double maxError = 0.0;
+  helper::testMagnetoStaticsDisc(analytical, maxError, helper::DOUBLE_TOLERANCE,
+                                 helper::DOUBLE_SYMMETRY_TOLERANCE);
+}
+
+// === Test magnetostatics - non-analytical, zero max-error === //
+
+TEST_CASE("Test magnetostatics - non-analytical, zero max-error (float)") {
+  const bool analytical = false;
+  const float maxError = 0.0f;
+  helper::testMagnetoStaticsDisc(analytical, maxError, helper::FLOAT_TOLERANCE,
+                                 helper::FLOAT_SYMMETRY_TOLERANCE);
+}
+
+TEST_CASE("Test magnetostatics - non-analytical, zero max-error (double)") {
+  const bool analytical = false;
+  const double maxError = 0.0;
+  helper::testMagnetoStaticsDisc(analytical, maxError, helper::DOUBLE_TOLERANCE,
+                                 helper::DOUBLE_SYMMETRY_TOLERANCE);
 }
