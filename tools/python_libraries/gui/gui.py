@@ -732,6 +732,11 @@ class runner_main_window(QMainWindow):
             QLabel("Grain side length [\u03BE\u2080]"), self._grain_side_length
         )
 
+        # Solenoid gauge
+        self._gauge_solenoid = CheckBox(jsonKey="gauge_solenoid")
+        self.register(self._gauge_solenoid)
+        physicsBoxLayout.addRow(QLabel("Use solenoid gauge"), self._gauge_solenoid)
+
         # Order parameter
         self._order_parameter = OrderParameter(jsonKey="order_parameter")
         self.register(self._order_parameter)
