@@ -74,6 +74,10 @@ public:
   void add(ComputeFreeEnergy<T> *inComputeFreeEnergy);
   void add(ComputeLDOS<T> *inComputeLDOS);
   void add(ComputeOrderParameter<T> *inComputeOrderParameter);
+  void
+  add(std::unique_ptr<ComputeVectorPotential<T>> inComputeVectorPotential) {
+    m_computeVectorPotential = std::move(inComputeVectorPotential);
+  }
   void deleteComputeObjects();
 
   // Functions
@@ -163,9 +167,8 @@ Context<T>::Context()
       m_inducedVectorPotential(nullptr), m_computeCurrent(nullptr),
       m_computeCurrentDensity(nullptr), m_computeFreeEnergy(nullptr),
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
-      m_computeVectorPotential(std::make_unique<ComputeVectorPotential<T>>()),
-      m_computeTime(static_cast<T>(0.0)), m_numIterations(0),
-      m_optimizer(std::make_unique<Optimizer<T>>()) {}
+      m_computeVectorPotential(nullptr), m_computeTime(static_cast<T>(0.0)),
+      m_numIterations(0), m_optimizer(std::make_unique<Optimizer<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
 #ifndef NDEBUG
@@ -335,16 +338,18 @@ template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
       m_inducedVectorPotential->setZero();
     }
 
-    // The physical side length of a lattice site.
-    const T gridElementSize = m_parameters->getGridElementSize();
+    if (m_computeVectorPotential) {
+      // The physical side length of a lattice site.
+      const T gridElementSize = m_parameters->getGridElementSize();
 
-    // The number of lattice site in the grain is needed for enforcing current
-    // conservation before computing the vector potential.
-    const int numGrainLatticeSites = m_geometry->getNumGrainLatticeSites();
+      // The number of lattice site in the grain is needed for enforcing current
+      // conservation before computing the vector potential.
+      const int numGrainLatticeSites = m_geometry->getNumGrainLatticeSites();
 
-    // Initialize the vector-potential solver.
-    m_computeVectorPotential->initialize(gridResolution, gridElementSize,
-                                         numGrainLatticeSites);
+      // Initialize the vector-potential solver.
+      m_computeVectorPotential->initialize(gridResolution, gridElementSize,
+                                           numGrainLatticeSites);
+    }
 
     ContextModule<T>::checkCudaError(
         "Context<T>::initialize(): vector potential");
@@ -376,28 +381,42 @@ template <typename T> void Context<T>::compute() {
   // Compute e.g. the order parameter.
   m_integrationIterator->compute();
 
-  if (m_computeOrderParameter) {
-    // The London penetration depth.
-    const T penetrationDepth = m_parameters->getPenetrationDepth();
+  // The London penetration depth.
+  const T penetrationDepth = m_parameters->getPenetrationDepth();
 
-    // Compute the induced vector potential. It can only be done if the current
-    // density is computed, and the penetration depth is finite.
-    if (m_computeCurrent && (penetrationDepth > static_cast<T>(0))) {
-      // Note that it is assumed that all values outside of the grain is already
-      // set to zero.
-      const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
+  // Compute the induced vector potential. It can only be done if the current
+  // density is computed, and the penetration depth is finite.
+  const bool computeVectorPotential = m_computeVectorPotential &&
+                                      m_computeCurrent &&
+                                      (penetrationDepth > static_cast<T>(0));
+  if (computeVectorPotential) {
+    // Note that it is assumed that all values outside of the grain is already
+    // set to zero.
+    const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
 
-      // Solve Maxwell's equation relating the vector potential to the current.
-      m_computeVectorPotential->solve(currentDensity, penetrationDepth);
+    // Solve Maxwell's equation relating the vector potential to the current.
+    m_computeVectorPotential->solve(currentDensity, penetrationDepth);
 
-      // Compute the residual.
-      m_computeVectorPotential->computeResidual(*m_inducedVectorPotential);
+    // Compute the residual.
+    m_computeVectorPotential->computeResidual(*m_inducedVectorPotential);
+  }
+
+  if (m_computeOrderParameter || computeVectorPotential) {
+    // Compute the next order parameter and vector potential, but do not
+    // update.
+    if (m_computeOrderParameter && computeVectorPotential) {
+      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
+                           *(m_computeOrderParameter->getOrderParameter()),
+                           *(m_computeVectorPotential->getResult()));
+    } else if (m_computeOrderParameter && !computeVectorPotential) {
+      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
+                           *(m_computeOrderParameter->getOrderParameter()),
+                           *m_inducedVectorPotential);
+    } else if (!m_computeOrderParameter && computeVectorPotential) {
+      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
+                           *m_orderParameter,
+                           *(m_computeVectorPotential->getResult()));
     }
-
-    // Compute the next order parameter and vector potential, but do not update.
-    m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
-                         *(m_computeOrderParameter->getOrderParameter()),
-                         *(m_computeVectorPotential->getResult()));
 
     // Update the order parameter and vector potential.
     // TODO(niclas): Should we really update when we have reached convergence?
@@ -421,9 +440,12 @@ template <typename T> void Context<T>::compute() {
 }
 
 template <typename T> T Context<T>::getResidual() const {
-  // Get the convergence of the vector potential first. If the vector
-  // potential is not computed, it will be zero.
-  T maxResidual = m_computeVectorPotential->getResidual();
+  T maxResidual = static_cast<T>(0);
+
+  // Get the convergence of the vector potential first.
+  if (m_computeVectorPotential) {
+    maxResidual = m_computeVectorPotential->getResidual();
+  }
 
   // Get the convergence for all compute objects.
   const int numComputeObjects = getNumComputeObjects();
@@ -435,11 +457,14 @@ template <typename T> T Context<T>::getResidual() const {
 }
 
 template <typename T> bool Context<T>::isConverged() const {
-  // Check the convergence of the vector potential first. If the vector
-  // potential is not computed, it will be converged.
-  const T convergenceCriterion = m_parameters->getConvergenceCriterion();
-  const T residual = m_computeVectorPotential->getResidual();
-  bool success = residual < convergenceCriterion;
+  bool success = true;
+
+  // Check the convergence of the vector potential first.
+  if (m_computeVectorPotential) {
+    const T convergenceCriterion = m_parameters->getConvergenceCriterion();
+    const T residual = m_computeVectorPotential->getResidual();
+    success = residual < convergenceCriterion;
+  }
 
   // Check the convergence for all compute objects.
   const int numComputeObjects = getNumComputeObjects();

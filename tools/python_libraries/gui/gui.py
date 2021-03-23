@@ -822,6 +822,13 @@ class runner_main_window(QMainWindow):
             QLabel("Convergence criterion"), self._convergence_criterion
         )
 
+        # Vector potential error
+        self._vector_potential_error = InputFloat(jsonKey="vector_potential_error")
+        self.register(self._vector_potential_error)
+        simulationBoxLayout.addRow(
+            QLabel("Maximum vector-potential error"), self._vector_potential_error
+        )
+
         # --------------------- #
         # Optimizer Parameters #
         # --------------------- #
