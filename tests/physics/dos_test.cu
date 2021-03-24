@@ -33,6 +33,7 @@
 #include "RiccatiSolverConfined.h"
 #include "cplx.h"
 #include "defines.h"
+#include "run_utils.h"
 #include <complex>
 #include <doctest/doctest.h>
 #include <iostream>
@@ -140,15 +141,9 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
 
   // =================== ACT ==================== //
-  // Compute the LDOS.
-  for (int i = 0; i < simParams::NUM_ITERATIONS_MAX; ++i) {
-    context->compute();
-    const T residual = context->getResidual();
-    const bool isConverged = context->isConverged();
-    if (isConverged) {
-      break;
-    }
-  }
+  const bool verbose = true;
+  scg::run_utils::runSimulation(context, verbose, 0,
+                                simParams::NUM_ITERATIONS_MAX);
 
   // Get results.
   scg::GridCPU<T> *dosObject = context->getComputeLDOS()->getDOS();
