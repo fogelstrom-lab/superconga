@@ -14,28 +14,28 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "BoundaryConditionSpecular.h" // Boundary condition for perfect specular reflection
-#include "ComputeCurrent.h"        // Compute the total charge current density
-#include "ComputeFreeEnergy.h"     // Compute the (Eilenberger) free energy
-#include "ComputeOrderParameter.h" // Compute order parameter
+#include "BoundaryConditionSpecular.h"
+#include "ComputeCurrent.h"
+#include "ComputeFreeEnergy.h"
+#include "ComputeOrderParameter.h"
 #include "ComputeVectorPotential.h"
-#include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
-#include "DiscGeometry.h"  // Used to constructed simulated grain from discs
-#include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
+#include "Context.h"
+#include "DiscGeometry.h"
+#include "GeometryGroup.h"
 #include "Optimizer.h"
-#include "OrderParameter.h" // Container class for order parameter components
+#include "OrderParameter.h"
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
-#include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
-#include "Parameters.h" // Parameters specifying which the superconducting system to simulate
-#include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
-#include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
-#include "Type.h"                  // Custom types (real, complex, ...)
-#include "Visualization.h" // Live visualization of desired observables through OpenGL
-#include "configure.h" // Variables and defines exported by cmake, e.g. version number and project name
+#include "OrderParameterInitial.h"
+#include "Parameters.h"
+#include "PolygonGeometry.h"
+#include "RiccatiSolverConfined.h"
+#include "Type.h"
+#include "Visualization.h"
+#include "configure.h"
 #include "io/read_utils.h"
-#include "run_utils.h" // Commonly used functions in run files
-
+#include "run_utils.h"
+#include "utils.h"
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
@@ -122,16 +122,16 @@ int main(int argc, char *argv[]) {
   // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
   // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
   // appropriately.
-  const T grainSideLength =
-      static_cast<T>(simParams["grain_side_length"].asDouble() / (2.0 * M_PI));
+  const T grainSideLength = scg::utils::toInternalLength(
+      static_cast<T>(simParams["grain_side_length"].asDouble()));
   parameters->setGrainWidth(grainSideLength);
 
   // Set the number of lattice points per coherence length.
   // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
   // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
   // appropriately.
-  const T pointsPerCoherenceLength = static_cast<T>(
-      simParams["points_per_coherence_length"].asDouble() * 2.0 * M_PI);
+  const T pointsPerCoherenceLength = scg::utils::toInternalInvLength(
+      static_cast<T>(simParams["points_per_coherence_length"].asDouble()));
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set number of Ozaki energies.
@@ -148,8 +148,11 @@ int main(int argc, char *argv[]) {
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
-  const T penetrationDepth =
-      static_cast<T>(simParams["penetration_depth"].asDouble());
+  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
+  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
+  // appropriately.
+  const T penetrationDepth = scg::utils::toInternalLength(
+      static_cast<T>(simParams["penetration_depth"].asDouble()));
   parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
