@@ -37,9 +37,9 @@ from python_libraries.plotting import field_plotting
 
 # Main.
 def main() -> None:
-    # =======================================================================#
-    #                            ARGUMENT PARSING                            #
-    # =======================================================================#
+    # ========================================================================#
+    #                            ARGUMENT PARSING                             #
+    # ========================================================================#
     # Use settings for a plotter frontend (frontend can be runner or plotter).
     frontend = "ldos_plotter"
     # Program name and description for command-line help message.
@@ -53,9 +53,9 @@ def main() -> None:
         frontend=frontend,
     )
 
-    # ======================================================================#
-    #                          ARGUMENT VALIDATION                          #
-    # ======================================================================#
+    # ========================================================================#
+    #                           ARGUMENT VALIDATION                           #
+    # ========================================================================#
     # Validate user input (e.g. check that data path exists).
     # Exit if there are errors.
     success = AV.validate_arguments(
@@ -65,9 +65,9 @@ def main() -> None:
         status_code = 1
         sys.exit(status_code)
 
-    # ======================================================================#
-    #                           PARSE DATA FILES                            #
-    # ======================================================================#
+    # ========================================================================#
+    #                            PARSE DATA FILES                             #
+    # ========================================================================#
     # Parse simulation parameters from json, get result as dictionary.
     simulation_parameters = parse_json_files.parse_config(
         base_path=plot_config_parameters["general"]["data_path"]
@@ -114,12 +114,13 @@ def main() -> None:
     for energy_idx in range(0, num_energies):
         ldos_data["ldos"][energy_idx, geometry["mask"] == 0] = np.nan
 
-    # ======================================================================#
-    #                               PLOT DATA                               #
-    # ======================================================================#
-    # Plot DOS and LDOS with matplotlib. Get reference to energy slider to
-    # prevent garbage collector from breaking plot interactivity.
-    energy_slider = field_plotting.plot_ldos(
+    # ========================================================================#
+    #                                PLOT DATA                                #
+    # ========================================================================#
+    # Plot DOS and LDOS with matplotlib. Get reference to energy slider and
+    # point-contact (STM tip) slider, to prevent garbage collector from
+    # breaking plot interactivity.
+    energy_slider, point_contact_slider = field_plotting.plot_ldos(
         ldos_data=ldos_data,
         dos_data=dos_data,
         plot_parameters=plot_config_parameters,

@@ -148,7 +148,9 @@ def plot_2D_imshow(
 # -----------------------------------------------------------------------------
 # Plot imshow collage of all observables/quantities indicated by plot_parameters.
 # data is a dict of 2D numpy ndarrays (imshow expects the latter).
-def plot_all(data: dict, geometry: dict, plot_parameters: dict, simulation_parameters: dict) -> None:
+def plot_all(
+    data: dict, geometry: dict, plot_parameters: dict, simulation_parameters: dict
+) -> None:
     # --------------------------------------------------
     # FIX PLOT LAYOUT: GRID OF IMSHOW PLOTS
     # --------------------------------------------------
@@ -300,6 +302,30 @@ def plot_ldos(
     mask_nan_in=True,
 ):
     # --------------------------------------------------
+    # HELPER FUNCTIONS
+    # --------------------------------------------------
+    # Compute start and stop indices for point-dos, taking care of not accessing indices out of bounds.
+    def get_point_dos(in_x_idx, in_y_idx, in_dos_radius, in_ldos_data):
+        # Enforce radius >= 1.
+        in_dos_radius = min(1, in_dos_radius)
+
+        # Get LDOS shape.
+        (num_energies, num_x, num_y) = np.shape(in_ldos_data)
+
+        # Compute start and stop indices, avoiding index out of bounds.
+        x_start_idx = max(0, in_x_idx - (in_dos_radius - 1))
+        x_stop_idx = min(num_x, in_x_idx + (in_dos_radius - 1) + 1)
+        y_start_idx = max(0, in_y_idx - (in_dos_radius - 1))
+        y_stop_idx = min(num_y, in_y_idx + (in_dos_radius - 1) + 1)
+
+        out_point_dos_data = np.nanmean(
+            in_ldos_data[:, y_start_idx:y_stop_idx, x_start_idx:x_stop_idx],
+            axis=(1, 2),
+        )
+
+        return out_point_dos_data
+
+    # --------------------------------------------------
     # FIGURE SETUP
     # --------------------------------------------------
     fig_width_scaling = 2.0
@@ -319,18 +345,17 @@ def plot_ldos(
 
     ax_LDOS = plt.subplot(gs[0:50, :100])
     ax_DOS = plt.subplot(gs[0:50, 110:])
-    ax_slider = plt.subplot(gs[60:65, 33:83])
-    ax_slider.set_facecolor("#ffffcc")
+    ax_energy_slider = plt.subplot(gs[60:65, 33:83])
+    ax_energy_slider.set_facecolor("#ffffcc")
 
-    ax_test = plt.subplot(gs[60:65, 110:])
-    ax_test.axis("off")
+    ax_dos_slider = plt.subplot(gs[60:65, 140:190])
+    ax_dos_slider.set_facecolor("#ffffcc")
 
     # Create axis object for heatmap colorbar.
     ax_cbar_LDOS = make_axes_locatable(ax_LDOS).append_axes("right", size="5%", pad=0.1)
 
     # Plot line at N=0 and N=1 in DOS figure.
     ax_DOS.axhline(y=0, c="gray", lw=1)
-    # ax_DOS.axhline(y=1, c="gray", lw=1, ls="--")
 
     # --------------------------------------------------
     # PLOT LDOS
@@ -345,8 +370,8 @@ def plot_ldos(
 
     # Energy index to plot LDOS at.
     LDOS_energy_idx = 0
-    vline1 = ax_DOS.axvline(
-        x=dos_data["energy"][LDOS_energy_idx], c="0.75", lw=1.5, ls="--"
+    vertical_line_energy = ax_DOS.axvline(
+        x=dos_data["energy"][LDOS_energy_idx], c="0.75", lw=2.5, ls="--"
     )
 
     LDOS_max = np.nanmax(ldos_data["ldos"][LDOS_energy_idx])
@@ -377,9 +402,6 @@ def plot_ldos(
     # --------------------------------------------------
     # PLOT DOS
     # --------------------------------------------------
-    dos_slice_x_idx = int(x_num * 0.5)
-    dos_slice_y_idx = int(y_num * 0.5)
-
     ax_DOS.plot(
         dos_data["energy"],
         dos_data["dos"],
@@ -392,58 +414,44 @@ def plot_ldos(
         "k-",
     )
 
+    # Indices where to plot point-DOS
+    point_dos_x_idx = int(x_num * 0.5)
+    point_dos_y_idx = int(y_num * 0.5)
+    # Radius of averaging point-DOS (in number of lattice points).
+    point_dos_radius = 1
+
+    # Compute start and stop indices for point-DOS.
+    point_dos_data = get_point_dos(
+        point_dos_x_idx, point_dos_y_idx, point_dos_radius, ldos_data["ldos"]
+    )
+
     (DOS_p1,) = ax_DOS.plot(
         dos_data["energy"],
-        ldos_data["ldos"][:, dos_slice_y_idx, dos_slice_x_idx],
+        point_dos_data,
         "r-",
-        label=r"$\mathrm{Point\, DOS},\, x=%2.1f\xi_0,\, y=%2.1f\xi_0$"
+        label=r"$\mathrm{Point-contact\, DOS},\, x=%2.1f\xi_0,\, y=%2.1f\xi_0$"
         % (
-            dos_slice_x_idx / simulation_parameters["points_per_coherence_length"],
-            dos_slice_y_idx / simulation_parameters["points_per_coherence_length"],
+            point_dos_x_idx / simulation_parameters["points_per_coherence_length"],
+            point_dos_y_idx / simulation_parameters["points_per_coherence_length"],
         ),
     )
     (DOS_p2,) = ax_DOS.plot(
         -np.flip(dos_data["energy"]),
-        np.flip(ldos_data["ldos"][:, dos_slice_y_idx, dos_slice_x_idx]),
+        np.flip(point_dos_data),
         "r-",
     )
 
-    """
-    (DOS_y1,) = ax_DOS.plot(
-        dos_data["energy"],
-        np.average(ldos_data["ldos"][:, dos_slice_y_idx, :], axis=1),
-        "b-",
-        label=r"$x\mathrm{-averaged\, DOS},\, y_i=%d$" % (dos_slice_y_idx),
-    )
-    (DOS_y2,) = ax_DOS.plot(
-        -np.flip(dos_data["energy"]),
-        np.flip(np.average(ldos_data["ldos"][:, dos_slice_y_idx, :], axis=1)),
-        "b-",
-    )
-
-    (DOS_x1,) = ax_DOS.plot(
-        dos_data["energy"],
-        np.average(ldos_data["ldos"][:, :, dos_slice_x_idx], axis=1),
-        "m-",
-        label=r"$y\mathrm{-averaged\, DOS},\, x_i=%d$" % (dos_slice_x_idx),
-    )
-    (DOS_x2,) = ax_DOS.plot(
-        -np.flip(dos_data["energy"]),
-        np.flip(np.average(ldos_data["ldos"][:, :, dos_slice_x_idx], axis=1)),
-        "m-",
-    )"""
-
     # Marker indicating point where "point-LDOS" is plotted.
     (LDOS_marker,) = ax_LDOS.plot(
-        dos_slice_x_idx / simulation_parameters["points_per_coherence_length"],
-        dos_slice_y_idx / simulation_parameters["points_per_coherence_length"],
+        point_dos_x_idx / simulation_parameters["points_per_coherence_length"],
+        point_dos_y_idx / simulation_parameters["points_per_coherence_length"],
         lw=0,
         ls=None,
-        marker="x",
-        ms=7,
+        marker="s",
+        ms=(2 * point_dos_radius + 1),
         markeredgecolor="r",
         markerfacecolor="none",
-        markeredgewidth=1.5,
+        markeredgewidth=2.5,
     )
 
     # --------------------------------------------------
@@ -501,6 +509,7 @@ def plot_ldos(
         # handletextpad=1.5,
     )
 
+    """
     ax_test.text(
         0.5,
         0.5,
@@ -511,9 +520,10 @@ def plot_ldos(
         fontsize=PP.font_size - 2,
         # bbox=props,
     )
+    """
 
     # --------------------------------------------------
-    # ADD INTERACTIVE SLIDER
+    # ADD INTERACTIVE ENERGY SLIDER
     # --------------------------------------------------
     energy_min = dos_data["energy"][0]
     energy_max = dos_data["energy"][-1]
@@ -522,7 +532,7 @@ def plot_ldos(
 
     # Define an axes area and draw a slider in it
     energy_slider = Slider(
-        ax_slider,
+        ax_energy_slider,
         r"$\mathrm{Choose\, energy}\, (k_{\mathrm{B}}T_{\mathrm{c}})$",
         dos_data["energy"][0],
         dos_data["energy"][-1],
@@ -531,9 +541,8 @@ def plot_ldos(
         valstep=delta_energy,
     )
     energy_slider.label.set_fontsize(PP.font_size - 4)
-    # energy_slider.val.set_size(PP.font)
 
-    def update(val):
+    def update_energy_slider(val):
         LDOS_energy = energy_slider.val
         LDOS_energy_idx = int(LDOS_energy / delta_energy)
         update_ldos_data = ldos_data["ldos"][LDOS_energy_idx]
@@ -553,18 +562,74 @@ def plot_ldos(
         cbar_LDOS.set_ticklabels(cbar_tick_labels)
 
         # Update text label.
-
         LDOS_text.set_text(
             r"$\text{(a)\, LDOS},\, \epsilon=%2.1fk_{\mathrm{B}}T_{\mathrm{c}}$"
             % LDOS_energy
         )
 
         # Update horizontal bar.
-        vline1.set_xdata(LDOS_energy)
+        vertical_line_energy.set_xdata(LDOS_energy)
 
         fig.canvas.draw()
 
-    energy_slider.on_changed(update)
+    energy_slider.on_changed(update_energy_slider)
+
+    # --------------------------------------------------
+    # ADD INTERACTIVE SLIDER FOR POINT-DOS SIZE
+    # --------------------------------------------------
+    # Min and max radius of point contact (coherence lengths).
+    min_point_contact_radius = (
+        1.0 / simulation_parameters["points_per_coherence_length"]
+    )
+    max_point_contact_radius = 5
+    # Define an axes area and draw a slider in it.
+    point_contact_slider = Slider(
+        ax_dos_slider,
+        r"$\mathrm{Point-contact\, radius}\, (\xi_0)$",
+        min_point_contact_radius,
+        max_point_contact_radius,
+        valinit=min_point_contact_radius,
+        valfmt="%2.2f",
+        valstep=1.0 / simulation_parameters["points_per_coherence_length"],
+    )
+    point_contact_slider.label.set_fontsize(PP.font_size - 4)
+
+    def update_point_contact_slider(val):
+        # Get radius from slider.
+        point_dos_radius_coherence_lengths = point_contact_slider.val
+        # Convert to discrete lattice points and enforce radius >= 1.
+        point_dos_radius = min(
+            1,
+            int(
+                point_dos_radius_coherence_lengths
+                * simulation_parameters["points_per_coherence_length"]
+            ),
+        )
+
+        # Get the position from the plot (this is garbage collected outside this function).
+        point_dos_x, point_dos_y = LDOS_marker.get_data()
+        point_dos_x_idx = int(
+            point_dos_x * simulation_parameters["points_per_coherence_length"]
+        )
+        point_dos_y_idx = int(
+            point_dos_y * simulation_parameters["points_per_coherence_length"]
+        )
+
+        # Update point-LDOS data.
+        point_dos_data = get_point_dos(
+            point_dos_x_idx, point_dos_y_idx, point_dos_radius, ldos_data["ldos"]
+        )
+
+        # Update point-LDOS plot.
+        DOS_p1.set_ydata(point_dos_data)
+        DOS_p2.set_ydata(np.flip(point_dos_data))
+
+        # Update marker position in heatmap.
+        LDOS_marker.set_markersize(2 * point_dos_radius + 1)
+
+        fig.canvas.draw()
+
+    point_contact_slider.on_changed(update_point_contact_slider)
 
     # --------------------------------------------------
     # ADD INTERACTIVE CLICKING
@@ -573,18 +638,28 @@ def plot_ldos(
         if event.xdata != None and event.ydata != None:
             if event.inaxes == ax_LDOS:
                 # Update coordinates.
-                dos_slice_x_idx = int(
+                point_dos_x_idx = int(
                     event.xdata * simulation_parameters["points_per_coherence_length"]
                 )
-                dos_slice_y_idx = int(
+                point_dos_y_idx = int(
                     event.ydata * simulation_parameters["points_per_coherence_length"]
                 )
 
-                # Update point-LDOS plot.
-                DOS_p1.set_ydata(ldos_data["ldos"][:, dos_slice_y_idx, dos_slice_x_idx])
-                DOS_p2.set_ydata(
-                    np.flip(ldos_data["ldos"][:, dos_slice_y_idx, dos_slice_x_idx])
+                # Get the position from the plot (this is garbage collected
+                # outside this function). Enforce radius >= 1.
+                point_dos_radius = min(1, int((LDOS_marker.get_markersize() - 1) * 0.5))
+
+                # Update point-LDOS data.
+                point_dos_data = get_point_dos(
+                    point_dos_x_idx,
+                    point_dos_y_idx,
+                    point_dos_radius,
+                    ldos_data["ldos"],
                 )
+
+                # Update point-LDOS plot.
+                DOS_p1.set_ydata(point_dos_data)
+                DOS_p2.set_ydata(np.flip(point_dos_data))
 
                 # Update marker position in heatmap.
                 LDOS_marker.set_data((event.xdata, event.ydata))
@@ -610,4 +685,4 @@ def plot_ldos(
 
     # Return reference to energy slider. This is to prevent object to be
     # garbage collected, rendering the slider inactive.
-    return energy_slider
+    return energy_slider, point_contact_slider
