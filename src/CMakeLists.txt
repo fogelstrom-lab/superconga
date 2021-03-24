@@ -8,22 +8,21 @@ set(SRC main.cu postprocess.cu)
 option(APPROX_STEP "Use approximate steps for the coherence functions." OFF)
 
 foreach(file ${SRC})
-  # string( REPLACE ".cu" "" name ${file})
   get_filename_component(name ${file} NAME_WE)
 
-  # Create command-line executable
+  # Create command-line executable.
   add_executable(${name} ${file})
 
-  # Include directories
+  # Include directories.
   target_include_directories(
     ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
                     ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
 
-  # Build src binaries into build/bin/
+  # Build src binaries into build/xxx/bin/ (where xxx is e.g. release).
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                            "${PROJECT_BINARY_DIR}/bin")
 
-  # External libraries
+  # External libraries.
   target_link_libraries(
     ${name}
     PRIVATE glut
@@ -34,7 +33,7 @@ foreach(file ${SRC})
             ${LAPACK_LIBRARIES}
             ${BLAS_LIBRARIES})
 
-  # Use C++17 since it is the latest standard CUDA supports
+  # Use C++17 since it is the latest standard CUDA supports.
   set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
                                            CUDA_STANDARD_REQUIRED ON)
   set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED

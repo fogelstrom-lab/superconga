@@ -44,22 +44,21 @@ set(SRC
 enable_testing()
 
 foreach(file ${SRC})
-  # string( REPLACE ".cu" "" name ${file})
   get_filename_component(name ${file} NAME_WE)
 
-  # Create command-line executable
+  # Create command-line executable.
   add_executable(${name} ${file})
 
-  # Add the test to the test suite
+  # Add the test to the test suite.
   add_test(NAME ${name} COMMAND ${name})
 
-  # ----------------------------------- # Add extra compile options and flags #
-  # ----------------------------------- # Include directories
+  # Include directories.
   target_include_directories(
     ${name}
     PRIVATE ${PROJECT_SOURCE_DIR}/include
     SYSTEM ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
-  # External libraries
+
+  # External libraries.
   target_link_libraries(
     ${name}
     PRIVATE glut
@@ -71,19 +70,23 @@ foreach(file ${SRC})
             ${BLAS_LIBRARIES}
             doctest::doctest)
 
-  # Use C++17 since it is the lates standard CUDA supports
+  # Build test binaries into build/xxx/tests/ (where xxx is e.g. release).
+  set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                           "${PROJECT_BINARY_DIR}/tests")
+
+  # Use C++17 since it is the lates standard CUDA supports.
   set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
                                            CUDA_STANDARD_REQUIRED ON)
   set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
                                                            ON)
 
-  # Set DEBUG compile flags
+  # Set DEBUG compile flags.
   target_compile_options(
     ${name}
     PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
     PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
     PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
 
-  # Set RELEASE compile flags
+  # Set RELEASE compile flags.
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
 endforeach()
