@@ -49,7 +49,7 @@ const double TEMPERATURE = 0.5;
 // Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc).
 const double GRAIN_SIDE_LENGTH = 5.0 / (2.0 * M_PI);
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 32.0 / GRAIN_SIDE_LENGTH;
+const double POINTS_PER_COHERENCE_LENGTH = 16.0 / GRAIN_SIDE_LENGTH;
 // Number of trajectory angles (on the Fermi-surface).
 // TODO(niclas): Even numbers are better than odd. Why exactly?
 const int NUM_ANGLES = 720;
