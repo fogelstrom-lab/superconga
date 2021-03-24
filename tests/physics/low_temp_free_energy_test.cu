@@ -209,8 +209,6 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
 } // namespace helper
 
 // ================= Test thermodynamics, low temp ================= //
-// A disc does not have any corners, where we get weird artifacts, so we should
-// be able to have lower tolerance.
 TEST_CASE("Test low temperature thermodynamics - s-wave disc (float)") {
   const float tolerance = 1e-5f;
   const float toleranceFreeEnergy = 1e-4f;
@@ -241,8 +239,6 @@ TEST_CASE("Test low temperature thermodynamics - d-wave square (float)") {
                                        isDisc);
 }
 
-// A disc does not have any corners, where we get weird artifacts, so we should
-// be able to have lower tolerance.
 TEST_CASE("Test low temperature thermodynamics - s-wave disc (double)") {
   const double tolerance = 1e-5;
   const double toleranceFreeEnergy = 1e-4;
