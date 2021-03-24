@@ -39,7 +39,7 @@
 #include "io/csv_writers.h"
 #include "io/read_utils.h"
 #include "run_utils.h"
-
+#include "utils.h"
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
@@ -148,16 +148,16 @@ int main(int argc, char *argv[]) {
   // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
   // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
   // appropriately.
-  const T grainSideLength =
-      static_cast<T>(simParams["grain_side_length"].asDouble() / (2.0 * M_PI));
+  const T grainSideLength = scg::utils::toInternalLength(
+      static_cast<T>(simParams["grain_side_length"].asDouble()));
   parameters->setGrainWidth(grainSideLength);
 
   // Set the number of lattice points per coherence length.
   // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
   // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
   // appropriately.
-  const T pointsPerCoherenceLength = static_cast<T>(
-      simParams["points_per_coherence_length"].asDouble() * 2.0 * M_PI);
+  const T pointsPerCoherenceLength = scg::utils::toInternalInvLength(
+      static_cast<T>(simParams["points_per_coherence_length"].asDouble()));
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set parameters relevant for real-axis energies.
@@ -182,8 +182,12 @@ int main(int argc, char *argv[]) {
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
-  parameters->setPenetrationDepth(
+  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
+  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
+  // appropriately.
+  const T penetrationDepth = scg::utils::toInternalLength(
       static_cast<T>(simParams["penetration_depth"].asDouble()));
+  parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
   const T externalFluxQuanta =

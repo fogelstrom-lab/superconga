@@ -94,7 +94,7 @@ public:
   }
 
   void setPenetrationDepth(const T inPenetrationDepth) {
-    m_penetrationDepth = toInternalLength(inPenetrationDepth);
+    m_penetrationDepth = inPenetrationDepth;
   }
 
   void setValid() { m_isValid = 1; }
@@ -171,9 +171,6 @@ private:
   void setLatticeResolution(const T inGrainWidth,
                             const T inPointsPerCoherenceLength);
   int computeGridResolutionRotated(const int numGridBase) const;
-  T toInternalLength(const T inLength) const {
-    return inLength / static_cast<T>(2.0 * M_PI);
-  }
 };
 
 template <typename T>
