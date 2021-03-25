@@ -63,15 +63,44 @@ private:
 
   bool appendRow(const Context<T> *const inContext,
                  const std::filesystem::path &inFilePath) const {
+    // The number of iterations so far.
+    const int numIterations = inContext->getNumIterations();
+
+    // Order-parameter residual.
+    const bool orderParameterExist = inContext->getComputeOrderParameter();
+    const T orderParameterResidual =
+        orderParameterExist
+            ? inContext->getComputeOrderParameter()->getResidual()
+            : static_cast<T>(0);
+
+    // Free-energy residual.
+    const bool freeEnergyExist = inContext->getComputeFreeEnergy();
+    const T freeEnergyResidual =
+        freeEnergyExist ? inContext->getComputeFreeEnergy()->getResidual()
+                        : static_cast<T>(0);
+    const T freeEnergyPerUnitArea =
+        freeEnergyExist
+            ? inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea()
+            : static_cast<T>(0);
+
+    // Current-density residual.
+    const bool currentDensityExist = inContext->getComputeCurrent();
+    const T currentDensityResidual =
+        currentDensityExist ? inContext->getComputeCurrent()->getResidual()
+                            : static_cast<T>(0);
+
+    // Vector-potential residual.
+    const bool vectorPotentialExist = inContext->getComputeVectorPotential();
+    const T vectorPotentialResidual =
+        vectorPotentialExist
+            ? inContext->getComputeVectorPotential()->getResidual()
+            : static_cast<T>(0);
 
     std::ostringstream oss;
-    oss << inContext->getNumIterations() << m_delimiter
-        << inContext->getComputeOrderParameter()->getResidual() << m_delimiter
-        << inContext->getComputeFreeEnergy()->getResidual() << m_delimiter
-        << inContext->getComputeCurrent()->getResidual() << m_delimiter
-        << inContext->getComputeVectorPotential()->getResidual() << m_delimiter
-        << std::setprecision(m_floatPrecision)
-        << inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+    oss << numIterations << m_delimiter << orderParameterResidual << m_delimiter
+        << freeEnergyResidual << m_delimiter << currentDensityResidual
+        << m_delimiter << vectorPotentialResidual << m_delimiter
+        << std::setprecision(m_floatPrecision) << freeEnergyPerUnitArea;
     return appendToFile(oss.str(), inFilePath);
   };
 
