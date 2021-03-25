@@ -39,6 +39,7 @@ set(SRC
     physics/dos_test.cu
     physics/low_temp_free_energy_test.cu
     physics/vector_potential_test.cu
+    riccati_solutions_test.cu
     utils_test.cu)
 
 # Enable testing functionality

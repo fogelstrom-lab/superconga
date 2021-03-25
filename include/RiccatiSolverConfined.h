@@ -437,7 +437,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
   internal::computeGammaFunctionTemplate_new_kernel<
-      T, typename GAMMA<T>::Gammabar, 3, 2, -1>
+      T, typename GAMMA<T>::GammaTilde, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
           h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
@@ -557,7 +557,7 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
   internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
-      T, typename GAMMA<T>::Gammabar, 3, 2, -1>
+      T, typename GAMMA<T>::GammaTilde, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock>>>(
           // Model parameters and energy values
           h, N, numEnergies_storage, energyIdxOffset_storage,
