@@ -307,7 +307,7 @@ def plot_ldos(
     # Compute start and stop indices for point-dos, taking care of not accessing indices out of bounds.
     def get_point_dos(in_x_idx, in_y_idx, in_dos_radius, in_ldos_data):
         # Enforce radius >= 1.
-        in_dos_radius = min(1, in_dos_radius)
+        in_dos_radius = max(1, in_dos_radius)
 
         # Get LDOS shape.
         (num_energies, num_x, num_y) = np.shape(in_ldos_data)
@@ -598,7 +598,7 @@ def plot_ldos(
         # Get radius from slider.
         point_dos_radius_coherence_lengths = point_contact_slider.val
         # Convert to discrete lattice points and enforce radius >= 1.
-        point_dos_radius = min(
+        point_dos_radius = max(
             1,
             int(
                 point_dos_radius_coherence_lengths
@@ -647,7 +647,7 @@ def plot_ldos(
 
                 # Get the position from the plot (this is garbage collected
                 # outside this function). Enforce radius >= 1.
-                point_dos_radius = min(1, int((LDOS_marker.get_markersize() - 1) * 0.5))
+                point_dos_radius = max(1, int((LDOS_marker.get_markersize() - 1) * 0.5))
 
                 # Update point-LDOS data.
                 point_dos_data = get_point_dos(
