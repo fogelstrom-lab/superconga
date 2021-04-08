@@ -3,7 +3,7 @@
 	"data_path": "data/dwave_octagon/T0.500000",
 	"energy_max": 3.0,
 	"energy_min": 0.0,
-	"energy_smearing": 0.02,
+	"energy_smearing": 0.05,
 	"num_energies": 128,
 	"num_energies_per_block": 32,
 	"num_fermi_momenta": 720,
