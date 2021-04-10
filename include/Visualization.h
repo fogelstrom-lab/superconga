@@ -775,10 +775,11 @@ void Visualization<T>::printRangeToImage(int img_row, int img_col, T minVal,
   char txt[256];
   int imgIdx = _num_image_X * img_row + img_col;
 
-  sprintf(txt, "%s (%f, %f)", _textImg[imgIdx].c_str(), minVal, maxVal);
+  sprintf(txt, "%s : [%.4f, %.4f]", _textImg[imgIdx].c_str(), minVal, maxVal);
 
-  for (i = 0; txt[i]; i++)
+  for (i = 0; txt[i]; i++) {
     glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+  }
 
   glRasterPos2f(-1.0f, -1.0f);
 }
@@ -798,20 +799,23 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
     int i;
 
     char txt[256];
-    sprintf(txt, "Discrete width = %d,   Momenta = %d,   Ozaki Poles = %d",
+    sprintf(txt, "Discrete width = %d,   #Momenta = %d,   #Ozaki Poles = %d",
             param->getGridResolutionBase(), param->getAngularResolution(),
             param->getNumMatsubaraEnergies());
 
-    for (i = 0; txt[i]; i++)
+    for (i = 0; txt[i]; i++) {
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+    }
 
     glRasterPos2f(posX, posY - 36.0f / getNumPixelsWindowY());
-    sprintf(txt, "Physical width = %f c.l.,  \nFlux quanta = %f,   T/T_c = %f",
+    sprintf(txt,
+            "Physical width = %f c.l.,  \n#Ext. flux quanta = %f,   T/T_c = %f",
             (param->getGridResolutionBase() - 1) * param->getGridElementSize(),
             param->getNumFluxQuanta(), param->getTemperature());
 
-    for (i = 0; txt[i]; i++)
+    for (i = 0; txt[i]; i++) {
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+    }
 
     glRasterPos2f(-1.0f, -1.0f);
   }
