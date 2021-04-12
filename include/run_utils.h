@@ -503,6 +503,10 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
               colIdx));
 
       // Plot the order parameter.
+      inGUI->label("|Delta_" + std::to_string(colIdx + 1) + "|/k_BT_c", colIdx,
+                   inGUI->getNumImagesY() - 1);
+      inGUI->label("Chi_" + std::to_string(colIdx + 1), colIdx,
+                   inGUI->getNumImagesY() - 2);
       inGUI->plotImage(component, colIdx);
     }
   }
@@ -516,6 +520,9 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
     const GridGPU<T> J = *(inContext->getComputeCurrent()->getResult());
 
     // Plot the current.
+    inGUI->label("|J|/j_d", colIdx, inGUI->getNumImagesY() - 1);
+    inGUI->label("J_x/j_d", colIdx, inGUI->getNumImagesY() - 2);
+    inGUI->label("J_y/j_d", colIdx, inGUI->getNumImagesY() - 3);
     inGUI->plotImage(J, colIdx);
     colIdx++;
 
@@ -532,6 +539,9 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
       const GridGPU<T> A = *(inContext->getInducedVectorPotential());
 
       // Plot the induced vector potential.
+      inGUI->label("|A|/A_0", colIdx, inGUI->getNumImagesY() - 1);
+      inGUI->label("A_x/A_0", colIdx, inGUI->getNumImagesY() - 2);
+      inGUI->label("A_y/A_0", colIdx, inGUI->getNumImagesY() - 3);
       inGUI->plotImage(A, colIdx, erase);
       colIdx++;
 
@@ -539,6 +549,7 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
       const T latticeSpacing = inContext->getParameters()->getGridElementSize();
       const GridGPU<T> divA = A.div(latticeSpacing);
       const GridGPU<T> magneticFluxDensity = A.curl(latticeSpacing);
+      inGUI->label("B/B_0", colIdx, inGUI->getNumImagesY() - 1);
       inGUI->plotImage(magneticFluxDensity, colIdx, erase);
     }
   }
