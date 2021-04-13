@@ -323,6 +323,7 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["optimizer"]["step_size"].asDouble());
   const T inertia =
       static_cast<T>(simParams["optimizer"]["inertia"].asDouble());
+  const T adaptive = simParams["optimizer"]["adaptive"].asBool();
   const std::size_t rank =
       static_cast<std::size_t>(simParams["optimizer"]["rank"].asInt());
   const bool replaceOldest = simParams["optimizer"]["replace_oldest"].asBool();
@@ -333,8 +334,8 @@ int main(int argc, char *argv[]) {
   const T maxMixing =
       static_cast<T>(simParams["optimizer"]["max_mixing"].asDouble());
   auto optimizer = std::make_unique<scg::Optimizer<T>>(
-      stepSize, inertia, rank, replaceOldest, andersonAlways, minMixing,
-      maxMixing);
+      stepSize, inertia, adaptive, rank, replaceOldest, andersonAlways,
+      minMixing, maxMixing);
   context->set(std::move(optimizer));
 
   //***************************************************

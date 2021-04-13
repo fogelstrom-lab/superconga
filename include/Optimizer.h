@@ -15,6 +15,7 @@
 #include <cstddef>
 #include <cuda.h>
 #include <limits>
+#include <thrust/device_vector.h>
 #include <vector>
 
 namespace scg {
@@ -66,6 +67,7 @@ public:
   ///
   /// \param inStepSize The step size, s.
   /// \param inInertia The inertia, v.
+  /// \param inAdaptive Whether to use adaptive step size and inertia.
   /// \param inRank The number of previous steps to use, N, i.e. the rank of the
   /// least-squares problem.
   /// \param inReplaceOldest Whether to replace the oldest, or the worst, of the
@@ -76,12 +78,13 @@ public:
   /// Anderson step.
   /// \param inMaxMixing The maximum allowed value of the mixing factor in the
   /// Anderson step.
-  Optimizer(const T inStepSize = static_cast<T>(1),
-            const T inInertia = static_cast<T>(0), const std::size_t inRank = 1,
-            const bool inReplaceOldest = true,
-            const bool inAndersonAlways = true,
-            const T inMinMixing = static_cast<T>(1),
-            const T inMaxMixing = static_cast<T>(1));
+  explicit Optimizer(const T inStepSize = static_cast<T>(1),
+                     const T inInertia = static_cast<T>(0),
+                     const bool inAdaptive = true, const std::size_t inRank = 1,
+                     const bool inReplaceOldest = true,
+                     const bool inAndersonAlways = true,
+                     const T inMinMixing = static_cast<T>(1),
+                     const T inMaxMixing = static_cast<T>(1));
 
   /// \brief Destructor of the optimizer base class.
   ~Optimizer(){};
@@ -208,11 +211,22 @@ private:
   /// \return Void.
   void prune();
 
-  // The step size.
-  const T m_stepSize;
+  // The initial step size.
+  const T m_stepSizeInit;
 
-  // The inertia.
-  const T m_inertia;
+  // The initial inertia.
+  const T m_inertiaInit;
+
+  // Whether to use adaptive step size and inertia.
+  const bool m_adaptive;
+
+  // Used when adaptive. Both numbers must be larger than one, and optimally not
+  // equal.
+  const T m_increase;
+  const T m_decrease;
+
+  // Some small number to avoid zeros.
+  const T m_epsilon;
 
   // The maximum number of stored steps. When we store this many, the worst (or
   // oldest) one will be replaced.
@@ -247,8 +261,14 @@ private:
   // The storage of the iteration indices of when steps were stored.
   std::vector<std::size_t> m_indices;
 
-  // The running mean update.
-  GridGPU<T> m_runningMean;
+  // The step to apply.
+  GridGPU<T> m_step;
+
+  // The step size per "field".
+  std::vector<T> m_stepSize;
+
+  // The inertia per "field".
+  std::vector<T> m_inertia;
 
   // The next order parameter and vector potential.
   GridGPU<T> m_next;
@@ -256,12 +276,15 @@ private:
 
 template <typename T>
 Optimizer<T>::Optimizer(const T inStepSize, const T inInertia,
-                        const std::size_t inRank, const bool inReplaceOldest,
-                        const bool inAndersonAlways, const T inMinMixing,
-                        const T inMaxMixing)
-    : m_stepSize(inStepSize), m_inertia(inInertia), m_rank(inRank),
-      m_replaceOldest(inReplaceOldest), m_andersonAlways(inAndersonAlways),
-      m_minMixing(inMinMixing), m_maxMixing(inMaxMixing), m_iterationIdx(0) {}
+                        const bool inAdaptive, const std::size_t inRank,
+                        const bool inReplaceOldest, const bool inAndersonAlways,
+                        const T inMinMixing, const T inMaxMixing)
+    : m_stepSizeInit(inStepSize), m_inertiaInit(inInertia),
+      m_adaptive(inAdaptive), m_rank(inRank), m_replaceOldest(inReplaceOldest),
+      m_andersonAlways(inAndersonAlways), m_minMixing(inMinMixing),
+      m_maxMixing(inMaxMixing), m_iterationIdx(0),
+      m_increase(std::cbrt(static_cast<T>(2))),
+      m_decrease(static_cast<T>(2.0 * M_PI)), m_epsilon(static_cast<T>(1e-6)) {}
 
 template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
@@ -269,8 +292,14 @@ template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   const int numFields = inX.numFields();
   const Type::type representation = inX.representation();
 
-  m_runningMean = GridGPU<T>(dimX, dimY, numFields, representation);
-  m_runningMean.setZero();
+  m_step = GridGPU<T>(dimX, dimY, numFields, representation);
+  m_step.setZero();
+
+  m_stepSize.resize(numFields);
+  std::fill(m_stepSize.begin(), m_stepSize.end(), m_stepSizeInit);
+
+  m_inertia.resize(numFields);
+  std::fill(m_inertia.begin(), m_inertia.end(), m_inertiaInit);
 
   m_next = GridGPU<T>(dimX, dimY, numFields, representation);
   m_next.setZero();
@@ -528,10 +557,11 @@ __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc,
 }
 
 template <typename T>
-__global__ void
-computeNext(const int inDimX, const int inDimY, const int inDimZ,
-            const T inStepSize, const T inInertia, const T *const inX,
-            const T *const inG, T *const inOutRunningMean, T *const outResult) {
+__global__ void computeNext(const int inDimX, const int inDimY,
+                            const int inDimZ, const T *const inStepSize,
+                            const T *const inInertia, const T *const inX,
+                            const T *const inGradient, T *const inOutStep,
+                            T *const outResult) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -543,20 +573,14 @@ computeNext(const int inDimX, const int inDimY, const int inDimZ,
     // Linear index.
     const int idx = inDimX * (z * inDimY + y) + x;
 
-    // Read the old value once.
-    const T X = inX[idx];
-
-    // The "gradient", i.e. the difference between the previous X and the
-    // proposed next X.
-    const T gradient = X - inG[idx];
-
-    // Update the running mean.
-    const T runningMean = inInertia * inOutRunningMean[idx] +
-                          (static_cast<T>(1) - inInertia) * gradient;
-    inOutRunningMean[idx] = runningMean;
+    // Update step.
+    const T inertia = inInertia[z];
+    const T step = inOutStep[idx] * inertia +
+                   inGradient[idx] * (static_cast<T>(1) - inertia);
+    inOutStep[idx] = step;
 
     // Compute the result.
-    outResult[idx] = X - inStepSize * runningMean;
+    outResult[idx] = inX[idx] - inStepSize[z] * step;
   }
 }
 } // namespace opt_internal
@@ -573,10 +597,55 @@ void Optimizer<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
   dim3 numThreadsPerBlock;
   inX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
-  // Take a step, and update the running mean.
+  // This is, of course, not truly the gradient. But when comparing with e.g.
+  // gradient descent, it takes the gradients place.
+  const GridGPU<T> gradient = inX - inG;
+
+  // TODO(niclas): The adaptive scheme is basically just an educated guess. It
+  // seems to work pretty well in practice, but the optimizer can end up in a
+  // weird state where the gradient is always perpendicular to the previous
+  // step, and the solution spirals towards the solution (which is not optimal).
+  if (m_adaptive) {
+    // Use for changing the step size and inertia.
+    const GridGPU<T> G2 = gradient * gradient;
+    const GridGPU<T> M2 = m_step * m_step;
+    const GridGPU<T> GM = gradient * m_step;
+
+    for (int i = 0; i < numFields; ++i) {
+      // Compute the cosine similarity between the gradient and the
+      // previous step.
+      const T gm = GM.sumField(i);
+      const T g2 = G2.sumField(i);
+      const T m2 = M2.sumField(i);
+      const T denom = g2 * m2;
+      const T similarity =
+          denom > static_cast<T>(0) ? gm / std::sqrt(denom) : static_cast<T>(0);
+
+      // Adjust the the step size. Increase step size if similar, otherwise
+      // decrease it.
+      const T factor = similarity > static_cast<T>(0)
+                           ? std::pow(m_increase, similarity)
+                           : std::pow(m_decrease, similarity);
+      m_stepSize[i] = std::max(m_stepSize[i] * factor, m_epsilon);
+
+      // Adjust the inertia. Lean towards the gradient if it is smaller than the
+      // previous step.
+      const T g = std::sqrt(g2);
+      const T m = std::sqrt(m2);
+      m_inertia[i] =
+          m > static_cast<T>(0) ? g / (g + m) : static_cast<T>(m_inertiaInit);
+    }
+  }
+
+  // Copy to the GPU.
+  const thrust::device_vector<T> stepSizeGPU(m_stepSize);
+  const thrust::device_vector<T> inertiaGPU(m_inertia);
+
+  // Take a step.
   opt_internal::computeNext<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, numFields, m_stepSize, m_inertia, inX.getDataPointer(),
-      inG.getDataPointer(), m_runningMean.getDataPointer(),
+      dimX, dimY, numFields, thrust::raw_pointer_cast(stepSizeGPU.data()),
+      thrust::raw_pointer_cast(inertiaGPU.data()), inX.getDataPointer(),
+      gradient.getDataPointer(), m_step.getDataPointer(),
       outNewX.getDataPointer());
 }
 
@@ -586,6 +655,8 @@ template <typename T> void Optimizer<T>::reset() {
   m_squaredResiduals.clear();
   m_indices.clear();
   m_iterationIdx = 0;
+  m_stepSize.clear();
+  m_inertia.clear();
 }
 
 template <typename T> T Optimizer<T>::sumGrid(const GridGPU<T> &inGrid) const {
