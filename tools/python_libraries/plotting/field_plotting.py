@@ -17,6 +17,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
+import pprint
 import sys
 
 # Custom libraries.
@@ -170,6 +171,11 @@ def plot_all(
     ):
         num_plot_columns -= 1
 
+    # Add extra columns for multi-component order parameters.
+    num_op_components = len(simulation_parameters["order_parameter"])
+    if plot_parameters["order_parameter"]["plot"]:
+        num_plot_columns += num_op_components - 1
+
     # Setup figure object.
     fig_width_scaling = 0.7 * num_plot_columns
     fig_height_scaling = 0.9 * num_plot_rows
@@ -184,100 +190,169 @@ def plot_all(
         dpi=PP.dpi,
     )
 
-    # Make axes iterable.
+    # Make axes iterable and unique.
     ax = {}
     cbar_ax = {}
+    for column_idx in range(0, num_plot_columns):
+        ax[column_idx] = {}
+        cbar_ax[column_idx] = {}
 
     # --------------------------------------------------
     # PLOT LOOP
     # --------------------------------------------------
     active_plots = []
-    # Loop over fields.
-    column_idx = 0
+    # Loop over fields (e.g. order-parameter, current density).
+    running_column_idx = 0
     for field_name in configuration.grid_field_types.keys():
         if plot_parameters[field_name]["plot"]:
             # Get the field type: vector-, scalar- or complex- field.
             field_type = configuration.grid_field_types[field_name]
-            ax[column_idx] = {}
-            cbar_ax[column_idx] = {}
 
-            # Loop over field_components.
-            row_idx = 0
-            for component_name in sorted(
-                configuration.grid_field_components[field_type]
-            ):
-                # Plot magnetic flux density in same column as order parameter.
-                if (
-                    field_name == "magnetic_flux_density"
-                    and plot_parameters["order_parameter"]["plot"]
+            # Deal with multi-component order parameters.
+            if field_name == "order_parameter":
+                num_multi_components = num_op_components
+            else:
+                num_multi_components = 1
+
+            # Loop over multi-component structure (e.g. Delta_1, Delta_2),
+            # which each can have field components (e.g. |Delta_1|, Chi_1,
+            # Delta_2, Chi_2, ...).
+            for multi_component_idx in range(0, num_multi_components):
+                # Reset row number: plot one field component per row.
+                row_idx = 0
+
+                # Loop over field_components (e.g. |j|, j_x and j_y for j).
+                for component_name in sorted(
+                    configuration.grid_field_components[field_type]
                 ):
-                    row_idx = 2
-                    column_idx = 0
+                    # Plot magnetic flux density in same column as order parameter.
+                    if (
+                        field_name == "magnetic_flux_density"
+                        and plot_parameters["order_parameter"]["plot"]
+                    ):
+                        row_idx = 2
+                        column_idx = 0
+                        running_column_idx -= 1
+                    else:
+                        column_idx = running_column_idx
 
-                # Set axes locations.
-                ax[column_idx][row_idx] = axes[row_idx][column_idx]
+                    # Introduce short-hand for data access.
+                    if num_multi_components > 1:
+                        data_field = data[field_name][component_name][
+                            multi_component_idx
+                        ]
+                    else:
+                        data_field = data[field_name][component_name]
 
-                # Add colorbar axis.
-                cbar_ax[column_idx][row_idx] = make_axes_locatable(
-                    ax[column_idx][row_idx]
-                ).append_axes("right", size="5%", pad=0.1)
+                    # Set axes locations.
+                    ax[column_idx][row_idx] = axes[row_idx][column_idx]
 
-                # Keep track of which plots are active to hide inactive subplots.
-                active_plots.append((row_idx, column_idx))
+                    # Add colorbar axis.
+                    cbar_ax[column_idx][row_idx] = make_axes_locatable(
+                        ax[column_idx][row_idx]
+                    ).append_axes("right", size="5%", pad=0.1)
 
-                # Normalize order parameter phase with pi.
-                if field_name == "order_parameter" and component_name == "phase":
-                    data[field_name][component_name] /= np.pi
+                    # Keep track of which plots are active to hide inactive subplots.
+                    active_plots.append((row_idx, column_idx))
 
-                # Fetch data: compute max/min values and data ranges.
-                max_value = np.nanmax(np.abs(data[field_name][component_name]))
-                if component_name == "magnitude" and field_type != "scalar":
-                    min_value = 0.0
-                    cbar_ticks = [min_value, max_value]
-                    cbar_tick_labels = [r"$0$", r"$%2.2f$" % max_value]
-                    cbar_label_pad = -20
-                else:
-                    min_value = -max_value
-                    cbar_ticks = [min_value, 0, max_value]
-                    cbar_tick_labels = [
-                        r"$%2.2f$" % min_value,
-                        r"$0$",
-                        r"$%2.2f$" % max_value,
-                    ]
-                    cbar_label_pad = -30
+                    # Normalize order parameter phase with pi.
+                    if field_name == "order_parameter" and component_name == "phase":
+                        data_field /= np.pi
 
-                # Compute extent: scale coordinates to coherence lengths.
-                y_num, x_num = np.shape(data[field_name][component_name])
-                x_min = 0
-                x_max = x_num / simulation_parameters["points_per_coherence_length"]
-                y_min = 0
-                y_max = y_num / simulation_parameters["points_per_coherence_length"]
-                extent = [x_min, x_max, y_min, y_max]
+                    # Fetch data: compute max/min values and data ranges.
+                    max_value = np.nanmax(np.abs(data_field))
+                    if component_name == "magnitude" and field_type != "scalar":
+                        min_value = 0.0
+                        cbar_ticks = [min_value, max_value]
+                        cbar_tick_labels = [r"$0$", r"$%2.2f$" % max_value]
+                        cbar_label_pad = -20
+                    else:
+                        min_value = -max_value
+                        cbar_ticks = [min_value, 0, max_value]
+                        cbar_tick_labels = [
+                            r"$%2.2f$" % min_value,
+                            r"$0$",
+                            r"$%2.2f$" % max_value,
+                        ]
+                        cbar_label_pad = -30
 
-                # Mask data points outside grain for quantities that are
-                # undefined there.
-                if field_name in ["order_parameter", "current_density", "superflow"]:
-                    data[field_name][component_name][geometry["mask"] == 0] = np.nan
+                    # Compute extent: scale coordinates to coherence lengths.
+                    y_num, x_num = np.shape(data_field)
+                    x_min = 0
+                    x_max = x_num / simulation_parameters["points_per_coherence_length"]
+                    y_min = 0
+                    y_max = y_num / simulation_parameters["points_per_coherence_length"]
+                    extent = [x_min, x_max, y_min, y_max]
 
-                # Draw 2D plot with imshow.
-                plot_2D_imshow(
-                    fig_in=fig,
-                    ax_in=ax[column_idx][row_idx],
-                    cbar_ax_in=cbar_ax[column_idx][row_idx],
-                    data_in=data[field_name][component_name],
-                    colormap_in=plot_parameters[field_name][component_name]["colormap"],
-                    max_value_in=max_value,
-                    min_value_in=min_value,
-                    extent_in=extent,
-                    cbar_ticks_in=cbar_ticks,
-                    cbar_tick_labels_in=cbar_tick_labels,
-                    cbar_label_in=plot_parameters[field_name][component_name][
-                        "colorbar_label"
-                    ],
-                    cbar_label_pad_in=cbar_label_pad,
-                )
-                row_idx += 1
-            column_idx += 1
+                    # Mask data points outside grain for quantities that are
+                    # undefined there.
+                    if field_name in [
+                        "order_parameter",
+                        "current_density",
+                        "superflow",
+                    ]:
+                        # NOTE! This int to float conversion might cause
+                        # issues, but it seems like it is currently not
+                        # possible to set integer arrays to NaN (NaN is a
+                        # special float value). Note that the color masking
+                        # occurs via matplotlib colormap.set_bad.
+                        data_field = data_field.astype(float)
+
+                        # Mask everything outside geometry with NaN.
+                        data_field[geometry["mask"] == 0] = np.nan
+
+                    # Add pairing symmetry name to colorbar label.
+                    if field_name == "order_parameter":
+                        # Fetch latex formatting for order-parameter pairing symmetry.
+                        # TODO(patric): fetch this from the column names instead, since
+                        # the following code breaks if the ordering differs between the
+                        # config file and the columns in the data file.
+                        pairing_symmetry = simulation_parameters["order_parameter"][
+                            multi_component_idx
+                        ]["symmetry"]
+                        pairing_symmetry_latex_format = (
+                            configuration.symmetry_latex_format[pairing_symmetry]
+                        )
+                        if component_name == "magnitude":
+                            colorbar_label = str(
+                                plot_parameters[field_name][component_name][
+                                    "colorbar_label"
+                                ]
+                            ).replace(
+                                "\Delta", "\Delta_{%s}" % pairing_symmetry_latex_format
+                            )
+                        else:
+                            colorbar_label = str(
+                                plot_parameters[field_name][component_name][
+                                    "colorbar_label"
+                                ]
+                            ).replace(
+                                "\chi", "\chi_{%s}" % pairing_symmetry_latex_format
+                            )
+                    else:
+                        colorbar_label = plot_parameters[field_name][component_name][
+                            "colorbar_label"
+                        ]
+
+                    # Draw 2D plot with imshow.
+                    plot_2D_imshow(
+                        fig_in=fig,
+                        ax_in=ax[column_idx][row_idx],
+                        cbar_ax_in=cbar_ax[column_idx][row_idx],
+                        data_in=data_field,
+                        colormap_in=plot_parameters[field_name][component_name][
+                            "colormap"
+                        ],
+                        max_value_in=max_value,
+                        min_value_in=min_value,
+                        extent_in=extent,
+                        cbar_ticks_in=cbar_ticks,
+                        cbar_tick_labels_in=cbar_tick_labels,
+                        cbar_label_in=colorbar_label,
+                        cbar_label_pad_in=cbar_label_pad,
+                    )
+                    row_idx += 1
+                running_column_idx += 1
 
     # Hide inactive subplots.
     for column_idx in range(0, num_plot_columns):
