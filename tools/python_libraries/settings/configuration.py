@@ -25,6 +25,12 @@ from typing import Optional, Union
 # -----------------------------------------------------------------------------
 # Valid order parameter symmetries.
 valid_symmetries = ["s", "dx2-y2", "dxy", "g"]
+symmetry_latex_format = {
+    "s": r"s",
+    "dx2-y2": r"d_{x^2-y^2}",
+    "dxy": r"d_{xy}",
+    "g": r"g",
+}
 
 # Filenames of output data.
 filenames = {
