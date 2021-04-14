@@ -1,8 +1,8 @@
 # SuprConGPU
 
-[Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
+[Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Pascal Stadler](https://gitlab.com/pascalsta), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
 
-SuprConGPU is open-source software for simulating the physics of superconducting and condensed-matter systems. The SuprConGPU library uses C++/CUDA for the numerical computations in the backend, and the packages Numpy, SCiPy, Matplotlib and Qt for the frontend. The goal of SuprConGPU is to ...(user-friendly, efficiency, systems/physics that can be covered) . SuprConGPU is largely based on the quasiclassical theory of superconductivity and ...(eilenberger, riccati, green functions) to ...(trajectories, boundary conditions, Anderson). SuprConGPU is avaiable to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms. This makes SuprConGPU an ideal tool to simulate superconductivity, both for research but also for educational purposes.
+SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs. The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL. A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via the GUI/CLI, without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
 
 
 ## Download
@@ -71,4 +71,4 @@ SuprConGPU development is supported by the Applied Quantum Physics Laboratory at
 
 
 ## Authors
-The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Oleksii Shevtsov. Previous developers are Mikael Håkansson. The project is supervised by Mikael Fogelström and Tomas Löfwander.
+The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
