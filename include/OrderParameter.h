@@ -31,7 +31,6 @@ public:
   OrderParameterComponent<T> *getOrderParameterComponent(int delta_idx) const;
   GridGPU<T> *getOrderParameterComponentField(int delta_idx) const;
 
-  GridGPU<T> *getOrderParameterField();
   // Perform rotation and return pointer
   GridGPU<T> *getOrderParameterFieldRotated(const int angleIdx);
   GridGPU<T> *getOrderParameterFieldRotated() const {
@@ -156,18 +155,6 @@ template <typename T>
 GridGPU<T> *
 OrderParameter<T>::getOrderParameterComponentField(int delta_idx) const {
   return getOrderParameterComponent(delta_idx)->getOrderParameterField();
-}
-
-template <typename T> GridGPU<T> *OrderParameter<T>::getOrderParameterField() {
-  // Add delta components together
-  _orderParameterCompound->setZero();
-
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
-    *_orderParameterCompound +=
-        (*(getOrderParameterComponent(i)->getOrderParameterField()));
-  }
-
-  return _orderParameterCompound;
 }
 
 template <typename T>

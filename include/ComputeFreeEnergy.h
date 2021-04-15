@@ -310,19 +310,29 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     nonMagneticSum +=
         static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
 
-    // TODO(niclas): This part is incorrect. The components should not be added
-    // together.
-    OrderParameter<T> *orderParameter = C::getOrderParameter();
-    GridGPU<T> deltaField(*(orderParameter->getOrderParameterField()));
-    C::getGeometry()->zeroValuesOutsideDomainRef(&deltaField);
+    // Add contribution from the order parameter.
+    const OrderParameter<T> *const orderParameter = C::getOrderParameter();
+    const int numOrderParameterComponents =
+        orderParameter->getNumOrderParameterComponents();
 
-    for (int fieldIdx = 0; fieldIdx < deltaField.numFields(); ++fieldIdx) {
-      const T relativeTc =
-          orderParameter->getOrderParameterComponent(fieldIdx)->getRelativeTc();
-      const T integrandFactor =
-          std::log(temperature / relativeTc) + sumInverseEnergy;
-      nonMagneticSum += deltaField[fieldIdx].complexMagnitudeSq().sumField() *
-                        integrandFactor;
+    for (int i = 0; i < numOrderParameterComponents; ++i) {
+      // Fetch a component.
+      const OrderParameterComponent<T> *const component =
+          orderParameter->getOrderParameterComponent(i);
+
+      // Compute the temperature dependent factor.
+      const T relativeTc = component->getRelativeTc();
+      const T factor = std::log(temperature / relativeTc) + sumInverseEnergy;
+
+      // Compute the squared absolute value.
+      GridGPU<T> componentSquared =
+          component->getOrderParameterField()->complexMagnitudeSq();
+
+      // Set to zero outside of the grain.
+      C::getGeometry()->zeroValuesOutsideDomainRef(&componentSquared);
+
+      // Add contribution from this order-parameter component.
+      nonMagneticSum += componentSquared.sumField() * factor;
     }
 
     // The Ginzburg-Landau parameter.

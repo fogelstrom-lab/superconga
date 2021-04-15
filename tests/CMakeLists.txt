@@ -26,6 +26,7 @@ set(SRC
     fermi_surface_test.cu
     fermi_surface_circle_test.cu
     fermi_surface_tight_binding_test.cu
+    free_energy_test.cu
     geometry_test.cu
     grid_data_sum_magnitude_test.cu
     grid_data_sum_square_test.cu
