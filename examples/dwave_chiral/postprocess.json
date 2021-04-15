@@ -1,0 +1,14 @@
+{
+	"convergence_criterion": 1e-4,
+	"data_path": "data/dwave_chiral/T0.500000",
+	"energy_max": 3.0,
+	"energy_min": 0.0,
+	"energy_smearing": 0.05,
+	"num_energies": 128,
+	"num_energies_per_block": 32,
+	"num_fermi_momenta": 720,
+	"num_iterations_max": 1000,
+	"num_iterations_min": 10,
+	"save_data": true,
+	"verbose": true
+}

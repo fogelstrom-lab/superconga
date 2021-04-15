@@ -4,6 +4,16 @@ A collection of parameter files, one per example, demonstrating different physic
 of superconductors that are computable through the SuprConGPU framework. 
 See [the documentation](https://suprcongpu.gitlab.io/suprcongpu/) for more information.
 
+## D-Wave Chiral
+
+A simulation of a [d_{xy} + id_{x^2 - y^2}]-wave superconductor, i.e. a chiral d-wave, in a disc-shaped grain.
+No external magnetic field is applied. The result is a chiral current around the grain boundary.
+
+Folder:
+```
+dwave_chiral
+```
+
 ## D-Wave Octagon
 
 A simulation of a d_{x^2 - y^2}-wave superconductor in an octagon grain, with half of the edges being
