@@ -125,19 +125,23 @@ void saveParametersWrapper(const Context<T> *const inContext,
       inContext->getComputeCurrent()->getResult()->sumMagnitude() /
       static_cast<T>(numGrainLatticeSites);
 
-  // Average vector-potential magnitude.
-  // TODO(niclas): Should this be computed outside of the grain?
+  // Get the vector potential. It is used both for the average vector potential,
+  // and average flux density.
   GridGPU<T> vectorPotential = *(inContext->getInducedVectorPotential());
-  inContext->getGeometry()->zeroValuesOutsideDomainRef(&vectorPotential);
-  resultsJSON["vector_potential_average_magnitude"] =
-      vectorPotential.sumMagnitude() / static_cast<T>(numGrainLatticeSites);
 
   // Average flux density.
   // TODO(niclas): Should this be computed outside of the grain?
   const T latticeElementSize = inContext->getParameters()->getGridElementSize();
+  GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&fluxDensity);
   resultsJSON["flux_density_average"] =
-      vectorPotential.curl(latticeElementSize).sumField() /
-      static_cast<T>(numGrainLatticeSites);
+      fluxDensity.sumField() / static_cast<T>(numGrainLatticeSites);
+
+  // Average vector-potential magnitude.
+  // TODO(niclas): Should this be computed outside of the grain?
+  inContext->getGeometry()->zeroValuesOutsideDomainRef(&vectorPotential);
+  resultsJSON["vector_potential_average_magnitude"] =
+      vectorPotential.sumMagnitude() / static_cast<T>(numGrainLatticeSites);
 
   // Save various results to JSON file.
   io::writeJSON(resultsJSON, fullPathResultsJSON, inVerbose);
