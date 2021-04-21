@@ -22,7 +22,7 @@ import sys
 
 # Custom libraries.
 sys.path.insert(0, "../../")
-from python_libraries.file_io import utils
+from python_libraries.physics import utils
 from python_libraries.plotting import colormaps_extra
 from python_libraries.plotting import plotting_parameters as PP
 from python_libraries.settings import configuration
@@ -238,9 +238,18 @@ def plot_all(
 
                     # Introduce short-hand for data access.
                     if num_multi_components > 1:
-                        data_field = data[field_name][component_name][
-                            multi_component_idx
-                        ]
+                        if (num_multi_components == 2) and plot_parameters["general"][
+                            "chiral_transform"
+                        ]:
+                            transformed_data_field = utils.chiral_transformation(
+                                data[field_name], multi_component_idx, component_name
+                            )
+
+                            data_field = transformed_data_field[component_name]
+                        else:
+                            data_field = data[field_name][component_name][
+                                multi_component_idx
+                            ]
                     else:
                         data_field = data[field_name][component_name]
 
@@ -313,6 +322,16 @@ def plot_all(
                         pairing_symmetry_latex_format = (
                             configuration.symmetry_latex_format[pairing_symmetry]
                         )
+
+                        # Replace OP label subscripts if using chiral transformation.
+                        if (num_multi_components == 2) and plot_parameters["general"][
+                            "chiral_transform"
+                        ]:
+                            if multi_component_idx == 0:
+                                pairing_symmetry_latex_format = r"+"
+                            else:
+                                pairing_symmetry_latex_format = r"-"
+
                         if component_name == "magnitude":
                             colorbar_label = str(
                                 plot_parameters[field_name][component_name][

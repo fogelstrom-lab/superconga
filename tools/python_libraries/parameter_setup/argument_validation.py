@@ -207,7 +207,11 @@ plotter_checks = {
     # General plotting parameters.
     "general": {
         "type": dict,
-        "fields": {"data_path": {"type": str}, "gui": {"type": bool, "optional": True}},
+        "fields": {
+            "data_path": {"type": str},
+            "gui": {"type": bool, "optional": True},
+            "chiral_transform": {"type": bool},
+        },
     },
     # Current density plotting parameters.
     "current_density": plotter_checks_vector_field,
