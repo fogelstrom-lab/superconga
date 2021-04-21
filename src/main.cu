@@ -118,14 +118,6 @@ int main(int argc, char *argv[]) {
   const T temperature = static_cast<T>(simParams["temperature"].asDouble());
   parameters->setTemperature(temperature);
 
-  // Set grain sidelength in coherence length.
-  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
-  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
-  // appropriately.
-  const T grainSideLength = scg::utils::toInternalLength(
-      static_cast<T>(simParams["grain_side_length"].asDouble()));
-  parameters->setGrainWidth(grainSideLength);
-
   // Set the number of lattice points per coherence length.
   // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
   // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
@@ -167,41 +159,30 @@ int main(int argc, char *argv[]) {
   // from the geometry group.
   scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
 
-  // Check if to set up a disc or polygon.
-  const int numVertices = simParams["geometry"]["num_outer_edges"].asInt();
-  const bool isDisc = numVertices < 0;
+  // Parse user-defined geometry. Compute factors to scale and translate
+  // geometry to internal coordinate system.
+  T scalingFactor;
+  T xOffset;
+  T yOffset;
+  scg::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
+                                         yOffset);
 
-  // Get the grain fraction, which is needed for scaling the geometry
-  // components.
-  const T grainFracton = parameters->getGrainFraction();
+  // Set grain sidelength in coherence length.
+  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
+  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
+  // appropriately.
+  const T geometrySideLengthInternal =
+      scg::utils::toInternalLength(scalingFactor);
+  parameters->setGrainWidth(geometrySideLengthInternal);
 
-  // Make the grain a disc or a square.
-  if (isDisc) {
-    geometry->add(new scg::DiscGeometry<T>(grainFracton), scg::Type::add);
-  } else {
-    geometry->add(new scg::PolygonGeometry<T>(grainFracton, numVertices),
-                  scg::Type::add);
-  }
+  // Fetch relative size of geometry to available simulation space, to account
+  // for padding for boundary interpolation.
+  const T grainFraction = parameters->getGrainFraction();
 
-  // Remove a portion to create a solenoid.
-  const T solenoidScale =
-      static_cast<T>(simParams["geometry"]["hole_scale"].asDouble());
-  const bool isSolenoid = solenoidScale > static_cast<T>(0);
-  if (isSolenoid) {
-    const int numSolenoidVertices =
-        simParams["geometry"]["num_inner_edges"].asInt();
-    const bool isDisc = numSolenoidVertices < 0;
-
-    // Circular or polygon hole.
-    if (isDisc) {
-      geometry->add(new scg::DiscGeometry<T>(grainFracton, solenoidScale),
-                    scg::Type::remove);
-    } else {
-      geometry->add(new scg::PolygonGeometry<T>(
-                        grainFracton, numSolenoidVertices, solenoidScale),
-                    scg::Type::remove);
-    }
-  }
+  // Parse user-defined geometry, loop through geometry component list and
+  // create compund geometry. Scale and translate to internal coordinate system.
+  scg::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
+                                        xOffset, yOffset, grainFraction);
 
   //***************************************************
   // SET UP ORDER PARAMETER

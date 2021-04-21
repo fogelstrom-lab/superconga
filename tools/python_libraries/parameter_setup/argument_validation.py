@@ -46,15 +46,29 @@ def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> 
     # Check that the value is larger than 'low'.
     if "low" in checks:
         low = checks["low"]
+        if not value > low:
+            print(f"--The field '{key}' must be larger than {low}.")
+            return False
+
+    # Check that the value is larger than, or equal to, 'low'.
+    if "low_include" in checks:
+        low = checks["low_include"]
         if not value >= low:
-            print(f"--The field '{key}' must be larger than or equal to {low}.")
+            print(f"--The field '{key}' must be larger than, or equal to, {low}.")
             return False
 
     # Check that the value is smaller than 'high'.
     if "high" in checks:
         high = checks["high"]
+        if not value < high:
+            print(f"--The field '{key}' must be smaller than {high}.")
+            return False
+
+    # Check that the value is smaller than, or equal to, 'high'.
+    if "high_include" in checks:
+        high = checks["high_include"]
         if not value <= high:
-            print(f"--The field '{key}' must be smaller than or equal to {high}.")
+            print(f"--The field '{key}' must be smaller than, or equal to, {high}.")
             return False
 
     # Check that the value is not in the excluded list.
@@ -119,31 +133,61 @@ runner_checks = {
     "data_path": {"type": str},
     "external_flux_quanta": {"type": float},
     "geometry": {
-        "type": dict,
-        "fields": {
-            "num_outer_edges": {"type": int, "excluded": [0, 1, 2]},
-            "num_inner_edges": {"type": int, "excluded": [0, 1, 2]},
-            "hole_scale": {"type": float},
+        "type": list,
+        "sub": {
+            "type": dict,
+            "fields": {
+                "disc": {
+                    "type": dict,
+                    "optional": True,
+                    "fields": {
+                        "add": {"type": bool},
+                        "diameter": {"type": float, "low": 0.0},
+                        "center_x": {"type": float},
+                        "center_y": {"type": float},
+                    },
+                },
+                "polygon": {
+                    "type": dict,
+                    "optional": True,
+                    "fields": {
+                        "add": {"type": bool},
+                        "vertices_x": {"type": list, "sub": {"type": float}},
+                        "vertices_y": {"type": list, "sub": {"type": float}},
+                    },
+                },
+                "regular_polygon": {
+                    "type": dict,
+                    "optional": True,
+                    "fields": {
+                        "add": {"type": bool},
+                        "bounding_disc_diameter": {"type": float, "low": 0.0},
+                        "center_x": {"type": float},
+                        "center_y": {"type": float},
+                        "num_edges": {"type": int, "excluded": [0, 1, 2]},
+                        "rotation": {"type": float},
+                    },
+                },
+            },
         },
     },
-    "grain_side_length": {"type": float, "low": 0.0},
     "gauge_solenoid": {"type": bool},
     "points_per_coherence_length": {"type": float, "low": 0.0},
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
-    "num_iterations_min": {"type": int, "low": 0},
+    "num_iterations_min": {"type": int, "low_include": 0},
     "num_ozaki_energies": {"type": int, "low": 0},
     "optimizer": {
         "type": dict,
         "fields": {
             "adaptive": {"type": bool},
             "anderson_always": {"type": bool},
-            "inertia": {"type": float},
+            "inertia": {"type": float, "low_include": 0.0},
             "max_mixing": {"type": float, "low": 0.0},
             "min_mixing": {"type": float, "low": 0.0},
             "rank": {"type": int, "low": 0},
             "replace_oldest": {"type": bool},
-            "step_size": {"type": float},
+            "step_size": {"type": float, "low": 0.0},
         },
     },
     "order_parameter": {
@@ -159,7 +203,7 @@ runner_checks = {
             },
         },
     },
-    "vector_potential_error": {"type": float},
+    "vector_potential_error": {"type": float, "low_include": 0.0},
     "penetration_depth": {"type": float},
     "save_data": {"type": bool},
     "save_data_interval": {"type": int},
@@ -171,14 +215,14 @@ runner_checks = {
 postprocess_checks = {
     "convergence_criterion": {"type": float, "low": 0.0},
     "data_path": {"type": str},
-    "energy_max": {"type": float, "low": 0.0},
-    "energy_min": {"type": float, "low": 0.0},
+    "energy_max": {"type": float, "low_include": 0.0},
+    "energy_min": {"type": float, "low_include": 0.0},
     "energy_smearing": {"type": float, "low": 0.0},
     "num_energies": {"type": int, "low": 0},
     "num_energies_per_block": {"type": int, "low": 0},
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
-    "num_iterations_min": {"type": int, "low": 0},
+    "num_iterations_min": {"type": int, "low_include": 0},
     "save_data": {"type": bool},
     "verbose": {"type": bool},
 }
@@ -251,6 +295,59 @@ def validate_runner_arguments(
     sim_params: dict,
 ) -> bool:
     success = True
+
+    # Check that geometry is not empty.
+    if len(sim_params["geometry"]) > 0:
+        # Loop over geometry components.
+        num_added_geometry_objects = 0
+        for geometry_component_dict in sim_params["geometry"]:
+            # Fetch type of geometry object (e.g. "disc" or "regular_polygon").
+            geometry_component = list(geometry_component_dict.keys())[0]
+
+            # There should only be one dict per geometry component.
+            if len(geometry_component_dict.keys()) != 1:
+                print(
+                    f"ERROR! Each geometry component should be a single dictionary. Found the following keys: '{list(geometry_component_dict.keys())}'."
+                )
+                success = False
+
+            # Count number of added objects, used later to verify that something was added.
+            if geometry_component_dict[geometry_component]["add"]:
+                num_added_geometry_objects += 1
+
+            # Special checks for polygons.
+            if geometry_component == "polygon":
+                # Check that polygon vertices have equal length.
+                num_x_vertices = len(
+                    geometry_component_dict[geometry_component]["vertices_x"]
+                )
+                num_y_vertices = len(
+                    geometry_component_dict[geometry_component]["vertices_y"]
+                )
+                if num_x_vertices != num_y_vertices:
+                    print(
+                        f"ERROR! The number of x- and y-vertex coordinates are not the same: {num_x_vertices} != {num_y_vertices}"
+                    )
+                    success = False
+
+                min_num_vertices = 3
+                if min(num_x_vertices, num_y_vertices) < min_num_vertices:
+                    print(
+                        f"ERROR! The minimum number of vertices is {min_num_vertices}."
+                    )
+                    success = False
+
+                # TODO(patric): Check that polygon does not have intersecting edges.
+
+        # Check that at least one geometry object is "added".
+        if num_added_geometry_objects == 0:
+            print(
+                f"ERROR! No geometry components with 'add=true' were found. Please make sure that at least one component is added to create a valid geometry."
+            )
+            success = False
+    else:
+        print("ERROR! Geometry list empty. Please add some geometry objects!")
+        success = False
 
     # Normalize critical temperature so that the maximum is one.
     Tc_max = 0
@@ -524,35 +621,31 @@ def validate_arguments(
         success = check_dict(arguments_dict, runner_checks)
 
         # Specific checks.
-        success &= validate_runner_arguments(arguments_dict)
+        if success:
+            success = validate_runner_arguments(arguments_dict)
     elif frontend == "postprocess":
         # General checks against dictionary.
         success = check_dict(arguments_dict, postprocess_checks)
 
         # Specific checks.
-        success &= validate_postprocess_arguments(arguments_dict)
+        if success:
+            success = validate_postprocess_arguments(arguments_dict)
     elif frontend == "plotter":
         # General checks against dictionary.
         success = check_dict(arguments_dict, plotter_checks)
 
         # Specific checks.
-        success &= validate_plotter_arguments(arguments_dict)
+        if success:
+            success = validate_plotter_arguments(arguments_dict)
     elif frontend == "ldos_plotter":
         # General checks against dictionary.
         success = check_dict(arguments_dict, ldos_plotter_checks)
 
         # Specific checks.
-        success &= validate_ldos_plotter_arguments(arguments_dict)
+        if success:
+            success = validate_ldos_plotter_arguments(arguments_dict)
     else:
         print(f"ERROR validate_arguments(): Unknown frontend: '{frontend}'.")
-        status_code = 1
-        sys.exit(status_code)
-
-    if not success:
-        print(
-            "ERROR encountered during user input validation [validate_arguments() of argument_validation.py]! Parameter validation failed; the run was aborted. Please see the above terminal output."
-        )
-        status_code = 1
-        sys.exit(status_code)
+        success = False
 
     return success
