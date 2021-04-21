@@ -3,6 +3,7 @@
 	"crystal_axes_rotation": 0.0,
 	"data_path": "data/dwave_phase_crystal",
 	"external_flux_quanta": 0.0,
+	"gauge_solenoid": true,
 	"geometry": [
 		{
 			"regular_polygon": {
