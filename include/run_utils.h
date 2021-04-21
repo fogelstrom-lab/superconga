@@ -13,6 +13,7 @@
 #define RUN_UTILS_H_
 
 #include "Context.h"
+#include "GeometryGroup.h"
 #include "Grid.h"
 #include "Parameters.h" // Parameters specifying which the superconducting system to simulate
 #include "Type.h" // Custom types (real, complex, ...)
@@ -51,6 +52,325 @@ bool guiUserSaveData = false;
 
 //===----------------------------- Functions -----------------------------===//
 
+/// \brief Calculate scaling and offset for user-provided geometry.
+///
+/// Parse geometry dictionary for a list of geometry components, provided e.g.
+/// via simulation parameters from user. Calculate the bounding box
+/// of the compound geometry, and the offset to the geometry center point. The
+/// bounding box is used to calculate the scaling factor to internal
+/// coordinates. Return scaling and offsets.
+///
+/// \param inSimulationParameters User-defined simulation parameters.
+/// \param outScalingFactor Scaling factor for geometry to internal coordinates.
+/// \param outOffsetX Distance to geometry center point along x.
+/// \param outOffsetY Distance to geometry center point along y.
+///
+/// \return void.
+template <typename T>
+void computeGeometryScaling(const Json::Value &inSimulationParameters,
+                            T &outScalingFactor, T &outOffsetX, T &outOffsetY) {
+  // Access geometry dictionary in simulation paramters.
+  const Json::Value geometryComponentVector =
+      inSimulationParameters["geometry"];
+
+  // Find out bounding box for compound geometry.
+  T xMax = static_cast<T>(0);
+  T xMin = static_cast<T>(0);
+  T yMax = static_cast<T>(0);
+  T yMin = static_cast<T>(0);
+  for (int i = 0; i < geometryComponentVector.size(); ++i) {
+    // Fetch geometry component type (e.g. disc).
+    const std::vector<std::string> geometryComponentNames =
+        geometryComponentVector[i].getMemberNames();
+    const std::string geometryComponentName = geometryComponentNames[0];
+
+    // Only consider components that are added (not removed).
+    if (!geometryComponentVector[i][geometryComponentName]["add"].asBool()) {
+      continue;
+    }
+
+    T xMaxComponent = static_cast<T>(0);
+    T xMinComponent = static_cast<T>(0);
+    T yMaxComponent = static_cast<T>(0);
+    T yMinComponent = static_cast<T>(0);
+
+    // Update maxima and minima of geometry extent.
+    if (geometryComponentName == "disc") {
+      //***************************************************
+      // DISC: GET EXTREMUM COORDINATES
+      //***************************************************
+      xMaxComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_x"]
+              .asDouble() +
+          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
+                    .asDouble());
+      xMinComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_x"]
+              .asDouble() -
+          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
+                    .asDouble());
+      yMaxComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_y"]
+              .asDouble() +
+          0.5 * geometryComponentVector[0][geometryComponentName]["diameter"]
+                    .asDouble());
+      yMinComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_y"]
+              .asDouble() -
+          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
+                    .asDouble());
+    } else if (geometryComponentName == "polygon") {
+      //***************************************************
+      // POLYGON: GET EXTREMUM COORDINATES
+      //***************************************************
+      // Loop over vertex coordinates.
+      const Json::Value xVerticesDict =
+          inSimulationParameters["geometry"][i][geometryComponentName]
+                                ["vertices_x"];
+      const Json::Value yVerticesDict =
+          inSimulationParameters["geometry"][i][geometryComponentName]
+                                ["vertices_y"];
+      // Check that the length is the same for the x and y vertices.
+      if (xVerticesDict.size() != yVerticesDict.size()) {
+        // Unknown geometry component. Print error and exit.
+        std::cout << "ERROR! Different number of x- and y-components given "
+                     "for polygon vertices: "
+                  << xVerticesDict.size() << " != " << yVerticesDict.size()
+                  << "." << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
+
+      std::vector<T> xVerticesVector;
+      std::vector<T> yVerticesVector;
+
+      for (int xIdx = 0; xIdx < xVerticesDict.size(); ++xIdx) {
+        xVerticesVector.push_back(
+            static_cast<T>(xVerticesDict[xIdx].asDouble()));
+        yVerticesVector.push_back(
+            static_cast<T>(yVerticesDict[xIdx].asDouble()));
+      }
+
+      xMaxComponent =
+          *std::max_element(xVerticesVector.begin(), xVerticesVector.end());
+      xMinComponent =
+          *std::min_element(xVerticesVector.begin(), xVerticesVector.end());
+      yMaxComponent =
+          *std::max_element(yVerticesVector.begin(), yVerticesVector.end());
+      yMinComponent =
+          *std::min_element(yVerticesVector.begin(), yVerticesVector.end());
+
+    } else if (geometryComponentName == "regular_polygon") {
+      //***************************************************
+      // REGULAR POLYGON: GET EXTREMUM COORDINATES
+      //***************************************************
+      xMaxComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_x"]
+              .asDouble() +
+          0.5 * geometryComponentVector[i][geometryComponentName]
+                                       ["bounding_disc_diameter"]
+                                           .asDouble());
+      xMinComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_x"]
+              .asDouble() -
+          0.5 * geometryComponentVector[i][geometryComponentName]
+                                       ["bounding_disc_diameter"]
+                                           .asDouble());
+      yMaxComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_y"]
+              .asDouble() +
+          0.5 * geometryComponentVector[i][geometryComponentName]
+                                       ["bounding_disc_diameter"]
+                                           .asDouble());
+      yMinComponent = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["center_y"]
+              .asDouble() -
+          0.5 * geometryComponentVector[i][geometryComponentName]
+                                       ["bounding_disc_diameter"]
+                                           .asDouble());
+    } else {
+      // Unknown geometry component. Print error and exit.
+      std::cout << "ERROR! Unknown geometry type: '"
+                << geometryComponentNames[0] << "'." << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+
+    // Update extremum points.
+    if ((i == 0) || (xMaxComponent > xMax)) {
+      xMax = xMaxComponent;
+    }
+    if ((i == 0) || (xMinComponent < xMin)) {
+      xMin = xMinComponent;
+    }
+    if ((i == 0) || (yMaxComponent > yMax)) {
+      yMax = yMaxComponent;
+    }
+    if ((i == 0) || (yMinComponent < yMin)) {
+      yMin = yMinComponent;
+    }
+  }
+
+  // Calculate extent for scaling to internal coordinate system.
+  const T xExtent = xMax - xMin;
+  const T yExtent = yMax - yMin;
+  // Calculate offset for translating to internal coordinate system.
+  outOffsetX = xMin + static_cast<T>(0.5) * xExtent;
+  outOffsetY = yMin + static_cast<T>(0.5) * yExtent;
+
+  // Calculate scaling factor for scaling to internal coordinate system.
+  // Consequently, this is the side length of the compound geometry - this is
+  // returned so that it can be used for the Parameter class instance.
+  outScalingFactor = std::max(xExtent, yExtent);
+}
+
+/// \brief Create geometry from list of geometry components.
+///
+/// Parse geometry dictionary for a list of geometry components, provided e.g.
+/// via simulation parameters from user. Start by calculating the bounding box
+/// of the compound geometry. Translate and scale the compound geometry to fit
+/// in internal geometry coordinate system. Loop through list and add/remove
+/// geometry objects as specified.
+///
+/// \param outGeometry Geometry container: instance of GeometryGroup class.
+/// \param inSimulationParameters User-defined simulation parameters.
+/// \param inScalingFactor Factor to scale geometry to internal coordinates.
+/// \param inOffsetX Distance along x to translate geometry to origin.
+/// \param inOffsetY Distance along y to translate geometry to origin.
+/// \param inGrainFraction Simulation space size, minus margin.
+///
+/// \return void.
+template <typename T>
+void addGeometryComponents(GeometryGroup<T> *outGeometry,
+                           const Json::Value &inSimulationParameters,
+                           const T inScalingFactor, const T inOffsetX,
+                           const T inOffsetY, const T inGrainFraction) {
+  // Access geometry dictionary in simulation paramters.
+  const Json::Value geometryComponentVector =
+      inSimulationParameters["geometry"];
+
+  // Loop over list of geometry components.
+  for (int i = 0; i < geometryComponentVector.size(); ++i) {
+    // Fetch geometry component type (e.g. disc).
+    const std::vector<std::string> geometryComponentNames =
+        geometryComponentVector[i].getMemberNames();
+    const std::string geometryComponentName = geometryComponentNames[0];
+
+    // Check whether component is to be added or removed.
+    const scg::Type::type addOrRemove =
+        (geometryComponentVector[i][geometryComponentName]["add"].asBool())
+            ? scg::Type::add
+            : scg::Type::remove;
+
+    // Add/remove the appropriate geometry component.
+    if (geometryComponentName == "disc") {
+      //***************************************************
+      // DISC: ADD/REMOVE
+      //***************************************************
+
+      // Translate and scale center coordinates.
+      const T xCenterTranslatedScaled =
+          (static_cast<T>(
+               geometryComponentVector[i]["disc"]["center_x"].asDouble()) -
+           inOffsetX) /
+          inScalingFactor;
+      const T yCenterTranslatedScaled =
+          (static_cast<T>(
+               geometryComponentVector[i]["disc"]["center_y"].asDouble()) -
+           inOffsetY) /
+          inScalingFactor;
+      // Disc diameter in internal coordinate system.
+      const T diameter =
+          static_cast<T>(
+              geometryComponentVector[i]["disc"]["diameter"].asDouble()) /
+          inScalingFactor;
+
+      // Add/remove disc.
+      outGeometry->add(new scg::DiscGeometry<T>(inGrainFraction, diameter,
+                                                xCenterTranslatedScaled,
+                                                yCenterTranslatedScaled),
+                       addOrRemove);
+    } else if (geometryComponentVector[i].isMember("polygon")) {
+      //***************************************************
+      // POLYGON: ADD/REMOVE
+      //***************************************************
+      // Check whether component is to be added or removed.
+
+      // Fetch vertices.
+      const int numVertices =
+          int(geometryComponentVector[i]["polygon"]["vertices_x"].size());
+
+      T xVertices[numVertices];
+      T yVertices[numVertices];
+
+      for (int vertex_idx = 0; vertex_idx < numVertices; ++vertex_idx) {
+        // Translate and scale polygon vertex coordinates.
+        xVertices[vertex_idx] =
+            (static_cast<T>(
+                 geometryComponentVector[i]["polygon"]["vertices_x"][vertex_idx]
+                     .asDouble()) -
+             inOffsetX) /
+            inScalingFactor;
+        yVertices[vertex_idx] =
+            (static_cast<T>(
+                 geometryComponentVector[i]["polygon"]["vertices_y"][vertex_idx]
+                     .asDouble()) -
+             inOffsetY) /
+            inScalingFactor;
+      }
+
+      // Add/remove polygon.
+      outGeometry->add(new scg::PolygonGeometry<T>(inGrainFraction, numVertices,
+                                                   xVertices, yVertices),
+                       addOrRemove);
+    } else if (geometryComponentVector[i].isMember("regular_polygon")) {
+      //***************************************************
+      // REGULAR POLYGON: ADD/REMOVE
+      //***************************************************
+      // Check whether component is to be added or removed.
+
+      // Translate and scale center coordinates.
+      const T xCenterTranslatedScaled =
+          (static_cast<T>(
+               geometryComponentVector[i]["regular_polygon"]["center_x"]
+                   .asDouble()) -
+           inOffsetX) /
+          inScalingFactor;
+      const T yCenterTranslatedScaled =
+          (static_cast<T>(
+               geometryComponentVector[i]["regular_polygon"]["center_y"]
+                   .asDouble()) -
+           inOffsetY) /
+          inScalingFactor;
+      // Diameter of the disc bounding the regular polygon, in internal
+      // coordinate system.
+      const T diameter =
+          static_cast<T>(geometryComponentVector[i]["regular_polygon"]
+                                                ["bounding_disc_diameter"]
+                                                    .asDouble()) /
+          inScalingFactor;
+
+      // Add/remove regular polygon.
+      outGeometry->add(
+          new scg::PolygonGeometry<T>(
+              inGrainFraction,
+              geometryComponentVector[i]["regular_polygon"]["num_edges"]
+                  .asInt(),
+              diameter,
+              static_cast<T>(
+                  geometryComponentVector[i]["regular_polygon"]["rotation"]
+                      .asDouble()),
+              xCenterTranslatedScaled, yCenterTranslatedScaled),
+          addOrRemove);
+    } else {
+      // Unknown geometry component. Print error and exit.
+      const std::vector<std::string> geometryComponentNames =
+          geometryComponentVector[i].getMemberNames();
+      std::cout << "ERROR! Unknown geometry type: '"
+                << geometryComponentNames[i][0] << "'." << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+  }
+}
+
 /// \brief Detect OpenGL key presses
 ///
 /// Detect keypresses in OpenGL instance - useful e.g. for changing
@@ -77,13 +397,13 @@ inline void myKeyboardFunc(const unsigned char inKey, const int inX,
 
 /// \brief Save config params, internal params, and results to JSON files.
 ///
-/// This function saves two json files: one for internal parameters, and one for
-/// scalar results. Motivation, there are some internal parameters that are not
-/// possible to infer without running the program (the exact number of lattice
-/// points inside the grain), these are very useful to have access to when
-/// post-processing (e.g. for doing area normalization). Finally, there are some
-/// scalar results (e.g. area-averaged quantities) that are more appropriate and
-/// convenient to have in json rather than csv.
+/// This function saves two json files: one for internal parameters, and one
+/// for scalar results. Motivation, there are some internal parameters that
+/// are not possible to infer without running the program (the exact number of
+/// lattice points inside the grain), these are very useful to have access to
+/// when post-processing (e.g. for doing area normalization). Finally, there
+/// are some scalar results (e.g. area-averaged quantities) that are more
+/// appropriate and convenient to have in json rather than csv.
 ///
 /// \param inContext - Context object for simulation.
 /// \param inDataPath - Directory where to put JSON files.
@@ -167,8 +487,8 @@ void saveParametersWrapper(const Context<T> *const inContext,
 /// \param inContext - Context object for simulation.
 /// \param inDataPath - Directory where to put file.
 /// \param inVerbose - Print success to terminal.
-/// \param inIterationDataSaveFormat - Enum specifying which format to save the
-/// per-iteration data in (see Type::fileFormat).
+/// \param inIterationDataSaveFormat - Enum specifying which format to save
+/// the per-iteration data in (see Type::fileFormat).
 ///
 /// \return - void
 template <typename T>
@@ -221,8 +541,8 @@ void saveGridData(const Context<T> *const inContext,
   GridGPU<T> &orderParameterSave =
       *(inContext->getComputeOrderParameter()->getResult());
 
-  // Set order parameter to zero outside simulation domain (non-zero values are
-  // used for interpolation).
+  // Set order parameter to zero outside simulation domain (non-zero values
+  // are used for interpolation).
   inContext->getGeometry()->zeroValuesOutsideDomainRef(&orderParameterSave);
 
   // Construct full file name for order-parameter file.
@@ -318,7 +638,8 @@ void saveGridData(const Context<T> *const inContext,
     }
   }
 
-  // TODO(niclas): Convert to (reduced) coherence length? I.e. multiply by 2pi.
+  // TODO(niclas): Convert to (reduced) coherence length? I.e. multiply by
+  // 2pi.
   const T latticeSpacing = parameters->getGridElementSize();
 
   // The magnetic flux-density is simply the curl of the vector potential.
@@ -362,8 +683,8 @@ void saveGridData(const Context<T> *const inContext,
 /// \param inDataPath - The path to data directory.
 /// \param inGridDataSaveFormat - Enum specifying which format to save the
 /// GridData in (see Type::fileFormat).
-/// \param inIterationDataSaveFormat - Enum specifying which format to save the
-/// per-iteration data in (see Type::fileFormat).
+/// \param inIterationDataSaveFormat - Enum specifying which format to save
+/// the per-iteration data in (see Type::fileFormat).
 ///
 /// \return - void
 template <typename T>

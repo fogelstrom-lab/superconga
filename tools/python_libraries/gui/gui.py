@@ -265,113 +265,6 @@ class ChooseFile(QPushButton):
             return None
 
 
-class Geometry(Serializable, QWidget, metaclass=QMeta):
-    def __init__(
-        self,
-        *,
-        jsonKey,
-        jsonGroup=None,
-        minValue=3,
-        errMsg="Invalid input!",
-        parent=None,
-    ):
-        super().__init__(parent)
-
-        self._jsonKey = jsonKey
-        self._jsonGroup = jsonGroup
-        self._minValue = minValue
-
-        # Dropdown to choose shape
-        self._shapeDropdown = QComboBox(parent)
-        self._shapeDropdown.setPlaceholderText("Choose grain shape")
-        self._shapeDropdown.addItem("Disc")
-        self._shapeDropdown.addItem("Polygon")
-        self._shapeDropdown.setFocusPolicy(Qt.TabFocus)
-        self._shapeDropdown.currentIndexChanged.connect(self.handle_shape_choice)
-
-        # Spin box to choose number of polygon edges
-        # Note: when "Disc" is chosen, number of edges is assumed to be -1
-        self._edgesSpinBox = QSpinBox(parent)
-        self._edgesSpinBox.setFocusPolicy(Qt.NoFocus)
-
-        if minValue is not None:
-            self._edgesSpinBox.setMinimum(minValue)
-
-        self._numEdgesWidget = QWidget(parent)
-        numEdgesLayout = QHBoxLayout(self._numEdgesWidget)
-        numEdgesLayout.addWidget(QLabel("Number of edges:"))
-        numEdgesLayout.addWidget(self._edgesSpinBox)
-
-        numEdgesLayout.setContentsMargins(5, 0, 0, 0)
-        self._numEdgesWidget.setVisible(False)
-
-        # Error message
-        self._errInfo = QLabel(parent)
-        self._errInfo.setText(errMsg)
-        self._errInfo.setStyleSheet("QLabel {color: %s;}" % colorErrMsg)
-        self._errInfo.setVisible(False)
-
-        # Layout
-        inputLayout = QHBoxLayout()
-        inputLayout.addWidget(self._shapeDropdown)
-        inputLayout.addWidget(self._numEdgesWidget)
-
-        layout = QVBoxLayout(self)
-        layout.addLayout(inputLayout)
-        layout.addWidget(self._errInfo)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-    @pyqtSlot(int)
-    def handle_shape_choice(self, index):
-        if index < 1:
-            self._numEdgesWidget.setVisible(False)
-            self._edgesSpinBox.setFocusPolicy(Qt.NoFocus)
-        else:
-            self._numEdgesWidget.setVisible(True)
-            self._edgesSpinBox.setFocusPolicy(Qt.StrongFocus)
-        self.validate_shape_choice(index)
-
-    def validate_shape_choice(self, index):
-        if index < 0:
-            self._errInfo.setVisible(True)
-        else:
-            self._errInfo.setVisible(False)
-
-    def validate(self):
-        self.validate_shape_choice(self._shapeDropdown.currentIndex())
-
-    @property
-    def jsonKey(self):
-        return self._jsonKey
-
-    @property
-    def jsonGroup(self):
-        return self._jsonGroup
-
-    def json(self):
-        if self._shapeDropdown.currentIndex() == 0:
-            value = -1
-        elif self._shapeDropdown.currentIndex() == 1:
-            value = self._edgesSpinBox.value()
-        else:
-            value = None
-
-        if value is not None:
-            return {self.jsonKey: value}
-        return None
-
-    def setValue(self, value):
-        valueInt = int(value)
-        if valueInt < 0:
-            self._shapeDropdown.setCurrentIndex(0)
-        elif valueInt >= self._minValue:
-            self._shapeDropdown.setCurrentIndex(1)
-            self._edgesSpinBox.setValue(valueInt)
-        else:
-            self._shapeDropdown.setCurrentIndex(-1)
-
-
 class InputDropdown(Serializable, QWidget, metaclass=QMeta):
     def __init__(
         self,
@@ -723,15 +616,6 @@ class runner_main_window(QMainWindow):
             self._crystal_axes_rotation,
         )
 
-        # Grain side length
-        self._grain_side_length = InputFloat(
-            jsonKey="grain_side_length", onlyPositive=True
-        )
-        self.register(self._grain_side_length)
-        physicsBoxLayout.addRow(
-            QLabel("Grain side length [\u03BE\u2080]"), self._grain_side_length
-        )
-
         # Solenoid gauge
         self._gauge_solenoid = CheckBox(jsonKey="gauge_solenoid")
         self.register(self._gauge_solenoid)
@@ -741,32 +625,6 @@ class runner_main_window(QMainWindow):
         self._order_parameter = OrderParameter(jsonKey="order_parameter")
         self.register(self._order_parameter)
         physicsBoxLayout.addRow(QLabel("Order parameter"), self._order_parameter)
-
-        # --------------------- #
-        # Geometry Parameters #
-        # --------------------- #
-        geometrybox = QGroupBox("Geometry Parameters")
-        geometryBoxLayout = QFormLayout(geometrybox)
-        geometryBoxLayout.setLabelAlignment(Qt.AlignLeft)
-
-        # Number of outer polygon edges
-        self._num_outer_edges = Geometry(
-            jsonKey="num_outer_edges", jsonGroup="geometry"
-        )
-        self.register(self._num_outer_edges)
-        geometryBoxLayout.addRow(QLabel("Outer edges"), self._num_outer_edges)
-
-        # Number of inner polygon edges
-        self._num_inner_edges = Geometry(
-            jsonKey="num_inner_edges", jsonGroup="geometry"
-        )
-        self.register(self._num_inner_edges)
-        geometryBoxLayout.addRow(QLabel("Inner edges"), self._num_inner_edges)
-
-        # Hole scale.
-        self._hole_scale = InputFloat(jsonKey="hole_scale", jsonGroup="geometry")
-        self.register(self._hole_scale)
-        geometryBoxLayout.addRow(QLabel("Hole scale"), self._hole_scale)
 
         # --------------------- #
         # Simulation Parameters #
@@ -807,7 +665,7 @@ class runner_main_window(QMainWindow):
         )
 
         # Min number of iterations
-        self._num_iterations_min = InputInt(jsonKey="num_iterations_min", minValue=1)
+        self._num_iterations_min = InputInt(jsonKey="num_iterations_min", minValue=0)
         self.register(self._num_iterations_min)
         simulationBoxLayout.addRow(
             QLabel("Min number of self-consistent iterations"), self._num_iterations_min
@@ -839,7 +697,9 @@ class runner_main_window(QMainWindow):
         # Use adaptive step size.
         self._adaptive = CheckBox(jsonKey="adaptive", jsonGroup="optimizer")
         self.register(self._adaptive)
-        optimizerBoxLayout.addRow(QLabel("Adaptive step size and inertia"), self._adaptive)
+        optimizerBoxLayout.addRow(
+            QLabel("Adaptive step size and inertia"), self._adaptive
+        )
 
         # Use Anderson all the time.
         self._anderson_always = CheckBox(
@@ -967,7 +827,6 @@ class runner_main_window(QMainWindow):
         # Main widget layout
         layout = QVBoxLayout(mainWidget)
         layout.addWidget(physicsBox)
-        layout.addWidget(geometrybox)
         layout.addWidget(simulationBox)
         layout.addWidget(optimizerBox)
         layout.addWidget(miscBox)

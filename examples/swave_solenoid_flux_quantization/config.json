@@ -4,12 +4,28 @@
 	"data_path": "data/swave_solenoid_flux_quantization",
 	"external_flux_quanta": 6.0,
 	"gauge_solenoid": true,
-	"geometry": {
-		"hole_scale": 0.2,
-		"num_inner_edges": 4,
-		"num_outer_edges": 4
-	},
-	"grain_side_length": 30.0,
+	"geometry": [
+		{
+			"regular_polygon": {
+				"add": true,
+				"bounding_disc_diameter": 30.0,
+				"center_x": 0.0,
+				"center_y": 0.0,
+				"num_edges": 4,
+				"rotation": 0.0
+			}
+		},
+		{
+			"regular_polygon": {
+				"add": false,
+				"bounding_disc_diameter": 6.0,
+				"center_x": 0.0,
+				"center_y": 0.0,
+				"num_edges": 4,
+				"rotation": 0.0
+			}
+		}
+	],
 	"num_fermi_momenta": 55,
 	"num_iterations_max": 1000,
 	"num_iterations_min": 20,

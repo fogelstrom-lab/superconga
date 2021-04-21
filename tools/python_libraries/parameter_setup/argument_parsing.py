@@ -174,15 +174,6 @@ def add_runner_arguments(parser) -> None:
         help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
     )
 
-    # Grain side length.
-    parser.add_argument(
-        "-s",
-        "--grain-side-length",
-        type=float,
-        default=None,
-        help="Side length of grain in units of coherence lengths (hbar*<v_F>)/(2*pi*k_B*T_c).",
-    )
-
     # Penetration depth.
     parser.add_argument(
         "-k",
@@ -199,28 +190,6 @@ def add_runner_arguments(parser) -> None:
         type=float,
         default=None,
         help="Rotation between grain and crystal ab-axes, in units of 2pi.",
-    )
-
-    # Geometry.
-    parser.add_argument(
-        "-Z",
-        "--num-outer-edges",
-        type=int,
-        default=None,
-        help="Number edges of the grain polygon. Negative values yield a circle.",
-    )
-    parser.add_argument(
-        "-z",
-        "--num-inner-edges",
-        type=int,
-        default=None,
-        help="Number edges of the hole polygon. Negative values yield a circle.",
-    )
-    parser.add_argument(
-        "--hole-scale",
-        type=float,
-        default=None,
-        help="The scale of the hole. Negative values yield no hole.",
     )
 
     # =============== ACCURACY =============== #
@@ -825,13 +794,6 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "data_path", args.data_path)
     set_value(sim_params, "external_flux_quanta", args.external_flux_quanta)
 
-    # Geometry.
-    group = "geometry"
-    set_value(sim_params, "num_outer_edges", args.num_outer_edges, group)
-    set_value(sim_params, "num_inner_edges", args.num_inner_edges, group)
-    set_value(sim_params, "hole_scale", args.hole_scale, group)
-
-    set_value(sim_params, "grain_side_length", args.grain_side_length)
     set_flag(sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial)
     set_value(
         sim_params, "points_per_coherence_length", args.points_per_coherence_length
