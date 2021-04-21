@@ -1,7 +1,8 @@
 {
     "general": {
         "data_path": "data",
-        "gui": false
+        "gui": false,
+        "chiral_transform": false
     },
     "current_density": {
         "magnitude": {

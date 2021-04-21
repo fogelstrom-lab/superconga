@@ -572,6 +572,19 @@ def add_plotter_arguments(parser) -> None:
         help="Path to JSON file with parameters specifying the plot settings.",
     )
 
+    # Use chiral transformation when plotting a two-component superconductor.
+    group_chiral_transform = parser.add_mutually_exclusive_group()
+    group_chiral_transform.add_argument(
+        "--chiral-transform",
+        action="store_true",
+        help="Use chiral transformation when plotting a two-component superconductor.",
+    )
+    group_chiral_transform.add_argument(
+        "--no-chiral-transform",
+        action="store_true",
+        help="Do not use chiral transformation when plotting a two-component superconductor.",
+    )
+
     # Plot order parameter.
     parser.add_argument(
         "--plot-order-parameter",
@@ -909,6 +922,13 @@ def set_plotter_arguments_from_cli(
     group = "general"
     set_value(plot_params, "data_path", args.data_path, group)
     set_value(plot_params, "gui", args.gui, group)
+    set_flag(
+        plot_params,
+        "chiral_transform",
+        args.chiral_transform,
+        args.no_chiral_transform,
+        group,
+    )
 
     # Control which fields to plot. All components can be turned on (not off)
     # with the base parameter, e.g. 'plot-current' plots all current
