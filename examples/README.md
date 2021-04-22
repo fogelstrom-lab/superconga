@@ -27,9 +27,9 @@ dwave_octagon
 
 ## D-Wave Phase Crystal
 
-A simulation of a d_{xy}-wave superconductor in a square grain, with all edges being
-maximally pair-breaking. The temperature is low, inducing a crystallization of the
-phase, eliciting spontaneous current loops and magnetic fields.
+A simulation of a d_{x^2 - y^2}-wave superconductor in a diamond shaped grain, with a single pair-breaking edge.
+The temperature is low, inducing a crystallization of the phase, eliciting spontaneous current loops and magnetic fields.
+Raising the temperature to e.g. T = 0.2 T_c destroys the phase crystal.
 
 Folder:
 ```
@@ -88,9 +88,9 @@ quanta, inducing an Abrikosov vortex lattice. The lattice illustrates several mi
 effects, including 1. the vortex shell effect where the vortices enter in concentric shells
 rather than one-by-one, and 2. the lattice shape effect where the lattice mimics the
 rotational symmetry of the grain (and the OP pairing symmetry if asymmetric).
+Note that the result is sensitive to the initial guess of the order parameter.
 
 Folders:
 ```
-swave_abrikosov_mesoscopic_vortex_lattice
-swave_abrikosov_square_vortex_lattice
+swave_abrikosov_vortex_lattice
 ```

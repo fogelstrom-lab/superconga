@@ -1,5 +1,5 @@
 {
-	"convergence_criterion": 1e-06,
+	"convergence_criterion": 1e-05,
 	"crystal_axes_rotation": 0.0,
 	"data_path": "data/dwave_chiral",
 	"external_flux_quanta": 0.0,
@@ -8,16 +8,16 @@
 		{
 			"disc": {
 				"add": true,
-				"diameter": 30.0,
+				"diameter": 25.0,
 				"center_x": 0.0,
 				"center_y": 0.0
 			}
 		}
 	],
-	"num_fermi_momenta": 60,
+	"num_fermi_momenta": 32,
 	"num_iterations_max": 1000,
 	"num_iterations_min": 0,
-	"num_ozaki_energies": 10,
+	"num_ozaki_energies": 8,
 	"optimizer": {
 		"adaptive": true,
 		"anderson_always": true,
@@ -46,7 +46,7 @@
 	],
 	"order_parameter_path": "",
 	"penetration_depth": -1.0,
-	"points_per_coherence_length": 6.0,
+	"points_per_coherence_length": 8.0,
 	"save_data": false,
 	"save_data_interval": 0,
 	"temperature": 0.5,
