@@ -29,15 +29,16 @@ public:
   /// one.
   /// \param inNumVertices The numer of vertices of the polygon, e.g. 4 will
   /// produce a square.
-  /// \param inDiameter The diameter of the bounding circle. It will be scaled
-  /// by the grain fraction.
+  /// \param inSideLength The side length of the polygon. It will be scaled
+  /// by the grain fraction. If it is negative the polygon vertices will be
+  /// places on the largest possible bounding circle.
   /// \param inAngle The rotation of the polygon.
   /// \param inCenterX The x-coordinate of the circle center. It will be scaled
   /// by the grain fraction.
   /// \param inCenterY The y-coordiante of the circle center. It will be scaled
   /// by the grain fraction.
   PolygonGeometry(const T inGrainFraction, const int inNumVertices,
-                  const T inDiameter = static_cast<T>(1.0),
+                  const T inSideLength = static_cast<T>(-1.0),
                   const T inAngle = static_cast<T>(0.0),
                   const T inCenterX = static_cast<T>(0.0),
                   const T inCenterY = static_cast<T>(0.0));
@@ -245,25 +246,32 @@ PolygonGeometry<T>::PolygonGeometry(const PolygonGeometry<T> &other)
     m_polygon = new Polygon<T>(*other.m_polygon);
 }
 
-// Create an n-gon, where the vertices are put equidistantly on a circle. Note
-// that the diameter is the diameter of this circle, not the side-length of the
-// n-gon. A square (4-gon) will hence have a side-length that is a factor
-// sqrt(2) smaller than inDiameter.
+// Create an n-gon, where the vertices are put equidistantly on a circle.
 template <typename T>
 PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
-                                    const int inNumVertices, const T inDiameter,
-                                    const T inAngle, const T inCenterX,
-                                    const T inCenterY)
+                                    const int inNumVertices,
+                                    const T inSideLength, const T inAngle,
+                                    const T inCenterX, const T inCenterY)
     : GeometryComponent<T>() {
-  // Calculate radius from diameter and apply margin/scaling.
-  const T polygonRadiusPadded =
-      static_cast<T>(0.5) * inDiameter * inGrainFraction;
+  // Calculate radius from the side length.
+  const T angleStep =
+      static_cast<T>(2.0 * M_PI) / static_cast<T>(inNumVertices);
+  const T radiusFromSideLength =
+      inSideLength /
+      std::hypot(std::cos(angleStep) - static_cast<T>(1), std::sin(angleStep));
 
-  // Apply scaling and margin to center coordinates.
+  // Set the radius. If it is negative, use default value.
+  const bool useDefaultRadius = inSideLength < static_cast<T>(0);
+  const T radius = useDefaultRadius
+                       ? static_cast<T>(constants::MAXIMUM_COORDINATE)
+                       : radiusFromSideLength;
+
+  // Apply scaling and margin..
+  const T radiusPadded = radius * inGrainFraction;
   const T centerPaddedX = inCenterX * inGrainFraction;
   const T centerPaddedY = inCenterY * inGrainFraction;
 
-  m_polygon = new Polygon<T>(inNumVertices, polygonRadiusPadded, inAngle,
+  m_polygon = new Polygon<T>(inNumVertices, radiusPadded, inAngle,
                              centerPaddedX, centerPaddedY);
 }
 

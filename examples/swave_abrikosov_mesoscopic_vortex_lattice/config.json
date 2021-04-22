@@ -8,7 +8,7 @@
 		{
 			"regular_polygon": {
 				"add": true,
-				"bounding_disc_diameter": 40.0,
+				"side_length": 30.0,
 				"center_x": 0.0,
 				"center_y": 0.0,
 				"num_edges": 4,

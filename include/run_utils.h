@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iomanip>
 #include <json/json.h>
+#include <limits>
 #include <memory>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -74,10 +75,10 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       inSimulationParameters["geometry"];
 
   // Find out bounding box for compound geometry.
-  T xMax = static_cast<T>(0);
-  T xMin = static_cast<T>(0);
-  T yMax = static_cast<T>(0);
-  T yMin = static_cast<T>(0);
+  T xMax = std::numeric_limits<T>::min();
+  T xMin = std::numeric_limits<T>::max();
+  T yMax = std::numeric_limits<T>::min();
+  T yMin = std::numeric_limits<T>::max();
   for (int i = 0; i < geometryComponentVector.size(); ++i) {
     // Fetch geometry component type (e.g. disc).
     const std::vector<std::string> geometryComponentNames =
@@ -89,36 +90,25 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       continue;
     }
 
-    T xMaxComponent = static_cast<T>(0);
-    T xMinComponent = static_cast<T>(0);
-    T yMaxComponent = static_cast<T>(0);
-    T yMinComponent = static_cast<T>(0);
-
     // Update maxima and minima of geometry extent.
     if (geometryComponentName == "disc") {
       //***************************************************
       // DISC: GET EXTREMUM COORDINATES
       //***************************************************
-      xMaxComponent = static_cast<T>(
+      const T radius = static_cast<T>(
+          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
+                    .asDouble());
+      const T centerX = static_cast<T>(
           geometryComponentVector[i][geometryComponentName]["center_x"]
-              .asDouble() +
-          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
-                    .asDouble());
-      xMinComponent = static_cast<T>(
-          geometryComponentVector[i][geometryComponentName]["center_x"]
-              .asDouble() -
-          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
-                    .asDouble());
-      yMaxComponent = static_cast<T>(
+              .asDouble());
+      const T centerY = static_cast<T>(
           geometryComponentVector[i][geometryComponentName]["center_y"]
-              .asDouble() +
-          0.5 * geometryComponentVector[0][geometryComponentName]["diameter"]
-                    .asDouble());
-      yMinComponent = static_cast<T>(
-          geometryComponentVector[i][geometryComponentName]["center_y"]
-              .asDouble() -
-          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
-                    .asDouble());
+              .asDouble());
+
+      xMax = std::max(xMax, centerX + radius);
+      xMin = std::min(xMin, centerX - radius);
+      yMax = std::max(yMax, centerY + radius);
+      yMin = std::min(yMin, centerY - radius);
     } else if (geometryComponentName == "polygon") {
       //***************************************************
       // POLYGON: GET EXTREMUM COORDINATES
@@ -130,82 +120,69 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       const Json::Value yVerticesDict =
           inSimulationParameters["geometry"][i][geometryComponentName]
                                 ["vertices_y"];
+
       // Check that the length is the same for the x and y vertices.
       if (xVerticesDict.size() != yVerticesDict.size()) {
         // Unknown geometry component. Print error and exit.
-        std::cout << "ERROR! Different number of x- and y-components given "
+        std::cerr << "ERROR! Different number of x- and y-components given "
                      "for polygon vertices: "
                   << xVerticesDict.size() << " != " << yVerticesDict.size()
                   << "." << std::endl;
         std::exit(EXIT_FAILURE);
       }
 
-      std::vector<T> xVerticesVector;
-      std::vector<T> yVerticesVector;
+      // Note, having n as std::size_t causes a bug in JsonCpp...
+      for (int n = 0; n < xVerticesDict.size(); ++n) {
+        const T x = static_cast<T>(xVerticesDict[n].asDouble());
+        const T y = static_cast<T>(yVerticesDict[n].asDouble());
 
-      for (int xIdx = 0; xIdx < xVerticesDict.size(); ++xIdx) {
-        xVerticesVector.push_back(
-            static_cast<T>(xVerticesDict[xIdx].asDouble()));
-        yVerticesVector.push_back(
-            static_cast<T>(yVerticesDict[xIdx].asDouble()));
+        xMax = std::max(xMax, x);
+        xMin = std::min(xMin, x);
+        yMax = std::max(yMax, y);
+        yMin = std::min(yMin, y);
       }
-
-      xMaxComponent =
-          *std::max_element(xVerticesVector.begin(), xVerticesVector.end());
-      xMinComponent =
-          *std::min_element(xVerticesVector.begin(), xVerticesVector.end());
-      yMaxComponent =
-          *std::max_element(yVerticesVector.begin(), yVerticesVector.end());
-      yMinComponent =
-          *std::min_element(yVerticesVector.begin(), yVerticesVector.end());
-
     } else if (geometryComponentName == "regular_polygon") {
       //***************************************************
       // REGULAR POLYGON: GET EXTREMUM COORDINATES
       //***************************************************
-      xMaxComponent = static_cast<T>(
+      const T sideLength = static_cast<T>(
+          geometryComponentVector[i][geometryComponentName]["side_length"]
+              .asDouble());
+      const T centerX = static_cast<T>(
           geometryComponentVector[i][geometryComponentName]["center_x"]
-              .asDouble() +
-          0.5 * geometryComponentVector[i][geometryComponentName]
-                                       ["bounding_disc_diameter"]
-                                           .asDouble());
-      xMinComponent = static_cast<T>(
-          geometryComponentVector[i][geometryComponentName]["center_x"]
-              .asDouble() -
-          0.5 * geometryComponentVector[i][geometryComponentName]
-                                       ["bounding_disc_diameter"]
-                                           .asDouble());
-      yMaxComponent = static_cast<T>(
+              .asDouble());
+      const T centerY = static_cast<T>(
           geometryComponentVector[i][geometryComponentName]["center_y"]
-              .asDouble() +
-          0.5 * geometryComponentVector[i][geometryComponentName]
-                                       ["bounding_disc_diameter"]
-                                           .asDouble());
-      yMinComponent = static_cast<T>(
-          geometryComponentVector[i][geometryComponentName]["center_y"]
-              .asDouble() -
-          0.5 * geometryComponentVector[i][geometryComponentName]
-                                       ["bounding_disc_diameter"]
-                                           .asDouble());
+              .asDouble());
+      const T rotation = static_cast<T>(
+          2.0 * M_PI *
+          geometryComponentVector[i][geometryComponentName]["rotation"]
+              .asDouble());
+      const T numEdges =
+          geometryComponentVector[i][geometryComponentName]["num_edges"]
+              .asInt();
+
+      const T angleStep = static_cast<T>(2.0 * M_PI) / static_cast<T>(numEdges);
+      const T radius =
+          sideLength / std::hypot(std::cos(angleStep) - static_cast<T>(1),
+                                  std::sin(angleStep));
+      const T angleOffset = static_cast<T>(0.5) * angleStep + rotation;
+
+      for (int n = 0; n < numEdges; ++n) {
+        const T angle = angleOffset + angleStep * static_cast<T>(n);
+        const T x = centerX + radius * std::cos(angle);
+        const T y = centerY + radius * std::sin(angle);
+
+        xMax = std::max(xMax, x);
+        xMin = std::min(xMin, x);
+        yMax = std::max(yMax, y);
+        yMin = std::min(yMin, y);
+      }
     } else {
       // Unknown geometry component. Print error and exit.
-      std::cout << "ERROR! Unknown geometry type: '"
-                << geometryComponentNames[0] << "'." << std::endl;
+      std::cout << "ERROR! Unknown geometry type: '" << geometryComponentName
+                << "'." << std::endl;
       std::exit(EXIT_FAILURE);
-    }
-
-    // Update extremum points.
-    if ((i == 0) || (xMaxComponent > xMax)) {
-      xMax = xMaxComponent;
-    }
-    if ((i == 0) || (xMinComponent < xMin)) {
-      xMin = xMinComponent;
-    }
-    if ((i == 0) || (yMaxComponent > yMax)) {
-      yMax = yMaxComponent;
-    }
-    if ((i == 0) || (yMinComponent < yMin)) {
-      yMin = yMinComponent;
     }
   }
 
@@ -340,26 +317,25 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
                    .asDouble()) -
            inOffsetY) /
           inScalingFactor;
-      // Diameter of the disc bounding the regular polygon, in internal
-      // coordinate system.
-      const T diameter =
-          static_cast<T>(geometryComponentVector[i]["regular_polygon"]
-                                                ["bounding_disc_diameter"]
-                                                    .asDouble()) /
+      // Side length of the regular polygon, in internal coordinate system.
+      const T sideLength =
+          static_cast<T>(
+              geometryComponentVector[i]["regular_polygon"]["side_length"]
+                  .asDouble()) /
           inScalingFactor;
 
+      const int numEdges =
+          geometryComponentVector[i]["regular_polygon"]["num_edges"].asInt();
+
+      const T rotation = static_cast<T>(
+          2.0 * M_PI *
+          geometryComponentVector[i]["regular_polygon"]["rotation"].asDouble());
+
       // Add/remove regular polygon.
-      outGeometry->add(
-          new scg::PolygonGeometry<T>(
-              inGrainFraction,
-              geometryComponentVector[i]["regular_polygon"]["num_edges"]
-                  .asInt(),
-              diameter,
-              static_cast<T>(
-                  geometryComponentVector[i]["regular_polygon"]["rotation"]
-                      .asDouble()),
-              xCenterTranslatedScaled, yCenterTranslatedScaled),
-          addOrRemove);
+      outGeometry->add(new scg::PolygonGeometry<T>(
+                           inGrainFraction, numEdges, sideLength, rotation,
+                           xCenterTranslatedScaled, yCenterTranslatedScaled),
+                       addOrRemove);
     } else {
       // Unknown geometry component. Print error and exit.
       const std::vector<std::string> geometryComponentNames =
