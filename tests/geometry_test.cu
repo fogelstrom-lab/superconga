@@ -152,9 +152,10 @@ template <typename T> void testArea(const bool inIsDisc) {
   } else {
     // Add a square.
     const int numVerticesSquare = 4;
-    geometryGroup->add(
-        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare),
-        scg::Type::add);
+    const T sideLength = grainWidth;
+    geometryGroup->add(new scg::PolygonGeometry<T>(
+                           grainFracton, numVerticesSquare, sideLength),
+                       scg::Type::add);
   }
 
   // Initialize the geometry group, i.e. compute domain labels.
@@ -165,12 +166,10 @@ template <typename T> void testArea(const bool inIsDisc) {
 
   // =================== ASSERT ==================== //
   const T grainArea = grainWidth * grainWidth;
-  // Note, the factor half for the square is due to the square vertices being on
-  // a bounding circle with unit diameter.
-  const T expectedArea = grainArea * (inIsDisc ? static_cast<T>(0.25 * M_PI)
-                                               : static_cast<T>(0.5));
-  // TODO(niclas): What accuracy do we expect the area to have?
-  const T tolerance = static_cast<T>(1e-2);
+  const T expectedArea =
+      grainArea * (inIsDisc ? static_cast<T>(0.25 * M_PI) : static_cast<T>(1));
+  // The half the ratio, circumference / area, for a square.
+  const T tolerance = static_cast<T>(2) / pointsPerCoherenceLength;
   CHECK(expectedArea == doctest::Approx(area).epsilon(tolerance));
 }
 } // namespace helper

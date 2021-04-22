@@ -161,7 +161,7 @@ runner_checks = {
                     "optional": True,
                     "fields": {
                         "add": {"type": bool},
-                        "bounding_disc_diameter": {"type": float, "low": 0.0},
+                        "side_length": {"type": float, "low": 0.0},
                         "center_x": {"type": float},
                         "center_y": {"type": float},
                         "num_edges": {"type": int, "excluded": [0, 1, 2]},
