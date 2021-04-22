@@ -17,22 +17,26 @@ template <typename T> void testGridResolution() {
       parameters.setPointsPerCoherenceLength(
           static_cast<T>(pointsPerCoherenceLength));
 
-      // =================== ASSERT ==================== //
-      const int gridResolution = parameters.getGridResolutionBase();
-      const int tmp = static_cast<int>(
-          std::ceil(std::sqrt(2.0) * static_cast<double>(gridResolution)));
-      const int expectedGridResolutionRotated =
-          (tmp - gridResolution) % 2 == 0 ? tmp : tmp + 1;
-
       // Note, gridResolutionCoherence and gridResolutionDeltaRotated are
       // completely redundant and return the same value.
       const int testGridResolutionCoherence =
           parameters.getGridResolutionCoherence();
       const int testGridResolutionDeltaRotated =
           parameters.getGridResolutionDeltaRotated();
+      const T testGridElementSize = parameters.getGridElementSize();
+
+      // =================== ASSERT ==================== //
+      const int gridResolution = parameters.getGridResolutionBase();
+      const int tmp = static_cast<int>(
+          std::ceil(std::sqrt(2.0) * static_cast<double>(gridResolution)));
+      const int expectedGridResolutionRotated =
+          (tmp - gridResolution) % 2 == 0 ? tmp : tmp + 1;
+      const T expectedGridElementSize =
+          static_cast<T>(1) / pointsPerCoherenceLength;
 
       CHECK(testGridResolutionCoherence == expectedGridResolutionRotated);
       CHECK(testGridResolutionDeltaRotated == expectedGridResolutionRotated);
+      CHECK(testGridElementSize == doctest::Approx(expectedGridElementSize));
     }
   }
 }
