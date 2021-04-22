@@ -20,21 +20,21 @@ namespace helper {
 template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context.
-  scg::Context<T> *context = new scg::Context<T>();
+  scg::Context<T> context;
 
   // Create parameters, and set the only value the geometruGroup needs.
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
 
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
-  const T gridWidth = static_cast<T>(10);
-  parameters->setGrainWidth(gridWidth);
+  const T grainWidth = static_cast<T>(10);
+  parameters->setGrainWidth(grainWidth);
 
   // Set the number of lattice points per coherence length:
   const T pointsPerCoherenceLength = static_cast<T>(3.5);
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Create a geometry group.
-  scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(context);
+  scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(&context);
   const T grainFracton = parameters->getGrainFraction();
   if (inIsDisc) {
     // Add two disconnected discs.
@@ -61,7 +61,7 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   }
 
   // Initialize the geometry group, i.e. compute domain labels.
-  context->initialize();
+  context.initialize();
 
   // Get and set the dimensions of our grids.
   const int numFields = 1;
@@ -125,13 +125,58 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
       }
     }
   }
+}
 
-  // Cleanup.
-  delete context;
+template <typename T> void testArea(const bool inIsDisc) {
+  // =================== ARRANGE ==================== //
+  // Create Context.
+  scg::Context<T> context;
+
+  // Create parameters, and set the only value the geometruGroup needs.
+  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
+
+  // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
+  const T grainWidth = static_cast<T>(1);
+  parameters->setGrainWidth(grainWidth);
+
+  // Set the number of lattice points per coherence length:
+  const T pointsPerCoherenceLength = static_cast<T>(1e3);
+  parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
+
+  // Create a geometry group.
+  scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(&context);
+  const T grainFracton = parameters->getGrainFraction();
+  if (inIsDisc) {
+    // Add a disc.
+    geometryGroup->add(new scg::DiscGeometry<T>(grainFracton), scg::Type::add);
+  } else {
+    // Add a square.
+    const int numVerticesSquare = 4;
+    geometryGroup->add(
+        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare),
+        scg::Type::add);
+  }
+
+  // Initialize the geometry group, i.e. compute domain labels.
+  context.initialize();
+
+  // =================== ACT ==================== //
+  const T area = geometryGroup->area();
+
+  // =================== ASSERT ==================== //
+  const T grainArea = grainWidth * grainWidth;
+  // Note, the factor half for the square is due to the square vertices being on
+  // a bounding circle with unit diameter.
+  const T expectedArea = grainArea * (inIsDisc ? static_cast<T>(0.25 * M_PI)
+                                               : static_cast<T>(0.5));
+  // TODO(niclas): What accuracy do we expect the area to have?
+  const T tolerance = static_cast<T>(1e-2);
+  CHECK(expectedArea == doctest::Approx(area).epsilon(tolerance));
 }
 } // namespace helper
 
 // ================= Test zeroValuesOutsideDomainRef disc ================= //
+
 TEST_CASE("Test zeroValuesOutsideDomainRef disc (float)") {
   const bool isDisc = true;
   helper::testZeroValuesOutsideDomain<float>(isDisc);
@@ -143,6 +188,7 @@ TEST_CASE("Test zeroValuesOutsideDomainRef disc (double)") {
 }
 
 // ================= Test zeroValuesOutsideDomainRef square ================= //
+
 TEST_CASE("Test zeroValuesOutsideDomainRef square (float)") {
   const bool isDisc = false;
   helper::testZeroValuesOutsideDomain<float>(isDisc);
@@ -151,4 +197,28 @@ TEST_CASE("Test zeroValuesOutsideDomainRef square (float)") {
 TEST_CASE("Test zeroValuesOutsideDomainRef square (double)") {
   const bool isDisc = false;
   helper::testZeroValuesOutsideDomain<double>(isDisc);
+}
+
+// ================= Test area disc ================= //
+
+TEST_CASE("Test area disc (float)") {
+  const bool isDisc = true;
+  helper::testArea<float>(isDisc);
+}
+
+TEST_CASE("Test area disc (double)") {
+  const bool isDisc = true;
+  helper::testArea<double>(isDisc);
+}
+
+// ================= Test area square ================= //
+
+TEST_CASE("Test area square (float)") {
+  const bool isDisc = false;
+  helper::testArea<float>(isDisc);
+}
+
+TEST_CASE("Test area square (double)") {
+  const bool isDisc = false;
+  helper::testArea<double>(isDisc);
 }
