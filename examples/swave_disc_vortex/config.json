@@ -1,5 +1,5 @@
 {
-	"convergence_criterion": 1e-06,
+	"convergence_criterion": 1e-05,
 	"crystal_axes_rotation": 0.0,
 	"data_path": "data/swave_disc_vortex",
 	"external_flux_quanta": 1.5,
@@ -14,10 +14,10 @@
 			}
 		}
 	],
-	"num_fermi_momenta": 60,
+	"num_fermi_momenta": 32,
 	"num_iterations_max": 1000,
-	"num_iterations_min": 10,
-	"num_ozaki_energies": 20,
+	"num_iterations_min": 0,
+	"num_ozaki_energies": 8,
 	"optimizer": {
 		"adaptive": true,
 		"anderson_always": true,
@@ -41,7 +41,7 @@
 	"penetration_depth": 5.0,
 	"points_per_coherence_length": 5.0,
 	"save_data": false,
-	"save_data_interval": 200,
+	"save_data_interval": 0,
 	"temperature": 0.5,
 	"vector_potential_error": 1e-06,
 	"vector_potential_path": "",

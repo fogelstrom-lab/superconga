@@ -1,6 +1,6 @@
 {
 	"convergence_criterion": 1e-4,
-	"data_path": "data/swave_abrikosov_mesoscopic_vortex_lattice/T0.200000",
+	"data_path": "data/swave_abrikosov_vortex_lattice/T0.200000",
 	"energy_max": 3.0,
 	"energy_min": 0.0,
 	"energy_smearing": 0.05,

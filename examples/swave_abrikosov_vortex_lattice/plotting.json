@@ -1,6 +1,6 @@
 {
     "general": {
-        "data_path": "data/swave_abrikosov_square_vortex_lattice/T0.200000",
+        "data_path": "data/swave_abrikosov_vortex_lattice/T0.200000",
         "gui": false
     },
     "current_density": {
