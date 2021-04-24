@@ -242,7 +242,7 @@ def plot_all(
                             "chiral_transform"
                         ]:
                             transformed_data_field = utils.chiral_transformation(
-                                data[field_name], multi_component_idx, component_name
+                                data[field_name], multi_component_idx
                             )
 
                             data_field = transformed_data_field[component_name]

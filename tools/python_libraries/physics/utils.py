@@ -28,7 +28,7 @@ from typing import Optional, Union
 # Delta = Delta_1 + i*Delta_2, the transformation is to
 # Delta_+/- = (Delta_1 +/- i*Delta_2)/sqrt(2), where now Delta_+/- can be
 # analyzed (plotted) instead of Delta_1/2.
-def chiral_transformation(data_fields_in, component_index, component_name):
+def chiral_transformation(data_fields_in: dict, component_index: int) -> dict:
     # Extract magnitude and phase for the two components.
     magnitude_1 = data_fields_in["magnitude"][0]
     magnitude_2 = data_fields_in["magnitude"][1]
