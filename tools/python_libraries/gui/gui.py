@@ -727,7 +727,7 @@ class runner_main_window(QMainWindow):
             jsonKey="min_mixing", jsonGroup="optimizer", minValue=0.0
         )
         self.register(self._min_mixing)
-        optimizerBoxLayout.addRow(QLabel("Max mixing factor"), self._min_mixing)
+        optimizerBoxLayout.addRow(QLabel("Min mixing factor"), self._min_mixing)
 
         # Rank.
         self._rank = InputInt(jsonKey="rank", jsonGroup="optimizer", minValue=0)
