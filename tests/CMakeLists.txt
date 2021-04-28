@@ -1,6 +1,6 @@
-###############################################################################
+# =========================================================== #
 # EXTERNAL LIBRARIES
-###############################################################################
+# =========================================================== #
 # Declare the doctest lib.
 FetchContent_Declare(
   doctest
@@ -14,9 +14,9 @@ if(NOT doctest_POPULATED)
   add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-###############################################################################
+# =========================================================== #
 # SOURCE FILES
-###############################################################################
+# =========================================================== #
 # Define the main set of source files
 set(SRC
     basis_function_normalization_test.cu
@@ -36,6 +36,7 @@ set(SRC
     parameters_test.cu
     physics/current_conservation_test.cu
     physics/dos_test.cu
+    physics/flux_density_test.cu
     physics/low_temp_free_energy_test.cu
     physics/vector_potential_test.cu
     riccati_solutions_test.cu
@@ -55,9 +56,8 @@ foreach(file ${SRC})
 
   # Include directories.
   target_include_directories(
-    ${name}
-    PRIVATE ${PROJECT_SOURCE_DIR}/include
-    SYSTEM ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
+    ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
+                    ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
 
   # External libraries.
   target_link_libraries(
