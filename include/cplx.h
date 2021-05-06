@@ -1,6 +1,8 @@
 #ifndef CPLX_H_
 #define CPLX_H_
 
+#include <thrust/complex.h>
+
 #ifdef __CUDACC__
 #include <cuda.h>
 #define _DEV_ __host__ __device__
@@ -216,15 +218,11 @@ template <typename T> _DEV_ T cplx<T>::cabsSq() const {
 // STATIC MEMBER FUNCTIONS
 //
 template <typename T> _DEV_ cplx<T> cplx<T>::csqrt(const cplx<T> &r) {
-  cplx<T> c;
-  T tmp = sqrt(r.x * r.x + r.y * r.y);
-  c.x = sqrt((tmp + r.x) * (T)0.5);
-  c.y = sqrt((tmp - r.x) * (T)0.5);
-
-  if (r.y < (T)0.0)
-    c.y = -c.y;
-
-  return c;
+  // TODO(niclas): We need thrust for increased accuracy. Consider replacing
+  // cplx with thrust::complex altogether.
+  const thrust::complex<T> radicand(r.x, r.y);
+  const thrust::complex<T> result = thrust::sqrt(radicand);
+  return cplx<T>(result.real(), result.imag());
 }
 
 template <typename T> _DEV_ cplx<T> cplx<T>::cexp(const cplx<T> &r) {
