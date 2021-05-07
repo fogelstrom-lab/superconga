@@ -10,12 +10,12 @@
 #include "GridFunctions.h"
 #include "GridFunctors.h"
 #include "Type.h"
-#include "cplx.h"
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <thrust/complex.h>
 #include <thrust/copy.h>
 #include <thrust/device_vector.h>
 #include <thrust/extrema.h>
@@ -55,7 +55,7 @@ public:
   bool operator!=(const GridData &right) const;
 
   GridData &operator=(GridData right);
-  GridData &operator=(const cplx<T> right);
+  GridData &operator=(const thrust::complex<T> right);
   GridData &operator=(const T right);
 
   // Try thrust::for_each instead of thrust::transform for better performance
@@ -67,23 +67,23 @@ public:
   // multiplication; for all elements in the array: c_i = a_i * b_i
 
   void operator+=(const GridData &right);
-  void operator+=(const cplx<T> right);
+  void operator+=(const thrust::complex<T> right);
   void operator+=(const T right);
   void operator-=(const GridData &right);
-  void operator-=(const cplx<T> right);
+  void operator-=(const thrust::complex<T> right);
   void operator-=(const T right);
   void operator*=(const GridData &right);
-  void operator*=(const cplx<T> right);
+  void operator*=(const thrust::complex<T> right);
   void operator*=(const T right);
 
   GridData operator+(GridData right) const;
-  GridData operator+(const cplx<T> right) const;
+  GridData operator+(const thrust::complex<T> right) const;
   GridData operator+(const T right) const;
   GridData operator-(GridData right) const;
-  GridData operator-(const cplx<T> right) const;
+  GridData operator-(const thrust::complex<T> right) const;
   GridData operator-(const T right) const;
   GridData operator*(GridData right) const;
-  GridData operator*(const cplx<T> right) const;
+  GridData operator*(const thrust::complex<T> right) const;
   GridData operator*(const T right) const;
 
   GridData operator-() const;
@@ -337,29 +337,33 @@ public:
 
   // Scale complex vector with complex scalar
   struct scaleComplexVectorFunctor {
-    const cplx<T> scalar;
+    const thrust::complex<T> scalar;
 
-    scaleComplexVectorFunctor(const cplx<T> _scalar) : scalar(_scalar) {}
+    scaleComplexVectorFunctor(const thrust::complex<T> _scalar)
+        : scalar(_scalar) {}
 
     template <typename Tuple> _DEV_ void operator()(Tuple inOutValues) {
       const T temp_re = thrust::get<0>(inOutValues);
       const T temp_im = thrust::get<1>(inOutValues);
 
-      thrust::get<0>(inOutValues) = (temp_re * scalar.x) - (temp_im * scalar.y);
-      thrust::get<1>(inOutValues) = (temp_re * scalar.y) + (temp_im * scalar.x);
+      thrust::get<0>(inOutValues) =
+          (temp_re * scalar.real()) - (temp_im * scalar.imag());
+      thrust::get<1>(inOutValues) =
+          (temp_re * scalar.imag()) + (temp_im * scalar.real());
     }
   };
 
   // Scale complex vector with complex scalar
   struct addComplexScalarFunctor {
-    const cplx<T> scalar;
+    const thrust::complex<T> scalar;
 
-    addComplexScalarFunctor(const cplx<T> _scalar) : scalar(_scalar) {}
+    addComplexScalarFunctor(const thrust::complex<T> _scalar)
+        : scalar(_scalar) {}
 
     template <typename Tuple> _DEV_ void operator()(Tuple inOutValues) {
 
-      thrust::get<0>(inOutValues) += scalar.x;
-      thrust::get<1>(inOutValues) += scalar.y;
+      thrust::get<0>(inOutValues) += scalar.real();
+      thrust::get<1>(inOutValues) += scalar.imag();
     }
   };
 
@@ -456,10 +460,10 @@ GridData<T, DEV> &GridData<T, DEV>::operator=(GridData<T, DEV> right) {
 }
 
 template <typename T, typename DEV>
-GridData<T, DEV> &GridData<T, DEV>::operator=(const cplx<T> right) {
+GridData<T, DEV> &GridData<T, DEV>::operator=(const thrust::complex<T> right) {
   if (isComplex()) {
-    setValue(right.x, Type::real);
-    setValue(right.y, Type::imag);
+    setValue(right.real(), Type::real);
+    setValue(right.imag(), Type::imag);
   } else {
 #ifndef NDEBUG
     std::cout << "Warning: Attempted to fill a real valued grid to a complex "
@@ -484,7 +488,7 @@ void GridData<T, DEV>::operator+=(const GridData<T, DEV> &right) {
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::operator+=(const cplx<T> right) {
+void GridData<T, DEV>::operator+=(const thrust::complex<T> right) {
   // This assumes that the calling object is complex, rightwise new memory for
   // the imaginary part would have to be allocated, and it would not be
   // coallesced properly
@@ -518,9 +522,7 @@ void GridData<T, DEV>::operator+=(const T right) {
     thrust::transform(value, value + m_vector.size(), m_vector.begin(),
                       m_vector.begin(), thrust::plus<T>());
   } else {
-    cplx<T> temp_cplx;
-    temp_cplx.x = right;
-    temp_cplx.y = T(0);
+    const thrust::complex<T> temp_cplx(right, static_cast<T>(0));
     operator+=(temp_cplx);
   }
 }
@@ -539,7 +541,7 @@ void GridData<T, DEV>::operator-=(const T right) {
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::operator-=(const cplx<T> right) {
+void GridData<T, DEV>::operator-=(const thrust::complex<T> right) {
   operator+=(-right);
 }
 
@@ -581,7 +583,7 @@ void GridData<T, DEV>::operator*=(const GridData<T, DEV> &right) {
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::operator*=(const cplx<T> right) {
+void GridData<T, DEV>::operator*=(const thrust::complex<T> right) {
   // Only callable if this grid is complex valued
   if (isComplex()) {
     for (int c = 0; c < numFields(); ++c) {
@@ -622,7 +624,8 @@ GridData<T, DEV> GridData<T, DEV>::operator+(GridData<T, DEV> right) const {
 }
 
 template <typename T, typename DEV>
-GridData<T, DEV> GridData<T, DEV>::operator+(const cplx<T> right) const {
+GridData<T, DEV>
+GridData<T, DEV>::operator+(const thrust::complex<T> right) const {
   GridData<T, DEV> tmp(*this);
   tmp += right;
   return tmp;
@@ -642,7 +645,8 @@ GridData<T, DEV> GridData<T, DEV>::operator-(GridData<T, DEV> right) const {
 }
 
 template <typename T, typename DEV>
-GridData<T, DEV> GridData<T, DEV>::operator-(const cplx<T> right) const {
+GridData<T, DEV>
+GridData<T, DEV>::operator-(const thrust::complex<T> right) const {
   GridData<T, DEV> tmp(*this);
   tmp -= right;
   return tmp;
@@ -662,7 +666,8 @@ GridData<T, DEV> GridData<T, DEV>::operator*(GridData<T, DEV> right) const {
 }
 
 template <typename T, typename DEV>
-GridData<T, DEV> GridData<T, DEV>::operator*(const cplx<T> right) const {
+GridData<T, DEV>
+GridData<T, DEV>::operator*(const thrust::complex<T> right) const {
   // Not optimal, but arithmetic operators are typically not performance
   // critical:
   GridData<T, DEV> tmp(*this); // One read (this) and one write (tmp)

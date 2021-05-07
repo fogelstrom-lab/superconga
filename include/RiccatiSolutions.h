@@ -20,9 +20,8 @@
 #ifndef RICCATI_SOLUTIONS_H
 #define RICCATI_SOLUTIONS_H
 
-#include "cplx.h"
 #include <cuda.h>
-#include <iostream>
+#include <thrust/complex.h>
 
 #ifdef __CUDACC__
 #ifndef _HD_
@@ -37,24 +36,26 @@ template <typename T> struct General {
   struct Gamma {
     /// \brief Riccati equation stepping solution: gamma.
     ///
+    /// \param inGammaHomogeneous The homogenous solution.
     /// \param inOrderParameter Order parameter.
     /// \param inEnergy Complex energy (imaginary pole).
     /// \param inGammaInitial Gamma at start of step.
     /// \param inStep Step size.
     ///
     /// \return complex-valued solution.
-    _HD_ static cplx<T> computeStep(const cplx<T> &inOrderParameter,
-                                    const cplx<T> &inEnergy,
-                                    const cplx<T> &inGammaInitial,
-                                    const T inStep);
+    _HD_ static thrust::complex<T>
+    computeStep(const thrust::complex<T> &inOrderParameter,
+                const thrust::complex<T> &inEnergy,
+                const thrust::complex<T> &inGammaInitial, const T inStep);
     /// \brief Riccati equation homogeneous solution: gamma.
     ///
     /// \param inOrderParameter Order parameter.
     /// \param inEnergy Complex energy (imaginary pole).
     ///
     /// \return complex-valued solution.
-    _HD_ static cplx<T> computeHomogeneous(const cplx<T> &inOrderParameter,
-                                           const cplx<T> &inEnergy);
+    _HD_ static thrust::complex<T>
+    computeHomogeneous(const thrust::complex<T> &inOrderParameter,
+                       const thrust::complex<T> &inEnergy);
   };
 
   struct GammaTilde {
@@ -66,97 +67,97 @@ template <typename T> struct General {
     /// \param inStep Step size.
     ///
     /// \return complex-valued solution.
-    _HD_ static cplx<T> computeStep(const cplx<T> &inOrderParameter,
-                                    const cplx<T> &inEnergy,
-                                    const cplx<T> &inGammaTildeInitial,
-                                    const T inStep);
+    _HD_ static thrust::complex<T>
+    computeStep(const thrust::complex<T> &inOrderParameter,
+                const thrust::complex<T> &inEnergy,
+                const thrust::complex<T> &inGammaTildeInitial, const T inStep);
     /// \brief Riccati equation stepping solution: gammaTilde.
     ///
     /// \param inOrderParameter Order parameter.
     /// \param inEnergy Complex energy (imaginary pole).
     ///
     /// \return complex-valued solution.
-    _HD_ static cplx<T> computeHomogeneous(const cplx<T> &inOrderParameter,
-                                           const cplx<T> &inEnergy);
+    _HD_ static thrust::complex<T>
+    computeHomogeneous(const thrust::complex<T> &inOrderParameter,
+                       const thrust::complex<T> &inEnergy);
   };
 };
 } // namespace Gamma
 
 template <typename T>
-_HD_ cplx<T> Gamma::General<T>::Gamma::computeStep(
-    const cplx<T> &inOrderParameter, const cplx<T> &inEnergy,
-    const cplx<T> &inGammaInitial, const T inStep) {
-  // References to make the math more readable.
-  const cplx<T> &D = inOrderParameter;
-  const cplx<T> &z = inEnergy;
+_HD_ thrust::complex<T> Gamma::General<T>::Gamma::computeStep(
+    const thrust::complex<T> &inOrderParameter,
+    const thrust::complex<T> &inEnergy,
+    const thrust::complex<T> &inGammaInitial, const T inStep) {
+  const thrust::complex<T> Omega =
+      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
+  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
 
-  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
-  const cplx<T> iOmega = Omega.imult();
+  const thrust::complex<T> gammaHomogeneous =
+      -inOrderParameter / (inEnergy + iOmega);
 
-  const cplx<T> gammaHomogeneous = -D / (z + iOmega);
+  const thrust::complex<T> diff = inGammaInitial - gammaHomogeneous;
 
-  const cplx<T> diff = (inGammaInitial - gammaHomogeneous);
+  const thrust::complex<T> ex =
+      thrust::exp((-static_cast<T>(2) * inStep) * Omega);
 
-  const cplx<T> ex = cplx<T>::cexp((-static_cast<T>(2) * inStep) * Omega);
-
-  const cplx<T> gammaStep =
-      gammaHomogeneous + (static_cast<T>(2) * iOmega * diff * ex) /
-                             (static_cast<T>(2) * iOmega +
-                              D.conj() * diff * (static_cast<T>(1) - ex));
+  const thrust::complex<T> gammaStep =
+      gammaHomogeneous +
+      (static_cast<T>(2) * iOmega * diff * ex) /
+          (static_cast<T>(2) * iOmega +
+           thrust::conj(inOrderParameter) * diff * (static_cast<T>(1) - ex));
 
   return gammaStep;
 }
 
 template <typename T>
-_HD_ cplx<T>
-Gamma::General<T>::Gamma::computeHomogeneous(const cplx<T> &inOrderParameter,
-                                             const cplx<T> &inEnergy) {
-  // References to make the math more readable.
-  const cplx<T> &D = inOrderParameter;
-  const cplx<T> &z = inEnergy;
+_HD_ thrust::complex<T> Gamma::General<T>::Gamma::computeHomogeneous(
+    const thrust::complex<T> &inOrderParameter,
+    const thrust::complex<T> &inEnergy) {
+  const thrust::complex<T> Omega =
+      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
+  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
 
-  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
-  const cplx<T> iOmega = Omega.imult();
-
-  const cplx<T> gammaHomogeneous = -D / (z + iOmega);
+  const thrust::complex<T> gammaHomogeneous =
+      -inOrderParameter / (inEnergy + iOmega);
   return gammaHomogeneous;
 }
 
 template <typename T>
-_HD_ cplx<T> Gamma::General<T>::GammaTilde::computeStep(
-    const cplx<T> &inOrderParameter, const cplx<T> &inEnergy,
-    const cplx<T> &inGammaTildeInitial, const T inStep) {
-  // References to make the math more readable.
-  const cplx<T> &D = inOrderParameter;
-  const cplx<T> &z = inEnergy;
+_HD_ thrust::complex<T> Gamma::General<T>::GammaTilde::computeStep(
+    const thrust::complex<T> &inOrderParameter,
+    const thrust::complex<T> &inEnergy,
+    const thrust::complex<T> &inGammaTildeInitial, const T inStep) {
+  const thrust::complex<T> Omega =
+      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
+  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
 
-  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
-  const cplx<T> iOmega = Omega.imult();
+  const thrust::complex<T> gammaTildeHomogeneous =
+      thrust::conj(inOrderParameter) / (inEnergy + iOmega);
 
-  const cplx<T> gammaTildeHomogeneous = D.conj() / (z + iOmega);
+  const thrust::complex<T> diff = inGammaTildeInitial - gammaTildeHomogeneous;
 
-  const cplx<T> diff = (inGammaTildeInitial - gammaTildeHomogeneous);
+  const thrust::complex<T> ex =
+      thrust::exp((-static_cast<T>(2) * inStep) * Omega);
 
-  const cplx<T> ex = cplx<T>::cexp((-static_cast<T>(2) * inStep) * Omega);
-
-  const cplx<T> gammaTildeStep =
+  const thrust::complex<T> gammaTildeStep =
       gammaTildeHomogeneous +
       (static_cast<T>(2) * iOmega * diff * ex) /
-          (static_cast<T>(2) * iOmega - D * diff * (static_cast<T>(1) - ex));
+          (static_cast<T>(2) * iOmega -
+           inOrderParameter * diff * (static_cast<T>(1) - ex));
   return gammaTildeStep;
 }
 
 template <typename T>
-_HD_ cplx<T> Gamma::General<T>::GammaTilde::computeHomogeneous(
-    const cplx<T> &inOrderParameter, const cplx<T> &inEnergy) {
-  // References to make the math more readable.
-  const cplx<T> &D = inOrderParameter;
-  const cplx<T> &z = inEnergy;
+_HD_ thrust::complex<T> Gamma::General<T>::GammaTilde::computeHomogeneous(
+    const thrust::complex<T> &inOrderParameter,
+    const thrust::complex<T> &inEnergy) {
+  const thrust::complex<T> Omega =
+      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
+  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
 
-  const cplx<T> Omega = cplx<T>::csqrt(D.cabsSq() - z * z);
-  const cplx<T> iOmega = Omega.imult();
-
-  const cplx<T> gammaTildeHomogeneous = D.conj() / (z + iOmega);
+  const thrust::complex<T> gammaTildeHomogeneous =
+      thrust::conj(inOrderParameter) / (inEnergy + iOmega);
   return gammaTildeHomogeneous;
 }
 } // namespace scg

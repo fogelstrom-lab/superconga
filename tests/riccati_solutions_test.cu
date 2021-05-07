@@ -1,11 +1,11 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "RiccatiSolutions.h"
-#include "cplx.h"
 #include <cmath>
 #include <complex>
 #include <doctest/doctest.h>
 #include <limits>
+#include <thrust/complex.h>
 #include <vector>
 
 namespace helper {
@@ -20,18 +20,10 @@ const double TOLERANCE_FACTOR = 10.0;
 // Factor for the crappy general stepping test.
 const double TOLERANCE_FACTOR_BAD = 1e4;
 
-/// \brief Convert std::complex to cplx
-///
-/// \param inVal The value to convert.
-///
-/// \return The converted value.
-template <typename T> scg::cplx<T> toInternal(const std::complex<T> &inVal) {
-  return scg::cplx<T>(inVal.real(), inVal.imag());
-}
-
 /// \brief The stepping expression expressed with std::complex.
 ///
-/// \param inOrderParameter The order parameter.
+/// \param inOrderParameter The order parameter, for tilde it would be -\Delta^*
+/// instead.
 /// \param inEnergy The energy.
 /// \param inInitial The initial value.
 /// \param inStep The step length.
@@ -72,13 +64,14 @@ void testHomogeneousSolutionsParticular(const T inTolerance) {
 
   // =================== ACT ==================== //
   // Construct energy and order parameter.
-  const scg::cplx<T> energy(static_cast<T>(0), energyImag);
-  const scg::cplx<T> orderParameter(orderParameterReal, static_cast<T>(0));
+  const thrust::complex<T> energy(static_cast<T>(0), energyImag);
+  const thrust::complex<T> orderParameter(orderParameterReal,
+                                          static_cast<T>(0));
 
   // Compute coherence functions.
-  const scg::cplx<T> testGamma =
+  const thrust::complex<T> testGamma =
       scg::Gamma::General<T>::Gamma::computeHomogeneous(orderParameter, energy);
-  const scg::cplx<T> testGammaTilde =
+  const thrust::complex<T> testGammaTilde =
       scg::Gamma::General<T>::GammaTilde::computeHomogeneous(orderParameter,
                                                              energy);
 
@@ -87,13 +80,13 @@ void testHomogeneousSolutionsParticular(const T inTolerance) {
   const std::complex<T> expectedGamma(static_cast<T>(0), static_cast<T>(0.5));
   const std::complex<T> expectedGammaTilde = std::conj(expectedGamma);
 
-  CHECK(testGamma.x ==
+  CHECK(testGamma.real() ==
         doctest::Approx(expectedGamma.real()).epsilon(inTolerance));
-  CHECK(testGamma.y ==
+  CHECK(testGamma.imag() ==
         doctest::Approx(expectedGamma.imag()).epsilon(inTolerance));
-  CHECK(testGammaTilde.x ==
+  CHECK(testGammaTilde.real() ==
         doctest::Approx(expectedGammaTilde.real()).epsilon(inTolerance));
-  CHECK(testGammaTilde.y ==
+  CHECK(testGammaTilde.imag() ==
         doctest::Approx(expectedGammaTilde.imag()).epsilon(inTolerance));
 }
 
@@ -126,12 +119,12 @@ void testHomogeneousSolutionsGeneral(const T inTolerance) {
                                                orderParameterImag);
 
           // Compute coherence functions.
-          const scg::cplx<T> testGamma =
-              scg::Gamma::General<T>::Gamma::computeHomogeneous(
-                  toInternal(orderParameter), toInternal(energy));
-          const scg::cplx<T> testGammaTilde =
+          const thrust::complex<T> testGamma =
+              scg::Gamma::General<T>::Gamma::computeHomogeneous(orderParameter,
+                                                                energy);
+          const thrust::complex<T> testGammaTilde =
               scg::Gamma::General<T>::GammaTilde::computeHomogeneous(
-                  toInternal(orderParameter), toInternal(energy));
+                  orderParameter, energy);
 
           // =================== ASSERT ==================== //
           // Compute expected coherence functions.
@@ -143,15 +136,15 @@ void testHomogeneousSolutionsGeneral(const T inTolerance) {
           const std::complex<T> expectedGammaTilde =
               std::conj(orderParameter) / (energy + iOmega);
 
-          CHECK(testGamma.x ==
+          CHECK(testGamma.real() ==
                 doctest::Approx(expectedGamma.real()).epsilon(inTolerance));
-          CHECK(testGamma.y ==
+          CHECK(testGamma.imag() ==
                 doctest::Approx(expectedGamma.imag()).epsilon(inTolerance));
           CHECK(
-              testGammaTilde.x ==
+              testGammaTilde.real() ==
               doctest::Approx(expectedGammaTilde.real()).epsilon(inTolerance));
           CHECK(
-              testGammaTilde.y ==
+              testGammaTilde.imag() ==
               doctest::Approx(expectedGammaTilde.imag()).epsilon(inTolerance));
         }
       }
@@ -176,24 +169,26 @@ void testSteppingSolutionsParticular(const T inTolerance) {
 
   // =================== ACT ==================== //
   // Construct energy and order parameter.
-  const scg::cplx<T> energy(static_cast<T>(0), energyImag);
-  const scg::cplx<T> orderParameter(orderParameterReal, static_cast<T>(0));
+  const thrust::complex<T> energy(static_cast<T>(0), energyImag);
+  const thrust::complex<T> orderParameter(orderParameterReal,
+                                          static_cast<T>(0));
 
   // Compute homogeneous coherence functions.
-  const scg::cplx<T> gammaHomo =
+  const thrust::complex<T> gammaHomo =
       scg::Gamma::General<T>::Gamma::computeHomogeneous(orderParameter, energy);
-  const scg::cplx<T> gammaTildeHomo =
+  const thrust::complex<T> gammaTildeHomo =
       scg::Gamma::General<T>::GammaTilde::computeHomogeneous(orderParameter,
                                                              energy);
 
   // Set initial values.
-  const scg::cplx<T> gammaInit = gammaHomo * initialFactor;
-  const scg::cplx<T> gammaTildeInit = gammaTildeHomo * initialFactor;
+  const thrust::complex<T> gammaInit = gammaHomo * initialFactor;
+  const thrust::complex<T> gammaTildeInit = gammaTildeHomo * initialFactor;
 
   // Compute coherence functions.
-  const scg::cplx<T> testGamma = scg::Gamma::General<T>::Gamma::computeStep(
-      orderParameter, energy, gammaInit, step);
-  const scg::cplx<T> testGammaTilde =
+  const thrust::complex<T> testGamma =
+      scg::Gamma::General<T>::Gamma::computeStep(orderParameter, energy,
+                                                 gammaInit, step);
+  const thrust::complex<T> testGammaTilde =
       scg::Gamma::General<T>::GammaTilde::computeStep(orderParameter, energy,
                                                       gammaTildeInit, step);
 
@@ -204,13 +199,13 @@ void testSteppingSolutionsParticular(const T inTolerance) {
                                           static_cast<T>(3.0 * M_E - 1.0));
   const std::complex<T> expectedGammaTilde = std::conj(expectedGamma);
 
-  CHECK(testGamma.x ==
+  CHECK(testGamma.real() ==
         doctest::Approx(expectedGamma.real()).epsilon(inTolerance));
-  CHECK(testGamma.y ==
+  CHECK(testGamma.imag() ==
         doctest::Approx(expectedGamma.imag()).epsilon(inTolerance));
-  CHECK(testGammaTilde.x ==
+  CHECK(testGammaTilde.real() ==
         doctest::Approx(expectedGammaTilde.real()).epsilon(inTolerance));
-  CHECK(testGammaTilde.y ==
+  CHECK(testGammaTilde.imag() ==
         doctest::Approx(expectedGammaTilde.imag()).epsilon(inTolerance));
 }
 
@@ -248,14 +243,12 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
 
               for (const T step : valuesPositive) {
                 // Compute coherence functions.
-                const scg::cplx<T> testGamma =
+                const thrust::complex<T> testGamma =
                     scg::Gamma::General<T>::Gamma::computeStep(
-                        toInternal(orderParameter), toInternal(energy),
-                        toInternal(gammaInit), step);
-                const scg::cplx<T> testGammaTilde =
+                        orderParameter, energy, gammaInit, step);
+                const thrust::complex<T> testGammaTilde =
                     scg::Gamma::General<T>::GammaTilde::computeStep(
-                        toInternal(orderParameter), toInternal(energy),
-                        toInternal(gammaInit), step);
+                        orderParameter, energy, gammaInit, step);
 
                 // =================== ASSERT ==================== //
                 // Compute expected coherence functions.
@@ -265,15 +258,15 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
                     -std::conj(orderParameter), energy, gammaInit, step);
 
                 CHECK(
-                    testGamma.x ==
+                    testGamma.real() ==
                     doctest::Approx(expectedGamma.real()).epsilon(inTolerance));
                 CHECK(
-                    testGamma.y ==
+                    testGamma.imag() ==
                     doctest::Approx(expectedGamma.imag()).epsilon(inTolerance));
-                CHECK(testGammaTilde.x ==
+                CHECK(testGammaTilde.real() ==
                       doctest::Approx(expectedGammaTilde.real())
                           .epsilon(inTolerance));
-                CHECK(testGammaTilde.y ==
+                CHECK(testGammaTilde.imag() ==
                       doctest::Approx(expectedGammaTilde.imag())
                           .epsilon(inTolerance));
               }

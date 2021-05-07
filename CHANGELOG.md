@@ -21,6 +21,7 @@
 - Add test of Riccati solutions
 - Add test of geometry area (disc and square)
 - Add test of discretization (`gridElementSize`)
+- Deprecate custom class for complex numbers (`cplx`) and switch to thrust::complex
 
 ---
 

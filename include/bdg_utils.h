@@ -14,13 +14,13 @@
 
 #include "ComputeResidual.h"
 #include "OrderParameterBasis.h"
-#include "cplx.h"
 #include "defines.h"
 #include "dispersion.h"
 #include "utils.h"
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <thrust/complex.h>
 #include <utility>
 #include <vector>
 
@@ -104,8 +104,8 @@ std::pair<T, T> computeCriticalTempResidual(
   // Loop over all momenta in order to compute the mean over the Brillouin zone.
   for (const auto &momentum : inMomenta) {
     // Evaluate the basis function.
-    const cplx<T> basisFunction = inBasisFunction.evaluate(momentum);
-    const T basisFunctionSquared = basisFunction.cabsSq();
+    const thrust::complex<T> basisFunction = inBasisFunction.evaluate(momentum);
+    const T basisFunctionSquared = thrust::norm(basisFunction);
 
     // Evaluate the dispersion.
     const T absDispersion = std::abs(inDispersion.evaluate(momentum));

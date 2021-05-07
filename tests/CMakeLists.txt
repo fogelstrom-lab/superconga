@@ -21,7 +21,6 @@ endif()
 set(SRC
     basis_function_normalization_test.cu
     bdg_utils_test.cu
-    cplx_test.cu
     dispersion_test.cu
     fermi_surface_test.cu
     fermi_surface_circle_test.cu

@@ -11,46 +11,54 @@
 #endif
 #endif
 
-#include "cplx.h"
+#include <thrust/complex.h>
 
 namespace scg {
 template <typename T> struct Greens {
-  _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
-                                       cplx<T> &greens) {
-    const cplx<T> g_gb = g * gb;
-    greens = -cplx<T>::i() * (static_cast<T>(1.0) - g_gb) /
-             (static_cast<T>(1.0) + g_gb);
+  _HD_ static void computeGreens_local(const thrust::complex<T> &g,
+                                       const thrust::complex<T> &gb,
+                                       thrust::complex<T> &greens) {
+    const thrust::complex<T> g_gb = g * gb;
+    const thrust::complex<T> tmp =
+        -((static_cast<T>(1.0) - g_gb) / (static_cast<T>(1.0) + g_gb));
+    greens = thrust::complex<T>(-tmp.imag(), tmp.real());
   }
 };
 
 template <typename T> struct GreensAnomalous {
-  _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
-                                       cplx<T> &greens) {
+  _HD_ static void computeGreens_local(const thrust::complex<T> &g,
+                                       const thrust::complex<T> &gb,
+                                       thrust::complex<T> &greens) {
     // Calc anomalous greens function (f), -2i*gamma / (1 + gamma*gamma_bar)
-    greens = -static_cast<T>(2.0) * cplx<T>::i() * g /
-             (static_cast<T>(1.0) + g * gb);
+    const thrust::complex<T> tmp =
+        -static_cast<T>(2.0) * g / (static_cast<T>(1.0) + g * gb);
+    greens = thrust::complex<T>(-tmp.imag(), tmp.real());
   }
 };
 
 template <typename T> struct GreensAnomalousTilde {
-  _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
-                                       cplx<T> &greens) {
+  _HD_ static void computeGreens_local(const thrust::complex<T> &g,
+                                       const thrust::complex<T> &gb,
+                                       thrust::complex<T> &greens) {
     // Calc f_tilde, 2i*gammabar / (1 + gamma*gamma_bar)
-    greens = static_cast<T>(2.0) * cplx<T>::i() * gb /
-             (static_cast<T>(1.0) + g * gb);
+    const thrust::complex<T> tmp =
+        static_cast<T>(2.0) * gb / (static_cast<T>(1.0) + g * gb);
+    greens = thrust::complex<T>(-tmp.imag(), tmp.real());
   }
 };
 
 template <typename T> struct Greens_Delta {
-  _HD_ static void computeGreens_local(const cplx<T> &g, const cplx<T> &gb,
-                                       cplx<T> &greens) {
+  _HD_ static void computeGreens_local(const thrust::complex<T> &g,
+                                       const thrust::complex<T> &gb,
+                                       thrust::complex<T> &greens) {
     // Calc total greens function expression for order parameter: f +
     // conj(f_tilde)
-    cplx<T> mult =
-        static_cast<T>(2.0) * cplx<T>::i() / (static_cast<T>(1.0) + g * gb);
+    const thrust::complex<T> tmp =
+        static_cast<T>(2.0) / (static_cast<T>(1.0) + g * gb);
+    const thrust::complex<T> factor(-tmp.imag(), tmp.real());
 
-    const cplx<T> f = -mult * g;
-    const cplx<T> f_tilde_conj = (mult * gb).conj();
+    const thrust::complex<T> f = -factor * g;
+    const thrust::complex<T> f_tilde_conj = thrust::conj(factor * gb);
 
     greens = f + f_tilde_conj;
   }
