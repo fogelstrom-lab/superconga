@@ -1,0 +1,130 @@
+# SuprConGPU changelog
+
+## Version v0.5.0 (April 13, 2021)
+
+This release significantly improves the self-consistency optimizer and adds the possibility to make it adaptive - automatically tuning the optimization parameters. This makes the code significantly faster and more robust at the same time. The release also adds a number of new tools and convenience features for the user.
+
+### Improvements
+- **MAJOR** Make self-consistency optimizer adaptive
+- **MAJOR** Add Python frontend for LDOS calculation (post-processing)
+- Expose gauge choice to user
+- Enable starting from existing vector potential
+- Update LDOS smearing in all examples
+- Add labels describing what is plotted in the live visualization
+- Add slider for point-contact radius in interactive LDOS plotter
+- Set residual of free energy to zero in first iteration
+- Enable starting simulation from data with lower resolution
+- Enable masking inside/outside the geometry in Python plotter
+- Save magnetic free-energy density to `results.json`
+- Re-add single-letter CLI flags for geometry.
+- Improve terminal output for LDOS plotter
+- Expose accuracy of the Green-function approximation
+
+### Bug fixes
+- Fix crash when saving convergence status to file
+- Fix bugs related to the slider for the point-contact radius in the interactive LDOS plotter
+- Fix bug in detecting frontend CLI flags
+- Fix CMake bug in choosing GPU architecture when multiple GPUs are present
+- Fix off-center disc-geometry bug
+
+### Developer changes
+- Make circular Fermi surface default
+- Only initialize context once
+- Add test for the cplx class
+- Improved management of unique pointers
+- Cleanup format of config files
+- Make DiscGeometry member disc a non-pointer
+- Move scaling of lengths to functions (i.e. scaling between physical coordinate system and internal coordinate system)
+- Cleanup DOS- and current-tests
+- Move test executables to unique folder `tests/`
+
+---
+
+## Version v0.4.0 (March 04, 2021)
+This release significantly improves the robustness and accuracy of the Riccati equation solver, by allowing the trajectory solver to take "half-steps". This eliminates a number of unwanted artifacts. The release makes it possible to start from previous simulations, and adds a number of post-processing tools: an LDOS calculator and interactive plotter, and a plotter for 2D data. A number of other features are added.
+
+### Improvements
+- **MAJOR** Enable taking half-steps in the Riccati equation
+- **MAJOR** Add Python post-processing tool for visualizing generated data
+- **MAJOR** Add C++/CUDA post-processing code for calculating the LDOS
+- **MAJOR** Add interactive spectroscopy tool/LDOS plotter (Python)
+- **MAJOR** Add support from starting from previous simulations
+- Save simulation configuration and geometry mask at start of simulation
+- Make the elementary charge a constant, for consistent sign convention
+- Save area-averaged quantities to `results.json`
+- Save magnetic free-energy density also separately from free energy
+- Significantly cleanup of terminal output, add debug flag for additional output
+- Add option for the geometry of the solenoid hole
+- Various small improvements to the examples
+- Update `README.md` with user instructions
+- Update `requirements.txt`
+- Add penetration depth sweep examples
+- Expose more optimization parameters: `anderson_always`, `min_mixing`, `max_mixing` and `replace_oldest`
+
+### Bug fixes
+- Fix so that points per coherence length is exactly true
+- Fix broken Python runner
+- Fix `replace_worst` json bug in user-config management
+
+### Developer changes
+- Cleanup Python frontend and move functionality to Python library
+- Remove legacy Python code
+- Use the L2 norm in the optimizer
+- Change some copy assignments to reference assignments in GeometryGroup, csv_writers and legacy_test
+- Improved pointer handling in GridData (do not use a pointer to thrust vector)
+- Improve save interval for output data
+- Cleanup and "hide" external dependencies in `.ext/`
+- Clear vector in ComputeVectorPotential in initialization
+
+---
+
+## Version v0.3.0 (February 09, 2021)
+This release (re-)adds the ability to save data to file. This includes configuration parameters, internal parameters, area-averaged quantities, spatially resolved observables/quantities. The release also generalizes the self-consistency optimizer and makes it possible for the user to chose the optimization strategy. A change is made from CUDA 10/C++14 to CUDA 11/C++17.
+
+### Improvements
+- **MAJOR** Re-add the ability to save data to file, as human-readable `.csv` and `.json` files ()
+- **MAJOR** Generalize the optimizer and expose to the user, making it possible to chose between different classes of optimizers
+- **MAJOR** Change from CUDA 10/C++14 to CUDA 11/C++17
+- Add a custom bulk order-parameter solver
+- Update README with basic usage instructions
+- Update colormaps in live visualization
+- Update legacy Python code to Python 3
+- Make it more intuitive to set the physical size of the system
+- Various updates to examples
+
+### Bug fixes
+- Fix GUI bug for lattice sites per coherence length
+- Fix bug with incorrect induced vector potential
+- Fix geometry error by doing retro-reflection at corners
+- Fix initialization order bug in Keldysh integrator
+- Fix interpolation bug in DiscGeometry
+
+### Developer changes
+- Add current conservation test
+- Update Lapack/BLAS/OpenBLAS dependencies
+- Make armadillo a subrepository
+- Subtract the mean of the current density before computing the vector potential
+- Add venv to gitignore
+- Change ComputeVectorPotential into a class
+- Move computation of the induced vector potential to context
+- Use template alias instead of typedef for GridData
+- Use std::filesystem to handle paths and create directories, instead of outdated C-code
+- Compute, and use, the zero-rotation domain labels
+- Fix Cppcheck warnings in Fermi surface code
+- Separate basis functions for circular, and tight-binding, Fermi surfaces
+- Cleanup OrderParameterInitial
+- Improve boundary interpolation
+- Add data folder to gitignore
+
+---
+
+## Version v0.2.0 (November 12, 2020)
+This point-release is a major cleanup of the legacy code, adding numerous new functionality and improvements. This release is used in the [BdG comparison repository](https://gitlab.com/suprcongpu/research/bdg-comparison), which was used in the following paper:
+
+- N\. Wall Wennerdal, A. Ask, P. Holmvall, T. Löfwander, and M. Fogelström, "[Breaking time-reversal and translational symmetry at edges of d-wave superconductors: microscopic theory and comparison with quasiclassical theory](https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.043198)", Physical Review Research **2**, 043198 (2020).
+
+---
+
+# Version v0.1.0 (November 07, 2019)
+
+- **Initial release.**
