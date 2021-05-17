@@ -1,5 +1,29 @@
 # SuprConGPU changelog
 
+## Latest version (unreleased)
+
+### Improvements
+- **MAJOR** Fully expose geometry to user in config files, remove from CLI/GUI
+- **MAJOR** Deprecate the GUI
+- Add `CHANGELOG.md` and update releases
+- Update framework description in README
+- Add chiral d-wave example
+- Add chiral-transformation option to plotter
+- Specify physical size by setting polygon side-length rather than bounding circle diameter
+- Various updates to examples
+
+### Bug fixes
+- Fix bug in average flux density
+- Fix bug in free energy related to summing multi-component order parameters
+- Fix plotter for multi-component order parameters
+
+### Developer changes
+- Add test of Riccati solutions
+- Add test of geometry area (disc and square)
+- Add test of discretization (`gridElementSize`)
+
+---
+
 ## Version v0.5.0 (April 13, 2021)
 
 This release significantly improves the self-consistency optimizer and adds the possibility to make it adaptive - automatically tuning the optimization parameters. This makes the code significantly faster and more robust at the same time. The release also adds a number of new tools and convenience features for the user.
