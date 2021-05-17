@@ -12,7 +12,7 @@
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h"
-#include "Parameters.h" //
+#include "Parameters.h"
 #include "PolygonGeometry.h"
 #include "RiccatiSolverConfined.h"
 #include "defines.h"
@@ -33,16 +33,16 @@ namespace simParams {
 const double TEMPERATURE = 0.5;
 
 // Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
-const double GRAIN_SIDE_LENGTH = 20.0 / (2.0 * M_PI);
+const double GRAIN_SIDE_LENGTH = 10.0 / (2.0 * M_PI);
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 3.0 * (2.0 * M_PI);
+const double POINTS_PER_COHERENCE_LENGTH = 5.0 * (2.0 * M_PI);
 
 // Number of discrete trajectory angles (on the Fermi-surface).
-const int NUM_ANGLES = 60;
+const int NUM_ANGLES = 32;
 
 // Number of discrete energies (poles)
-const int NUM_ENERGIES = 20;
+const int NUM_ENERGIES = 8;
 
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1e-5;
@@ -51,17 +51,13 @@ const double CONVERGENCE_CRITERION = 1e-5;
 const bool PRINT_ITERATION_STATUS = true;
 
 // Maximum number of iterations
-const int NUM_ITERATIONS_MAX = 200;
+const int NUM_ITERATIONS_MAX = 100;
 
 // Minimum number of iterations
 const int NUM_ITERATIONS_MIN = 1;
 
 // The external magnetic field.
-const double EXTERNAL_FLUX_QUANTA = 0.5;
-
-// Optimizer parameters.
-const double OPTIMIZER_STEP_SIZE = 1.5;
-const double OPTIMIZER_INERTIA = 0.333;
+const double EXTERNAL_FLUX_QUANTA = 0.01;
 
 // Which polygons to test.
 // TODO(niclas): We probably have some bug. Only even polygons work. FIX
@@ -127,8 +123,32 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   if (isDisc) {
     geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
   } else {
-    geometry->add(new scg::PolygonGeometry<T>(grainFraction, inNumVertices),
-                  scg::Type::add);
+    // TODO(niclas): This should live within some geometry class!
+    const T angleStep =
+        static_cast<T>(2.0 * M_PI) / static_cast<T>(inNumVertices);
+    const T offset = angleStep * static_cast<T>(0.5);
+    T xMax = std::numeric_limits<T>::min();
+    T xMin = std::numeric_limits<T>::max();
+    T yMax = std::numeric_limits<T>::min();
+    T yMin = std::numeric_limits<T>::max();
+    for (int i = 0; i < inNumVertices; ++i) {
+      const T angle = angleStep * static_cast<T>(i) + offset;
+      const T x = std::cos(angle);
+      const T y = std::sin(angle);
+      xMax = std::max(x, xMax);
+      xMin = std::min(x, xMin);
+      yMax = std::max(y, yMax);
+      yMin = std::min(y, yMin);
+    }
+    const T xExtent = xMax - xMin;
+    const T yExtent = yMax - yMin;
+    const T extent = std::max(xExtent, yExtent);
+    const T radius = static_cast<T>(1) / extent;
+    const T sideLength =
+        static_cast<T>(2) * radius * std::sin(static_cast<T>(0.5) * angleStep);
+    geometry->add(
+        new scg::PolygonGeometry<T>(grainFraction, inNumVertices, sideLength),
+        scg::Type::add);
   }
 
   // Choose a Riccati solver for a confined geometry.
@@ -159,10 +179,7 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   new scg::ComputeFreeEnergy<T>(context);
 
   // Set optimizer.
-  const T stepSize = static_cast<T>(simParams::OPTIMIZER_STEP_SIZE);
-  const T inertia = static_cast<T>(simParams::OPTIMIZER_INERTIA);
-  auto optimizer = std::make_unique<scg::Optimizer<T>>(stepSize, inertia);
-  context->set(std::move(optimizer));
+  context->set(std::make_unique<scg::Optimizer<T>>());
 
   // =================== ACT ==================== //
   context->initialize();
@@ -183,6 +200,8 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   const T testMeanCurrentDensityY =
       currentDensity.sumField(1) / static_cast<T>(numGrainLatticeSites);
   const T sumAbsCurrent = currentDensity.sumMagnitude();
+  const T freeEnergyPerUnitArea =
+      context->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
 
   std::printf("J: (x, y) = (%e, %e)\n", testMeanCurrentDensityX,
               testMeanCurrentDensityY);
@@ -199,6 +218,7 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   CHECK(testMeanCurrentDensityY ==
         doctest::Approx(expectedMeanCurrentDensityY).epsilon(tolerance));
   CHECK(sumAbsCurrent > static_cast<T>(0));
+  CHECK(freeEnergyPerUnitArea < static_cast<T>(0));
   CHECK(context->isConverged());
 
   // Clean up context
