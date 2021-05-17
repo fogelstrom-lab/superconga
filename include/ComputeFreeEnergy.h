@@ -7,10 +7,10 @@
 #include "IntegrationIteratorOzaki.h"
 #include "LocalGreens.h"
 #include "OrderParameterBulk.h"
-#include "cplx.h"
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <thrust/complex.h>
 
 namespace scg {
 template <typename T> class ComputeFreeEnergy : public ComputeProperty<T> {
@@ -78,13 +78,13 @@ private:
 /// \param inGammabar - Tilde Riccati coherence function
 /// \param outFreeEnergy - The free energy
 template <typename T>
-__device__ void computeFreeEnergyKernelI(const cplx<T> &inOrderParameter,
-                                         const cplx<T> &inGamma,
-                                         const cplx<T> &inGammabar,
-                                         cplx<T> &outFreeEnergy) {
+__device__ thrust::complex<T>
+computeFreeEnergyKernelI(const thrust::complex<T> &inOrderParameter,
+                         const thrust::complex<T> &inGamma,
+                         const thrust::complex<T> &inGammabar) {
 
-  outFreeEnergy =
-      (inOrderParameter.conj() * inGamma - inOrderParameter * inGammabar);
+  return thrust::conj(inOrderParameter) * inGamma -
+         inOrderParameter * inGammabar;
 }
 
 // Parallelize calculation of free-energy kernel I over spatial coordinates
@@ -104,11 +104,13 @@ __global__ void computeFreeEnergy_Kernel(
     const int grainCoordinateIdx = y * inNumLatticePoints + x;
 
     // Initialize the sum (over Ozaki poles) to zero
-    cplx<T> freeEnergyKernelSum(T(0.0), T(0.0));
+    thrust::complex<T> freeEnergyKernelSum(static_cast<T>(0),
+                                           static_cast<T>(0));
 
     // Order parameter at this coordinate
-    const cplx<T> orderParameter(inOrderParameter_re[grainCoordinateIdx],
-                                 inOrderParameter_im[grainCoordinateIdx]);
+    const thrust::complex<T> orderParameter(
+        inOrderParameter_re[grainCoordinateIdx],
+        inOrderParameter_im[grainCoordinateIdx]);
 
     // Loop over Ozaki poles: the energy sum in the free-energy kernel I
     for (int energyIdx = 0; energyIdx < inNumEnergies; ++energyIdx) {
@@ -121,24 +123,24 @@ __global__ void computeFreeEnergy_Kernel(
           grainCoordinateIdx;
 
       // Coherence functions in the current coordinate, angle and energy
-      const cplx<T> gamma(inGamma_re[coherenceFunctionIdx],
-                          inGamma_im[coherenceFunctionIdx]);
-      const cplx<T> gammabar(inGammabar_re[coherenceFunctionIdx],
-                             inGammabar_im[coherenceFunctionIdx]);
-      cplx<T> freeEnergyKernelI;
+      const thrust::complex<T> gamma(inGamma_re[coherenceFunctionIdx],
+                                     inGamma_im[coherenceFunctionIdx]);
+      const thrust::complex<T> gammabar(inGammabar_re[coherenceFunctionIdx],
+                                        inGammabar_im[coherenceFunctionIdx]);
 
       // Calculate I(x, y, energy, angle)
-      computeFreeEnergyKernelI<T>(orderParameter, gamma, gammabar,
-                                  freeEnergyKernelI);
+      const thrust::complex<T> freeEnergyKernelI =
+          computeFreeEnergyKernelI<T>(orderParameter, gamma, gammabar);
 
-      // Multiply by Ozaki residue and sum the contribution
-      freeEnergyKernelSum +=
-          inOzakiResidues[energyIdx] * cplx<T>::i() * freeEnergyKernelI;
+      // Multiply by Ozaki residue and sum the contribution.
+      // Note that multiplying with 'i' is done after the loop.
+      freeEnergyKernelSum += inOzakiResidues[energyIdx] * freeEnergyKernelI;
     }
 
-    // Add contribution to the free energy in this coordinate
-    outFreeEnergy_re[grainCoordinateIdx] += freeEnergyKernelSum.x;
-    outFreeEnergy_im[grainCoordinateIdx] += freeEnergyKernelSum.y;
+    // Add contribution to the free energy in this coordinate.
+    // Note that a mutiplication with 'i' is done here.
+    outFreeEnergy_re[grainCoordinateIdx] -= freeEnergyKernelSum.imag();
+    outFreeEnergy_im[grainCoordinateIdx] += freeEnergyKernelSum.real();
   }
 }
 

@@ -2,11 +2,11 @@
 #define ORDER_PARAMETER_BASIS_H_
 
 #include "FermiSurface.h"
-#include "cplx.h"
 #include "defines.h"
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <thrust/complex.h>
 
 namespace scg {
 /// \brief Enum class with the supported basis-function symmetries.
@@ -53,7 +53,7 @@ public:
   /// \param inMomentum - The Fermi momentum (x,y).
   ///
   /// \return - The basis function value
-  cplx<T> evaluate(const vector2d<T> &inMomentum) const;
+  thrust::complex<T> evaluate(const vector2d<T> &inMomentum) const;
 
   /// \brief Evaluate the basis function.
   ///
@@ -61,7 +61,7 @@ public:
   /// \param inMomentumY - The y-component of the Fermi momentum
   ///
   /// \return - The basis function value
-  cplx<T> evaluate(const T inMomentumX, const T inMomentumY) const;
+  thrust::complex<T> evaluate(const T inMomentumX, const T inMomentumY) const;
 
   /// \brief Normalize the basis function on the Fermi surface.
   ///
@@ -121,36 +121,39 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
 }
 
 template <typename T>
-cplx<T> BasisFunction<T>::evaluate(const vector2d<T> &inMomentum) const {
+thrust::complex<T>
+BasisFunction<T>::evaluate(const vector2d<T> &inMomentum) const {
   return evaluate(inMomentum[0], inMomentum[1]);
 }
 
 template <typename T>
-cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
-                                   const T inMomentumY) const {
-  cplx<T> basisFunction;
+thrust::complex<T> BasisFunction<T>::evaluate(const T inMomentumX,
+                                              const T inMomentumY) const {
+  thrust::complex<T> basisFunction;
 
   if (m_circularFermiSurface) {
     switch (m_symmetry) {
     case BasisFunctionSymmetry::SWAVE: {
-      basisFunction = cplx<T>(static_cast<T>(1.0), static_cast<T>(0.0));
+      basisFunction =
+          thrust::complex<T>(static_cast<T>(1.0), static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::DWAVE_X2_Y2: {
-      basisFunction =
-          cplx<T>(inMomentumX * inMomentumX - inMomentumY * inMomentumY,
-                  static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(inMomentumX * inMomentumX -
+                                             inMomentumY * inMomentumY,
+                                         static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::DWAVE_XY: {
-      basisFunction = cplx<T>(inMomentumX * inMomentumY, static_cast<T>(0.0));
+      basisFunction =
+          thrust::complex<T>(inMomentumX * inMomentumY, static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::GWAVE: {
-      basisFunction =
-          cplx<T>(inMomentumX * inMomentumY *
-                      (inMomentumX * inMomentumX - inMomentumY * inMomentumY),
-                  static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(
+          inMomentumX * inMomentumY *
+              (inMomentumX * inMomentumX - inMomentumY * inMomentumY),
+          static_cast<T>(0.0));
       break;
     }
     default: {
@@ -159,31 +162,32 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
       std::cout << "ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
 #endif
-      basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
+      basisFunction =
+          thrust::complex<T>(static_cast<T>(0.0), static_cast<T>(0.0));
     }
     }
   } else {
     switch (m_symmetry) {
     case BasisFunctionSymmetry::SWAVE: {
-      basisFunction = cplx<T>(std::cos(inMomentumX) + std::cos(inMomentumY),
-                              static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(
+          std::cos(inMomentumX) + std::cos(inMomentumY), static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::DWAVE_X2_Y2: {
-      basisFunction = cplx<T>(std::cos(inMomentumX) - std::cos(inMomentumY),
-                              static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(
+          std::cos(inMomentumX) - std::cos(inMomentumY), static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::DWAVE_XY: {
-      basisFunction = cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY),
-                              static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(
+          std::sin(inMomentumX) * std::sin(inMomentumY), static_cast<T>(0.0));
       break;
     }
     case BasisFunctionSymmetry::GWAVE: {
-      basisFunction =
-          cplx<T>(std::sin(inMomentumX) * std::sin(inMomentumY) *
-                      (std::cos(inMomentumX) - std::cos(inMomentumY)),
-                  static_cast<T>(0.0));
+      basisFunction = thrust::complex<T>(
+          std::sin(inMomentumX) * std::sin(inMomentumY) *
+              (std::cos(inMomentumX) - std::cos(inMomentumY)),
+          static_cast<T>(0.0));
       break;
     }
     default: {
@@ -192,7 +196,8 @@ cplx<T> BasisFunction<T>::evaluate(const T inMomentumX,
       std::cout << "ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
 #endif
-      basisFunction = cplx<T>(static_cast<T>(0.0), static_cast<T>(0.0));
+      basisFunction =
+          thrust::complex<T>(static_cast<T>(0.0), static_cast<T>(0.0));
     }
     }
   }
@@ -214,13 +219,13 @@ void BasisFunction<T>::normalize(const FermiSurface<T> *const inFermiSurface) {
     const vector2d<T> momentum = inFermiSurface->getFermiMomentum(angleIdx);
 
     // Evaluate the basis function.
-    const cplx<T> basisFunction = evaluate(momentum);
+    const thrust::complex<T> basisFunction = evaluate(momentum);
 
     // Get integrand factor.
     const T integrandFactor = inFermiSurface->getIntegrandFactor(angleIdx);
 
     // Accumulate.
-    avgBasisFunctionSquared += basisFunction.cabsSq() * integrandFactor;
+    avgBasisFunctionSquared += thrust::norm(basisFunction) * integrandFactor;
   }
 
   // The normalization needs to be updated multiplicatively because the previous
@@ -238,10 +243,10 @@ void BasisFunction<T>::normalize(const std::vector<vector2d<T>> &inMomenta) {
   T avgBasisFunctionSquared = static_cast<T>(0.0);
   for (const auto &momentum : inMomenta) {
     // Evaluate the basis function.
-    const cplx<T> basisFunction = evaluate(momentum);
+    const thrust::complex<T> basisFunction = evaluate(momentum);
 
     // Accumulate.
-    avgBasisFunctionSquared += basisFunction.cabsSq();
+    avgBasisFunctionSquared += thrust::norm(basisFunction);
   }
   avgBasisFunctionSquared /= static_cast<T>(inMomenta.size());
 

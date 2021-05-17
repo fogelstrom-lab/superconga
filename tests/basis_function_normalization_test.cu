@@ -4,9 +4,8 @@
 #include "FermiSurfaceCircle.h"
 #include "FermiSurfaceTightBinding.h"
 #include "OrderParameterBasis.h"
-#include "cplx.h"
 #include "utils.h"
-
+#include <thrust/complex.h>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <functional>
@@ -89,12 +88,14 @@ void testBasisFunctionNormaliztation(const T inTolerance,
         T momentumX;
         T momentumY;
         fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
-        const scg::cplx<T> etaS = basisFunctionS.evaluate(momentumX, momentumY);
-        const scg::cplx<T> etaD = basisFunctionD.evaluate(momentumX, momentumY);
+        const thrust::complex<T> etaS =
+            basisFunctionS.evaluate(momentumX, momentumY);
+        const thrust::complex<T> etaD =
+            basisFunctionD.evaluate(momentumX, momentumY);
 
         // Compute the integrand of <|eta|^2 >
-        integrandFactorSumS += integrandFactor * etaS.cabsSq();
-        integrandFactorSumD += integrandFactor * etaD.cabsSq();
+        integrandFactorSumS += integrandFactor * thrust::norm(etaS);
+        integrandFactorSumD += integrandFactor * thrust::norm(etaD);
       }
 
       // =================== ASSERT ==================== //

@@ -14,7 +14,6 @@
 #include "Parameters.h"
 #include "RiccatiSolutions.h"
 #include "VectorPotential_Kernel.h"
-#include "cplx.h"
 #include "utils.h"
 #include <limits>
 

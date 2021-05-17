@@ -203,8 +203,10 @@ void OrderParameterComponent<T>::computeMomentumDependence(
   T pXRotated;
   T pYRotated;
   utils::rotate(m_crystalAxesRotation, pX, pY, pXRotated, pYRotated);
-  const cplx<T> basisFunction = m_basisFunction.evaluate(pXRotated, pYRotated);
-  (*target) *= (conjugateBasisFunction ? basisFunction.conj() : basisFunction);
+  const thrust::complex<T> basisFunction =
+      m_basisFunction.evaluate(pXRotated, pYRotated);
+  (*target) *=
+      (conjugateBasisFunction ? thrust::conj(basisFunction) : basisFunction);
 }
 
 template <typename T> T OrderParameterComponent<T>::deltaBulk() const {

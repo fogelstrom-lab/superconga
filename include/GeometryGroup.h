@@ -8,8 +8,8 @@
 #include "Grid.h"
 #include "Parameters.h"
 #include "Type.h"
-#include "cplx.h"
 #include <cuda.h>
+#include <thrust/complex.h>
 
 namespace scg {
 template <typename T> class GeometryGroup : public ContextModule<T> {
@@ -86,7 +86,7 @@ public:
 
   // Computes the average of the specified field in the inpute grid, only using
   // the values inside the actual geometry definition.
-  cplx<T> fieldAverage(GridGPU<T> *data, const int field = 0);
+  thrust::complex<T> fieldAverage(GridGPU<T> *data, const int field = 0);
 
   // Getters
   void getGridDimensions(int &Nx, int &Ny) const;
@@ -794,7 +794,8 @@ template <typename T> T GeometryGroup<T>::area() const {
 
 // Compute field aveage, only accounting for nodes inside geometry
 template <typename T>
-cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
+thrust::complex<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data,
+                                                  const int field) {
   const T angle = static_cast<T>(0);
   create(angle);
 
@@ -819,7 +820,8 @@ cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
   int domOffsetX = (Nx_dom - Nx_data) / 2;
   int domOffsetY = (Ny_dom - Ny_data) / 2;
 
-  cplx<T> sum(0.0, 0.0);
+  T sumReal = static_cast<T>(0);
+  T sumImag = static_cast<T>(0);
 
   int idx_data, idx_dom, num_discrete = 0;
 
@@ -829,16 +831,16 @@ cplx<T> GeometryGroup<T>::fieldAverage(GridGPU<T> *data, const int field) {
       idx_dom = (j + domOffsetY) * Nx_dom + (i + domOffsetX);
 
       if (dom[idx_dom] == 1) {
-        sum.x += data_re[idx_data];
+        sumReal += data_re[idx_data];
         if (complex) {
-          sum.y += data_im[idx_data];
+          sumImag += data_im[idx_data];
         }
         num_discrete++;
       }
     }
   }
 
-  return sum / (T)num_discrete;
+  return thrust::complex<T>(sumReal, sumImag) / static_cast<T>(num_discrete);
 }
 
 template <typename T>

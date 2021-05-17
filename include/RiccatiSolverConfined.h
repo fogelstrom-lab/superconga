@@ -3,9 +3,9 @@
 
 #include "Grid.h"
 #include "RiccatiSolver.h"
-#include "cplx.h"
 #include <cmath>
 #include <string>
+#include <thrust/complex.h>
 
 namespace scg {
 template <typename T, template <typename> class GAMMA,
@@ -63,8 +63,8 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
   // well?
   if (x <= idx_x_max) {
     // Read the energy.
-    cplx<T> energy(energies_re[e_idx], energies_im[e_idx]);
-    const T energy_zeroPotential = energy.x;
+    const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
+                                                 energies_im[e_idx]);
 
     // In order to read/write values from/to the boundary coherence functions,
     // we need to keep track of how many boundaries we have encountered along
@@ -79,7 +79,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
     // The value of the coherence function at the entry edge of the current
     // lattice site. It is updated as we traverse the trajectory.
-    cplx<T> gEntry(static_cast<T>(0), static_cast<T>(0));
+    thrust::complex<T> gEntry(static_cast<T>(0), static_cast<T>(0));
 
     // The step from the entry edge to the exit edge of the lattice site.
     const T step = h / fermiSpeed;
@@ -96,7 +96,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       const int idx = y * N + x;
 
       // Add energy shift from vector potential
-      energy.x = energy_zeroPotential + energy_shift[idx];
+      const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
 
       // Index to gamma grid (for all energies)
       const int gamma_idx = e_idx * 2 * N * N + y * N + x;
@@ -105,7 +105,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       const char nodeType = domainLabel[idx];
 
       // Read order parameter
-      const cplx<T> delta(delta_real[idx], delta_imag[idx]);
+      const thrust::complex<T> delta(delta_real[idx], delta_imag[idx]);
 
       if (nodeType == 1) {
         // Inside domain:
@@ -113,24 +113,26 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 #ifdef APPROX_STEP
         // Take a step from the entry edge to the exit edge of the lattice
         // site.
-        const cplx<T> gExit = GAMMA::computeStep(delta, energy, gEntry, step);
+        const thrust::complex<T> gExit =
+            GAMMA::computeStep(delta, energy, gEntry, step);
 
         // Approximate the value of the coherence function at the center of the
         // lattice site by the mean of the entry and exit values.
-        const cplx<T> gCenter = static_cast<T>(0.5) * (gEntry + gExit);
+        const thrust::complex<T> gCenter =
+            static_cast<T>(0.5) * (gEntry + gExit);
 #else
         // Take a step from the entry edge to the center of the lattice site.
-        const cplx<T> gCenter =
+        const thrust::complex<T> gCenter =
             GAMMA::computeStep(delta, energy, gEntry, halfStep);
 
         // Take a step from the center to the exit edge of the lattice site.
-        const cplx<T> gExit =
+        const thrust::complex<T> gExit =
             GAMMA::computeStep(delta, energy, gCenter, halfStep);
 #endif
 
         // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.x;
-        gamma_imag[gamma_idx] = gCenter.y;
+        gamma_real[gamma_idx] = gCenter.real();
+        gamma_imag[gamma_idx] = gCenter.imag();
 
         // For the next lattice site, the current exit value is the entry.
         gEntry = gExit;
@@ -141,8 +143,8 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
             angleIdx, e_idx + energyIdx_offset, x, boundary_entry_count, Ne, N,
             idx_in_gamma);
-        const cplx<T> gBoundary(bnd_in_gamma_real[idx_sparse],
-                                bnd_in_gamma_imag[idx_sparse]);
+        const thrust::complex<T> gBoundary(bnd_in_gamma_real[idx_sparse],
+                                           bnd_in_gamma_imag[idx_sparse]);
 
         // Distance to exact boundary location from the center of the lattice
         // site.
@@ -156,7 +158,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
         // Take a step from the grain boundary to the exit edge of the lattice
         // site.
-        const cplx<T> gExit =
+        const thrust::complex<T> gExit =
             GAMMA::computeStep(delta, energy, gBoundary, boundaryToEdgeStep);
 
         // Approximate the value of the coherence function at the center of the
@@ -164,22 +166,22 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // values.
         const T weightBoundary = halfStep / boundaryToEdgeStep;
         const T weightExit = static_cast<T>(1) - weightBoundary;
-        const cplx<T> gCenter =
+        const thrust::complex<T> gCenter =
             (gBoundary * weightBoundary + gExit * weightExit);
 #else
         // Take a step from the grain boundary to the center of the lattice
         // site.
-        const cplx<T> gCenter =
+        const thrust::complex<T> gCenter =
             GAMMA::computeStep(delta, energy, gBoundary, boundaryToCenterStep);
 
         // Take a step from the center to the exit edge of the lattice site.
-        const cplx<T> gExit =
+        const thrust::complex<T> gExit =
             GAMMA::computeStep(delta, energy, gCenter, halfStep);
 #endif
 
         // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.x;
-        gamma_imag[gamma_idx] = gCenter.y;
+        gamma_real[gamma_idx] = gCenter.real();
+        gamma_imag[gamma_idx] = gCenter.imag();
 
         // For the next lattice site, the current exit value is the entry.
         gEntry = gExit;
@@ -201,39 +203,39 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
         // Take a step from the entry edge of the lattice site to the grain
         // boundary.
-        const cplx<T> gBoundary =
+        const thrust::complex<T> gBoundary =
             GAMMA::computeStep(delta, energy, gEntry, edgeToBoundaryStep);
 
         // Approximate the center value by the weighted mean.
         const T weightEntry = centerToBoundaryStep / edgeToBoundaryStep;
         const T weightBoundary = static_cast<T>(1) - weightEntry;
-        const cplx<T> gCenter =
+        const thrust::complex<T> gCenter =
             (gEntry * weightEntry + gBoundary * weightBoundary);
 #else
         // Take a step from the entry edge to the center of the lattice site.
-        const cplx<T> gCenter =
+        const thrust::complex<T> gCenter =
             GAMMA::computeStep(delta, energy, gEntry, halfStep);
 
         // Take a step from the center of the lattice site to the grain
         // boundary.
-        const cplx<T> gBoundary =
+        const thrust::complex<T> gBoundary =
             GAMMA::computeStep(delta, energy, gCenter, centerToBoundaryStep);
 #endif
 
         // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.x;
-        gamma_imag[gamma_idx] = gCenter.y;
+        gamma_real[gamma_idx] = gCenter.real();
+        gamma_imag[gamma_idx] = gCenter.imag();
 
         // There is no exit edge value to set it to, because we hit a
         // boundary. So the next lattice site is outside of the domain.
-        gEntry = cplx<T>(static_cast<T>(0), static_cast<T>(0));
+        gEntry = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
 
         // Store boundary gamma.
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
             angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
             idx_out_gamma);
-        bnd_out_gamma_real[idx_sparse] = gBoundary.x;
-        bnd_out_gamma_imag[idx_sparse] = gBoundary.y;
+        bnd_out_gamma_real[idx_sparse] = gBoundary.real();
+        bnd_out_gamma_imag[idx_sparse] = gBoundary.imag();
 
         // Increase exit counter.
         boundary_exit_count++;
@@ -269,8 +271,9 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
   if (x < N) {
-    cplx<T> energy(energies_re[e_idx], energies_im[e_idx]);
-    const T energy_zeroPotential = energy.x;
+    // Read the energy.
+    const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
+                                                 energies_im[e_idx]);
 
     int boundary_exit_count = 0;
 
@@ -284,14 +287,14 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
       const int idx = y * N + x;
 
       // Add energy shift from vector potential
-      energy.x = energy_zeroPotential + energy_shift[idx];
+      const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
 
       // What type of node are we on?
       const char nodeType = domainLabel[idx];
 
       if (nodeType == DOMAIN_EXIT) {
         // Read order parameter
-        const cplx<T> delta(delta_real[idx], delta_imag[idx]);
+        const thrust::complex<T> delta(delta_real[idx], delta_imag[idx]);
 
         // Compute gammas and store
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
@@ -299,10 +302,11 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
             idx_out_gamma);
 
         // Compute gamma at current grid point
-        const cplx<T> gBoundary = GAMMA::computeHomogeneous(delta, energy);
+        const thrust::complex<T> gBoundary =
+            GAMMA::computeHomogeneous(delta, energy);
 
-        bnd_out_gamma_real[idx_sparse] = gBoundary.x;
-        bnd_out_gamma_imag[idx_sparse] = gBoundary.y;
+        bnd_out_gamma_real[idx_sparse] = gBoundary.real();
+        bnd_out_gamma_imag[idx_sparse] = gBoundary.imag();
 
         boundary_exit_count++;
       }

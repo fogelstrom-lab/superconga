@@ -31,13 +31,13 @@
 #include "Parameters.h"
 #include "PolygonGeometry.h"
 #include "RiccatiSolverConfined.h"
-#include "cplx.h"
 #include "defines.h"
 #include "run_utils.h"
 #include <complex>
 #include <doctest/doctest.h>
 #include <iostream>
 #include <stdlib.h>
+#include <thrust/complex.h>
 
 //*******************************************************
 // SIMULATION PARAMETERS common between test cases
@@ -173,9 +173,9 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
       // Construct the complex valued order parameter.
       // Strictly speaking it unnecessary to have it complex valued when we only
       // consider s- and d-wave.
-      const scg::cplx<T> tmp =
+      const thrust::complex<T> tmp =
           basisFunction.evaluate(fermiMomentumX, fermiMomentumY);
-      const std::complex<T> eta(tmp.x, tmp.y);
+      const std::complex<T> eta(tmp.real(), tmp.imag());
       const std::complex<T> orderParameter = eta * orderParameterBulk;
 
       // Compute the angle resolved DOS.

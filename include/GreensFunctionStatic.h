@@ -5,7 +5,7 @@
 #include "LocalGreens.h"
 #include "ParameterIterator.h"
 #include "Parameters.h"
-#include "cplx.h"
+#include <thrust/complex.h>
 
 namespace scg {
 template <typename> class GeometryGroup;
@@ -47,13 +47,15 @@ computeGreens_kernel(const int N, T *greens_re, T *greens_im,
   if (x < N) {
     const int gamma_idx = e_idx * 2 * N * N + y * N + x;
 
-    cplx<T> greens_local, gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]),
-        gammabar(gammabar_re[gamma_idx], gammabar_im[gamma_idx]);
+    const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
+    const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
+                                      gammabar_im[gamma_idx]);
 
+    thrust::complex<T> greens_local;
     GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
 
-    greens_re[gamma_idx] = greens_local.x;
-    greens_im[gamma_idx] = greens_local.y;
+    greens_re[gamma_idx] = greens_local.real();
+    greens_im[gamma_idx] = greens_local.imag();
   }
 }
 
@@ -67,28 +69,26 @@ __global__ void computeGreensSumEnergy_kernel(const int N, const int Ne,
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
-  int gamma_idx, greens_idx;
-  int e_idx;
-
   if (x < N) {
-    greens_idx = y * N + x;
+    const int greens_idx = y * N + x;
 
-    cplx<T> greensTmp, greens_local, gamma, gammabar,
-        greens_sum((T)0.0, (T)0.0);
+    thrust::complex<T> greens_sum(static_cast<T>(0), static_cast<T>(0));
 
-    for (e_idx = 0; e_idx < Ne; ++e_idx) {
-      gamma_idx = e_idx * 2 * N * N + greens_idx;
+    for (int e_idx = 0; e_idx < Ne; ++e_idx) {
+      const int gamma_idx = e_idx * 2 * N * N + greens_idx;
 
-      gamma = cplx<T>(gamma_re[gamma_idx], gamma_im[gamma_idx]);
-      gammabar = cplx<T>(gammabar_re[gamma_idx], gammabar_im[gamma_idx]);
+      const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
+      const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
+                                        gammabar_im[gamma_idx]);
 
-      GREENS<T>::computeGreens_local(gamma, gammabar, greensTmp);
+      thrust::complex<T> greens_local;
+      GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
 
-      greens_sum += greensTmp;
+      greens_sum += greens_local;
     }
 
-    greens_re[greens_idx] += greens_sum.x;
-    greens_im[greens_idx] += greens_sum.y;
+    greens_re[greens_idx] += greens_sum.real();
+    greens_im[greens_idx] += greens_sum.imag();
   }
 }
 
@@ -100,28 +100,26 @@ __global__ void computeGreensSumEnergy_kernel(
   const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
   const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
 
-  int gamma_idx, greens_idx;
-  int e_idx;
-
   if (x < N) {
-    greens_idx = y * N + x;
+    const int greens_idx = y * N + x;
 
-    cplx<T> greensTmp, greens_local, gamma, gammabar,
-        greens_sum((T)0.0, (T)0.0);
+    thrust::complex<T> greens_sum(static_cast<T>(0), static_cast<T>(0));
 
-    for (e_idx = 0; e_idx < Ne; ++e_idx) {
-      gamma_idx = e_idx * 2 * N * N + greens_idx;
+    for (int e_idx = 0; e_idx < Ne; ++e_idx) {
+      const int gamma_idx = e_idx * 2 * N * N + greens_idx;
 
-      gamma = cplx<T>(gamma_re[gamma_idx], gamma_im[gamma_idx]);
-      gammabar = cplx<T>(gammabar_re[gamma_idx], gammabar_im[gamma_idx]);
+      const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
+      const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
+                                        gammabar_im[gamma_idx]);
 
-      GREENS<T>::computeGreens_local(gamma, gammabar, greensTmp);
+      thrust::complex<T> greens_local;
+      GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
 
-      greens_sum += summandFactor[e_idx] * greensTmp;
+      greens_sum += summandFactor[e_idx] * greens_local;
     }
 
-    greens_re[greens_idx] += greens_sum.x;
-    greens_im[greens_idx] += greens_sum.y;
+    greens_re[greens_idx] += greens_sum.real();
+    greens_im[greens_idx] += greens_sum.imag();
   }
 }
 } // namespace internal
