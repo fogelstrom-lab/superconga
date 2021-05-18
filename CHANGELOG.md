@@ -5,7 +5,10 @@
 ### Improvements
 - **MAJOR** Fully expose geometry to user in config files, remove from CLI/GUI
 - **MAJOR** Deprecate the GUI
-- Add `CHANGELOG.md` and update releases
+- Add `CHANGELOG.md`
+- Add `CONTRIBUTING.md` (contribution guide)
+- Add `CODE_OF_CONDUCT.md`
+- Update release numbers
 - Update framework description in README
 - Add chiral d-wave example
 - Add chiral-transformation option to plotter
