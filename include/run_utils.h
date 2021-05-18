@@ -13,10 +13,12 @@
 #define RUN_UTILS_H_
 
 #include "Context.h"
+#include "DiscGeometry.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
-#include "Parameters.h" // Parameters specifying which the superconducting system to simulate
-#include "Type.h" // Custom types (real, complex, ...)
+#include "Parameters.h"
+#include "PolygonGeometry.h"
+#include "Type.h"
 #include "Visualization.h"
 #include "io/csv_writers.h"
 #include "io/write_utils.h"
@@ -24,7 +26,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <errno.h> // errno, ENOENT, EEXIST
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
