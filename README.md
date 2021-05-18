@@ -51,13 +51,9 @@ To see further usage instructions, run `python plotter.py --help`, or refer to t
 
 
 ## Contribute
-We encourage any useful contributions to the development of SuprConGPU, by forking this repository and sending merge requests, proposing changes via our SuprConGPU discussion group, questions and discussions, or sharing bug reports via the issues page.
+We encourage any useful contributions to the development of SuprConGPU, by forking this repository and sending merge requests, sharing bug reports or suggestions via the [issues page](https://gitlab.com/suprcongpu/suprcongpu/-/issues), or contacting us with any questions and discussions.
 
-All contributions are acknowledged in the [contributors section](https://suprcongpu.gitlab.io/suprcongpu-doc/contributors.html) in the documentation.
-
-Note that all contributions must adhere to the [clang-format style guide](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html#clang-format) for C++/CUDA code, and the [PEP 8 -- Style Guide](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html#pep8) for Python Code.
-
-For more information, including technical advice, please see [Contributing to SuperConGPU development](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html).
+All contributions are acknowledged in the [contributors section](https://suprcongpu.gitlab.io/suprcongpu-doc/contributors.html). For more information, including technical advice, please see [Contributing to SuperConGPU development](https://suprcongpu.gitlab.io/suprcongpu-doc/contribute.html) in the online documentation. Please note that any contribution must adhere to our [code of conduct](https://gitlab.com/suprcongpu/suprcongpu/-/blob/master/CODE_OF_CONDUCT.md).
 
 
 ## License
@@ -72,3 +68,6 @@ SuprConGPU development is supported by the Applied Quantum Physics Laboratory at
 
 ## Authors
 The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
+
+## Citing SuprConGPU
+If you have used SuprConGPU in your research, please [cite it](https://suprcongpu.gitlab.io/suprcongpu-doc/cite.html). Please let us know about your research in turn, as we find any application of SuprConGPU of great interest, and want to include it in our future outreaches.
