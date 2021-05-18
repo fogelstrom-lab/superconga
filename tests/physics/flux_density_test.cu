@@ -148,7 +148,7 @@ template <typename T> void testFluxDensity(const T inTolerance) {
 
   // =================== ASSERT ==================== //
   // Note, the way doctest compares two floating point numbers, A and B, is the
-  // following: |A| * |B| < epsilon * (scale + max(|A|, |B|))
+  // following: |A - B| < epsilon * (scale + max(|A|, |B|))
   CHECK(penetrationDepth == doctest::Approx(testPenetrationDepth)
                                 .epsilon(inTolerance)
                                 .scale(static_cast<T>(0)));
