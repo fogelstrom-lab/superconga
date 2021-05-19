@@ -1,0 +1,13 @@
+image: alpine
+
+pages:
+  stage: deploy
+  script:
+  - apk update && apk add doxygen graphviz ttf-freefont
+  - doxygen docs/doxygen.conf
+  - mv docs/html/ public/
+  artifacts:
+    paths:
+    - public
+  only:
+    - master
