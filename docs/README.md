@@ -1,6 +1,6 @@
 # SuprConGPU API documentation
 
-Welcome to the API documentation of SuprConGPU.
+Welcome to the [API documentation of SuprConGPU](https://suprcongpu.gitlab.io/suprcongpu/).
 
 
 ### Generating documentation locally
