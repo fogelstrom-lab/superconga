@@ -574,7 +574,7 @@ def plot_ldos(
     ax_DOS.tick_params(axis="both", which="major", labelsize=PP.tick_size)
     ax_DOS.xaxis.set_ticks_position("bottom")
     ax_DOS.yaxis.set_ticks_position("left")
-    ax_DOS.set_ylim([0, 5])
+    ax_DOS.set_ylim([0, 10])
     ax_DOS.set_xlim([-dos_data["energy"][-1], dos_data["energy"][-1]])
     # ax_DOS.set_yticks([0, 4])
     # ax_DOS.set_xticks([0, 10, 20, 30, 40, 50])

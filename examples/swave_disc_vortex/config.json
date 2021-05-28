@@ -8,7 +8,7 @@
 		{
 			"disc": {
 				"add": true,
-				"diameter": 50.0,
+				"diameter": 30.0,
 				"center_x": 0.0,
 				"center_y": 0.0
 			}
@@ -39,7 +39,7 @@
 	],
 	"order_parameter_path": "",
 	"penetration_depth": 5.0,
-	"points_per_coherence_length": 5.0,
+	"points_per_coherence_length": 20.0,
 	"save_data": false,
 	"save_data_interval": 0,
 	"temperature": 0.5,

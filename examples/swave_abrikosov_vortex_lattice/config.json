@@ -41,7 +41,7 @@
 	],
 	"order_parameter_path": "",
 	"penetration_depth": 10.0,
-	"points_per_coherence_length": 8.0,
+	"points_per_coherence_length": 15.0,
 	"save_data": false,
 	"save_data_interval": 0,
 	"temperature": 0.2,
