@@ -1,6 +1,15 @@
+//===--------------------- Type.h - Enum definitions. ---------------------===//
 //
-// Enums to make code and function arguments read more easily.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Convenient enum definitions, to make code and function arguments easier to
+/// read.
+///
+//===----------------------------------------------------------------------===//
 #ifndef TYPE_H_
 #define TYPE_H_
 

@@ -1,3 +1,14 @@
+//===-- ComputeVectorPotential.h - Compute object for vector potential. ---===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for vector potential.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_VECTOR_POTENTIAL_H_
 #define COMPUTE_VECTOR_POTENTIAL_H_
 

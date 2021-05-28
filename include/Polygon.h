@@ -1,11 +1,20 @@
+//===--------------------- Polygon.h - Polygon class. ---------------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Polygon class, providing a basic shape implementation for a polygon.
+/// Polygons must be defined in a counterclockwise fashion.
+///
+//===----------------------------------------------------------------------===//
 #ifndef POLYGON_H_
 #define POLYGON_H_
 
 #include "Grid.h"
 #include <cmath>
-
-// This class provides a basic shape implementation for a polygon.
-// Polygons must be defined in a counterclockwise fashion.
 
 namespace scg {
 template <typename T> class Polygon {

@@ -1,3 +1,14 @@
+//===---- ComputeFreeEnergy.h - Class for free energy compute object. -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for free energy.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_FREE_ENERGY_H_
 #define COMPUTE_FREE_ENERGY_H_
 

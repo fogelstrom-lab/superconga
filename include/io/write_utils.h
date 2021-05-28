@@ -1,3 +1,14 @@
+//===------ write_utils.h - utils functions for writing data to files -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility functions for writing data to files.
+///
+//===----------------------------------------------------------------------===//
 #ifndef WRITE_UTILS_H_
 #define WRITE_UTILS_H_
 

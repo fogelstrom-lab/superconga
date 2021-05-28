@@ -1,7 +1,14 @@
-/////////////////////////////////////////////////////////////////////////////
-// Functions to compute local contribution to energy from a vector potential
-/////////////////////////////////////////////////////////////////////////////
-
+//===-- LocalVectorPotential.h - Compute energy from vector potential. ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functions to compute local contribution to energy from a vector potential.
+///
+//===----------------------------------------------------------------------===//
 #ifndef LOCAL_VECTOR_POTENTIAL_H_
 #define LOCAL_VECTOR_POTENTIAL_H_
 

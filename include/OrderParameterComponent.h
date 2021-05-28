@@ -1,3 +1,15 @@
+//===-- OrderParameterComponent.h - Component of order parameter group. ---===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Storage for a single order parameter component, added to the total order
+/// parameter.
+///
+//===----------------------------------------------------------------------===//
 #ifndef ORDER_PARAMETER_COMPONENT_H_
 #define ORDER_PARAMETER_COMPONENT_H_
 

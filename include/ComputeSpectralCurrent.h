@@ -1,5 +1,16 @@
-#ifndef COMPUTE_CURRENT_DENSITY_H_
-#define COMPUTE_CURRENT_DENSITY_H_
+//=== ComputeSpectralCurrent.h - Class for spectral current compute object. ==//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for spectral current.
+///
+//===----------------------------------------------------------------------===//
+#ifndef COMPUTE_SPECTRAL_CURRENT_H_
+#define COMPUTE_SPECTRAL_CURRENT_H_
 
 #include "ComputeProperty.h"
 #include "Grid.h"
@@ -8,13 +19,13 @@
 #include <limits>
 
 namespace scg {
-template <typename T> class ComputeCurrentDensity : public ComputeProperty<T> {
+template <typename T> class ComputeSpectralCurrent : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
-  ComputeCurrentDensity();
-  virtual ~ComputeCurrentDensity();
+  ComputeSpectralCurrent();
+  virtual ~ComputeSpectralCurrent();
 
-  ComputeCurrentDensity(Context<T> *ctx);
+  ComputeSpectralCurrent(Context<T> *ctx);
 
   virtual GridGPU<T> *getResult() { return _lcurrent_all; }
   virtual IntegrationIterator<T> *
@@ -47,18 +58,18 @@ public:
       return _lcurrent_y;
   }
 
-  GridCPU<T> *getCurrentDensity() const { return _current; }
+  GridCPU<T> *getSpectralCurrent() const { return _current; }
 
   int getMultFermiFunction() const { return _multFermiFunction; }
   void setMultFermiFunction(const int mult) { _multFermiFunction = mult; }
 
 private:
-  // Computed local current density will be stored here at end of
+  // Computed local spectral current will be stored here at end of
   // IntegrationIterator::compute() function.
   GridGPU<T> *_lcurrent_x;
   GridGPU<T> *_lcurrent_y;
 
-  // Total current density for system, for each energy level
+  // Total spectral current for system, for each energy level
   GridGPU<T> *_lcurrent_all;
 
   // Integrated current, per energy level
@@ -72,18 +83,18 @@ private:
 };
 
 template <typename T>
-ComputeCurrentDensity<T>::ComputeCurrentDensity()
+ComputeSpectralCurrent<T>::ComputeSpectralCurrent()
     : ComputeProperty<T>(), _lcurrent_x(0), _lcurrent_y(0), _lcurrent_all(0),
       _current(0), _tmp(0), _multFermiFunction(0) {}
 
 template <typename T>
-ComputeCurrentDensity<T>::ComputeCurrentDensity(Context<T> *ctx)
+ComputeSpectralCurrent<T>::ComputeSpectralCurrent(Context<T> *ctx)
     : ComputeProperty<T>(ctx), _lcurrent_x(0), _lcurrent_y(0), _lcurrent_all(0),
       _current(0), _tmp(0), _multFermiFunction(0) {
   ctx->add(this);
 }
 
-template <typename T> ComputeCurrentDensity<T>::~ComputeCurrentDensity() {
+template <typename T> ComputeSpectralCurrent<T>::~ComputeSpectralCurrent() {
   if (_lcurrent_x)
     delete _lcurrent_x;
   if (_lcurrent_y)
@@ -98,12 +109,12 @@ template <typename T> ComputeCurrentDensity<T>::~ComputeCurrentDensity() {
 
 template <typename T>
 IntegrationIterator<T> *
-ComputeCurrentDensity<T>::createIntegrationIterator(int numEnergiesPerBlock) {
+ComputeSpectralCurrent<T>::createIntegrationIterator(int numEnergiesPerBlock) {
   return new IntegrationIteratorKeldysh<T>(ContextModule<T>::getContext(),
                                            numEnergiesPerBlock);
 }
 
-template <typename T> int ComputeCurrentDensity<T>::initialize() {
+template <typename T> int ComputeSpectralCurrent<T>::initialize() {
   typedef ContextModule<T> C;
 
   int N0 = C::getParameters()->getGridResolutionBase();
@@ -126,7 +137,7 @@ template <typename T> int ComputeCurrentDensity<T>::initialize() {
 
   ComputeProperty<T>::initGreensAngle(N1, numEnergiesInterval);
 #ifndef NDEBUG
-  std::cout << "CurrentDensity mem: "
+  std::cout << "SpectralCurrent mem: "
             << (_lcurrent_all->numElements() + 3 * _lcurrent_x->numElements()) *
                    sizeof(T)
             << "\n";
@@ -135,7 +146,7 @@ template <typename T> int ComputeCurrentDensity<T>::initialize() {
 }
 
 template <typename T>
-void ComputeCurrentDensity<T>::initializeIteration(int numFields) {
+void ComputeSpectralCurrent<T>::initializeIteration(int numFields) {
   if (ComputeProperty<T>::doCompute()) {
     _lcurrent_x->setZero();
     _lcurrent_y->setZero();
@@ -144,9 +155,9 @@ void ComputeCurrentDensity<T>::initializeIteration(int numFields) {
 }
 
 template <typename T>
-void ComputeCurrentDensity<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                                  GridGPU<T> *gamma,
-                                                  GridGPU<T> *gammabar) {
+void ComputeSpectralCurrent<T>::computeGreensAngle(ParameterIterator<int> *iter,
+                                                   GridGPU<T> *gamma,
+                                                   GridGPU<T> *gammabar) {
   if (ComputeProperty<T>::doCompute()) {
     GreensFunctionStatic<T, Greens>::computeGreens(
         ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar);
@@ -154,8 +165,8 @@ void ComputeCurrentDensity<T>::computeGreensAngle(ParameterIterator<int> *iter,
 }
 
 template <typename T>
-void ComputeCurrentDensity<T>::integrateGreensAngle(GeometryGroup<T> *geom,
-                                                    const int angleIdx) {
+void ComputeSpectralCurrent<T>::integrateGreensAngle(GeometryGroup<T> *geom,
+                                                     const int angleIdx) {
   if (ComputeProperty<T>::doCompute()) {
     GridGPU<T> *greens = ComputeProperty<T>::getGreensCurrentAngle();
 
@@ -182,7 +193,7 @@ void ComputeCurrentDensity<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 }
 
 template <typename T>
-void ComputeCurrentDensity<T>::computePropertyFromGreens() {
+void ComputeSpectralCurrent<T>::computePropertyFromGreens() {
   if (ComputeProperty<T>::doCompute()) {
     typedef ContextModule<T> C;
 
@@ -226,7 +237,7 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
                                2 * (i + energyIdx_offset) + 1);
     }
 
-    // Integrate local current density (used to compute residual)
+    // Integrate local spectral current (used to compute residual)
     GridCPU<T> energies_cpu = *energies;
     T *energies_ptr =
         energies_cpu.getDataPointer(0, Type::real) + energyIdx_offset;
@@ -264,4 +275,4 @@ void ComputeCurrentDensity<T>::computePropertyFromGreens() {
 }
 } // namespace scg
 
-#endif // COMPUTE_CURRENT_DENSITY_H_
+#endif // COMPUTE_SPECTRAL_CURRENT_H_

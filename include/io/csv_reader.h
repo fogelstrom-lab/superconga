@@ -1,3 +1,14 @@
+//===---- csv_reader.h - functionality for reading data from csv files. ---===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functions and classes for reading data from csv files.
+///
+//===----------------------------------------------------------------------===//
 #ifndef CSV_READER_H_
 #define CSV_READER_H_
 

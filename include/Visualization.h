@@ -1,3 +1,14 @@
+//===------------- Visualization.h - OpenGL live visualization. -----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of OpenGL live visualization.
+///
+//===----------------------------------------------------------------------===//
 #ifndef VISUALIZATION_H_
 #define VISUALIZATION_H_
 

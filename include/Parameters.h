@@ -1,3 +1,14 @@
+//===--------------- Parameters.h - Parameter storage class. --------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Storage class for parameters, with convenience functions.
+///
+//===----------------------------------------------------------------------===//
 #ifndef PARAMETERS_H_
 #define PARAMETERS_H_
 

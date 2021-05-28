@@ -1,6 +1,14 @@
+//===------------------------ Disc.h - Disc class. ------------------------===//
 //
-// This class provides a basic shape implementation for a disc.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Disc class, providing a basic shape implementation for a disc.
+///
+//===----------------------------------------------------------------------===//
 #ifndef DISC_H_
 #define DISC_H_
 

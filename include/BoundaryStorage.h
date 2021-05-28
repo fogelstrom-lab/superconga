@@ -1,3 +1,15 @@
+//===------ BoundaryStorage.h - Coherence function boundary storage. ------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Class and functionality for treating boundary storage for coherence
+/// functions.
+///
+//===----------------------------------------------------------------------===//
 #ifndef BOUNDARY_STORAGE_H_
 #define BOUNDARY_STORAGE_H_
 

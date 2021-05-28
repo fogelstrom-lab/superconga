@@ -1,3 +1,15 @@
+//===----- ComputeResidual.h - Functionality for computing residual. ------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functionality for computing the residual between different self-consistent
+/// iterations.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_RESIDUAL_H_
 #define COMPUTE_RESIDUAL_H_
 

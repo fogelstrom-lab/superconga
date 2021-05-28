@@ -1,3 +1,14 @@
+//===------ CoherenceFunctions.h - Base class for coherence functions. ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Class and functionality for coherence functions.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COHERENCE_FUNCTIONS_H_
 #define COHERENCE_FUNCTIONS_H_
 

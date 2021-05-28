@@ -1,3 +1,14 @@
+//===----------- IncludeGL.h - Utility functions used by OpenGL. ----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility functions used in the OpenGL live visualization.
+///
+//===----------------------------------------------------------------------===//
 #ifndef INCLUDE_GL_H_
 #define INCLUDE_GL_H_
 

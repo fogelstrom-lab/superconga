@@ -1,3 +1,15 @@
+//===-------------- GridFunctions_CPU.h - CPU grid functions. -------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// CPU-specific implementation of functions to operate on Grid functions, i.e.
+/// thrust host vectors.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_FUNCTIONS_CPU_H_
 #define GRID_FUNCTIONS_CPU_H_
 

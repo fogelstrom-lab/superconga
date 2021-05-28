@@ -1,3 +1,15 @@
+//===----- BoundaryConditionSpecular.h - Specular boundary condition. -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of a specular boundary condition. Derives from the virtual
+/// BOundaryCondition class.
+///
+//===----------------------------------------------------------------------===//
 #ifndef BOUNDARY_CONDITION_SPECULAR_H_
 #define BOUNDARY_CONDITION_SPECULAR_H_
 

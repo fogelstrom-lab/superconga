@@ -1,3 +1,15 @@
+//===-- Integrationiterator.h - Integration iterator base class. ----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Base class for integration iterator, i.e. the class that handles the energy
+/// integration.
+///
+//===----------------------------------------------------------------------===//
 #ifndef INTEGRATION_ITERATOR_H_
 #define INTEGRATION_ITERATOR_H_
 

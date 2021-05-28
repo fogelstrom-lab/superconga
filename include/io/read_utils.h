@@ -1,3 +1,14 @@
+//===---- read_utils.h - utils functions for reading data from files. ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility functions for reading data from files.
+///
+//===----------------------------------------------------------------------===//
 #ifndef READ_UTILS_H_
 #define READ_UTILS_H_
 

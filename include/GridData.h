@@ -1,3 +1,17 @@
+//===-- GridData.h - GridData class. --------------------------------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// GridData class and functionality. GridData is a data type that wraps thrust
+/// host (device) vectors for CPU (GPU) implementation. Different kinds of
+/// GridData objects are defined, like 2D real and complex fields, vector fields
+/// etcetera.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_DATA_H_
 #define GRID_DATA_H_
 

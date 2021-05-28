@@ -1,3 +1,15 @@
+//===--------------------- Context.h - Context class. ---------------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Class for the context object, containing pointers and storage for most
+/// objects during a simulation.
+///
+//===----------------------------------------------------------------------===//
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
@@ -13,7 +25,7 @@
 
 namespace scg {
 template <typename> class ComputeCurrent;
-template <typename> class ComputeCurrentDensity;
+template <typename> class ComputeSpectralCurrent;
 template <typename> class ComputeFreeEnergy;
 template <typename> class ComputeLDOS;
 template <typename> class ComputeOrderParameter;
@@ -70,7 +82,7 @@ public:
 
   // Adders of compute objects.
   void add(ComputeCurrent<T> *inComputeCurrent);
-  void add(ComputeCurrentDensity<T> *inComputeCurrentDensity);
+  void add(ComputeSpectralCurrent<T> *inComputeSpectralCurrent);
   void add(ComputeFreeEnergy<T> *inComputeFreeEnergy);
   void add(ComputeLDOS<T> *inComputeLDOS);
   void add(ComputeOrderParameter<T> *inComputeOrderParameter);
@@ -99,8 +111,8 @@ public:
 
   // Getters of compute objects.
   ComputeCurrent<T> *getComputeCurrent() const { return m_computeCurrent; }
-  ComputeCurrentDensity<T> *getComputeCurrentDensity() const {
-    return m_computeCurrentDensity;
+  ComputeSpectralCurrent<T> *getComputeSpectralCurrent() const {
+    return m_ComputeSpectralCurrent;
   }
   ComputeFreeEnergy<T> *getComputeFreeEnergy() const {
     return m_computeFreeEnergy;
@@ -153,7 +165,7 @@ private:
 
   // Helper pointers
   ComputeCurrent<T> *m_computeCurrent;
-  ComputeCurrentDensity<T> *m_computeCurrentDensity;
+  ComputeSpectralCurrent<T> *m_ComputeSpectralCurrent;
   ComputeFreeEnergy<T> *m_computeFreeEnergy;
   ComputeLDOS<T> *m_computeLDOS;
   ComputeOrderParameter<T> *m_computeOrderParameter;
@@ -165,7 +177,7 @@ Context<T>::Context()
       m_riccatiSolver(nullptr), m_integrationIterator(nullptr),
       m_fermiSurface(std::make_unique<FermiSurfaceCircle<T>>()),
       m_inducedVectorPotential(nullptr), m_computeCurrent(nullptr),
-      m_computeCurrentDensity(nullptr), m_computeFreeEnergy(nullptr),
+      m_ComputeSpectralCurrent(nullptr), m_computeFreeEnergy(nullptr),
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
       m_computeVectorPotential(nullptr), m_computeTime(static_cast<T>(0.0)),
       m_numIterations(0), m_optimizer(std::make_unique<Optimizer<T>>()) {}
@@ -241,9 +253,9 @@ void Context<T>::add(ComputeCurrent<T> *inComputeCurrent) {
 }
 
 template <typename T>
-void Context<T>::add(ComputeCurrentDensity<T> *inComputeCurrentDensity) {
-  m_computeCurrentDensity = inComputeCurrentDensity;
-  add(static_cast<ComputeProperty<T> *>(inComputeCurrentDensity));
+void Context<T>::add(ComputeSpectralCurrent<T> *inComputeSpectralCurrent) {
+  m_ComputeSpectralCurrent = inComputeSpectralCurrent;
+  add(static_cast<ComputeProperty<T> *>(inComputeSpectralCurrent));
 }
 
 template <typename T>

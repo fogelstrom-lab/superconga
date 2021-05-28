@@ -1,3 +1,14 @@
+//===-- OrderParameterBulk.h - Order parameter bulk calculation. ----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functionality related to computing a bulk order parameter.
+///
+//===----------------------------------------------------------------------===//
 #ifndef ORDER_PARAMETER_BULK_H_
 #define ORDER_PARAMETER_BULK_H_
 

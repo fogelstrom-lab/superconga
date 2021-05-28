@@ -17,7 +17,7 @@
 - Various updates to examples
 - Increase resolution in vortex examples, to avoid LODS artefacts caused by too low resolution (oscillations and split zero-energy peak in core).
 - Deprecate `plotting.json` configuration files for plotter.
-- Add showcase to README.
+- Add showcase to README
 
 ### Bug fixes
 - Fix bug in average flux density
@@ -30,6 +30,7 @@
 - Add test of discretization (`gridElementSize`)
 - Deprecate custom class for complex numbers (`cplx`) and switch to thrust::complex
 - Add test of the induced flux-density
+- Add doxygen headers to all files
 
 ---
 

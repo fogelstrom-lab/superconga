@@ -1,6 +1,16 @@
-// Container which stores and manages objects of type GeometryComponent.
-// This class compounds the different components together, and produces the
-// final discrete geometry output.
+//===---- GeometryGroup.h - Container for geometry component objects. -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Container which stores and manages objects of type GeometryComponent. This
+/// class compounds the different components together, and produces the final
+/// discrete geometry output.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GEOMETRY_GROUP_H_
 #define GEOMETRY_GROUP_H_
 

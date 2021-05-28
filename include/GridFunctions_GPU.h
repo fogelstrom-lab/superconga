@@ -1,3 +1,15 @@
+//===-------------- GridFunctions_GPU.h - GPU grid functions. -------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// GPU-specific implementation of functions to operate on Grid functions, i.e.
+/// thrust device vectors.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_FUNCTIONS_GPU_H_
 #define GRID_FUNCTIONS_GPU_H_
 

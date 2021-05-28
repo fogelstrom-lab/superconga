@@ -1,3 +1,14 @@
+//== ParameterIterator.h - Convenience class for iterating over parameters. ==//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Convenience class for defining parameter ranges and iterating over them.
+///
+//===----------------------------------------------------------------------===//
 #ifndef PARAMETER_ITERATOR_H_
 #define PARAMETER_ITERATOR_H_
 
