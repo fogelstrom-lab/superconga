@@ -1,3 +1,15 @@
+//===-- IntegrationiteratorOzaki.h - Ozaki integration summation. ---------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Ozaki implementation of the integration iterator, i.e. the class that
+/// handles summation over Ozaki poles.
+///
+//===----------------------------------------------------------------------===//
 #ifndef INTEGRATION_ITERATOR_OZAKI_H_
 #define INTEGRATION_ITERATOR_OZAKI_H_
 

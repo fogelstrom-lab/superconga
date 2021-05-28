@@ -1,3 +1,15 @@
+//===-- GreensFunctionStatic.h - Green function computation wrapper. ------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Kernels and wrappers to compute Green functions (quasiparticle propagator
+/// and anomalous pair propagator).
+///
+//===----------------------------------------------------------------------===//
 #ifndef GREENS_FUNCTION_STATIC_H_
 #define GREENS_FUNCTION_STATIC_H_
 

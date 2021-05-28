@@ -1,3 +1,14 @@
+//===----------- csv_writers.h - classes for writing csv files -----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functionality and classes for writing CSV files.
+///
+//===----------------------------------------------------------------------===//
 #ifndef CSV_WRITERS_H_
 #define CSV_WRITERS_H_
 

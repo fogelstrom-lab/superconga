@@ -1,3 +1,13 @@
+//===---- ContextModule.h - . ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+///
+//===----------------------------------------------------------------------===//
 #ifndef CONTEXT_MODULE_H_
 #define CONTEXT_MODULE_H_
 

@@ -1,7 +1,16 @@
+//===-- GeometryComponent.h - Geometry component base class. --------------===//
 //
-// Base class for the discrete representation of geometry, as used by the
-// Riccati solver.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Base class for the discrete representation of geometry, as used by the
+/// Riccati solver.
+///
+//===----------------------------------------------------------------------===//
+
 #ifndef GEOMETRY_COMPONENT_H_
 #define GEOMETRY_COMPONENT_H_
 

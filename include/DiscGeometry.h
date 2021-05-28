@@ -1,6 +1,15 @@
+//===------------- DiscGeometry.h - Disc shape primitve class. ------------===//
 //
-// Handles the discrete representation of a disc shape primitive.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Class handling the discrete representation of a disc shape primitive.
+/// Derives from the GeometryComponent class.
+///
+//===----------------------------------------------------------------------===//
 #ifndef DISC_GEOMETRY_H_
 #define DISC_GEOMETRY_H_
 

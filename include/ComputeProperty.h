@@ -1,8 +1,17 @@
-// ComputeProperty and its derived classes work in tandem with
-// the IntegrationIterator class. Functions in this base class are mostly
-// 'hooks' which gets called by IntegrationIterator as it integrates over
-// energies and angles.
-
+//===---------- ComputeProperty.h - ComputeProperty base class. -----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// ComputeProperty and its derived classes work in tandem with the
+/// IntegrationIterator class. Functions in this base class are mostly 'hooks'
+/// which gets called by IntegrationIterator as it integrates over energies and
+/// angles.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_PROPERTY_H_
 #define COMPUTE_PROPERTY_H_
 

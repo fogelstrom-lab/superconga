@@ -1,7 +1,15 @@
+//===-------------- OrderParameterInitial.h - Polygon class. --------------===//
 //
-// Collection of functions to set the initial condition of the order parameter.
-// All member functions are static so this struct should not be instantiated.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Collection of functions to set the initial condition of the order parameter.
+/// All member functions are static so this struct should not be instantiated.
+///
+//===----------------------------------------------------------------------===//
 #ifndef ORDER_PARAMETER_INITIAL_H_
 #define ORDER_PARAMETER_INITIAL_H_
 

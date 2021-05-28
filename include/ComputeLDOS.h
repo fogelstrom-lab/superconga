@@ -1,3 +1,14 @@
+//===-- ComputeLDOS.h - Class for local density of states compute object. -===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for local density of states.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_LDOS_H_
 #define COMPUTE_LDOS_H_
 

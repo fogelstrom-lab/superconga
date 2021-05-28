@@ -1,3 +1,14 @@
+//===----- Colormap.h - Colormaps for heatmaps in live visualization. -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Colormaps used in the heatmaps in the OpenGL live visualization.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COLORMAP_H_
 #define COLORMAP_H_
 

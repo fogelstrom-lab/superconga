@@ -1,3 +1,15 @@
+//===-- FermiSurfaceTightBinding.h - Tight-binding Fermi surface class ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of a general Fermi surface derived
+/// from a tight-binding model.
+///
+//===----------------------------------------------------------------------===//
 #ifndef FERMI_SURFACE_TIGHT_BINDING_H_
 #define FERMI_SURFACE_TIGHT_BINDING_H_
 

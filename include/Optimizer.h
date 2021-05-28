@@ -1,3 +1,15 @@
+//===----------------- Optimizer.h - Optimizer base class. ----------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Optimzier base class, i.e. for different kinds of self-consistency
+/// accelerators.
+///
+//===----------------------------------------------------------------------===//
 #ifndef OPTIMIZER_H_
 #define OPTIMIZER_H_
 

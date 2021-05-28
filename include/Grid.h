@@ -1,3 +1,15 @@
+//===------------- Grid.h - GridData wrapper for CPU or GPU. -------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Wrapper for GridData class type, choosing either host or device for CPU or
+/// GPU. Also has convenient shortened definitions for data structures.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_H_
 #define GRID_H_
 

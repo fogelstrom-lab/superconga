@@ -1,6 +1,14 @@
+//===----- RiccatiSolver.h - Base class for riccati equation solver. ------===//
 //
-// Base class for the Riccati equation solver.
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Base class for the Riccati equation solver.
+///
+//===----------------------------------------------------------------------===//
 #ifndef RICCATI_SOLVER_H_
 #define RICCATI_SOLVER_H_
 

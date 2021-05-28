@@ -1,3 +1,16 @@
+//= RiccatiSolverConfined.h - Solve Riccati equations in confined geometry. =//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Riccati solver implementation for confined geometries, i.e. finite system
+/// confined by well-defined boundaries. Derives from the virtual class
+/// RiccatiSolver.
+///
+//===----------------------------------------------------------------------===//
 #ifndef RICCATI_SOLVER_CONFINED_H_
 #define RICCATI_SOLVER_CONFINED_H_
 

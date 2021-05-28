@@ -1,3 +1,14 @@
+//===---- ComputeCurrent.h - Class for order parameter compute object. ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for order parameter.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_ORDER_PARAMETER_H_
 #define COMPUTE_ORDER_PARAMETER_H_
 

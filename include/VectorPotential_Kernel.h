@@ -1,3 +1,15 @@
+//===- VectorPotential_Kernel.h - CUDA kernel for computing energy shift. -===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// CUDA kernel for computing the energy shift caused by vector potentials (both
+/// external vector potentials, and vector potentials induced by currents).
+///
+//===----------------------------------------------------------------------===//
 #ifndef VECTOR_POTENTIAL_KERNEL_H_
 #define VECTOR_POTENTIAL_KERNEL_H_
 

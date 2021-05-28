@@ -1,3 +1,15 @@
+//===-- IntegrationiteratorKeldysh.h - Keldysh integration iterator. -----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Keldysh implementation of the integration iterator, i.e. the class that
+/// handles integration over the real axis.
+///
+//===----------------------------------------------------------------------===//
 #ifndef INTEGRATION_ITERATOR_KELDYSH_H_
 #define INTEGRATION_ITERATOR_KELDYSH_H_
 

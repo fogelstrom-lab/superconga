@@ -1,7 +1,15 @@
-////////////////////////////////////////////////////////
-// Functions to compute local value of Greens functions
-///////////////////////////////////////////////////////
-
+//===-- LocalGreens.h - Compute Green functions. --------------------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute Green functions (quasiparticle propagator and anomalous pair
+/// propagator) from coherence functions.
+///
+//===----------------------------------------------------------------------===//
 #ifndef LOCAL_GREENS_H_
 #define LOCAL_GREENS_H_
 

@@ -1,3 +1,14 @@
+//===----------- OrderParameter.h - Order parameter container. ------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Order parameter container, for storing different order parameter components.
+///
+//===----------------------------------------------------------------------===//
 #ifndef ORDER_PARAMETER_H_
 #define ORDER_PARAMETER_H_
 

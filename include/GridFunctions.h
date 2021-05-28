@@ -1,3 +1,14 @@
+//===------- GridFunctions.h - GridFunctions wrapper for CPU or GPU. ------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Wrapper for GridFunctions file, choosing either CPU or GPU implementation.
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_FUNCTIONS_H_
 #define GRID_FUNCTIONS_H_
 

@@ -1,3 +1,14 @@
+//===-- FermiSurfaceCircular.h - Circular Fermi surface class -------------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of a circular Fermi surface.
+///
+//===----------------------------------------------------------------------===//
 #ifndef FERMI_SURFACE_CIRCLE_H_
 #define FERMI_SURFACE_CIRCLE_H_
 

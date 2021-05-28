@@ -1,3 +1,15 @@
+//===-- OrderParameterBasis.h - Order parameter basis functions. ----------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Momentum-space basis functions for various order-parameter pairing
+/// symmetries.
+///
+//===----------------------------------------------------------------------===//
 #ifndef ORDER_PARAMETER_BASIS_H_
 #define ORDER_PARAMETER_BASIS_H_
 

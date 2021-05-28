@@ -1,3 +1,14 @@
+//===---- ComputeCurrent.h - Class for current density compute object. ----===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute object class for current density.
+///
+//===----------------------------------------------------------------------===//
 #ifndef COMPUTE_CURRENT_H_
 #define COMPUTE_CURRENT_H_
 

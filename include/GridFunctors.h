@@ -1,3 +1,16 @@
+//===---------- GridFunctors.h - Functors used by Grid data class. --------===//
+//
+// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Functors used by Grid data class, in the iterator-algorithm transformation
+/// functions: these functors are used in operations between GridData objects
+/// (and therefore thrust vectors).
+///
+//===----------------------------------------------------------------------===//
 #ifndef GRID_FUNCTORS_H_
 #define GRID_FUNCTORS_H_
 
