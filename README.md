@@ -17,8 +17,9 @@ For detailed instructions on installation and compilation, see: [https://suprcon
 
 ## Documentation
 A user manual with tutorials, examples and additional information can be found in the official documentation: [https://suprcongpu.gitlab.io/suprcongpu-doc/](https://suprcongpu.gitlab.io/suprcongpu-doc/)
-
 This documentation is built from the following development repository: [https://gitlab.com/suprcongpu/suprcongpu-doc](https://gitlab.com/suprcongpu/suprcongpu-doc)
+
+API documentation can be found here: 
 
 
 ## Citing SuprConGPU
