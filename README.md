@@ -4,6 +4,8 @@
 
 SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs. The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL. A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via the GUI/CLI, without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
 
+![](examples/showcase.png)
+
 
 ## Download
 The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#:~:text=Clone%20a%20repository&text=You%20can%20either%20clone%20it,paste%20in%20your%20command%20line.) the repository through the above interface.
@@ -17,6 +19,10 @@ For detailed instructions on installation and compilation, see: [https://suprcon
 A user manual with tutorials, examples and additional information can be found in the official documentation: [https://suprcongpu.gitlab.io/suprcongpu-doc/](https://suprcongpu.gitlab.io/suprcongpu-doc/)
 
 This documentation is built from the following development repository: [https://gitlab.com/suprcongpu/suprcongpu-doc](https://gitlab.com/suprcongpu/suprcongpu-doc)
+
+
+## Citing SuprConGPU
+If you have used SuprConGPU in your research, please [cite it](https://suprcongpu.gitlab.io/suprcongpu-doc/cite.html). Please let us know about your research in turn, as we find any application of SuprConGPU of great interest, and want to include it in our future outreaches.
 
 
 ## Basic usage
@@ -37,6 +43,7 @@ These example files can easily be copied/modified with a text editor or the GUI,
 python suprcongpu.py --help
 ```
 or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
+
 
 ## Data post-processing and visualization
 Simulation data can be saved to file by running the program with the `--save-data` flag
@@ -68,6 +75,3 @@ SuprConGPU development is supported by the Applied Quantum Physics Laboratory at
 
 ## Authors
 The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
-
-## Citing SuprConGPU
-If you have used SuprConGPU in your research, please [cite it](https://suprcongpu.gitlab.io/suprcongpu-doc/cite.html). Please let us know about your research in turn, as we find any application of SuprConGPU of great interest, and want to include it in our future outreaches.
