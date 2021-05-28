@@ -14,6 +14,7 @@
 - Add chiral-transformation option to plotter
 - Specify physical size by setting polygon side-length rather than bounding circle diameter
 - Various updates to examples
+- Increase resolution in vortex examples, to avoid LODS artefacts caused by too low resolution (oscillations and split zero-energy peak in core).
 
 ### Bug fixes
 - Fix bug in average flux density
