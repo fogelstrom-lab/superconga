@@ -33,7 +33,7 @@ const std::string includePath = "${CMAKE_SOURCE_DIR}/include";
 
 // License statement
 const std::string licenseStatement =
-    "Copyright (C) 2020 suprcongpu developers, Inc.\nThis is free software; "
+    "Copyright (C) 2019 suprcongpu developers, Inc.\nThis is free software; "
     "see the source for copying conditions.\nThere is NO warranty; not even "
     "for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 
