@@ -2,6 +2,12 @@
 
 ## Latest version (unreleased)
 
+### Improvements
+
+### Bug fixes
+
+### Developer changes
+- Completely deprecate GUI option.
 
 ---
 

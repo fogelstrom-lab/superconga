@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2020 and after, SuprConGPU team.
+# Copyright (C) 2019 and after, SuprConGPU team.
 # All rights reserved.
 # This file is part of the SuprConGPU Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
@@ -10,15 +10,12 @@ Long description.
 """
 
 # Built-in modules and third-party libraries.
-import argparse
-import json
 import os
 import sys
 from pathlib import Path
 
 # Custom libraries.
 sys.path.insert(0, "tools/")
-from python_libraries.gui import gui
 from python_libraries.parameter_setup import argument_parsing as AP
 from python_libraries.parameter_setup import argument_validation as AV
 from python_libraries.runner import binary_caller

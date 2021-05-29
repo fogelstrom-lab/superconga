@@ -7,12 +7,7 @@
 """Validation of command-line input parsed by argparse."""
 
 # Built-in modules and third-party libraries.
-import argparse
-import json
-import numpy as np
-import os
 from pathlib import Path
-import pprint
 import sys
 from typing import Optional, Union
 
@@ -253,7 +248,6 @@ plotter_checks = {
         "type": dict,
         "fields": {
             "data_path": {"type": str},
-            "gui": {"type": bool, "optional": True},
             "chiral_transform": {"type": bool},
         },
     },

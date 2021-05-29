@@ -10,7 +10,6 @@
 import argparse
 import json
 from pathlib import Path
-import pprint
 import sys
 from typing import Optional, Union
 
@@ -55,9 +54,6 @@ def make_default_parser(
 # -----------------------------------------------------------------------------
 # Add arguments specific for the runner.
 def add_runner_arguments(parser) -> None:
-    # Display GUI.
-    parser.add_argument("--gui", action="store_true", help="Use GUI to run simulation.")
-
     # Config file.
     parser.add_argument(
         "-f",
@@ -527,11 +523,6 @@ def add_plotter_arguments(parser) -> None:
         help="Path to data folder.",
     )
 
-    # Display GUI.
-    parser.add_argument(
-        "--gui", action="store_true", help="Use GUI to choose what to plot."
-    )
-
     # Plotting configuration file.
     parser.add_argument(
         "-f",
@@ -883,7 +874,6 @@ def set_plotter_arguments_from_cli(
     # General plot settings.
     group = "general"
     set_value(plot_params, "data_path", args.data_path, group)
-    set_value(plot_params, "gui", args.gui, group)
     set_flag(
         plot_params,
         "chiral_transform",

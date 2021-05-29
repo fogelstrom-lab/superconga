@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2020 and after, SuprConGPU team.
+# Copyright (C) 2019 and after, SuprConGPU team.
 # All rights reserved.
 # This file is part of the SuprConGPU Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
@@ -13,13 +13,8 @@ documentation.
 """
 
 # Built-in modules and third-party libraries.
-import argparse
-import json
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-from pathlib import Path
-import pprint
 import sys
 
 # Custom libraries.
@@ -27,7 +22,6 @@ sys.path.insert(0, "tools/")
 from python_libraries.file_io import parse_json_files
 from python_libraries.file_io import parse_convergence
 from python_libraries.file_io import parse_grid_quantity
-from python_libraries.gui import gui
 from python_libraries.parameter_setup import argument_parsing as AP
 from python_libraries.parameter_setup import argument_validation as AV
 from python_libraries.plotting import field_plotting
@@ -74,7 +68,9 @@ def main() -> None:
     )
 
     # Get geometry mask.
-    geometry = parse_grid_quantity.parse_geometry_numpy(base_path=plot_config_parameters["general"]["data_path"])
+    geometry = parse_grid_quantity.parse_geometry_numpy(
+        base_path=plot_config_parameters["general"]["data_path"]
+    )
 
     # Parse "internal parameters" from json, get result as dictionary.
     internal_parameters = parse_json_files.parse_internal_parameters(

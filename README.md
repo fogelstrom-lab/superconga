@@ -2,7 +2,7 @@
 
 [Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Pascal Stadler](https://gitlab.com/pascalsta), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
 
-SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs. The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL. A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via the GUI/CLI, without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
+SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs. The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL. A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via command-line interface (CLI), without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
 
 ![](examples/showcase.png)
 
@@ -24,19 +24,15 @@ If you have used SuprConGPU in your research, please [cite it](https://suprcongp
 
 
 ## Basic usage
-The code is most easily run via its Python(3) front-end, either in terminal mode
+The code is most easily run via its Python(3) frontend
 ```shell
 python suprcongpu.py
 ```
-or with a GUI
-```shell
-python suprcongpu.py --gui
-```
 It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the s-wave Abrikosov example:
 ```shell
-python suprcongpu.py --gui --file examples/swave_abrikosov_mesoscopic_vortex_lattice/config.json
+python suprcongpu.py --file examples/swave_abrikosov_mesoscopic_vortex_lattice/config.json
 ```
-These example files can easily be copied/modified with a text editor or the GUI, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
+These example files can easily be copied/modified with a text editor, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
 ```shell
 python suprcongpu.py --help
 ```
