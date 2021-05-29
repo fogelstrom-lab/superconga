@@ -2,6 +2,11 @@
 
 ## Latest version (unreleased)
 
+
+---
+
+## Version v0.6.0 (May 29, 2021)
+
 ### Improvements
 - **MAJOR** Fully expose geometry to user in config files, remove from CLI/GUI
 - **MAJOR** Deprecate the GUI
