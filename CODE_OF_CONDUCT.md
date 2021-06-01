@@ -59,8 +59,7 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
+reported to the community leaders responsible for enforcement at [wennerda@chalmers.se](mailto:wennerda@chalmers.se) or [patric.holmvall@physics.uu.se](mailto:patric.holmvall@physics.uu.se).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
