@@ -8,6 +8,7 @@
 
 ### Developer changes
 - Completely deprecate GUI option.
+- Write to convergence.csv every iteration
 
 ---
 
