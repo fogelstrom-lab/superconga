@@ -480,13 +480,9 @@ void saveConvergenceStatus(
   std::unique_ptr<io::IIterationDataSaveStrategy<T>> iterationDataSaver =
       io::getIterationDataSaver<T>(inIterationDataSaveFormat);
 
-  if (iterationDataSaver &&
-      iterationDataSaver->save(inContext, convergenceFile)) {
-    if (inVerbose) {
-      std::cout << "Wrote convergence status to file: " << convergenceFile
-                << std::endl;
-    }
-  } else {
+  const bool success = iterationDataSaver &&
+                       iterationDataSaver->save(inContext, convergenceFile);
+  if (!success) {
     std::cout << "ERROR! Failed to save " << convergenceFile << "file."
               << std::endl;
     std::exit(EXIT_FAILURE);
@@ -673,10 +669,6 @@ void saveDataWrapper(
 
   // Save parameters to JSON file.
   saveParametersWrapper(inContext, inDataPath, inVerbose);
-
-  // Append convergence status to file.
-  saveConvergenceStatus(inContext, inDataPath, inVerbose,
-                        inIterationDataSaveFormat);
 
   // Save order parameter, current density, induced vector-potential, and
   // induced magnetic flux-density, to file.
@@ -875,7 +867,6 @@ enum class Status { kContinue, kQuit, kSave };
 /// \param inVerbose - Print iteration status to terminal or not.
 /// \param inNumIterationsMin - The minimum number of iterations.
 /// \param inNumIterationsMax - The maximum number of iterations.
-/// \param inSaveData - Whether to save data or not.
 /// \param inSaveDataInterval - How frequently to save data.
 ///
 /// \return - Simulation status.
@@ -883,7 +874,6 @@ template <typename T>
 Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
                     const int inNumIterationsMin = 0,
                     const int inNumIterationsMax = 10000,
-                    const bool inSaveData = false,
                     const int inSaveDataInterval = 0) {
   // Solve equations for all compute objects.
   inOutContext->compute();
@@ -914,8 +904,7 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
   const bool saveInterval = inSaveDataInterval > 0
                                 ? (numIterations % inSaveDataInterval == 0)
                                 : false;
-  const bool saveData =
-      (internal::guiUserSaveData || saveInterval) && inSaveData;
+  const bool saveData = internal::guiUserSaveData || saveInterval;
 
   // Set status.
   Status status;
@@ -964,11 +953,18 @@ void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
     if (status != Status::kQuit) {
       // Run one iteration.
       status = runIteration(inOutContext, inVerbose, inNumIterationsMin,
-                            inNumIterationsMax, inSaveData, inSaveDataInterval);
+                            inNumIterationsMax, inSaveDataInterval);
 
-      if (status == Status::kSave) {
-        saveDataWrapper(inOutContext, inDataPath, inVerbose,
-                        inGridDataSaveFormat);
+      if (inSaveData) {
+        // Append convergence status to file.
+        saveConvergenceStatus(inOutContext, inDataPath, inVerbose,
+                              inGridDataSaveFormat);
+
+        // Save grid data and results.
+        if (status == Status::kSave) {
+          saveDataWrapper(inOutContext, inDataPath, inVerbose,
+                          inGridDataSaveFormat);
+        }
       }
     } else {
       // When no computation is done it is unnecessary to update the window as
