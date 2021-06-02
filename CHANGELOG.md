@@ -9,6 +9,7 @@
 ### Developer changes
 - Completely deprecate GUI option.
 - Write to convergence.csv every iteration
+- Readd support for deprecated argument `bounding_disc_diameter` for `regular_polygon`
 
 ---
 
