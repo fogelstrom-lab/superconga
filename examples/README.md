@@ -1,8 +1,11 @@
 # Examples
 
-A collection of parameter files, one per example, demonstrating different physical aspects 
-of superconductors that are computable through the SuprConGPU framework. 
-See [the documentation](https://suprcongpu.gitlab.io/suprcongpu/) for more information.
+A collection of parameter files, one per example, demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework. Run the examples with `suprcongpu.py` with the `--file` argument (from the root directory from the repository):
+```shell
+python3 suprcongpu.py --file examples/swave_abrikosov_vortex_lattice/config.json
+```
+
+See tutorials in the [online documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/) for more information.
 
 ## D-Wave Chiral
 
@@ -67,18 +70,6 @@ circulating Meissner currents, along the edge, and a vortex in the middle.
 Folder:
 ```
 swave_disc_vortex
-```
-
-## S-Wave Solenoid: Flux Quantization
-
-A simulation of an s-wave superconductor in a square grain, with a hole in the center
-(the hole being square as well) making it a solenoid. A magnetic field of N flux quanta
-is applied. The lowest free energy is obtained with an order parameter with N number of
-phase windings.
-
-Folder:
-```
-swave_solenoid_flux_quantization
 ```
 
 ## S-Wave Abrikosov Vortex Lattice

@@ -1,10 +1,17 @@
 # Source files
 Source files used to compile binaries. Below follows a short summary
-of each source file. See [the readme](../) for a usage instructions, or
-[the documentation](https://suprcongpu.gitlab.io/suprcongpu/) for more thorough
+of each source file. See [the readme](../) for a usage instructions, or the
+[online documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/) for more thorough
 instructions.
 
-## main
+## main.cu
 The main source to run simple examples, either by parsing the `.json`-parameter
 files in `examples/`, or by parsing command-line arguments. The binary file is
-built to `build/bin/main`.
+built to `build/release/bin/main`.
+
+## postprocess.cu
+A post-processing source to compute the local density of states. Use by running
+the frontend `postprocess.py` and give the path to a post-processing configuration file,
+found e.g. in the folders in `examples/`. See the
+[tutorials](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html)
+for more instructions. The binary file is built to `build/release/bin/postprocess`.
