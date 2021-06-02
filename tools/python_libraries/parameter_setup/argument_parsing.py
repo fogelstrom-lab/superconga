@@ -9,6 +9,7 @@
 # Built-in modules and third-party libraries.
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 from typing import Optional, Union
@@ -1150,6 +1151,52 @@ def set_ldos_plotter_arguments_from_cli(
 
 
 # -----------------------------------------------------------------------------
+# DEPRECATED ARGUMENTS PARSING
+# -----------------------------------------------------------------------------
+# If a deprecated argument is set, change to the new argument.
+def set_deprecated_arguments(
+    sim_params,
+    frontend: str = "runner",
+) -> None:
+
+    if frontend == "runner":
+        set_runner_deprecated_arguments(sim_params)
+    elif frontend == "postprocess":
+        pass
+    elif frontend == "plotter":
+        pass
+    elif frontend == "ldos_plotter":
+        pass
+    else:
+        print(f"ERROR set_deprecated_arguments(): Unknown frontend: '{frontend}'.")
+        status_code = 1
+        sys.exit(status_code)
+
+
+# Change deprecated arguments to supported ones.
+def set_runner_deprecated_arguments(sim_params) -> None:
+    geometry = sim_params["geometry"]
+    for component in geometry:
+        if "regular_polygon" in component:
+            regular_polygon = component["regular_polygon"]
+            if "bounding_disc_diameter" in regular_polygon:
+                diameter = regular_polygon["bounding_disc_diameter"]
+                num_edges = regular_polygon["num_edges"]
+                side_length = diameter * math.sin(math.pi / num_edges)
+                regular_polygon.pop("bounding_disc_diameter")
+                regular_polygon.update({"side_length": side_length})
+                print(
+                    "-- WARNING! The argument 'bounding_disc_diameter' is deprecated. Use 'side_length' instead."
+                )
+                print(
+                    "   The relation is: side_length = bounding_disc_diameter * sin(pi / num_edges)."
+                )
+                print(
+                    f"   Changing 'bounding_disc_diameter' = {diameter} to 'side_length' = {side_length}."
+                )
+
+
+# -----------------------------------------------------------------------------
 # WRAPPER: PARSE ARGUMENTS
 # -----------------------------------------------------------------------------
 # Read command-line arguments. Look for valid .json file and parse it.
@@ -1206,10 +1253,14 @@ def parse_command_line_arguments(
         # Set default dict structure.
         sim_params = {"general": {}}
 
+    # Overwrite arguments from the command line.
     set_arguments_from_cli(
         sim_params,
         args,
         frontend,
     )
+
+    # Change deprecated arguments.
+    set_deprecated_arguments(sim_params, frontend)
 
     return sim_params, args
