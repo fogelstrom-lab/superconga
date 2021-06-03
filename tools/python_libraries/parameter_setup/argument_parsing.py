@@ -69,8 +69,8 @@ def add_runner_arguments(parser) -> None:
         "-b",
         "--cpp-binary",
         type=str,
-        default="build/release/bin/main",
-        help="Path to the C++ binary.",
+        default=None,
+        help="Path to the C++ binary. If not set 'build/release/bin/main' relative to the supercongpu.py script will be used.",
     )
 
     parser.add_argument(
@@ -393,8 +393,8 @@ def add_postprocess_arguments(parser) -> None:
         "-b",
         "--cpp-binary",
         type=str,
-        default="build/release/bin/postprocess",
-        help="Path to the C++ binary.",
+        default=None,
+        help="Path to the C++ binary. If not set 'build/release/bin/postprocess' relative to the postprocess.py script will be used.",
     )
 
     # Convergence criterion.
@@ -1263,4 +1263,10 @@ def parse_command_line_arguments(
     # Change deprecated arguments.
     set_deprecated_arguments(sim_params, frontend)
 
-    return sim_params, args
+    # Get the relative C++ binary path.
+    if frontend in ["runner", "postprocess"]:
+        cpp_binary = args.cpp_binary
+    else:
+        cpp_binary = None
+
+    return sim_params, cpp_binary

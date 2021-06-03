@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 # Custom libraries.
-sys.path.insert(0, "tools/")
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools/"))
 from python_libraries.parameter_setup import argument_parsing as AP
 from python_libraries.parameter_setup import argument_validation as AV
 from python_libraries.runner import binary_caller
@@ -40,7 +40,7 @@ def main() -> None:
     program_description = "SuprConGPU Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in examples and give the path to this file with the -f option. All parameters can be overridden using the command-line options specified below."
     # Parse command-line arguments, and possibly a JSON file which specifies
     # config plotting parameters. The JSON file is provided via: -f|--file.
-    simulation_parameters, parser_args = AP.parse_command_line_arguments(
+    simulation_parameters, cpp_binary = AP.parse_command_line_arguments(
         program_name=program_name,
         program_description=program_description,
         frontend=frontend,
@@ -61,7 +61,9 @@ def main() -> None:
         sys.exit(1)
 
     # Launch binary.
-    binary_caller.run_cpp_binary(parser_args.cpp_binary, simulation_parameters)
+    if cpp_binary is None:
+        cpp_binary = os.path.join(os.path.dirname(__file__), "build/release/bin/main")
+    binary_caller.run_cpp_binary(cpp_binary, simulation_parameters)
 
     # ======================================================================#
     #                            POST-PROCESSING                            #
