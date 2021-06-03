@@ -2,10 +2,13 @@
 
 [Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Pascal Stadler](https://gitlab.com/pascalsta), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
 
-SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs. The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL. A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via command-line interface (CLI), without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
+SuprConGPU is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs.
+
+**Backend:** The framework self-consistently solves for the superconducting order-parameter and the magnetic vector potential, and computes the the current density, magnetic induction, free energy, as well as the local density of states. The simulations can be visualized in real-time with OpenGL.
+
+**Frontend:** A user-friendly Python frontend is provided, enabling simulation parameters to be defined via intuitive configuration files, or via command-line interface (CLI), without requiring a deep understanding of implementation details. Furthermore, the framework ships with simple and interactive tools for visualization and data analysis, making SuprConGPU an ideal tool both for research but also for educational purposes. SuprConGPU is available to use under the license agreements stated in LICENSE.txt, and it can be used on all Unix-based platforms.
 
 ![](examples/showcase.png)
-
 
 ## Download
 The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics/start-using-git.html#:~:text=Clone%20a%20repository&text=You%20can%20either%20clone%20it,paste%20in%20your%20command%20line.) the repository through the above interface.
@@ -16,39 +19,35 @@ For detailed instructions on installation and compilation, see: [https://suprcon
 
 
 ## Documentation
-A user manual with tutorials, examples and additional information can be found in the [official documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/). This documentation is built from the following [documentation repository](https://gitlab.com/suprcongpu/suprcongpu-doc). API documentation can be found [here](https://suprcongpu.gitlab.io/suprcongpu/).
+A user manual with tutorials, examples and additional information can be found in the [official documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/). This documentation is built from the [documentation repository](https://gitlab.com/suprcongpu/suprcongpu-doc). API documentation can be found [here](https://suprcongpu.gitlab.io/suprcongpu/).
 
 
 ## Citing SuprConGPU
-If you have used SuprConGPU in your research, please [cite it](https://suprcongpu.gitlab.io/suprcongpu-doc/cite.html). Please let us know about your research in turn, as we find any application of SuprConGPU of great interest, and want to include it in our future outreaches.
+If you have used SuprConGPU in your research or found it useful, please [cite it](https://suprcongpu.gitlab.io/suprcongpu-doc/cite.html). Please let us know about your research in turn, as we find any application of SuprConGPU of great interest, and want to include your usage of it in our future outreaches.
 
 
 ## Basic usage
-The code is most easily run via its Python(3) frontend
+The code is most easily run via its Python(3) frontend `suprcongpu.py`. It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-vortex lattice example:
 ```shell
-python suprcongpu.py
-```
-It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the s-wave Abrikosov example:
-```shell
-python suprcongpu.py --file examples/swave_abrikosov_mesoscopic_vortex_lattice/config.json
+python suprcongpu.py --file examples/swave_abrikosov_vortex_lattice/config.json
 ```
 These example files can easily be copied/modified with a text editor, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
 ```shell
 python suprcongpu.py --help
 ```
-or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
+or refer to the [tutorial](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
 
 
 ## Data post-processing and visualization
 Simulation data can be saved to file by running the program with the `--save-data` flag
 ```shell
-python suprcongpu.py --save-data --file examples/swave_abrikosov_mesoscopic_vortex_lattice/config.json
+python suprcongpu.py --save-data --file examples/swave_abrikosov_vortex_lattice/config.json
 ```
-This saves data in the path specified by the `"data_path"` option in the .json-file (which can also be overriden via command-line with the argument `--data-path`). Whatever data path was used, will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. tabular Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/swave_abrikosov_mesoscopic_vortex_lattice/T0.200000/`, use the `--data-path` argument:
+This saves data in the path specified by the `"data_path"` option in `config.json` (which can also be overriden by the command-line argument `--data-path`). Whatever data path was used, will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. columns of Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/swave_abrikosov_vortex_lattice/T0.200000/`, use the `--data-path` argument:
 ```shell
-python plotter.py --data-path data/swave_abrikosov_mesoscopic_vortex_lattice/T0.200000
+python plotter.py --data-path data/swave_abrikosov_vortex_lattice/T0.200000
 ```
-To see further usage instructions, run `python plotter.py --help`, or refer to the [user manual](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html) in the online documentation.
+To see further usage instructions, run `python plotter.py --help`, or refer to the [tutorials](https://suprcongpu.gitlab.io/suprcongpu-doc/tutorials.html).
 
 
 ## Contribute
