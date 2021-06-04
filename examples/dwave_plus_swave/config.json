@@ -19,14 +19,14 @@
 	"num_iterations_min": 0,
 	"num_ozaki_energies": 8,
 	"optimizer": {
-		"adaptive": true,
+		"adaptive": false,
 		"anderson_always": true,
-		"inertia": 0.333,
-		"max_mixing": 1.0,
-		"min_mixing": 1.0,
-		"rank": 1,
+		"inertia": 0.0,
+		"max_mixing": 1e3,
+		"min_mixing": 1e-3,
+		"rank": 5,
 		"replace_oldest": true,
-		"step_size": 1.5
+		"step_size": 1.0
 	},
 	"order_parameter": [
 		{
