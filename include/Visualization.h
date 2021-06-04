@@ -305,7 +305,7 @@ void Visualization<T>::plotImage(const GRID &grid, const int inColumnIdx,
                                  const bool erase) {
   if (grid.dimX() > _Nx_img || grid.dimY() > _Ny_img) {
 #ifndef NDEBUG
-    std::cout << "Visualization<T>::plotImage() ERROR: dimensions of input "
+    std::cout << "-- ERROR! Visualization<T>::plotImage(): dimensions of input "
                  "grid does not match allocated image.\n";
     std::cout << "--> _Nx_img = " << _Nx_img << ", gridDimX = " << grid.dimX()
               << ", _Ny_img = " << _Ny_img << ", gridDimY = " << grid.dimY()
@@ -415,8 +415,9 @@ void Visualization<T>::plotImage(const GRID &grid, const int inColumnIdx,
     }
   } else {
 #ifndef NDEBUG
-    std::cout << "Visualization<T>::plotImage() ERROR: field index or subimage "
-                 "index out of range.\n";
+    std::cout
+        << "-- ERROR! Visualization<T>::plotImage(): field index or subimage "
+           "index out of range.\n";
 #endif
   }
 }
@@ -688,8 +689,9 @@ int Visualization<T>::getImageIndexOffset(int image_idx_x,
     return topBorderOffset + imgRowOffset + image_idx_x * imgWidth + _border_x;
   } else {
 #ifndef NDEBUG
-    std::cout << "Visualization<T>::getImageIndexOffset() ERROR: image indices "
-                 "out of bounds\n";
+    std::cout
+        << "-- ERROR! Visualization<T>::getImageIndexOffset(): image indices "
+           "out of bounds\n";
 #endif
     return 0;
   }

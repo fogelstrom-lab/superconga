@@ -353,7 +353,7 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
 #ifndef NDEBUG
     if (!success) {
       // TODO(niclas): Raise exception instead?
-      std::cerr << "ERROR! Eigen decomposition failed." << std::endl;
+      std::cerr << "-- ERROR! Eigen decomposition failed." << std::endl;
     }
 #endif
 
@@ -396,7 +396,7 @@ void ComputeVectorPotential<T>::initializeFilters(const int inGridResolution,
 #ifndef NDEBUG
       if (errorSquared < 0.0) {
         std::cerr
-            << "WARNING! Squared error < 0, i.e. catastrophic cancellation "
+            << "-- WARNING! Squared error < 0, i.e. catastrophic cancellation "
                "occurred."
             << std::endl;
       }

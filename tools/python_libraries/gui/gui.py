@@ -430,7 +430,7 @@ class OrderParameterComponent(Serializable, QWidget, metaclass=QMeta):
                 assert isinstance(valueDict, dict)
             except AssertionError:
                 print(
-                    "Input Error: Each order parameter component should be a dictionary of key-value pairs!"
+                    "-- ERROR! Each order parameter component should be a dictionary of key-value pairs!"
                 )
             for key, value in valueDict.items():
                 widget = self._inputs.get(key)
@@ -553,11 +553,11 @@ class OrderParameter(Serializable, QScrollArea, metaclass=QMeta):
             assert isinstance(opComponentsList, list)
         except AssertionError:
             print(
-                "Input Error: Order parameter should be specified as a list of component dictionaries"
+                "-- ERROR! Order parameter should be specified as a list of component dictionaries"
             )
         self.clear()
         if len(opComponentsList) == 0:
-            print("Input Warning: Order parameter was not specified")
+            print("-- WARNING! Order parameter was not specified")
             opComponent = self.add_component()
         else:
             for opComponentDict in opComponentsList:

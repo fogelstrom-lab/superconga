@@ -146,7 +146,7 @@ def computeFermiMomentum(
 
     # Check that everything has converged.
     if not isConverged:
-        print("WARNING! Did not converge.")
+        print("-- WARNING! Did not converge.")
 
     # Form the final momenta.
     kX = k * cosPhi + offset[0]
@@ -214,7 +214,7 @@ def wrapToRange(inValue, inLow=-np.pi, inHigh=np.pi):
 
 # Compute the dispersion in the first Brillouin zone.
 def computeDispersion(parameters, numMomenta):
-    print("Computing the dispersion...")
+    print("-- Computing the dispersion...")
     start = time.time()
 
     # Create meshgrid.
@@ -226,7 +226,7 @@ def computeDispersion(parameters, numMomenta):
 
     dispersionDict = {"kx": kX.tolist(), "ky": kY.tolist(), "values": eK.tolist()}
     stop = time.time()
-    print("Done! - Time %f [s]" % (stop - start))
+    print("-- Done! - Time %f [s]" % (stop - start))
     return dispersionDict
 
 
@@ -234,7 +234,7 @@ def computeDispersion(parameters, numMomenta):
 def computeDensityOfStates(
     parameters, numMomenta, numEnergies, margin, gamma, tolerance=0.01
 ):
-    print("Computing the density of states...")
+    print("-- Computing the density of states...")
     start = time.time()
 
     # Create meshgrid. Skip +pi to avoid double counting.
@@ -273,7 +273,7 @@ def computeDensityOfStates(
     dosDict = {"energies": energies.tolist(), "values": dos.tolist()}
 
     stop = time.time()
-    print("Done! - Time %f [s]" % (stop - start))
+    print("-- Done! - Time %f [s]" % (stop - start))
     return dosDict
 
 
@@ -310,7 +310,7 @@ def computeCriticalTemperature(
     maxChemicalPotential=1.0,
     epsilon=1e-16,
 ):
-    print("Computing the critical temperature...")
+    print("-- Computing the critical temperature...")
     start = time.time()
 
     # Create meshgrid. Skip +pi to avoid double counting.
@@ -415,13 +415,13 @@ def computeCriticalTemperature(
     }
 
     stop = time.time()
-    print("Done! - Time %f [s]" % (stop - start))
+    print("-- Done! - Time %f [s]" % (stop - start))
     return crititalTemperatureDict
 
 
 # Compute Fermi momenta, Fermi velocities, and integrand weights.
 def computeFermiSurface(parameters, numAngles, numIterations, convergenceCriterion):
-    print("Computing the Fermi surface...")
+    print("-- Computing the Fermi surface...")
     start = time.time()
 
     # Is the Fermi surface centered around (0, 0)?
@@ -449,7 +449,7 @@ def computeFermiSurface(parameters, numAngles, numIterations, convergenceCriteri
     }
 
     stop = time.time()
-    print("Done! - Time %f [s]" % (stop - start))
+    print("-- Done! - Time %f [s]" % (stop - start))
 
     return fermiSurfaceDict
 
@@ -655,7 +655,7 @@ def main():
 
         file = open(filename, "w")
         json.dump(data, file)
-        print("Saved", filename)
+        print("-- Saved", filename)
 
 
 if __name__ == "__main__":

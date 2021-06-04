@@ -50,7 +50,7 @@ T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
 
   bool isConverged = false;
 
-  std::cout << "Fitting the penetration depth..." << std::endl;
+  std::cout << "-- Fitting the penetration depth..." << std::endl;
   while (!isConverged) {
     // The flux from the London expression
     const T flux = factor * k * ((R - k) + k * std::exp(-R / k));
@@ -73,7 +73,7 @@ T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
     // Update the penetration depth.
     k -= dk;
   }
-  std::cout << "Done!" << std::endl;
+  std::cout << "-- Done!" << std::endl;
 
   return k;
 }

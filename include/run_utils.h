@@ -125,7 +125,7 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       // Check that the length is the same for the x and y vertices.
       if (xVerticesDict.size() != yVerticesDict.size()) {
         // Unknown geometry component. Print error and exit.
-        std::cerr << "ERROR! Different number of x- and y-components given "
+        std::cerr << "-- ERROR! Different number of x- and y-components given "
                      "for polygon vertices: "
                   << xVerticesDict.size() << " != " << yVerticesDict.size()
                   << "." << std::endl;
@@ -181,7 +181,7 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       }
     } else {
       // Unknown geometry component. Print error and exit.
-      std::cout << "ERROR! Unknown geometry type: '" << geometryComponentName
+      std::cout << "-- ERROR! Unknown geometry type: '" << geometryComponentName
                 << "'." << std::endl;
       std::exit(EXIT_FAILURE);
     }
@@ -341,7 +341,7 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
       // Unknown geometry component. Print error and exit.
       const std::vector<std::string> geometryComponentNames =
           geometryComponentVector[i].getMemberNames();
-      std::cout << "ERROR! Unknown geometry type: '"
+      std::cout << "-- ERROR! Unknown geometry type: '"
                 << geometryComponentNames[i][0] << "'." << std::endl;
       std::exit(EXIT_FAILURE);
     }
@@ -362,7 +362,7 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
 inline void myKeyboardFunc(const unsigned char inKey, const int inX,
                            const int inY) {
 #ifndef NDEBUG
-  std::cout << "key pressed: " << inKey << ", at (" << inX << ", " << inY
+  std::cout << "-- Key pressed: " << inKey << ", at (" << inX << ", " << inY
             << ")\n";
 #endif
   if (inKey == 'q' || inKey == 'Q') {
@@ -483,8 +483,7 @@ void saveConvergenceStatus(
   const bool success = iterationDataSaver &&
                        iterationDataSaver->save(inContext, convergenceFile);
   if (!success) {
-    std::cout << "ERROR! Failed to save " << convergenceFile << "file."
-              << std::endl;
+    std::cout << "-- ERROR! Failed to write: " << convergenceFile << std::endl;
     std::exit(EXIT_FAILURE);
   }
 }
@@ -536,13 +535,12 @@ void saveGridData(const Context<T> *const inContext,
                                   orderParameterFile);
   }
   if (!success) {
-    std::cout << "ERROR! Could not save Order Parameter to file: "
-              << orderParameterFile << std::endl;
+    std::cout << "-- ERROR! Could not write: " << orderParameterFile
+              << std::endl;
     std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
-      std::cout << "Saved order parameter to file: " << orderParameterFile
-                << std::endl;
+      std::cout << "-- Wrote: " << orderParameterFile << std::endl;
     }
   }
 
@@ -570,13 +568,12 @@ void saveGridData(const Context<T> *const inContext,
         textDataSaver->save(currentSave, {"j_x", "j_y"}, currentDensityFile);
   }
   if (!success) {
-    std::cout << "Could not save current density to file: "
-              << currentDensityFile << std::endl;
+    std::cout << "-- ERROR! Could not write: " << currentDensityFile
+              << std::endl;
     std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
-      std::cout << "Saved current density to file: " << currentDensityFile
-                << std::endl;
+      std::cout << "-- Wrote: " << currentDensityFile << std::endl;
     }
   }
 
@@ -601,13 +598,12 @@ void saveGridData(const Context<T> *const inContext,
                                   vectorPotentialFile);
   }
   if (!success) {
-    std::cout << "Could not save induced vector-potential to file: "
-              << vectorPotentialFile << std::endl;
+    std::cout << "-- ERROR! Could not write: " << vectorPotentialFile
+              << std::endl;
     std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
-      std::cout << "Saved induced vector-potential  to file: "
-                << vectorPotentialFile << std::endl;
+      std::cout << "-- Wrote: " << vectorPotentialFile << std::endl;
     }
   }
 
@@ -636,13 +632,11 @@ void saveGridData(const Context<T> *const inContext,
         textDataSaver->save(magneticFluxDensitySave, {"b_z"}, fluxDensityFile);
   }
   if (!success) {
-    std::cout << "Could not save induced flux-density to file: "
-              << fluxDensityFile << std::endl;
+    std::cout << "-- ERROR! Could not write: " << fluxDensityFile << std::endl;
     std::exit(EXIT_FAILURE);
   } else {
     if (inVerbose) {
-      std::cout << "Saved induced flux-density to file: " << fluxDensityFile
-                << std::endl;
+      std::cout << "-- Wrote: " << fluxDensityFile << std::endl;
     }
   }
 }
@@ -893,10 +887,12 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
   const bool patienceReached = (numIterations > inNumIterationsMax);
 
   // Print status if simulation finished.
-  if (isConverged) {
-    std::cout << "SUCCESS! Simulation converged." << std::endl;
-  } else if (patienceReached) {
-    std::cout << "FAILURE! Simulation did not converge." << std::endl;
+  if (inVerbose) {
+    if (isConverged) {
+      std::cout << "-- SUCCESS! Simulation converged." << std::endl;
+    } else if (patienceReached) {
+      std::cout << "-- FAILURE! Simulation did not converge." << std::endl;
+    }
   }
 
   // Determine what to do.
@@ -1001,14 +997,14 @@ void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
 template <typename T>
 void cleanup(Context<T> *inContext, Visualization<T> *inGUI = nullptr) {
 #ifndef NDEBUG
-  std::cout << "Cleaning up..." << std::endl;
+  std::cout << "-- Cleaning up..." << std::endl;
 #endif
 
   delete inGUI;
   delete inContext;
 
 #ifndef NDEBUG
-  std::cout << "Done!" << std::endl;
+  std::cout << "-- Done!" << std::endl;
 #endif
 }
 } // namespace run_utils

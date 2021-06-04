@@ -42,7 +42,7 @@ def make_default_parser(
     elif frontend == "ldos_plotter":
         add_ldos_plotter_arguments(parser)
     else:
-        print(f"ERROR make_default_parser(): Unknown frontend: '{frontend}'.")
+        print(f"-- ERROR! make_default_parser(): Unknown frontend: '{frontend}'.")
         status_code = 1
         sys.exit(status_code)
 
@@ -770,7 +770,7 @@ def set_arguments_from_cli(
     elif frontend == "ldos_plotter":
         set_ldos_plotter_arguments_from_cli(sim_params, args)
     else:
-        print(f"ERROR set_from_cli(): Unknown frontend: '{frontend}'.")
+        print(f"-- ERROR! set_from_cli(): Unknown frontend: '{frontend}'.")
         status_code = 1
         sys.exit(status_code)
 
@@ -1168,7 +1168,7 @@ def set_deprecated_arguments(
     elif frontend == "ldos_plotter":
         pass
     else:
-        print(f"ERROR set_deprecated_arguments(): Unknown frontend: '{frontend}'.")
+        print(f"-- ERROR! set_deprecated_arguments(): Unknown frontend: '{frontend}'.")
         status_code = 1
         sys.exit(status_code)
 

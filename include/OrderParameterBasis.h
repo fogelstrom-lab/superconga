@@ -125,7 +125,8 @@ template <typename T> std::string BasisFunction<T>::getSymmetryStr() const {
   default: {
 #ifndef NDEBUG
     // TODO(niclas): Raise exception instead!?
-    std::cout << "ERROR! Basis-function symmetry not implemented!" << std::endl;
+    std::cout << "-- ERROR! Basis-function symmetry not implemented!"
+              << std::endl;
 #endif
   }
   }
@@ -171,7 +172,7 @@ thrust::complex<T> BasisFunction<T>::evaluate(const T inMomentumX,
     default: {
 #ifndef NDEBUG
       // TODO(niclas): Raise exception instead!?
-      std::cout << "ERROR! Basis-function symmetry not implemented!"
+      std::cout << "-- ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
 #endif
       basisFunction =
@@ -205,7 +206,7 @@ thrust::complex<T> BasisFunction<T>::evaluate(const T inMomentumX,
     default: {
 #ifndef NDEBUG
       // TODO(niclas): Raise exception instead!?
-      std::cout << "ERROR! Basis-function symmetry not implemented!"
+      std::cout << "-- ERROR! Basis-function symmetry not implemented!"
                 << std::endl;
 #endif
       basisFunction =

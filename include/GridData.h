@@ -947,7 +947,7 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
 #ifndef NDEBUG
       // Unknown field: Print warning and return 0.
       // TODO(patric): Raise exception
-      std::cout << "WARNING! No defined behavior for sumMagnitude for real "
+      std::cout << "-- WARNING! No defined behavior for sumMagnitude for real "
                    "field with "
                 << _numFields << " number of fields. Function call ignored."
                 << std::endl;
@@ -1016,7 +1016,7 @@ void GridData<T, DEV>::complexMagnitudeSq(GridData<T, DEV> *result) const {
     GridFunctions<T, DEV>::complexMagnitudeSq(result);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::complexMagnitudeSq() ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::complexMagnitudeSq(): Grids not of equal "
                  "dimensions, or source field not complex.\n";
 #endif
   }
@@ -1035,7 +1035,7 @@ void GridData<T, DEV>::complexPhase(GridData<T, DEV> *result) const {
     GridFunctions<T, DEV>::complexPhase(result);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::complexPhase(): ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::complexPhase(): Grids not of equal "
                  "dimensions, or source grid not complex\n";
 #endif
   }
@@ -1056,8 +1056,9 @@ void GridData<T, DEV>::complexPhaseGradient(GridData<T, DEV> *result,
     GridFunctions<T, DEV>::complexPhaseGradient(result, h);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::complexPhaseGradient(): ERROR: Grids not of equal "
-                 "dimensions, or source grid not complex\n";
+    std::cout
+        << "-- ERROR! GridData::complexPhaseGradient(): Grids not of equal "
+           "dimensions, or source grid not complex\n";
 #endif
   }
 }
@@ -1075,7 +1076,7 @@ void GridData<T, DEV>::fieldMagnitude(GridData<T, DEV> *result) const {
     GridFunctions<T, DEV>::fieldMagnitude(result);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::fieldMagnitude(): Grids not of equal "
                  "dimensions.\n";
 #endif
   }
@@ -1094,7 +1095,7 @@ void GridData<T, DEV>::div(GridData<T, DEV> *result, const T h) const {
     GridFunctions<T, DEV>::div(result, h);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::fieldMagnitude(): Grids not of equal "
                  "dimensions.\n";
 #endif
   }
@@ -1114,7 +1115,7 @@ void GridData<T, DEV>::curl(GridData<T, DEV> *result, const T h) const {
     GridFunctions<T, DEV>::curl(result, h);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::fieldMagnitude(): Grids not of equal "
                  "dimensions.\n";
 #endif
   }
@@ -1133,7 +1134,7 @@ void GridData<T, DEV>::del2(GridData<T, DEV> *result, const T h) const {
     GridFunctions<T, DEV>::del2(result, h);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::fieldMagnitude(): ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::fieldMagnitude(): Grids not of equal "
                  "dimensions.\n";
 #endif
   }
@@ -1153,7 +1154,7 @@ void GridData<T, DEV>::sumFieldComponents(GridData<T, DEV> *result) const {
     GridFunctions<T, DEV>::sumFieldComponents(result);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData::sumFieldComponents() ERROR: Grids not of equal "
+    std::cout << "-- ERROR! GridData::sumFieldComponents(): Grids not of equal "
                  "dimensions.\n";
 #endif
   }
@@ -1265,7 +1266,7 @@ void GridData<T, DEV>::copyFieldTo(GridData<T, DEV> *target, int thisField,
                  target->getVector().begin() + dst_begin);
   } else {
 #ifndef NDEBUG
-    std::cout << "GridData<T,DEV>::copyFieldTo(): ERROR: x and y dimensions "
+    std::cout << "-- ERROR! GridData<T,DEV>::copyFieldTo(): x and y dimensions "
                  "are not equal, or field out of range.\n";
 #endif
   }

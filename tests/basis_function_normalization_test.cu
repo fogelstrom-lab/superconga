@@ -5,12 +5,12 @@
 #include "FermiSurfaceTightBinding.h"
 #include "OrderParameterBasis.h"
 #include "utils.h"
-#include <thrust/complex.h>
 #include <cmath>
 #include <doctest/doctest.h>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <thrust/complex.h>
 #include <vector>
 
 namespace helper {
@@ -60,7 +60,7 @@ void testBasisFunctionNormaliztation(const T inTolerance,
           static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
           static_cast<T>(CHEMICAL_POTENTIAL_FS2));
     } else {
-      std::cout << "Error! Unknown FermiSurface!" << std::endl;
+      std::cout << "-- ERROR! Unknown FermiSurface!" << std::endl;
     }
 
     // Initialize Fermi surface

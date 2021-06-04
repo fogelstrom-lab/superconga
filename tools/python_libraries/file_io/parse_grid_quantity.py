@@ -124,7 +124,7 @@ def parse_field_numpy(base_path: str, field_name: str) -> dict:
         out_data_dict["phase"] = phases
     else:
         print(
-            f"ERROR in parse_grid_quantity.py! Unimplemented field type: {field_type}."
+            f"-- ERROR! parse_grid_quantity.py: Unimplemented field type: {field_type}."
         )
         status_code = 1
         sys.exit(status_code)

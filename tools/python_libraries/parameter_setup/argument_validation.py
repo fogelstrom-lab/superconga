@@ -24,7 +24,7 @@ def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> 
     # Check that the value is of the expected type.
     expected_type = checks["type"]
     if not isinstance(value, expected_type):
-        print(f"--The field '{key}' must be of type {expected_type}.")
+        print(f"-- ERROR! The field '{key}' must be of type {expected_type}.")
         return False
 
     # Run recursively if list or dictionary.
@@ -42,42 +42,46 @@ def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> 
     if "low" in checks:
         low = checks["low"]
         if not value > low:
-            print(f"--The field '{key}' must be larger than {low}.")
+            print(f"-- ERROR! The field '{key}' must be larger than {low}.")
             return False
 
     # Check that the value is larger than, or equal to, 'low'.
     if "low_include" in checks:
         low = checks["low_include"]
         if not value >= low:
-            print(f"--The field '{key}' must be larger than, or equal to, {low}.")
+            print(
+                f"-- ERROR! The field '{key}' must be larger than, or equal to, {low}."
+            )
             return False
 
     # Check that the value is smaller than 'high'.
     if "high" in checks:
         high = checks["high"]
         if not value < high:
-            print(f"--The field '{key}' must be smaller than {high}.")
+            print(f"-- ERROR! The field '{key}' must be smaller than {high}.")
             return False
 
     # Check that the value is smaller than, or equal to, 'high'.
     if "high_include" in checks:
         high = checks["high_include"]
         if not value <= high:
-            print(f"--The field '{key}' must be smaller than, or equal to, {high}.")
+            print(
+                f"-- ERROR! The field '{key}' must be smaller than, or equal to, {high}."
+            )
             return False
 
     # Check that the value is not in the excluded list.
     if "excluded" in checks:
         for exc in checks["excluded"]:
             if value == exc:
-                print(f"--The field '{key}' cannot have value {exc}.")
+                print(f"-- ERROR! The field '{key}' cannot have value {exc}.")
                 return False
 
     # Check that the value is in some pre-defined set.
     if "one_of" in checks:
         valid_values = checks["one_of"]
         if not value in valid_values:
-            print(f"--The field '{key}' must be one of {valid_values}.")
+            print(f"-- ERROR! The field '{key}' must be one of {valid_values}.")
             return False
 
     # No errors.
@@ -95,7 +99,7 @@ def check_dict(sim_params: dict, checks: dict) -> bool:
             if value_checks.get("optional", False):
                 continue
             else:
-                print(f"--The field '{key}' must exist.")
+                print(f"-- ERROR! The field '{key}' must exist.")
                 success = False
                 continue
 
@@ -104,7 +108,7 @@ def check_dict(sim_params: dict, checks: dict) -> bool:
         # Check that the value is of the expected type.
         expected_type = value_checks["type"]
         if not isinstance(value, expected_type):
-            print(f"--The field '{key}' must be of type {expected_type}.")
+            print(f"-- ERROR! The field '{key}' must be of type {expected_type}.")
             success = False
             continue
 
@@ -301,7 +305,7 @@ def validate_runner_arguments(
             # There should only be one dict per geometry component.
             if len(geometry_component_dict.keys()) != 1:
                 print(
-                    f"ERROR! Each geometry component should be a single dictionary. Found the following keys: '{list(geometry_component_dict.keys())}'."
+                    f"-- ERROR! Each geometry component should be a single dictionary. Found the following keys: '{list(geometry_component_dict.keys())}'."
                 )
                 success = False
 
@@ -320,14 +324,14 @@ def validate_runner_arguments(
                 )
                 if num_x_vertices != num_y_vertices:
                     print(
-                        f"ERROR! The number of x- and y-vertex coordinates are not the same: {num_x_vertices} != {num_y_vertices}"
+                        f"-- ERROR! The number of x- and y-vertex coordinates are not the same: {num_x_vertices} != {num_y_vertices}"
                     )
                     success = False
 
                 min_num_vertices = 3
                 if min(num_x_vertices, num_y_vertices) < min_num_vertices:
                     print(
-                        f"ERROR! The minimum number of vertices is {min_num_vertices}."
+                        f"-- ERROR! The minimum number of vertices is {min_num_vertices}."
                     )
                     success = False
 
@@ -336,11 +340,11 @@ def validate_runner_arguments(
         # Check that at least one geometry object is "added".
         if num_added_geometry_objects == 0:
             print(
-                f"ERROR! No geometry components with 'add=true' were found. Please make sure that at least one component is added to create a valid geometry."
+                f"-- ERROR! No geometry components with 'add=true' were found. Please make sure that at least one component is added to create a valid geometry."
             )
             success = False
     else:
-        print("ERROR! Geometry list empty. Please add some geometry objects!")
+        print("-- ERROR! Geometry list empty. Please add some geometry objects!")
         success = False
 
     # Normalize critical temperature so that the maximum is one.
@@ -352,7 +356,9 @@ def validate_runner_arguments(
 
     # Check that the minimum number of iterations is smaller than the maximum.
     if not (sim_params["num_iterations_max"] >= sim_params["num_iterations_min"]):
-        print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
+        print(
+            "-- ERROR! 'num_iterations_max' must be larger than 'num_iterations_min'."
+        )
         success = False
 
     # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
@@ -360,7 +366,7 @@ def validate_runner_arguments(
         not sim_params["optimizer"]["max_mixing"]
         >= sim_params["optimizer"]["min_mixing"]
     ):
-        print("--'max_mixing' must be larger than, or equal to, 'min_mixing'.")
+        print("-- ERROR! 'max_mixing' must be larger than, or equal to, 'min_mixing'.")
         success = False
 
     return success
@@ -374,12 +380,14 @@ def validate_postprocess_arguments(
 
     # Check that the minimum number of iterations is smaller than the maximum.
     if not (sim_params["num_iterations_max"] >= sim_params["num_iterations_min"]):
-        print("--'num_iterations_max' must be larger than 'num_iterations_min'.")
+        print(
+            "-- ERROR! 'num_iterations_max' must be larger than 'num_iterations_min'."
+        )
         success = False
 
     # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
     if not sim_params["energy_max"] >= sim_params["energy_min"]:
-        print("--'energy_max' must be larger than, or equal to, 'energy_min'.")
+        print("-- ERROR! 'energy_max' must be larger than, or equal to, 'energy_min'.")
         success = False
 
     return success
@@ -395,7 +403,7 @@ def validate_plotter_arguments(
     data_path = Path(plot_params["general"]["data_path"])
 
     if not utils.check_dir(data_path, verbose=False, exit_on_failure=False):
-        print(f"Error! Invalid data path: '{data_path}'")
+        print(f"-- Error! Invalid data path: '{data_path}'")
         success = False
         return success
 
@@ -433,7 +441,7 @@ def validate_plotter_arguments(
         and (not plot_vector_potential)
     ):
         print(
-            f"Error: No quantity was chosen for plotting. Please specify at least one quantity, using e.g. '--plot-current'. See '--help' for all options."
+            f"-- ERROR! No quantity was chosen for plotting. Please specify at least one quantity, using e.g. '--plot-current'. See '--help' for all options."
         )
         success = False
         return success
@@ -442,7 +450,7 @@ def validate_plotter_arguments(
     config_file = data_path / configuration.filenames["config"]
     if not utils.check_file(config_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid config file found in specified data path: '{config_file}'."
+            f"-- ERROR! No valid config file found in specified data path: '{config_file}'."
         )
         success = False
         return success
@@ -451,7 +459,7 @@ def validate_plotter_arguments(
     internal_param_file = data_path / configuration.filenames["internal_parameters"]
     if not utils.check_file(internal_param_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
+            f"-- ERROR! No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
         )
         success = False
         return success
@@ -460,7 +468,7 @@ def validate_plotter_arguments(
     results_file = data_path / configuration.filenames["results"]
     if not utils.check_file(results_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid 'scalar results' file found in specified data path: '{results_file}'."
+            f"-- ERROR! No valid 'scalar results' file found in specified data path: '{results_file}'."
         )
         success = False
         return success
@@ -469,7 +477,7 @@ def validate_plotter_arguments(
     convergence_file = data_path / configuration.filenames["convergence"]
     if not utils.check_file(convergence_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid convergence file found in specified data path: '{convergence_file}'."
+            f"-- ERROR! No valid convergence file found in specified data path: '{convergence_file}'."
         )
         success = False
         return success
@@ -479,7 +487,7 @@ def validate_plotter_arguments(
         current_file = data_path / configuration.filenames["current_density"]
         if not utils.check_file(current_file, verbose=False, exit_on_failure=False):
             print(
-                f"Error: No valid current density file found in specified data path: '{current_file}'."
+                f"-- ERROR! No valid current density file found in specified data path: '{current_file}'."
             )
             success = False
             return success
@@ -491,7 +499,7 @@ def validate_plotter_arguments(
             magnetic_field_file, verbose=False, exit_on_failure=False
         ):
             print(
-                f"Error: No valid magnetic field file found in specified data path: '{magnetic_field_file}'."
+                f"-- ERROR! No valid magnetic field file found in specified data path: '{magnetic_field_file}'."
             )
             success = False
             return success
@@ -499,7 +507,7 @@ def validate_plotter_arguments(
         op_file = data_path / configuration.filenames["order_parameter"]
         if not utils.check_file(op_file, verbose=False, exit_on_failure=False):
             print(
-                f"Error: No valid order parameter file found in specified data path: '{op_file}'."
+                f"-- ERROR! No valid order parameter file found in specified data path: '{op_file}'."
             )
             success = False
             return success
@@ -507,7 +515,7 @@ def validate_plotter_arguments(
         superflow_file = data_path / configuration.filenames["superflow"]
         if not utils.check_file(superflow_file, verbose=False, exit_on_failure=False):
             print(
-                f"Error: No valid superflow file found in specified data path: '{superflow_file}'."
+                f"-- ERROR! No valid superflow file found in specified data path: '{superflow_file}'."
             )
             success = False
             return success
@@ -517,7 +525,7 @@ def validate_plotter_arguments(
             vector_potential_file, verbose=False, exit_on_failure=False
         ):
             print(
-                f"Error: No valid vector potential file found in specified data path: '{vector_potential_file}'."
+                f"-- ERROR! No valid vector potential file found in specified data path: '{vector_potential_file}'."
             )
             success = False
             return success
@@ -535,7 +543,7 @@ def validate_ldos_plotter_arguments(
     data_path = Path(plot_params["general"]["data_path"])
 
     if not utils.check_dir(data_path, verbose=False, exit_on_failure=False):
-        print(f"Error! Invalid data path: '{data_path}'")
+        print(f"-- ERROR! Invalid data path: '{data_path}'")
         success = False
         return success
 
@@ -543,7 +551,7 @@ def validate_ldos_plotter_arguments(
     config_file = data_path / configuration.filenames["config"]
     if not utils.check_file(config_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid config file found in specified data path: '{config_file}'."
+            f"-- ERROR! No valid config file found in specified data path: '{config_file}'."
         )
         success = False
         return success
@@ -552,7 +560,7 @@ def validate_ldos_plotter_arguments(
     internal_param_file = data_path / configuration.filenames["internal_parameters"]
     if not utils.check_file(internal_param_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
+            f"-- ERROR! No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
         )
         success = False
         return success
@@ -561,7 +569,7 @@ def validate_ldos_plotter_arguments(
     results_file = data_path / configuration.filenames["results"]
     if not utils.check_file(results_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid 'scalar results' file found in specified data path: '{results_file}'."
+            f"-- ERROR! No valid 'scalar results' file found in specified data path: '{results_file}'."
         )
         success = False
         return success
@@ -570,7 +578,7 @@ def validate_ldos_plotter_arguments(
     convergence_file = data_path / configuration.filenames["convergence"]
     if not utils.check_file(convergence_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid convergence file found in specified data path: '{convergence_file}'."
+            f"-- ERROR! No valid convergence file found in specified data path: '{convergence_file}'."
         )
         success = False
         return success
@@ -579,7 +587,7 @@ def validate_ldos_plotter_arguments(
     post_processing_file = data_path / configuration.filenames["post_processing"]
     if not utils.check_file(post_processing_file, verbose=False, exit_on_failure=False):
         print(
-            f"Error: No valid post-processing file found in specified data path: '{post_processing_file}'."
+            f"-- ERROR! No valid post-processing file found in specified data path: '{post_processing_file}'."
         )
         success = False
         return success
@@ -587,14 +595,18 @@ def validate_ldos_plotter_arguments(
     # Check that LDOS file exists.
     ldos_file = data_path / configuration.filenames["ldos"]
     if not utils.check_file(ldos_file, verbose=False, exit_on_failure=False):
-        print(f"Error: No valid LDOS file found in specified data path: '{ldos_file}'.")
+        print(
+            f"-- ERROR! No valid LDOS file found in specified data path: '{ldos_file}'."
+        )
         success = False
         return success
 
     # Check that DOS file exists.
     dos_file = data_path / configuration.filenames["dos"]
     if not utils.check_file(dos_file, verbose=False, exit_on_failure=False):
-        print(f"Error: No valid DOS file found in specified data path: '{dos_file}'.")
+        print(
+            f"-- ERROR! No valid DOS file found in specified data path: '{dos_file}'."
+        )
         success = False
         return success
 
@@ -639,7 +651,7 @@ def validate_arguments(
         if success:
             success = validate_ldos_plotter_arguments(arguments_dict)
     else:
-        print(f"ERROR validate_arguments(): Unknown frontend: '{frontend}'.")
+        print(f"-- ERROR! validate_arguments(): Unknown frontend: '{frontend}'.")
         success = False
 
     return success

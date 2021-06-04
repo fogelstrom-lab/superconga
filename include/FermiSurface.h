@@ -177,7 +177,7 @@ template <typename T> void FermiSurface<T>::initialize(const int inNumAngles) {
 #ifndef NDEBUG
   if (inNumAngles < 1) {
     // TODO(niclas): Raise exception instead!?
-    std::cout << "WARNING! The number angles must be larger than one."
+    std::cout << "-- WARNING! The number angles must be larger than one."
               << std::endl;
   }
 #endif
@@ -189,7 +189,7 @@ template <typename T> int FermiSurface<T>::getNumAngles() const {
 #ifndef NDEBUG
   if (!m_isNumAnglesInitialized) {
     // TODO(niclas): Raise exception instead!?
-    std::cout << "WARNING! The number angles is not set." << std::endl;
+    std::cout << "-- WARNING! The number angles is not set." << std::endl;
   }
 #endif
   return m_numAngles;
