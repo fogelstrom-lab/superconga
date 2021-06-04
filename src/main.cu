@@ -405,10 +405,13 @@ int main(int argc, char *argv[]) {
     const scg::GridGPU<char> &domain = *(geometry->getDomainGrid());
     const scg::io::CSVGridDataSaveStrategy<char> writer;
     const bool success = writer.save(domain, {"domain"}, domainFileName);
-    if (!success) {
-      std::cout << "-- ERROR! Could not save: " << domainFileName << std::endl;
-    } else {
-      std::cout << "-- Wrote: " << domainFileName << std::endl;
+    if (verbose) {
+      if (!success) {
+        std::cout << "-- ERROR! Could not write: " << domainFileName
+                  << std::endl;
+      } else {
+        std::cout << "-- Wrote: " << domainFileName << std::endl;
+      }
     }
   }
 

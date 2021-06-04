@@ -300,9 +300,10 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
 #ifndef NDEBUG
   if (inNumVertices < 3) {
     // Todo(patric): Raise exception
-    std::cerr << "ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
-                 "inNumVertices = "
-              << inNumVertices << std::endl;
+    std::cerr
+        << "-- ERROR! PolygonGeometry: A polygon needs at least 3 vertices. "
+           "inNumVertices = "
+        << inNumVertices << std::endl;
   }
 #endif
 
@@ -320,10 +321,11 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
     if ((std::abs(vertexX) > static_cast<T>(constants::MAXIMUM_COORDINATE)) ||
         (std::abs(vertexY) > static_cast<T>(constants::MAXIMUM_COORDINATE))) {
       // Todo(patric): Raise exception
-      std::cerr << "ERROR! PolygonGeometry: Vertex coordinates must be within "
-                   "[-"
-                << constants::MAXIMUM_COORDINATE << ", "
-                << constants::MAXIMUM_COORDINATE << "]." << std::endl;
+      std::cerr
+          << "-- ERROR! PolygonGeometry: Vertex coordinates must be within "
+             "[-"
+          << constants::MAXIMUM_COORDINATE << ", "
+          << constants::MAXIMUM_COORDINATE << "]." << std::endl;
     }
 #endif
 

@@ -35,7 +35,7 @@ def check_dir(
         success = False
 
         if verbose:
-            print(f"Error: Cannot find directory: '{data_path}'.")
+            print(f"-- ERROR! Cannot find directory: '{data_path}'.")
 
         if exit_on_failure:
             status_code = 1
@@ -44,7 +44,7 @@ def check_dir(
         success = False
 
         if verbose:
-            print(f"Error: Cannot read directory: '{data_path}'.")
+            print(f"-- ERROR! Cannot read directory: '{data_path}'.")
 
         if exit_on_failure:
             status_code = 1
@@ -66,7 +66,7 @@ def check_file(
         success = False
 
         if verbose:
-            print(f"Error: Cannot find file: '{data_path}'.")
+            print(f"-- ERROR! Cannot find file: '{data_path}'.")
 
         if exit_on_failure:
             status_code = 1
@@ -75,7 +75,7 @@ def check_file(
         success = False
 
         if verbose:
-            print(f"Error: Cannot read file: '{data_path}'.")
+            print(f"-- ERROR! Cannot read file: '{data_path}'.")
 
         if exit_on_failure:
             status_code = 1

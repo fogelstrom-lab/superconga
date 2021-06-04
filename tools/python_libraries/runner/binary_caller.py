@@ -37,7 +37,7 @@ def run_cpp_binary(cpp_binary_str: str, sim_params: dict) -> int:
     else:
         status_code = 1
         print(
-            f"--Cannot find the C++ executable '{cpp_binary_path}'. See the README for how to compile it."
+            f"-- ERROR! Cannot find the C++ executable '{cpp_binary_path}'. See the README for how to compile it."
         )
 
     # Remove temporary config file.

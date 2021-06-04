@@ -236,8 +236,9 @@ std::pair<bool, T> computeCriticalTemperature(
 #ifndef NDEBUG
   // TODO(niclas): Raise exception instead!?
   if (!isConverged) {
-    std::cerr << "WARNING! The BdG bulk critical temperature did not converge!"
-              << std::endl;
+    std::cerr
+        << "-- WARNING! The BdG bulk critical temperature did not converge!"
+        << std::endl;
   }
 #endif
 

@@ -98,7 +98,7 @@ public:
       break;
     }
     default: {
-      std::cerr << "ERROR: Colormap not implemented!" << std::endl;
+      std::cerr << "-- ERROR! Colormap not implemented!" << std::endl;
     }
     }
 

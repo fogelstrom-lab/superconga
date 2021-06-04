@@ -371,7 +371,7 @@ int main(int argc, char *argv[]) {
       const bool success = writer.save(dos, {"energy", "dos"}, dosFileName);
 
       if (!success) {
-        std::cout << "-- ERROR! Could not save: " << dosFileName << std::endl;
+        std::cout << "-- ERROR! Could not write: " << dosFileName << std::endl;
       } else {
         std::cout << "-- Wrote: " << dosFileName << std::endl;
       }
@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
       const bool success = writer.save(ldos, {"ldos"}, ldosFileName);
 
       if (!success) {
-        std::cout << "-- ERROR! Could not save: " << ldosFileName << std::endl;
+        std::cout << "-- ERROR! Could not write: " << ldosFileName << std::endl;
       } else {
         std::cout << "-- Wrote: " << ldosFileName << std::endl;
       }

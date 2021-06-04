@@ -777,7 +777,7 @@ int GeometryGroup<T>::computeNumGrainLatticeSites(
 #ifndef NDEBUG
       if (node < 0 || node > m_maxValidLabel) {
         // TODO(niclas): Raise exception instead?
-        std::cerr << "WARNING: Domain label, " << static_cast<int>(node)
+        std::cerr << "-- WARNING: Domain label, " << static_cast<int>(node)
                   << ", not understood!" << std::endl;
       }
 #endif

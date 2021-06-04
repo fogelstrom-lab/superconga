@@ -219,7 +219,7 @@ T computeOrderParameterBulkSWave(
 #ifndef NDEBUG
   // TODO(niclas): Raise exception instead!?
   if (!isConverged) {
-    std::cerr << "ERROR! The bulk order parameter did NOT converge!"
+    std::cerr << "-- ERROR! The bulk order parameter did NOT converge!"
               << std::endl;
   }
 #endif

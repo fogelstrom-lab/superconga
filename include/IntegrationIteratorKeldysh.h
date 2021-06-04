@@ -236,7 +236,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   if (currentEnergyIndex >= numEnergies) {
 // TODO(niclas): This should never happen. Raise exception instead!?
 #ifndef NDEBUG
-    std::cout << "ERROR! Energy index out of bounds." << std::endl;
+    std::cout << "-- ERROR! Energy index out of bounds." << std::endl;
 #endif
     return;
   }

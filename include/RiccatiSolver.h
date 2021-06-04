@@ -257,7 +257,7 @@ template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
           ContextModule<T>::getContext());
   } else {
 #ifndef NDEBUG
-    std::cout << "WARNING: No boundary conditions specified!\n";
+    std::cout << "-- WARNING: No boundary conditions specified!\n";
 #endif
   }
 }

@@ -192,7 +192,7 @@ vector2d<T> computeFermiMomentum(
   // TODO(niclas): Make sure that the signs of eA and eB differ. Exit gracefully
   // otherwise.
   if (utils::sign(eA) == utils::sign(eB)) {
-    std::cout << "ERROR! Failure of the bisection method." << std::endl;
+    std::cout << "-- ERROR! Failure of the bisection method." << std::endl;
   }
 #endif
 
@@ -232,7 +232,7 @@ vector2d<T> computeFermiMomentum(
       // Make sure that the signs of eA and eB differ.
       if (utils::sign(eA) == utils::sign(eB)) {
 #ifndef NDEBUG
-        std::cout << "ERROR! Failure of the bisection method." << std::endl;
+        std::cout << "-- ERROR! Failure of the bisection method." << std::endl;
 #endif
         break;
       }
@@ -275,18 +275,18 @@ vector2d<T> computeFermiMomentum(
   // TODO(niclas): Raise exception instead!
   if (!isConverged) {
 #ifndef NDEBUG
-    std::cout << "ERROR! The Fermi momentum did not converge!" << std::endl;
+    std::cout << "-- ERROR! The Fermi momentum did not converge!" << std::endl;
 #endif
   }
   if (!isSane) {
 #ifndef NDEBUG
-    std::cout << "ERROR! The Fermi momentum magnitude is negative!"
+    std::cout << "-- ERROR! The Fermi momentum magnitude is negative!"
               << std::endl;
 #endif
   }
   if (!isWithinBZ) {
 #ifndef NDEBUG
-    std::cout << "ERROR! The Fermi momentum is outside of Brillouin zone!"
+    std::cout << "-- ERROR! The Fermi momentum is outside of Brillouin zone!"
               << std::endl;
 #endif
   }

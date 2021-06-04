@@ -345,7 +345,7 @@ __global__ void boundaryConditionSpecularKernel(
         } else {
           // This should never happen.
 #ifndef NDEBUG
-          printf("WARNING! Specular boundary condition failed.");
+          printf("-- WARNING! Specular boundary condition failed.");
 #endif
           boundaryInCoherenceReal[idx_sparse_in] = static_cast<T>(0.0);
           boundaryInCoherenceImag[idx_sparse_in] = static_cast<T>(0.0);
