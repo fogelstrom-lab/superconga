@@ -4,6 +4,7 @@
 
 ### Improvements
 - Support running Python scripts from other directories.
+- Showcase a wider array of accelerator settings in the examples.
 
 ### Bug fixes
 

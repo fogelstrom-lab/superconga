@@ -23,12 +23,12 @@
 	"optimizer": {
 		"adaptive": true,
 		"anderson_always": true,
-		"inertia": 0.333,
+		"inertia": 0.0,
 		"max_mixing": 1.0,
 		"min_mixing": 1.0,
 		"rank": 1,
 		"replace_oldest": true,
-		"step_size": 1.5
+		"step_size": 1.0
 	},
 	"order_parameter": [
 		{
