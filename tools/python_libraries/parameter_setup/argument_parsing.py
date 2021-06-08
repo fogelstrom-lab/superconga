@@ -16,6 +16,7 @@ from typing import Optional, Union
 
 # Custom libraries.
 sys.path.insert(0, "../../")
+from python_libraries import __version__
 from python_libraries.file_io import utils
 from python_libraries.settings import configuration
 
@@ -146,7 +147,7 @@ def add_runner_arguments(parser) -> None:
         "--temperature",
         type=float,
         default=None,
-        help="Temperature in units of T_c.",
+        help="Temperature in units of the critical temperature T_c.",
     )
 
     # External flux quanta.
@@ -177,7 +178,7 @@ def add_runner_arguments(parser) -> None:
         "--penetration-depth",
         type=float,
         default=None,
-        help="The London penetration depth, expressed in coherence lengths. If the value is less than, or equal to, zero the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
+        help="The London penetration depth, expressed in coherence lengths (i.e. the Ginzburg-Landau coefficient). If the value is less than zero, the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
     )
 
     # Crystal axes rotation.
@@ -262,7 +263,7 @@ def add_runner_arguments(parser) -> None:
         "--convergence-criterion",
         type=float,
         default=None,
-        help="Convergence criteron for self-consistency.",
+        help="Convergence criterion for self-consistency.",
     )
 
     # Lattice side length.
@@ -271,7 +272,7 @@ def add_runner_arguments(parser) -> None:
         "--points-per-coherence-length",
         type=float,
         default=None,
-        help="Number of lattice points per coherence length. Recommended value 10.",
+        help="Number of lattice points per coherence length. Recommended value 10 (or larger).",
     )
 
     # Num Fermi momenta.
@@ -280,8 +281,7 @@ def add_runner_arguments(parser) -> None:
         "--num-fermi-momenta",
         type=int,
         default=None,
-        help="Number of discrete angles in Fermi-surface average. Set to "
-        "odd value for best convergence. Recommended minumum: 101.",
+        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 100.",
     )
 
     # Num iterations max.
@@ -320,6 +320,11 @@ def add_runner_arguments(parser) -> None:
     )
 
     # =============== MISC =============== #
+
+    # Version number.
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s " + __version__
+    )
 
     # Data path.
     parser.add_argument(
@@ -385,7 +390,7 @@ def add_postprocess_arguments(parser) -> None:
         "--file",
         type=str,
         default=None,
-        help="Path to JSON file with parameters specifying the simulation settings.",
+        help="Path to JSON file with parameters specifying the settings for calculating the density of states.",
     )
 
     # C++ binary.
@@ -403,7 +408,7 @@ def add_postprocess_arguments(parser) -> None:
         "--convergence-criterion",
         type=float,
         default=None,
-        help="Convergence criteron for self-consistency.",
+        help="Convergence criterion for self-consistency.",
     )
 
     # Data path.
@@ -420,7 +425,7 @@ def add_postprocess_arguments(parser) -> None:
         "--energy-max",
         type=float,
         default=None,
-        help="The maximum energy.",
+        help="The maximum energy to compute density of states at.",
     )
 
     # Energy min.
@@ -428,7 +433,7 @@ def add_postprocess_arguments(parser) -> None:
         "--energy-min",
         type=float,
         default=None,
-        help="The minimum energy.",
+        help="The minimum energy to compute density of states at.",
     )
 
     # Energy smearing.
@@ -436,7 +441,7 @@ def add_postprocess_arguments(parser) -> None:
         "--energy-smearing",
         type=float,
         default=None,
-        help="The energy smearing.",
+        help="The smearing (broadening) factor to the energy in the propagator, used to compute the density of states.",
     )
 
     # Num energies.
@@ -445,7 +450,7 @@ def add_postprocess_arguments(parser) -> None:
         "--num-energies",
         type=int,
         default=None,
-        help="Number of energies.",
+        help="Number of energies to compute the density of states at, between (and including) the min/max energies.",
     )
 
     # Num energies per block.
@@ -454,7 +459,7 @@ def add_postprocess_arguments(parser) -> None:
         "--num-energies-per-block",
         type=int,
         default=None,
-        help="Number of energies per block.",
+        help="Number of energies per block. The density of states calculation is memory intensive, which might lead to the GPU running out of memory. To solve this, the problem is divided into multiple chunks (blocks) calculated in serial.",
     )
 
     # Num iterations max.
@@ -480,7 +485,7 @@ def add_postprocess_arguments(parser) -> None:
         "--num-fermi-momenta",
         type=int,
         default=None,
-        help="Number of angles in Fermi-surface average.",
+        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 700.",
     )
 
     # Save.
@@ -507,6 +512,11 @@ def add_postprocess_arguments(parser) -> None:
         "--quiet",
         action="store_true",
         help="Do not print iteration status and other output to terminal.",
+    )
+
+    # Version number.
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s " + __version__
     )
 
 
@@ -538,12 +548,12 @@ def add_plotter_arguments(parser) -> None:
     group_chiral_transform.add_argument(
         "--chiral-transform",
         action="store_true",
-        help="Use chiral transformation when plotting a two-component superconductor.",
+        help="Use chiral transformation (d+id' becomes d_+ + d_-) when plotting a two-component superconductor.",
     )
     group_chiral_transform.add_argument(
         "--no-chiral-transform",
         action="store_true",
-        help="Do not use chiral transformation when plotting a two-component superconductor.",
+        help="Do not use chiral transformation (d+id' becomes d_+ + d_-) when plotting a two-component superconductor.",
     )
 
     # Plot order parameter.
@@ -674,6 +684,11 @@ def add_plotter_arguments(parser) -> None:
         help="Plot induced vector potential y-component.",
     )
 
+    # Version number.
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s " + __version__
+    )
+
 
 # -----------------------------------------------------------------------------
 # ARGUMENT SPECIFICATION: DENSITY OF STATES PLOTTER
@@ -686,7 +701,7 @@ def add_ldos_plotter_arguments(parser) -> None:
         "--data-path",
         type=str,
         default=None,
-        help="Path to data folder.",
+        help="Path to folder with density of states data.",
     )
 
     # Plotting configuration file.
@@ -696,6 +711,11 @@ def add_ldos_plotter_arguments(parser) -> None:
         type=str,
         default=None,
         help="Path to JSON file with parameters specifying the plot settings.",
+    )
+
+    # Version number.
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s " + __version__
     )
 
 

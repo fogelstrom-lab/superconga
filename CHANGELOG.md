@@ -6,6 +6,8 @@
 - Support running Python scripts from other directories.
 - Showcase a wider array of accelerator settings in the examples.
 - Standardize messages to the user.
+- Improve descriptions for command-line arguments for frontends (`--help` flag). 
+- Update README.md.
 
 ### Bug fixes
 

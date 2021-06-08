@@ -30,8 +30,10 @@ def main() -> None:
     # ======================================================================#
     frontend = "postprocess"
     # Program name and description for command-line help message.
-    program_name = "SuprConGPU postprocess"
-    program_description = "Compute the LDOS and DOS given a converged simulation."
+    program_name = "SuprConGPU DOS calculator"
+    program_description = (
+        "Compute the LDOS and DOS from a given a converged simulation."
+    )
     # Parse command-line arguments, and possibly a JSON file which specifies
     # config plotting parameters. The JSON file is provided via: -f|--file.
     simulation_parameters, cpp_binary = AP.parse_command_line_arguments(
