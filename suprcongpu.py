@@ -37,7 +37,7 @@ def main() -> None:
     frontend = "runner"
     # Program name and description for command-line help message.
     program_name = "SuprConGPU"
-    program_description = "SuprConGPU Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in examples and give the path to this file with the -f option. All parameters can be overridden using the command-line options specified below."
+    program_description = "SuprConGPU Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in the folders in 'examples/', and give the path to this file with the -f option. All parameters, except the geometry, can be overridden using the command-line options specified below."
     # Parse command-line arguments, and possibly a JSON file which specifies
     # config plotting parameters. The JSON file is provided via: -f|--file.
     simulation_parameters, cpp_binary = AP.parse_command_line_arguments(
