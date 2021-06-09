@@ -8,6 +8,7 @@
 - Standardize messages to the user.
 - Improve descriptions for command-line arguments for frontends (`--help` flag). 
 - Update README.md.
+- Add option to run with single precision via the Python frontend.
 
 ### Bug fixes
 

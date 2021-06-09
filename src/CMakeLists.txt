@@ -2,56 +2,65 @@
 # SOURCE FILES
 # ##############################################################################
 # Define the main set of source files
-set(SRC main.cu postprocess.cu)
+set(SRC suprcongpu.cu postprocess.cu)
 
-# Set compiler options, i.e. #defines.
-option(APPROX_STEP "Use approximate steps for the coherence functions." OFF)
+# Define precisions.
+set(SINGLE_PRECISION OFF ON)
 
 foreach(file ${SRC})
-  get_filename_component(name ${file} NAME_WE)
+  get_filename_component(name_raw ${file} NAME_WE)
 
-  # Create command-line executable.
-  add_executable(${name} ${file})
+  foreach(single_precision ${SINGLE_PRECISION})
+    # Append precision to name.
+    if(single_precision)
+      set(name ${name_raw}_f32)
+    else()
+      set(name ${name_raw}_f64)
+    endif(single_precision)
 
-  # Include directories.
-  target_include_directories(
-    ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
-                    ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
+    # Create command-line executable.
+    add_executable(${name} ${file})
 
-  # Build src binaries into build/xxx/bin/ (where xxx is e.g. release).
-  set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                           "${PROJECT_BINARY_DIR}/bin")
+    # Include directories.
+    target_include_directories(
+      ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
+                      ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
 
-  # External libraries.
-  target_link_libraries(
-    ${name}
-    PRIVATE glut
-            GL
-            GLU
-            gfortran
-            jsoncpp_lib
-            ${LAPACK_LIBRARIES}
-            ${BLAS_LIBRARIES})
+    # Build src binaries into build/xxx/bin/ (where xxx is e.g. release).
+    set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                             "${PROJECT_BINARY_DIR}/bin")
 
-  # Use C++17 since it is the latest standard CUDA supports.
-  set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
-                                           CUDA_STANDARD_REQUIRED ON)
-  set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
-                                                           ON)
+    # External libraries.
+    target_link_libraries(
+      ${name}
+      PRIVATE glut
+              GL
+              GLU
+              gfortran
+              jsoncpp_lib
+              ${LAPACK_LIBRARIES}
+              ${BLAS_LIBRARIES})
 
-  # Apply compiler options.
-  if(APPROX_STEP)
-    message("-- APPROX_STEP ON")
-    target_compile_definitions(${name} PUBLIC APPROX_STEP)
-  endif()
+    # Use C++17 since it is the latest standard CUDA supports.
+    set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
+                                             CUDA_STANDARD_REQUIRED ON)
+    set_target_properties(${name} PROPERTIES CXX_STANDARD 17
+                                             CXX_STANDARD_REQUIRED ON)
 
-  # Set DEBUG compile flags
-  target_compile_options(
-    ${name}
-    PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
-    PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
-    PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
+    # Apply compiler options.
+    if(single_precision)
+      target_compile_definitions(${name} PUBLIC SCG_APPROX_STEP)
+      target_compile_definitions(${name} PUBLIC SCG_SINGLE_PRECISION)
+    endif(single_precision)
 
-  # Set RELEASE compile flags
-  target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
-endforeach()
+    # Set DEBUG compile flags
+    target_compile_options(
+      ${name}
+      PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
+      PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
+      PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
+
+    # Set RELEASE compile flags
+    target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
+  endforeach(single_precision ${SINGLE_PRECISION})
+endforeach(file ${SRC})

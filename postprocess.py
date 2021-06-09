@@ -36,7 +36,7 @@ def main() -> None:
     )
     # Parse command-line arguments, and possibly a JSON file which specifies
     # config plotting parameters. The JSON file is provided via: -f|--file.
-    simulation_parameters, cpp_binary = AP.parse_command_line_arguments(
+    simulation_parameters, cpp_info = AP.parse_command_line_arguments(
         program_name=program_name,
         program_description=program_description,
         frontend=frontend,
@@ -56,11 +56,13 @@ def main() -> None:
         sys.exit(1)
 
     # Launch binary.
-    if cpp_binary is None:
-        cpp_binary = os.path.join(
-            os.path.dirname(__file__), "build/release/bin/postprocess"
+    cpp_path, cpp_precision = cpp_info
+    if cpp_path is None:
+        cpp_path = os.path.join(
+            os.path.dirname(__file__),
+            "build/release/bin/postprocess_f" + str(cpp_precision),
         )
-    binary_caller.run_cpp_binary(cpp_binary, simulation_parameters)
+    binary_caller.run_cpp_binary(cpp_path, simulation_parameters)
 
     # ======================================================================#
     #                            POST-PROCESSING                            #

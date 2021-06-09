@@ -65,13 +65,21 @@ def add_runner_arguments(parser) -> None:
         help="Path to JSON file with parameters specifying the simulation settings.",
     )
 
-    # C++ binary.
-    parser.add_argument(
-        "-b",
-        "--cpp-binary",
+    # C++ binary and precision.
+    group_cpp = parser.add_mutually_exclusive_group()
+    group_cpp.add_argument(
+        "--cpp-path",
         type=str,
         default=None,
-        help="Path to the C++ binary. If not set 'build/release/bin/main' relative to the supercongpu.py script will be used.",
+        help="Path to the C++ binary.",
+    )
+    group_cpp.add_argument(
+        "-P",
+        "--precision",
+        type=int,
+        choices=[32, 64],
+        default=64,
+        help="The floating point precision. The C++ binary 'build/release/bin/suprcongpu_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
     parser.add_argument(
@@ -393,13 +401,21 @@ def add_postprocess_arguments(parser) -> None:
         help="Path to JSON file with parameters specifying the settings for calculating the density of states.",
     )
 
-    # C++ binary.
-    parser.add_argument(
-        "-b",
-        "--cpp-binary",
+    # C++ binary and precision.
+    group_cpp = parser.add_mutually_exclusive_group()
+    group_cpp.add_argument(
+        "--cpp-path",
         type=str,
         default=None,
-        help="Path to the C++ binary. If not set 'build/release/bin/postprocess' relative to the postprocess.py script will be used.",
+        help="Path to the C++ binary.",
+    )
+    group_cpp.add_argument(
+        "-P",
+        "--precision",
+        type=int,
+        choices=[32, 64],
+        default=64,
+        help="The floating point precision. The C++ binary 'build/release/bin/postprocess_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
     # Convergence criterion.
@@ -1285,8 +1301,10 @@ def parse_command_line_arguments(
 
     # Get the relative C++ binary path.
     if frontend in ["runner", "postprocess"]:
-        cpp_binary = args.cpp_binary
+        cpp_path = args.cpp_path
+        cpp_precision = args.precision
     else:
-        cpp_binary = None
+        cpp_path = None
+        cpp_precision = None
 
-    return sim_params, cpp_binary
+    return sim_params, (cpp_path, cpp_precision)
