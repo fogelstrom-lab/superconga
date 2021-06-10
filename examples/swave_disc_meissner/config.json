@@ -37,14 +37,13 @@
 			"symmetry": "s"
 		}
 	],
-	"order_parameter_path": "",
 	"penetration_depth": 5.0,
 	"points_per_coherence_length": 5.0,
-	"save_data": false,
-	"save_data_interval": 0,
+	"save_path": "data/examples/swave_disc_meissner",
+	"save_frequency": -1,
+	"load_path": "",
 	"temperature": 0.5,
 	"vector_potential_error": 1e-06,
-	"vector_potential_path": "",
 	"verbose": true,
 	"visualize": true
 }

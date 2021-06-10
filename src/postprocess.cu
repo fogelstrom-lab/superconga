@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
 #endif
   }
 
-  // Extract the data path for convenience.
-  const std::filesystem::path dataPath(
-      postProcessConfig["data_path"].asString());
+  // Path to directory containing data to load from.
+  const std::filesystem::path loadDataPath(
+      postProcessConfig["load_path"].asString());
 
   //*******************************************************
   // PARSE SIMULATION CONFIG FILE
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   Json::Value simParams;
   {
     // Path to simulation config.
-    const std::filesystem::path simulationFile = dataPath / "config.json";
+    const std::filesystem::path simulationFile = loadDataPath / "config.json";
 
     // Check that provided config file actually exists and can be opened.
     std::ifstream ifile(simulationFile);
@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
 
   // Read the order parameter from file.
   {
-    const std::string orderParameterFile = dataPath / "order_parameter.csv";
+    const std::string orderParameterFile = loadDataPath / "order_parameter.csv";
     // Read the values from file.
     const bool success =
         scg::io::readOrderParameter(orderParameterFile, *orderParameter);
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
   // SET INDUCED VECTOR-POTENTIAL
   //***************************************************
   // Read the vector potential from file.
-  const std::string vectorPotentialFile = dataPath / "vector_potential.csv";
+  const std::string vectorPotentialFile = loadDataPath / "vector_potential.csv";
   {
     // Create the placeholder grid.
     const int gridResolution = parameters->getGridResolutionBase();
@@ -353,7 +353,21 @@ int main(int argc, char *argv[]) {
   // TODO(niclas): Perhaps move this to io/write_utils.h, e.g.
   // saveDensityOfStates? And do the same thing for saving other grids in
   // run_utils.h.
-  if (postProcessConfig["save_data"].asBool()) {
+
+  // Path to directory containing data to save to.
+  const std::filesystem::path saveDataPath(
+      postProcessConfig["save_path"].asString());
+
+  if (!saveDataPath.empty()) {
+    // Create directories.
+    std::filesystem::create_directories(saveDataPath);
+
+    // Save post-process config.
+    const std::filesystem::path configFileName =
+        saveDataPath / "postprocess.json";
+    scg::io::writeJSON(postProcessConfig, configFileName,
+                       postProcessConfig["verbose"].asBool());
+
     // Get file extension.
     const scg::Type::fileFormat dataFormat = scg::Type::csv;
     const std::string extension = scg::io::getFileExtension(dataFormat);
@@ -365,7 +379,8 @@ int main(int argc, char *argv[]) {
       const scg::io::CSVGridDataSaveStrategy<T> writer(writeIndices);
 
       // Create filename.
-      const std::filesystem::path dosFileName = dataPath / ("dos" + extension);
+      const std::filesystem::path dosFileName =
+          saveDataPath / ("dos" + extension);
 
       // Get the DOS.
       const scg::GridCPU<T> &dos = *(context.getComputeLDOS()->getDOS());
@@ -387,7 +402,7 @@ int main(int argc, char *argv[]) {
 
       // Create filename.
       const std::filesystem::path ldosFileName =
-          dataPath / ("ldos" + extension);
+          saveDataPath / ("ldos" + extension);
 
       // Get the LDOS.
       const scg::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
@@ -401,11 +416,6 @@ int main(int argc, char *argv[]) {
         std::cout << "-- Wrote: " << ldosFileName << std::endl;
       }
     }
-
-    // Save post-process config.
-    const std::filesystem::path configFileName = dataPath / "postprocess.json";
-    scg::io::writeJSON(postProcessConfig, configFileName,
-                       postProcessConfig["verbose"].asBool());
   }
 
   // Success!

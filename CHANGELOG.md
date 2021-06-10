@@ -7,6 +7,7 @@
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
+- Add option to continue from saved files in `--save-path` folder, and resume from `--load-path`.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
@@ -15,6 +16,8 @@
 - Change sign of the elementary charge in order to conform with Graf et al.
 - Make minmax a non-static member method.
 - Add unit test of the current density comparing it with the linear-response expression.
+- Use scientific notation in CSV files.
+- Remove temperature subdirectory in data path. Save examples to `data/examples`.
 
 ---
 

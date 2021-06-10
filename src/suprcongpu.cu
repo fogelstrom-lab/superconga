@@ -256,12 +256,15 @@ int main(int argc, char *argv[]) {
     orderParameter->add(orderParameterComponent);
   }
 
+  // Path to directory containing data to load from.
+  const std::filesystem::path loadDataPath(simParams["load_path"].asString());
+
   // Read the order parameter from file, if the path is not empty.
   // TODO(niclas): This is a bit ugly perhaps. If the file contains data for a
   // component, it is overwritten. If it does not, it is left untouched.
-  const std::string orderParameterFile =
-      std::filesystem::path(simParams["order_parameter_path"].asString());
-  if (!orderParameterFile.empty()) {
+  if (!loadDataPath.empty()) {
+    const std::string orderParameterFile = loadDataPath / "order_parameter.csv";
+
     // Read the values from file.
     const bool success =
         scg::io::readOrderParameter(orderParameterFile, *orderParameter);
@@ -277,9 +280,9 @@ int main(int argc, char *argv[]) {
   // SET INDUCED VECTOR-POTENTIAL
   //***************************************************
   // Read the vector potential from file, if the path is not empty.
-  const std::string vectorPotentialFile =
-      std::filesystem::path(simParams["vector_potential_path"].asString());
-  if (!vectorPotentialFile.empty()) {
+  if (!loadDataPath.empty()) {
+    const std::string vectorPotentialFile = loadDataPath / "vector_potential.csv";
+
     // Create the placeholder grid.
     const int gridResolution = parameters->getGridResolutionBase();
     auto vectorPotential = std::make_unique<scg::GridGPU<T>>(
@@ -383,27 +386,30 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // CREATE DIRECTORIES AND SAVE PARAMETERS
   //***********************************************
-  // Construct full directory path.
-  const std::filesystem::path dataBasePath(simParams["data_path"].asString());
-  const std::filesystem::path dataPath =
-      dataBasePath /
-      ("T" + std::to_string(simParams["temperature"].asDouble()));
+  const std::filesystem::path saveDataPath(simParams["save_path"].asString());
 
-  const bool saveData = simParams["save_data"].asBool();
+  // Set the save frequency. If the argument is negative we only save the grid
+  // data at the very end.
+  const int saveFrequencyArg = simParams["save_frequency"].asInt();
+  const int saveFrequency = (saveFrequencyArg < 0)
+                                ? std::numeric_limits<int>::max()
+                                : saveFrequencyArg;
+
+  const bool saveData = !saveDataPath.empty() && (saveFrequency > 0);
   const bool verbose = simParams["verbose"].asBool();
   if (saveData) {
     // Create directories.
-    std::filesystem::create_directories(dataPath);
+    std::filesystem::create_directories(saveDataPath);
 
     // Save config parameters to JSON file.
-    const std::filesystem::path configFileName = dataPath / "config.json";
+    const std::filesystem::path configFileName = saveDataPath / "config.json";
     scg::io::writeJSON(simParams, configFileName, verbose);
 
     // TODO(niclas): Write internal parameters here as well? They do not change
     // during the simulation.
 
     // Save domain.
-    const std::filesystem::path domainFileName = dataPath / "domain.csv";
+    const std::filesystem::path domainFileName = saveDataPath / "domain.csv";
     const scg::GridGPU<char> &domain = *(geometry->getDomainGrid());
     const scg::io::CSVGridDataSaveStrategy<char> writer;
     const bool success = writer.save(domain, {"domain"}, domainFileName);
@@ -423,15 +429,15 @@ int main(int argc, char *argv[]) {
   const scg::Type::fileFormat dataFormat = scg::Type::csv;
   scg::run_utils::runSimulation(
       context, verbose, simParams["num_iterations_min"].asInt(),
-      simParams["num_iterations_max"].asInt(), visualize, dataPath, saveData,
-      simParams["save_data_interval"].asInt(), dataFormat);
+      simParams["num_iterations_max"].asInt(), visualize, saveDataPath,
+      saveData, saveFrequency, dataFormat);
 
   //***********************************************
   // SAVE RESULTS
   //***********************************************
   // Save at the very end.
   if (saveData) {
-    scg::run_utils::saveDataWrapper(context, dataPath, verbose, dataFormat);
+    scg::run_utils::saveDataWrapper(context, saveDataPath, verbose, dataFormat);
   }
 
   // Cleanup dynamically allocated memory.
