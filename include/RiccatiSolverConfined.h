@@ -123,7 +123,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       if (nodeType == 1) {
         // Inside domain:
 
-#ifdef APPROX_STEP
+#ifdef SCG_APPROX_STEP
         // Take a step from the entry edge to the exit edge of the lattice
         // site.
         const thrust::complex<T> gExit =
@@ -164,7 +164,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         const T distance = abs(boundaryDistance[idx]);
         const T boundaryToCenterStep = distance * step;
 
-#ifdef APPROX_STEP
+#ifdef SCG_APPROX_STEP
         // We're taking a step from the grain boundary to the exit edge of the
         // lattice site, so we must add half a lattice site distance.
         const T boundaryToEdgeStep = boundaryToCenterStep + halfStep;
@@ -209,7 +209,7 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         const T distance = abs(boundaryDistance[idx]);
         const T centerToBoundaryStep = distance * step;
 
-#ifdef APPROX_STEP
+#ifdef SCG_APPROX_STEP
         // We're taking a step from the entry edge of thelattice site to the
         // grain boundary, so we must add half a lattice site distance.
         const T edgeToBoundaryStep = centerToBoundaryStep + halfStep;

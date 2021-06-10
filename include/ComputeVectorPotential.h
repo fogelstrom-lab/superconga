@@ -470,7 +470,10 @@ crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
 
     // Compute the dot product between each spatial column of the source and the
     // filter.
-    double sum = 0.0;
+    // TODO(niclas): Note that T precision is used for accumulating the
+    // sum. Using float we still pass our tests, but investigate using Kahan
+    // summation.
+    T sum = static_cast<T>(0);
     for (int i = 0; i < inGridResolution; ++i) {
       const int idxFilter = i + offsetFilter;
       const T filterVal = inFilter[idxFilter];
@@ -478,7 +481,7 @@ crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
       const int idxSrc = i + offsetSrc;
       const T srcVal = inSrc[idxSrc];
 
-      sum += static_cast<double>(srcVal * filterVal);
+      sum += srcVal * filterVal;
     }
 
     // Destination index. Note the we write the transposed result, i.e. swapped
@@ -486,7 +489,7 @@ crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
     const int idxDst = inGridResolution * (d * inGridResolution + x) + y;
 
     // Write result.
-    outDst[idxDst] = static_cast<T>(sum);
+    outDst[idxDst] = sum;
   }
 }
 
@@ -525,6 +528,9 @@ __global__ void crossCorrelate2D(const int inGridResolution,
     const int offsetFilterY = inGridResolution - 1 - y;
     const int offsetSrc = d * inGridResolution * inGridResolution;
 
+    // TODO(niclas): Note that double precision is used for accumulating the
+    // sum. Using float leads to an unaccaptable loss of precision. Investigate
+    // using Kahan summation.
     double sum = 0.0;
     for (int j = 0; j < inGridResolution; ++j) {
       double partialSum = 0.0;

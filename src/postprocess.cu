@@ -50,11 +50,13 @@
 #include <string>
 
 //*******************************************************
-// TYPEDEFS
+// PRECISION
 //*******************************************************
-// Run with double or single floating point precision, double is highly
-// recommended.
+#ifdef SCG_SINGLE_PRECISION
+typedef float T;
+#else
 typedef double T;
+#endif
 
 //*******************************************************
 // MAIN
