@@ -43,7 +43,7 @@ template <typename T>
 class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
 public:
   CSVIterationDataSaveStrategy(const std::string &inDelimiter = ",",
-                               const int inFloatPrecision = 10)
+                               const int inFloatPrecision = 8)
       : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
 
   bool save(const Context<T> *const inContext,
@@ -108,10 +108,11 @@ private:
             : static_cast<T>(0);
 
     std::ostringstream oss;
+    oss << std::scientific << std::setprecision(m_floatPrecision);
     oss << numIterations << m_delimiter << orderParameterResidual << m_delimiter
         << freeEnergyResidual << m_delimiter << currentDensityResidual
         << m_delimiter << vectorPotentialResidual << m_delimiter
-        << std::setprecision(m_floatPrecision) << freeEnergyPerUnitArea;
+        << freeEnergyPerUnitArea;
     return appendToFile(oss.str(), inFilePath);
   };
 
@@ -149,7 +150,7 @@ class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
 public:
   CSVGridDataSaveStrategy(const bool inWriteIndices = true,
                           const std::string &inDelimiter = ",",
-                          const int inFloatPrecision = 10)
+                          const int inFloatPrecision = 8)
       : m_writeIndices(inWriteIndices), m_delimiter(inDelimiter),
         m_floatPrecision(inFloatPrecision) {}
 
@@ -257,6 +258,7 @@ private:
           for (int x = 0; x < dimX; ++x) {
             // Create stream.
             std::ostringstream oss;
+            oss << std::scientific << std::setprecision(m_floatPrecision);
 
             // Write indices.
             if (m_writeIndices) {
@@ -308,6 +310,7 @@ private:
         for (int x = 0; x < dimX; ++x) {
           // Create stream.
           std::ostringstream oss;
+          oss << std::scientific << std::setprecision(m_floatPrecision);
 
           // Write indices.
           if (m_writeIndices) {
