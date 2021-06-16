@@ -9,6 +9,7 @@
 - Improve descriptions for command-line arguments for frontends (`--help` flag). 
 - Update README.md.
 - Add option to run with single precision via the Python frontend.
+- Print the physical width in the live visualization using the external definition of the coherence length, i.e. with 2pi in the denominator.
 
 ### Bug fixes
 

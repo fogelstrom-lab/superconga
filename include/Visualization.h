@@ -22,6 +22,8 @@
 #include "Grid.h"
 #include "IncludeGL.h"
 #include "Parameters.h"
+#include "defines.h"
+#include "utils.h"
 #include <cmath>
 
 #ifdef __CUDACC__
@@ -813,8 +815,8 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
 
     char txt[256];
     sprintf(txt, "Discrete width = %d,   #Momenta = %d,   #Ozaki Poles = %d",
-            param->getGridResolutionBase(), param->getAngularResolution(),
-            param->getNumMatsubaraEnergies());
+            param->getGridResolutionBase() - 2 * constants::GRAIN_SIZE_MARGIN,
+            param->getAngularResolution(), param->getNumMatsubaraEnergies());
 
     for (i = 0; txt[i]; i++) {
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
@@ -822,8 +824,9 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
 
     glRasterPos2f(posX, posY - 36.0f / getNumPixelsWindowY());
     sprintf(txt,
-            "Physical width = %f c.l.,  \n#Ext. flux quanta = %f,   T/T_c = %f",
-            (param->getGridResolutionBase() - 1) * param->getGridElementSize(),
+            "Physical width = %.3f c.l.,  \n#Ext. flux quanta = %.3f,   T/T_c "
+            "= %.3f",
+            utils::toInternalInvLength(param->getGrainWidth()),
             param->getNumFluxQuanta(), param->getTemperature());
 
     for (i = 0; txt[i]; i++) {
