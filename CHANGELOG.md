@@ -10,11 +10,12 @@
 - Update README.md.
 - Add option to run with single precision via the Python frontend.
 - Print the physical width in the live visualization using the external definition of the coherence length, i.e. with 2pi in the denominator.
+- Use the same colormap, RdBu, for e.g. the induced magnetic field in both Python and C++.
 
 ### Bug fixes
 
 ### Developer changes
-- Completely deprecate GUI option.
+- Remove the Python frontend GUI.
 - Write to convergence.csv every iteration.
 - Readd support for deprecated argument `bounding_disc_diameter` for `regular_polygon`.
 
