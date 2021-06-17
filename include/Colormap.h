@@ -50,25 +50,25 @@ private:
       Color(1.0f, 1.0f, 1.0f)};
 
   // Taken from Matplotlib. Not all values though, but equally spaced.
-  const std::vector<Color> m_rdbu_r = {
-      Color(0.01960784f, 0.18823529f, 0.38039216f),
-      Color(0.13202614f, 0.40346021f, 0.67627835f),
-      Color(0.2627451f, 0.57647059f, 0.76470588f),
-      Color(0.57739331f, 0.77500961f, 0.87197232f),
-      Color(0.81960784f, 0.89803922f, 0.94117647f),
-      Color(0.96908881f, 0.96647443f, 0.96493656f),
-      Color(0.99215686f, 0.85882353f, 0.78039216f),
-      Color(0.95455594f, 0.64175317f, 0.50572857f),
-      Color(0.83921569f, 0.37647059f, 0.30196078f),
+  const std::vector<Color> m_rdbu = {
+      Color(0.40392157f, 0.0f, 0.12156863f),
       Color(0.6922722f, 0.0922722f, 0.16770473),
-      Color(0.40392157f, 0.0f, 0.12156863f)};
+      Color(0.83921569f, 0.37647059f, 0.30196078f),
+      Color(0.95455594f, 0.64175317f, 0.50572857f),
+      Color(0.99215686f, 0.85882353f, 0.78039216f),
+      Color(0.96908881f, 0.96647443f, 0.96493656f),
+      Color(0.81960784f, 0.89803922f, 0.94117647f),
+      Color(0.57739331f, 0.77500961f, 0.87197232f),
+      Color(0.2627451f, 0.57647059f, 0.76470588f),
+      Color(0.13202614f, 0.40346021f, 0.67627835f),
+      Color(0.01960784f, 0.18823529f, 0.38039216f)};
 
 public:
   /// \brief Colormap constructor.
   Colormap() {}
 
   /// \brief Enum of the supported colormap types.
-  enum class Type { JET, HOT, RDBU_R };
+  enum class Type { JET, HOT, RDBU };
 
   /// \brief Get the color for a specific intensity, and colormap type.
   ///
@@ -93,8 +93,8 @@ public:
       colormap = m_hot;
       break;
     }
-    case Type::RDBU_R: {
-      colormap = m_rdbu_r;
+    case Type::RDBU: {
+      colormap = m_rdbu;
       break;
     }
     default: {

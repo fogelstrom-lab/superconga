@@ -472,7 +472,7 @@ void Visualization<T>::drawField(const GRID &grid, const int field,
   // Set the colormap type.
   // TODO(niclas): Use a cyclic colormap for the phase.
   const Colormap::Type colormapType =
-      inIsPositive ? Colormap::Type::HOT : Colormap::Type::RDBU_R;
+      inIsPositive ? Colormap::Type::HOT : Colormap::Type::RDBU;
 
   // The normalization factor. Note that the denominator cannot be zero due to
   // 'epsilon' above.
