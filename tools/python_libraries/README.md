@@ -1,8 +1,7 @@
 # Python Libraries
 This folder contains various Python tools and libraries, which are split into the following packages:
 * `file_io` - Parse data files produced by the framework backend (e.g. `.csv` and `.json` files).
-* `gui` - Set up an interactive GUI for the frontend.
-* `parameter_setup` - Parse and validate user arguments provided via command-line, gui and/or `.json`-configuration files.
+* `parameter_setup` - Parse and validate user arguments provided via command-line and/or `.json`-configuration files.
 * `physics` - Various tools used for physics and observables.
 * `plotting` - Plot data produced by the framework, using matplotlib.
 * `runner` - Package containing the main functionality of the frontend runner.

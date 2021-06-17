@@ -10,8 +10,8 @@ SuprConGPU Main file for setting up self-consistent simulations in a confined
 geometry (a mesoscopic grain). Different superconducting order parameters and
 geometries can be specified, as well as physical parameters such as temperature
 and external fields. To set these, create a .json parameter-file as in examples
-and give the path to this file with the -f option. All parameters can be
-overridden using the command-line options.
+and give the path to this file with the -f option. All parameters, except the geometry, 
+can be overridden using the command-line options.
 """
 
 # Built-in modules and third-party libraries.
