@@ -180,6 +180,6 @@ This point-release is a major cleanup of the legacy code, adding numerous new fu
 
 ---
 
-# Version v0.1.0 (November 07, 2019)
+## Version v0.1.0 (November 07, 2019)
 
 - **Initial release.**
