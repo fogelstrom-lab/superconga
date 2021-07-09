@@ -1,6 +1,7 @@
 # =========================================================== #
 # EXTERNAL LIBRARIES
 # =========================================================== #
+message(STATUS "################### Building SuprConGPU test files ###################")
 # Declare the doctest lib.
 FetchContent_Declare(
   doctest
@@ -46,6 +47,8 @@ set(SRC
 enable_testing()
 
 foreach(file ${SRC})
+  message(STATUS "# -- Setting up test executable: ${file}.")
+  
   get_filename_component(name ${file} NAME_WE)
 
   # Create command-line executable.
@@ -54,12 +57,12 @@ foreach(file ${SRC})
   # Add the test to the test suite.
   add_test(NAME ${name} COMMAND ${name})
 
-  # Include directories.
+  # Include directories: equivalent to -I.
   target_include_directories(
     ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
                     ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
 
-  # External libraries.
+  # External libraries: equivalent to -l.
   target_link_libraries(
     ${name}
     PRIVATE glut
@@ -91,3 +94,5 @@ foreach(file ${SRC})
   # Set RELEASE compile flags.
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
 endforeach()
+
+message(STATUS "######################################################################")

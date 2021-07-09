@@ -1,6 +1,8 @@
-# ##############################################################################
+# #############################################################################
 # SOURCE FILES
-# ##############################################################################
+# #############################################################################
+message(STATUS "################## Building SuprConGPU source files ##################")
+
 # Define the main set of source files
 set(SRC suprcongpu.cu postprocess.cu)
 
@@ -8,6 +10,8 @@ set(SRC suprcongpu.cu postprocess.cu)
 set(SINGLE_PRECISION OFF ON)
 
 foreach(file ${SRC})
+  message(STATUS "# -- Setting up executable: ${file}.")
+
   get_filename_component(name_raw ${file} NAME_WE)
 
   foreach(single_precision ${SINGLE_PRECISION})
@@ -21,7 +25,7 @@ foreach(file ${SRC})
     # Create command-line executable.
     add_executable(${name} ${file})
 
-    # Include directories.
+    # Include directories: equivalent to -I.
     target_include_directories(
       ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
                       ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
@@ -30,7 +34,7 @@ foreach(file ${SRC})
     set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                              "${PROJECT_BINARY_DIR}/bin")
 
-    # External libraries.
+    # External libraries: equivalent to -l.
     target_link_libraries(
       ${name}
       PRIVATE glut
@@ -64,3 +68,5 @@ foreach(file ${SRC})
     target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
   endforeach(single_precision ${SINGLE_PRECISION})
 endforeach(file ${SRC})
+
+message(STATUS "######################################################################")
