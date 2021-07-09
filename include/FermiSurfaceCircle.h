@@ -15,13 +15,13 @@
 #include "FermiSurface.h"
 #include "defines.h"
 #include "utils.h"
+
 #include <cmath>
 #include <iostream>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 namespace scg {
-// TODO: (Patric) Choose a circular fermisurface by default if the user does not
-// specify any in the run file.
 template <typename T> class FermiSurfaceCircle : public FermiSurface<T> {
 public:
   // Constructor.
