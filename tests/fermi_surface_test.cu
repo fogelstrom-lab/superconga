@@ -1,9 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "FermiSurface.h"
+#include "doctest_wrapper.h"
+
 #include <array>
 #include <cmath>
-#include <doctest/doctest.h>
 #include <iostream>
 #include <limits>
 

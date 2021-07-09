@@ -3,8 +3,9 @@
 #include "ComputeVectorPotential.h"
 #include "Grid.h"
 #include "Type.h"
+#include "doctest_wrapper.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 #include <iostream>
 #include <limits>
 #include <thrust/device_vector.h>

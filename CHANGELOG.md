@@ -13,11 +13,14 @@
 - Use the same colormap, RdBu, for e.g. the induced magnetic field in both Python and C++.
 
 ### Bug fixes
+- Fix error in `FermiSurfaceCircle.h` due to missing include.
 
 ### Developer changes
 - Remove the Python frontend GUI.
 - Write to convergence.csv every iteration.
 - Readd support for deprecated argument `bounding_disc_diameter` for `regular_polygon`.
+- Hide spam from internal `doctest` dependencies.
+- Improved formatting for output from `setup.sh` and CMake.
 
 ---
 

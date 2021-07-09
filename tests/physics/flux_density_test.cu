@@ -16,10 +16,11 @@
 #include "RiccatiSolverConfined.h"
 #include "Type.h"
 #include "defines.h"
+#include "doctest_wrapper.h"
 #include "run_utils.h"
 #include "utils.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 #include <limits>
 
 namespace helper {

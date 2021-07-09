@@ -4,9 +4,10 @@
 #include "ComputeVectorPotential.h"
 #include "Grid.h"
 #include "OrderParameterBulk.h"
+#include "doctest_wrapper.h"
 #include "utils.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 #include <limits>
 #include <thrust/host_vector.h>
 

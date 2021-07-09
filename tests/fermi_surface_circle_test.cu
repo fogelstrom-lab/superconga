@@ -1,9 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "FermiSurfaceCircle.h"
+#include "doctest_wrapper.h"
 #include "utils.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 
 namespace helper {
 // A helper function to test the number of angles. Instantiate the

@@ -3,9 +3,10 @@
 #include "Grid.h"
 #include "GridData.h"
 #include "Type.h"
+#include "doctest_wrapper.h"
 #include "utils.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 
 namespace helper {
 // ============ Constants used in multiple tests ============ //

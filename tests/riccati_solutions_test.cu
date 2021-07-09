@@ -1,9 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "RiccatiSolutions.h"
+#include "doctest_wrapper.h"
+
 #include <cmath>
 #include <complex>
-#include <doctest/doctest.h>
 #include <limits>
 #include <thrust/complex.h>
 #include <vector>
