@@ -15,9 +15,9 @@
 #include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
 #include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
 #include "defines.h"
+#include "doctest_wrapper.h"
 #include "run_utils.h"
 
-#include <doctest/doctest.h>
 #include <iostream>
 #include <limits>
 #include <stdlib.h>

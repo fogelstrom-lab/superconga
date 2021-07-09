@@ -3,9 +3,10 @@
 #include "FermiSurfaceTightBinding.h"
 #include "defines.h"
 #include "dispersion.h"
+#include "doctest_wrapper.h"
 #include "utils.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 #include <functional>
 #include <iostream>
 #include <vector>

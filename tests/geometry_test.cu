@@ -11,9 +11,10 @@
 #include "Parameters.h"
 #include "PolygonGeometry.h"
 #include "Type.h"
+#include "doctest_wrapper.h"
+
 #include <array>
 #include <cmath>
-#include <doctest/doctest.h>
 #include <limits>
 
 namespace helper {

@@ -14,12 +14,11 @@
 
 // TODO(niclas): These should not have to be included! They are needed because
 // "Context" only has forward declarations.
+#include "BoundaryConditionSpecular.h"
 #include "ComputeCurrent.h"
 #include "ComputeFreeEnergy.h"
-#include "ComputeOrderParameter.h"
-
-#include "BoundaryConditionSpecular.h"
 #include "ComputeLDOS.h"
+#include "ComputeOrderParameter.h"
 #include "Context.h"
 #include "DiscGeometry.h"
 #include "FermiSurfaceCircle.h"
@@ -32,9 +31,10 @@
 #include "PolygonGeometry.h"
 #include "RiccatiSolverConfined.h"
 #include "defines.h"
+#include "doctest_wrapper.h"
 #include "run_utils.h"
+
 #include <complex>
-#include <doctest/doctest.h>
 #include <iostream>
 #include <stdlib.h>
 #include <thrust/complex.h>

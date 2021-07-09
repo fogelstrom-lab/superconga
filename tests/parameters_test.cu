@@ -1,8 +1,9 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "Parameters.h"
+#include "doctest_wrapper.h"
+
 #include <cmath>
-#include <doctest/doctest.h>
 
 namespace helper {
 template <typename T> void testGridResolution() {
