@@ -3,6 +3,18 @@
 ## Latest version (unreleased)
 
 ### Improvements
+- Update README.md.
+
+### Bug fixes
+
+### Developer changes
+
+---
+
+## Version v0.7.0 (July 9, 2021)
+This version is a collection of smaller fixes and cleanup.
+
+### Improvements
 - Support running Python scripts from other directories.
 - Showcase a wider array of accelerator settings in the examples.
 - Standardize messages to the user.
@@ -18,13 +30,14 @@
 ### Developer changes
 - Remove the Python frontend GUI.
 - Write to convergence.csv every iteration.
-- Readd support for deprecated argument `bounding_disc_diameter` for `regular_polygon`.
+- Read support for deprecated argument `bounding_disc_diameter` for `regular_polygon`.
 - Hide spam from internal `doctest` dependencies.
 - Improved formatting for output from `setup.sh` and CMake.
 
 ---
 
 ## Version v0.6.0 (May 29, 2021)
+This version exposes more functionality in the frontend, extends the number of examples and tests, and significantly cleans up the file structure and functionality.
 
 ### Improvements
 - **MAJOR** Fully expose geometry to user in config files, remove from CLI/GUI
