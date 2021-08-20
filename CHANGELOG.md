@@ -4,6 +4,7 @@
 
 ### Improvements
 - Update README.md.
+- Speed up the coherence function computation by doing the two half steps in one go.
 
 ### Bug fixes
 
