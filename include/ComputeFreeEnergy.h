@@ -307,21 +307,21 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     const T *ozakiResidues_re = ozakiResidues.getDataPointer(0, Type::real);
 
     const int numEnergies = ozakiEnergies.dimX();
-    T sumInverseEnergy = 0.0;
+    T sumInverseEnergy = static_cast<T>(0);
     for (int ozakiIdx = 0; ozakiIdx < numEnergies; ++ozakiIdx) {
       sumInverseEnergy +=
           ozakiResidues_re[ozakiIdx] / ozakiEnergies_im[ozakiIdx];
     }
-    sumInverseEnergy *= static_cast<T>(2.0 * M_PI) * temperature;
+    sumInverseEnergy *= temperature;
 
     // Get the part of the free energy from 'I'.
-    T energySummedKernelI_re = 0.0, energySummedKernelI_im = 0.0;
+    T energySummedKernelI_re = static_cast<T>(0);
+    T energySummedKernelI_im = static_cast<T>(0);
     C::getGeometry()->zeroValuesOutsideDomainRef(m_freeEnergyGrid);
     m_freeEnergyGrid->sumField(energySummedKernelI_re, energySummedKernelI_im);
 
     // Update the non-magnetic sum.
-    nonMagneticSum +=
-        static_cast<T>(2.0 * M_PI) * temperature * energySummedKernelI_re;
+    nonMagneticSum += temperature * energySummedKernelI_re;
 
     // Add contribution from the order parameter.
     const OrderParameter<T> *const orderParameter = C::getOrderParameter();
@@ -361,21 +361,14 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       GridGPU<T> magneticField =
           inducedVectorPotential->curl(latticeElementSize);
 
-      // Note, by setting values outside of the grain to zero, we are only
+      // By setting values outside of the grain to zero, we are only
       // including the contribution of the induced magnetic field within the
       // grain to the free energy.
-      // Note that for proper treatment, this might have to be done in 3D
-      // (depending on assumptions/model). For a layered superconductor, taking
-      // into account only 2D means the free energy per sheet/plane. Taking into
-      // account 3D, on the other hand, captures e.g. a truly 2D SC or SC at a
-      // surface of a 3D superconductor.
       C::getGeometry()->zeroValuesOutsideDomainRef(&magneticField);
 
-      // Note that the prefactor depend on our choice of unit definitions, e.g.
-      // (2pi) in the denominator of the coherence length. Here it is assumed
-      // that it is defined without the (2pi).
-      const T magneticFactor = static_cast<T>(0.5 * M_PI * M_PI) *
-                               penetrationDepth * penetrationDepth;
+      // Note that the prefactor depend on our choice of unit definitions.
+      const T magneticFactor =
+          static_cast<T>(0.5) * penetrationDepth * penetrationDepth;
 
       // Update the magnetic sum.
       magneticSum += magneticFactor * magneticField.sumSquare();

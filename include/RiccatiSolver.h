@@ -135,7 +135,9 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   const int N1 = parameters->getGridResolutionCoherence();
   const T numFluxQuanta = parameters->getNumFluxQuanta();
   const T area = inContextModule->getGeometry()->area();
-  const T fluxDensity = numFluxQuanta / area;
+  // The pi factor comes from our choice of units for the flux density:
+  // B_0 = \Phi_0 / (\pi \xi^2_0).
+  const T fluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
   const T h = parameters->getGridElementSize();
 
   const T systemAngle =

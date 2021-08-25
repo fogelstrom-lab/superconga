@@ -384,7 +384,8 @@ template <typename T>
 int Parameters<T>::computeNumOzakiEnergies(const T inTemperature,
                                            const T inEnergyCutoff) {
   // The value to compare with in the poles data.
-  const double val = static_cast<double>(inEnergyCutoff / inTemperature);
+  const double val =
+      2.0 * M_PI * static_cast<double>(inEnergyCutoff / inTemperature);
 
   // Get the pointer to the value of the first element larger than 'val'.
   const auto upper =

@@ -1,7 +1,7 @@
 {
 	"convergence_criterion": 1e-05,
 	"crystal_axes_rotation": 0.0,
-	"energy_cutoff": 100.0,
+	"energy_cutoff": 16.0,
 	"external_flux_quanta": 20.0,
 	"gauge_solenoid": false,
 	"geometry": [

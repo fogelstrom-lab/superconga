@@ -157,7 +157,7 @@ void computeVectorPotential(scg::GridGPU<T> &inOutVectorPotential,
   }
 
   // Factor from the equation itself.
-  const T equationFactor = -static_cast<T>(4.0) / (inKappa * inKappa);
+  const T equationFactor = -static_cast<T>(1.0) / (inKappa * inKappa);
 
   // Factor from the Green function.
   const T greenFactor = static_cast<T>(1) / static_cast<T>(2.0 * M_PI);
@@ -203,11 +203,11 @@ void testComputeOrderParameterBulkSWave(const T inTolerance) {
                                                        static_cast<T>(0.9)};
 
   // Loop over temperatures.
+  // Note, the internal energy scale is changed to 2*pi*k_B*T_c.
+  const T scale = static_cast<T>(1) / static_cast<T>(2.0 * M_PI);
   for (const T &temperature : temperatures) {
-    // Loop over convergence criteria.
-
     const T oldOrderParameter =
-        legacy::computeOrderParameterBulkSWave(temperature);
+        legacy::computeOrderParameterBulkSWave(temperature) * scale;
 
     // Compute the new value.
     const T newOrderParameter =

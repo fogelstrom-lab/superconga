@@ -555,7 +555,7 @@ def plot_ldos(
     LDOS_text = ax_LDOS.text(
         0.02,
         1.01,
-        r"$\text{(a)\, LDOS},\, \epsilon=%2.1fk_{\mathrm{B}}T_{\mathrm{c}}$"
+        r"$\text{(a)\, LDOS},\, \epsilon=%2.1f (2 \pi k_{\mathrm{B}}T_{\mathrm{c}})$"
         % (dos_data["energy"][LDOS_energy_idx]),
         horizontalalignment="left",
         verticalalignment="bottom",
@@ -569,7 +569,9 @@ def plot_ldos(
     # --------------------------------------------------
     # Set x- and y-labels.
     ax_DOS.set_ylabel(r"$N / 2N_{\mathrm{F}}$", fontsize=PP.font_size)
-    ax_DOS.set_xlabel(r"$\epsilon/k_{\mathrm{B}}T_{\mathrm{c}}$", fontsize=PP.font_size)
+    ax_DOS.set_xlabel(
+        r"$\epsilon/(2 \pi k_{\mathrm{B}} T_{\mathrm{c}})$", fontsize=PP.font_size
+    )
     # Adjust ticks and font size of tick labels.
     ax_DOS.tick_params(axis="both", which="major", labelsize=PP.tick_size)
     ax_DOS.xaxis.set_ticks_position("bottom")
@@ -627,11 +629,11 @@ def plot_ldos(
     # Define an axes area and draw a slider in it
     energy_slider = Slider(
         ax_energy_slider,
-        r"$\mathrm{Choose\, energy}\, (k_{\mathrm{B}}T_{\mathrm{c}})$",
+        r"$\mathrm{Choose\, energy}\, (2 \pi k_{\mathrm{B}} T_{\mathrm{c}})$",
         dos_data["energy"][0],
         dos_data["energy"][-1],
         valinit=dos_data["energy"][0],
-        valfmt="%2.1f",
+        valfmt="%0.3f",
         valstep=delta_energy,
     )
     energy_slider.label.set_fontsize(PP.font_size - 4)
@@ -657,7 +659,7 @@ def plot_ldos(
 
         # Update text label.
         LDOS_text.set_text(
-            r"$\text{(a)\, LDOS},\, \epsilon=%2.1fk_{\mathrm{B}}T_{\mathrm{c}}$"
+            r"$\text{(a)\, LDOS},\, \epsilon=%.3f (2 \pi k_{\mathrm{B}} T_{\mathrm{c}})$"
             % LDOS_energy
         )
 

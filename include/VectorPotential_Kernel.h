@@ -48,8 +48,7 @@ __global__ void computeEnergyShiftOnlyExternalKernel(
     const int idx = yIdx * inGridResolution + xIdx;
 
     // Compute energy shift.
-    // The factor pi comes from our choice of coordinates.
-    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E * M_PI) *
+    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E) *
                           (inFermiVelocityX * vectorPotentialX +
                            inFermiVelocityY * vectorPotentialY);
   }
@@ -91,8 +90,7 @@ __global__ void computeEnergyShiftKernel(
     const T vectorPotentialY = inVectorPotentialY[idx] + extVectorPotentialY;
 
     // Compute energy shift.
-    // The factor pi comes from our choice of coordinates.
-    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E * M_PI) *
+    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E) *
                           (inFermiVelocityX * vectorPotentialX +
                            inFermiVelocityY * vectorPotentialY);
   }

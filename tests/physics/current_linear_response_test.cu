@@ -45,17 +45,17 @@ const double PENETRATION_DEPTH = 1.0;
 const double VECTOR_POTENTIAL_X = 1e-3;
 const double VECTOR_POTENTIAL_Y = 1e-3;
 
-// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
-const double GRAIN_SIDE_LENGTH = 20.0 / (2.0 * M_PI);
+// Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc)
+const double GRAIN_SIDE_LENGTH = 20.0;
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 10.0 * (2.0 * M_PI);
+const double POINTS_PER_COHERENCE_LENGTH = 10.0;
 
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 100;
 
 // The energy cutoff.
-const double ENERGY_CUTOFF = 100.0;
+const double ENERGY_CUTOFF = 16.0;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = false;
@@ -84,14 +84,11 @@ scg::vector2d<T> computeCurrentDensity(const T inTemperature,
   // The bulk orderparameter at this temperature.
   const T orderParameter = scg::computeOrderParameterBulkSWave(inTemperature);
 
-  // For convenience.
-  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
-
-  // Comes from: cutoff = 2 * pi * T * (n + 0.5).
+  // Comes from: cutoff =  T * (n + 0.5).
   // But the n is the largest n we need to include, so the number of energies is
   // one more, hence the plus one.
   const int numEnergies =
-      static_cast<int>(static_cast<T>(ENERGY_CUTOFF) / twoPiTemp -
+      static_cast<int>(static_cast<T>(ENERGY_CUTOFF) / inTemperature -
                        static_cast<T>(0.5)) +
       1;
 
@@ -99,7 +96,7 @@ scg::vector2d<T> computeCurrentDensity(const T inTemperature,
   T factorEnergy = static_cast<T>(0);
   for (int n = numEnergies - 1; n >= 0; --n) {
     const T matsubaraEnergy =
-        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
+        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
     const T Omega = std::hypot(orderParameter, matsubaraEnergy);
     factorEnergy += std::pow(Omega, -3);
   }
@@ -107,7 +104,7 @@ scg::vector2d<T> computeCurrentDensity(const T inTemperature,
 
   // Factor due to choice of units.
   const T factorUnits =
-      static_cast<T>(scg::constants::SIGN_E * M_PI) * inTemperature;
+      static_cast<T>(2.0 * scg::constants::SIGN_E) * inTemperature;
 
   // The total factor. The half comes from 1/(2*pi) * int cos^2(x) dx.
   const T factor = -factorEnergy * factorUnits * static_cast<T>(0.5);

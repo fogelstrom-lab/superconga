@@ -46,8 +46,8 @@
 namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.5;
-// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc).
-const double GRAIN_SIDE_LENGTH = 5.0 / (2.0 * M_PI);
+// Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc).
+const double GRAIN_SIDE_LENGTH = 5.0;
 // Number of lattice points per coherence length
 const double POINTS_PER_COHERENCE_LENGTH = 16.0 / GRAIN_SIDE_LENGTH;
 // Number of trajectory angles (on the Fermi-surface).
@@ -59,9 +59,9 @@ const int NUM_ENERGIES = 32;
 const int NUM_ENERGIES_PER_BLOCK = NUM_ENERGIES;
 // The range of the energies.
 const double ENERGY_MIN = 0.0;
-const double ENERGY_MAX = 3.0;
+const double ENERGY_MAX = 0.5;
 // The value of the imaginary part added to the energies.
-const double ENERGY_SMEARING = 0.02;
+const double ENERGY_SMEARING = 0.008;
 // Maximum number of iterations.
 const int NUM_ITERATIONS_MAX = 1000;
 } // namespace simParams

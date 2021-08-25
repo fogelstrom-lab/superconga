@@ -4,6 +4,7 @@
 
 ### Improvements
 - **MAJOR** Set energy cutoff instead of the number of energies.
+- **MAJOR** Change units so that the energy scale is `2*pi*kB*Tc`, `xi_0 = hbar*vF/(2*pi*kB*Tc)`, `A_0 = Phi_0/(pi*xi_0)`, `B_0 = Phi_0/(pi*xi^2_0)`, and `j_d = 2*pi*kB*Tc*|e|*v_F*N_F` both internally and externally.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
@@ -18,6 +19,7 @@
 - Add unit test of the current density comparing it with the linear-response expression.
 - Use scientific notation in CSV files.
 - Remove temperature subdirectory in data path. Save examples to `data/examples`.
+- Add tool `old_data_scaler.py` for scaling old data to the new units.
 
 ---
 
