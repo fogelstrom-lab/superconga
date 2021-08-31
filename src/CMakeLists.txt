@@ -53,7 +53,6 @@ foreach(file ${SRC})
 
     # Apply compiler options.
     if(single_precision)
-      target_compile_definitions(${name} PUBLIC SCG_APPROX_STEP)
       target_compile_definitions(${name} PUBLIC SCG_SINGLE_PRECISION)
     endif(single_precision)
 

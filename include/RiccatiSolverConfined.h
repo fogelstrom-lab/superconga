@@ -123,25 +123,11 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       if (nodeType == 1) {
         // Inside domain:
 
-#ifdef SCG_APPROX_STEP
-        // Take a step from the entry edge to the exit edge of the lattice
-        // site.
-        const thrust::complex<T> gExit =
-            GAMMA::computeStep(delta, energy, gEntry, step);
-
-        // Approximate the value of the coherence function at the center of the
-        // lattice site by the mean of the entry and exit values.
-        const thrust::complex<T> gCenter =
-            static_cast<T>(0.5) * (gEntry + gExit);
-#else
-        // Take a step from the entry edge to the center of the lattice site.
-        const thrust::complex<T> gCenter =
-            GAMMA::computeStep(delta, energy, gEntry, halfStep);
-
-        // Take a step from the center to the exit edge of the lattice site.
-        const thrust::complex<T> gExit =
-            GAMMA::computeStep(delta, energy, gCenter, halfStep);
-#endif
+        // Take a step from the entry edge to the center of the lattice site,
+        // and from the center to the exit edge of the lattice site.
+        thrust::complex<T> gCenter;
+        thrust::complex<T> gExit;
+        GAMMA::computeHalfSteps(delta, energy, gEntry, step, gCenter, gExit);
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();
@@ -164,24 +150,6 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         const T distance = abs(boundaryDistance[idx]);
         const T boundaryToCenterStep = distance * step;
 
-#ifdef SCG_APPROX_STEP
-        // We're taking a step from the grain boundary to the exit edge of the
-        // lattice site, so we must add half a lattice site distance.
-        const T boundaryToEdgeStep = boundaryToCenterStep + halfStep;
-
-        // Take a step from the grain boundary to the exit edge of the lattice
-        // site.
-        const thrust::complex<T> gExit =
-            GAMMA::computeStep(delta, energy, gBoundary, boundaryToEdgeStep);
-
-        // Approximate the value of the coherence function at the center of the
-        // lattice site by the weighted mean of the boundary and exit edge
-        // values.
-        const T weightBoundary = halfStep / boundaryToEdgeStep;
-        const T weightExit = static_cast<T>(1) - weightBoundary;
-        const thrust::complex<T> gCenter =
-            (gBoundary * weightBoundary + gExit * weightExit);
-#else
         // Take a step from the grain boundary to the center of the lattice
         // site.
         const thrust::complex<T> gCenter =
@@ -190,7 +158,6 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // Take a step from the center to the exit edge of the lattice site.
         const thrust::complex<T> gExit =
             GAMMA::computeStep(delta, energy, gCenter, halfStep);
-#endif
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();
@@ -209,22 +176,6 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         const T distance = abs(boundaryDistance[idx]);
         const T centerToBoundaryStep = distance * step;
 
-#ifdef SCG_APPROX_STEP
-        // We're taking a step from the entry edge of thelattice site to the
-        // grain boundary, so we must add half a lattice site distance.
-        const T edgeToBoundaryStep = centerToBoundaryStep + halfStep;
-
-        // Take a step from the entry edge of the lattice site to the grain
-        // boundary.
-        const thrust::complex<T> gBoundary =
-            GAMMA::computeStep(delta, energy, gEntry, edgeToBoundaryStep);
-
-        // Approximate the center value by the weighted mean.
-        const T weightEntry = centerToBoundaryStep / edgeToBoundaryStep;
-        const T weightBoundary = static_cast<T>(1) - weightEntry;
-        const thrust::complex<T> gCenter =
-            (gEntry * weightEntry + gBoundary * weightBoundary);
-#else
         // Take a step from the entry edge to the center of the lattice site.
         const thrust::complex<T> gCenter =
             GAMMA::computeStep(delta, energy, gEntry, halfStep);
@@ -233,7 +184,6 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // boundary.
         const thrust::complex<T> gBoundary =
             GAMMA::computeStep(delta, energy, gCenter, centerToBoundaryStep);
-#endif
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();

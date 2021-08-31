@@ -2,6 +2,7 @@
 
 #include "RiccatiSolutions.h"
 #include "doctest_wrapper.h"
+#include "utils.h"
 
 #include <cmath>
 #include <complex>
@@ -13,13 +14,13 @@ namespace helper {
 // Define the small and large numbers use for parameter sweeps.
 // TODO(niclas): These are neither very large nor small.
 const double SMALL = 1e-3;
-const double LARGE = 10.0;
+const double LARGE = 1e3;
 
 // Factor for the tolerance of most tests.
 const double TOLERANCE_FACTOR = 10.0;
 
 // Factor for the crappy general stepping test.
-const double TOLERANCE_FACTOR_BAD = 1e4;
+const double TOLERANCE_FACTOR_BAD = 1e3;
 
 /// \brief The stepping expression expressed with std::complex.
 ///
@@ -225,6 +226,15 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
   const std::vector<T> valuesPositive = {
       static_cast<T>(SMALL), static_cast<T>(1), static_cast<T>(LARGE)};
 
+  // The coherence functions can never have a magnitude larger than unity.
+  const int numMagnitudes = 5;
+  const bool includeEndPoint = true;
+  const std::vector<T> gammaMagnitudeValues = scg::utils::linspace(
+      static_cast<T>(0), static_cast<T>(1), numMagnitudes, includeEndPoint);
+  const std::vector<T> gammaPhaseValues = {
+      -static_cast<T>(1), -static_cast<T>(SMALL), static_cast<T>(0),
+      static_cast<T>(SMALL), static_cast<T>(1)};
+
   // =================== ACT ==================== //
   for (const T energyReal : values) {
     for (const T energyImag : valuesPositive) {
@@ -237,10 +247,13 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
           const std::complex<T> orderParameter(orderParameterReal,
                                                orderParameterImag);
 
-          for (const T gammaInitReal : values) {
-            for (const T gammaInitImag : values) {
+          for (const T gammaInitMagnitude : gammaMagnitudeValues) {
+            for (const T gammaInitPhase : gammaPhaseValues) {
               // Construct initial values.
-              const std::complex<T> gammaInit(gammaInitReal, gammaInitImag);
+              const std::complex<T> gammaInit =
+                  gammaInitMagnitude *
+                  std::complex<T>(std::cos(gammaInitPhase),
+                                  std::sin(gammaInitPhase));
 
               for (const T step : valuesPositive) {
                 // Compute coherence functions.
@@ -269,6 +282,114 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
                           .epsilon(inTolerance));
                 CHECK(testGammaTilde.imag() ==
                       doctest::Approx(expectedGammaTilde.imag())
+                          .epsilon(inTolerance));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/// \brief Compare the halfstep Riccati solutions with an std::complex
+/// implementation.
+///
+/// \param inTolerance The tolerance.
+///
+/// \return Void.
+template <typename T>
+void testHalfSteppingSolutionsGeneral(const T inTolerance) {
+  // =================== ARRANGE ==================== //
+  const std::vector<T> values = {-static_cast<T>(LARGE), -static_cast<T>(1),
+                                 -static_cast<T>(SMALL), static_cast<T>(0),
+                                 static_cast<T>(SMALL),  static_cast<T>(1),
+                                 static_cast<T>(LARGE)};
+  const std::vector<T> valuesPositive = {
+      static_cast<T>(SMALL), static_cast<T>(1), static_cast<T>(LARGE)};
+
+  // The coherence functions can never have a magnitude larger than unity.
+  const int numMagnitudes = 5;
+  const bool includeEndPoint = true;
+  const std::vector<T> gammaMagnitudeValues = scg::utils::linspace(
+      static_cast<T>(0), static_cast<T>(1), numMagnitudes, includeEndPoint);
+  const std::vector<T> gammaPhaseValues = {
+      -static_cast<T>(1), -static_cast<T>(SMALL), static_cast<T>(0),
+      static_cast<T>(SMALL), static_cast<T>(1)};
+
+  // =================== ACT ==================== //
+  for (const T energyReal : values) {
+    for (const T energyImag : valuesPositive) {
+      // Construct energy.
+      const std::complex<T> energy(energyReal, energyImag);
+
+      for (const T orderParameterReal : values) {
+        for (const T orderParameterImag : values) {
+          // Construct order parameter.
+          const std::complex<T> orderParameter(orderParameterReal,
+                                               orderParameterImag);
+
+          for (const T gammaInitMagnitude : gammaMagnitudeValues) {
+            for (const T gammaInitPhase : gammaPhaseValues) {
+              // Construct initial values.
+              const std::complex<T> gammaInit =
+                  gammaInitMagnitude *
+                  std::complex<T>(std::cos(gammaInitPhase),
+                                  std::sin(gammaInitPhase));
+
+              for (const T step : valuesPositive) {
+                // Compute coherence functions.
+                thrust::complex<T> testGammaCenter;
+                thrust::complex<T> testGammaExit;
+                scg::Gamma::General<T>::Gamma::computeHalfSteps(
+                    orderParameter, energy, gammaInit, step, testGammaCenter,
+                    testGammaExit);
+
+                thrust::complex<T> testGammaTildeCenter;
+                thrust::complex<T> testGammaTildeExit;
+                scg::Gamma::General<T>::GammaTilde::computeHalfSteps(
+                    orderParameter, energy, gammaInit, step,
+                    testGammaTildeCenter, testGammaTildeExit);
+
+                // =================== ASSERT ==================== //
+                // Compute expected coherence functions.
+                const T halfStep = static_cast<T>(0.5) * step;
+
+                const std::complex<T> expectedGammaCenter =
+                    computeStep(orderParameter, energy, gammaInit, halfStep);
+                const std::complex<T> expectedGammaExit = computeStep(
+                    orderParameter, energy, expectedGammaCenter, halfStep);
+
+                const std::complex<T> expectedGammaTildeCenter = computeStep(
+                    -std::conj(orderParameter), energy, gammaInit, halfStep);
+                const std::complex<T> expectedGammaTildeExit =
+                    computeStep(-std::conj(orderParameter), energy,
+                                expectedGammaTildeCenter, halfStep);
+
+                CHECK(testGammaCenter.real() ==
+                      doctest::Approx(expectedGammaCenter.real())
+                          .epsilon(inTolerance));
+                CHECK(testGammaCenter.imag() ==
+                      doctest::Approx(expectedGammaCenter.imag())
+                          .epsilon(inTolerance));
+                CHECK(testGammaExit.real() ==
+                      doctest::Approx(expectedGammaExit.real())
+                          .epsilon(inTolerance));
+                CHECK(testGammaExit.imag() ==
+                      doctest::Approx(expectedGammaExit.imag())
+                          .epsilon(inTolerance));
+
+                CHECK(testGammaTildeCenter.real() ==
+                      doctest::Approx(expectedGammaTildeCenter.real())
+                          .epsilon(inTolerance));
+                CHECK(testGammaTildeCenter.imag() ==
+                      doctest::Approx(expectedGammaTildeCenter.imag())
+                          .epsilon(inTolerance));
+                CHECK(testGammaTildeExit.real() ==
+                      doctest::Approx(expectedGammaTildeExit.real())
+                          .epsilon(inTolerance));
+                CHECK(testGammaTildeExit.imag() ==
+                      doctest::Approx(expectedGammaTildeExit.imag())
                           .epsilon(inTolerance));
               }
             }
@@ -334,4 +455,18 @@ TEST_CASE("Test stepping solutions general - float") {
   const float tolerance = static_cast<float>(helper::TOLERANCE_FACTOR_BAD) *
                           std::numeric_limits<float>::epsilon();
   helper::testSteppingSolutionsGeneral(tolerance);
+}
+
+// ============== Test "half-stepping" solutions - general ============== //
+
+TEST_CASE("Test half-stepping solutions general - double") {
+  const double tolerance =
+      helper::TOLERANCE_FACTOR_BAD * std::numeric_limits<double>::epsilon();
+  helper::testHalfSteppingSolutionsGeneral(tolerance);
+}
+
+TEST_CASE("Test half-stepping solutions general - float") {
+  const float tolerance = static_cast<float>(helper::TOLERANCE_FACTOR_BAD) *
+                          std::numeric_limits<float>::epsilon();
+  helper::testHalfSteppingSolutionsGeneral(tolerance);
 }
