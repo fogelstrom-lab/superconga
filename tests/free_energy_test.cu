@@ -12,7 +12,7 @@
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
 #include "OrderParameterInitial.h"
-#include "Parameters.h" //
+#include "Parameters.h"
 #include "PolygonGeometry.h"
 #include "RiccatiSolverConfined.h"
 #include "defines.h"
@@ -92,8 +92,7 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
 
   // Choose a Riccati solver for a confined geometry.
   scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                     scg::VectorPotential::Radial>(context);
+      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(context);
   riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   // Set up order parameter.

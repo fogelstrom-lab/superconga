@@ -109,8 +109,7 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
 
   scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                     scg::VectorPotential::Radial>(&context);
+      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(&context);
   riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(&context);

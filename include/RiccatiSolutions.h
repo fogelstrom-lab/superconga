@@ -30,108 +30,119 @@
 #endif
 
 namespace scg {
-namespace Gamma {
-// Function declarations: use template kernel for both gamma and gammaTilde.
-template <typename T> struct General {
-  struct Gamma {
-    /// \brief Riccati equation stepping solution: gamma.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    /// \param inGammaInitial Gamma at start of step.
-    /// \param inStep Step size.
-    ///
-    /// \return complex-valued solution.
-    _HD_ static thrust::complex<T>
-    computeStep(const thrust::complex<T> &inOrderParameter,
-                const thrust::complex<T> &inEnergy,
-                const thrust::complex<T> &inGammaInitial, const T inStep);
-
-    /// \brief Riccati equation half-stepping solution: gamma.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    /// \param inGammaInitial Gamma at start of step.
-    /// \param inStep Step size.
-    /// \param outGammaCenter The value of gamma at the center of the step.
-    /// \param outGammaExit The value of gamma at the end of the step.
-    _HD_ static void
-    computeHalfSteps(const thrust::complex<T> &inOrderParameter,
-                     const thrust::complex<T> &inEnergy,
-                     const thrust::complex<T> &inGammaInitial, const T inStep,
-                     thrust::complex<T> &outGammaCenter,
-                     thrust::complex<T> &outGammaExit);
-
-    /// \brief Riccati equation homogeneous solution: gamma.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    ///
-    /// \return complex-valued solution.
-    _HD_ static thrust::complex<T>
-    computeHomogeneous(const thrust::complex<T> &inOrderParameter,
-                       const thrust::complex<T> &inEnergy);
-  };
-
-  struct GammaTilde {
-    /// \brief Riccati equation stepping solution: gammaTilde.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    /// \param inGammaTildeInitial GammaTilde at start of step.
-    /// \param inStep Step size.
-    ///
-    /// \return complex-valued solution.
-    _HD_ static thrust::complex<T>
-    computeStep(const thrust::complex<T> &inOrderParameter,
-                const thrust::complex<T> &inEnergy,
-                const thrust::complex<T> &inGammaTildeInitial, const T inStep);
-
-    /// \brief Riccati equation half-stepping solution: gammaTilde.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    /// \param inGammaInitial GammaTilde at start of step.
-    /// \param inStep Step size.
-    /// \param outGammaTildeCenter The value of gammaTilde at the center of the
-    /// step. \param outGammaTildeExit The value of gammaTilde at the end of the
-    /// step.
-    _HD_ static void
-    computeHalfSteps(const thrust::complex<T> &inOrderParameter,
-                     const thrust::complex<T> &inEnergy,
-                     const thrust::complex<T> &inGammaTildeInitial,
-                     const T inStep, thrust::complex<T> &outGammaTildeCenter,
-                     thrust::complex<T> &outGammaTildeExit);
-
-    /// \brief Riccati equation stepping solution: gammaTilde.
-    ///
-    /// \param inOrderParameter Order parameter.
-    /// \param inEnergy Complex energy (imaginary pole).
-    ///
-    /// \return complex-valued solution.
-    _HD_ static thrust::complex<T>
-    computeHomogeneous(const thrust::complex<T> &inOrderParameter,
-                       const thrust::complex<T> &inEnergy);
-  };
-};
-} // namespace Gamma
-
+namespace riccati {
+/// \brief Riccati equation homogeneous: gamma and gammaTilde.
+///
+/// \param inOrderParameter Order parameter.
+/// \param inEnergy Complex energy (imaginary pole).
+/// \param outGamma The homogeneous solution for gamma.
+/// \param outGammaTilde The homogeneous solution for gammaTilde.
+///
+/// \return Void.
 template <typename T>
-_HD_ thrust::complex<T> Gamma::General<T>::Gamma::computeStep(
-    const thrust::complex<T> &inOrderParameter,
-    const thrust::complex<T> &inEnergy,
-    const thrust::complex<T> &inGammaInitial, const T inStep) {
+_HD_ void computeHomogeneous(const thrust::complex<T> &inOrderParameter,
+                             const thrust::complex<T> &inEnergy,
+                             thrust::complex<T> &outGamma,
+                             thrust::complex<T> &outGammaTilde) {
   // Form Omega and i*Omega.
   const thrust::complex<T> Omega =
       thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
   const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
 
-  // The homogenous solution.
-  const thrust::complex<T> gammaHomogeneous =
-      -inOrderParameter / (inEnergy + iOmega);
+  // Inverse denominator.
+  const thrust::complex<T> invDenom =
+      thrust::complex<T>(static_cast<T>(1), static_cast<T>(0)) /
+      (inEnergy + iOmega);
+
+  // The homogenous solutions.
+  outGamma = -inOrderParameter * invDenom;
+  outGammaTilde = thrust::conj(inOrderParameter) * invDenom;
+}
+
+template <typename T> struct Gamma {
+  /// \brief Riccati equation stepping solution: gamma.
+  ///
+  /// \param inGammaHomogeneous The homogenous solution.
+  /// \param inOrderParameter Order parameter.
+  /// \param inEnergy Complex energy (imaginary pole).
+  /// \param inGammaInitial Gamma at start of step.
+  /// \param inStep Step size.
+  ///
+  /// \return complex-valued solution.
+  _HD_ static thrust::complex<T>
+  computeStep(const thrust::complex<T> &inGammaHomogeneous,
+              const thrust::complex<T> &inOrderParameter,
+              const thrust::complex<T> &inEnergy,
+              const thrust::complex<T> &inGammaInitial, const T inStep);
+
+  /// \brief Riccati equation half-stepping solution: gamma.
+  ///
+  /// \param inGammaHomogeneous The homogenous solution.
+  /// \param inOrderParameter Order parameter.
+  /// \param inEnergy Complex energy (imaginary pole).
+  /// \param inGammaInitial Gamma at start of step.
+  /// \param inStep Step size.
+  /// \param outGammaCenter The value of gamma at the center of the step.
+  /// \param outGammaExit The value of gamma at the end of the step.
+  _HD_ static void
+  computeHalfSteps(const thrust::complex<T> &inGammaHomogeneous,
+                   const thrust::complex<T> &inOrderParameter,
+                   const thrust::complex<T> &inEnergy,
+                   const thrust::complex<T> &inGammaInitial, const T inStep,
+                   thrust::complex<T> &outGammaCenter,
+                   thrust::complex<T> &outGammaExit);
+};
+
+template <typename T> struct GammaTilde {
+  /// \brief Riccati equation stepping solution: gammaTilde.
+  ///
+  /// \param inGammaTildeHomogeneous The homogenous solution.
+  /// \param inOrderParameter Order parameter.
+  /// \param inEnergy Complex energy (imaginary pole).
+  /// \param inGammaTildeInitial GammaTilde at start of step.
+  /// \param inStep Step size.
+  ///
+  /// \return complex-valued solution.
+  _HD_ static thrust::complex<T>
+  computeStep(const thrust::complex<T> &inGammaTildeHomogeneous,
+              const thrust::complex<T> &inOrderParameter,
+              const thrust::complex<T> &inEnergy,
+              const thrust::complex<T> &inGammaTildeInitial, const T inStep);
+
+  /// \brief Riccati equation half-stepping solution: gammaTilde.
+  ///
+  /// \param inGammaTildeHomogeneous The homogenous solution.
+  /// \param inOrderParameter Order parameter.
+  /// \param inEnergy Complex energy (imaginary pole).
+  /// \param inGammaInitial GammaTilde at start of step.
+  /// \param inStep Step size.
+  /// \param outGammaTildeCenter The value of gammaTilde at the center of the
+  /// step.
+  /// \param outGammaTildeExit The value of gammaTilde at the end of the
+  /// step.
+  _HD_ static void
+  computeHalfSteps(const thrust::complex<T> &inGammaTildeHomogeneous,
+                   const thrust::complex<T> &inOrderParameter,
+                   const thrust::complex<T> &inEnergy,
+                   const thrust::complex<T> &inGammaTildeInitial,
+                   const T inStep, thrust::complex<T> &outGammaTildeCenter,
+                   thrust::complex<T> &outGammaTildeExit);
+};
+
+template <typename T>
+_HD_ thrust::complex<T>
+Gamma<T>::computeStep(const thrust::complex<T> &inGammaHomogeneous,
+                      const thrust::complex<T> &inOrderParameter,
+                      const thrust::complex<T> &inEnergy,
+                      const thrust::complex<T> &inGammaInitial,
+                      const T inStep) {
+  // Form Omega and i*Omega.
+  const thrust::complex<T> iOmega =
+      inEnergy + inGammaHomogeneous * thrust::conj(inOrderParameter);
+  const thrust::complex<T> Omega(iOmega.imag(), -iOmega.real());
 
   // The difference between the initial and homogenous values.
-  const thrust::complex<T> diff = inGammaInitial - gammaHomogeneous;
+  const thrust::complex<T> diff = inGammaInitial - inGammaHomogeneous;
 
   // The exponential decay factor.
   const thrust::complex<T> decay =
@@ -144,26 +155,24 @@ _HD_ thrust::complex<T> Gamma::General<T>::Gamma::computeStep(
   const thrust::complex<T> C = -thrust::conj(inOrderParameter) * diff * decay;
 
   // The value at the end of the step.
-  return gammaHomogeneous + A / (B + C);
+  return inGammaHomogeneous + A / (B + C);
 }
 
 template <typename T>
-_HD_ void Gamma::General<T>::Gamma::computeHalfSteps(
-    const thrust::complex<T> &inOrderParameter,
-    const thrust::complex<T> &inEnergy,
-    const thrust::complex<T> &inGammaInitial, const T inStep,
-    thrust::complex<T> &outGammaCenter, thrust::complex<T> &outGammaExit) {
+_HD_ void
+Gamma<T>::computeHalfSteps(const thrust::complex<T> &inGammaHomogeneous,
+                           const thrust::complex<T> &inOrderParameter,
+                           const thrust::complex<T> &inEnergy,
+                           const thrust::complex<T> &inGammaInitial,
+                           const T inStep, thrust::complex<T> &outGammaCenter,
+                           thrust::complex<T> &outGammaExit) {
   // Form Omega and i*Omega.
-  const thrust::complex<T> Omega =
-      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
-  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
-
-  // The homogenous solution.
-  const thrust::complex<T> gammaHomogeneous =
-      -inOrderParameter / (inEnergy + iOmega);
+  const thrust::complex<T> iOmega =
+      inEnergy + inGammaHomogeneous * thrust::conj(inOrderParameter);
+  const thrust::complex<T> Omega(iOmega.imag(), -iOmega.real());
 
   // The difference between the initial and homogenous values.
-  const thrust::complex<T> diff = inGammaInitial - gammaHomogeneous;
+  const thrust::complex<T> diff = inGammaInitial - inGammaHomogeneous;
 
   // The exponential decay factor.
   const thrust::complex<T> decay = thrust::exp(-inStep * Omega);
@@ -175,41 +184,26 @@ _HD_ void Gamma::General<T>::Gamma::computeHalfSteps(
   const thrust::complex<T> C = -thrust::conj(inOrderParameter) * diff * decay;
 
   // Take first half-step.
-  outGammaCenter = gammaHomogeneous + A / (B + C);
+  outGammaCenter = inGammaHomogeneous + A / (B + C);
 
   // Take second half-step.
-  outGammaExit = gammaHomogeneous + A * decay / (B + C * decay);
+  outGammaExit = inGammaHomogeneous + A * decay / (B + C * decay);
 }
 
 template <typename T>
-_HD_ thrust::complex<T> Gamma::General<T>::Gamma::computeHomogeneous(
-    const thrust::complex<T> &inOrderParameter,
-    const thrust::complex<T> &inEnergy) {
+_HD_ thrust::complex<T>
+GammaTilde<T>::computeStep(const thrust::complex<T> &inGammaTildeHomogeneous,
+                           const thrust::complex<T> &inOrderParameter,
+                           const thrust::complex<T> &inEnergy,
+                           const thrust::complex<T> &inGammaTildeInitial,
+                           const T inStep) {
   // Form Omega and i*Omega.
-  const thrust::complex<T> Omega =
-      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
-  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
-
-  // The homogenous solution.
-  return -inOrderParameter / (inEnergy + iOmega);
-}
-
-template <typename T>
-_HD_ thrust::complex<T> Gamma::General<T>::GammaTilde::computeStep(
-    const thrust::complex<T> &inOrderParameter,
-    const thrust::complex<T> &inEnergy,
-    const thrust::complex<T> &inGammaTildeInitial, const T inStep) {
-  // Form Omega and i*Omega.
-  const thrust::complex<T> Omega =
-      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
-  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
-
-  // The homogenous solution.
-  const thrust::complex<T> gammaTildeHomogeneous =
-      thrust::conj(inOrderParameter) / (inEnergy + iOmega);
+  const thrust::complex<T> iOmega =
+      inEnergy - inGammaTildeHomogeneous * inOrderParameter;
+  const thrust::complex<T> Omega(iOmega.imag(), -iOmega.real());
 
   // The difference between the initial and homogenous values.
-  const thrust::complex<T> diff = inGammaTildeInitial - gammaTildeHomogeneous;
+  const thrust::complex<T> diff = inGammaTildeInitial - inGammaTildeHomogeneous;
 
   // The exponential decay factor.
   const thrust::complex<T> decay =
@@ -222,27 +216,24 @@ _HD_ thrust::complex<T> Gamma::General<T>::GammaTilde::computeStep(
   const thrust::complex<T> C = inOrderParameter * diff * decay;
 
   // The value at the end of the step.
-  return gammaTildeHomogeneous + A / (B + C);
+  return inGammaTildeHomogeneous + A / (B + C);
 }
 
 template <typename T>
-_HD_ void Gamma::General<T>::GammaTilde::computeHalfSteps(
+_HD_ void GammaTilde<T>::computeHalfSteps(
+    const thrust::complex<T> &inGammaTildeHomogeneous,
     const thrust::complex<T> &inOrderParameter,
     const thrust::complex<T> &inEnergy,
     const thrust::complex<T> &inGammaTildeInitial, const T inStep,
     thrust::complex<T> &outGammaTildeCenter,
     thrust::complex<T> &outGammaTildeExit) {
   // Form Omega and i*Omega.
-  const thrust::complex<T> Omega =
-      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
-  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
-
-  // The homogenous solution.
-  const thrust::complex<T> gammaTildeHomogeneous =
-      thrust::conj(inOrderParameter) / (inEnergy + iOmega);
+  const thrust::complex<T> iOmega =
+      inEnergy - inGammaTildeHomogeneous * inOrderParameter;
+  const thrust::complex<T> Omega(iOmega.imag(), -iOmega.real());
 
   // The difference between the initial and homogenous values.
-  const thrust::complex<T> diff = inGammaTildeInitial - gammaTildeHomogeneous;
+  const thrust::complex<T> diff = inGammaTildeInitial - inGammaTildeHomogeneous;
 
   // The exponential decay factor.
   const thrust::complex<T> decay = thrust::exp(-inStep * Omega);
@@ -254,24 +245,12 @@ _HD_ void Gamma::General<T>::GammaTilde::computeHalfSteps(
   const thrust::complex<T> C = inOrderParameter * diff * decay;
 
   // Take first half-step.
-  outGammaTildeCenter = gammaTildeHomogeneous + A / (B + C);
+  outGammaTildeCenter = inGammaTildeHomogeneous + A / (B + C);
 
   // Take second half-step.
-  outGammaTildeExit = gammaTildeHomogeneous + A * decay / (B + C * decay);
+  outGammaTildeExit = inGammaTildeHomogeneous + A * decay / (B + C * decay);
 }
-
-template <typename T>
-_HD_ thrust::complex<T> Gamma::General<T>::GammaTilde::computeHomogeneous(
-    const thrust::complex<T> &inOrderParameter,
-    const thrust::complex<T> &inEnergy) {
-  // Form Omega and i*Omega.
-  const thrust::complex<T> Omega =
-      thrust::sqrt(thrust::norm(inOrderParameter) - inEnergy * inEnergy);
-  const thrust::complex<T> iOmega(-Omega.imag(), Omega.real());
-
-  // The homogenous solution.
-  return thrust::conj(inOrderParameter) / (inEnergy + iOmega);
-}
+} // namespace riccati
 } // namespace scg
 
 #endif // RICCATI_SOLUTIONS_H

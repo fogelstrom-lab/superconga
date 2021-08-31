@@ -21,8 +21,7 @@
 #include <thrust/complex.h>
 
 namespace scg {
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
+template <typename T, template <typename> class POTENTIAL>
 class RiccatiSolverConfined : public RiccatiSolver<T> {
 public:
   // Constructors and Destructors
@@ -53,15 +52,14 @@ public:
 
 namespace internal {
 // TODO(niclas): Put parameters in order (in, inout, out).
-template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
+template <typename T, typename Coherence, int DOMAIN_ENTRY, int DOMAIN_EXIT,
           int DIRECTION>
 __global__ void computeGammaFunctionTemplate_new_kernel(
-    const T h, const T fermiSpeed, const int N, const int Ne,
-    const int energyIdx_offset, const int idx_x_min, const int idx_x_max,
-    const int idx_y_min, const int idx_y_max, const int angleIdx,
-    const T *const energies_re, const T *const energies_im,
-    const T *const energy_shift, T *gamma_real, T *gamma_imag,
-    const T *const delta_real, const T *const delta_imag,
+    const T inStep, const int N, const int Ne, const int energyIdx_offset,
+    const int idx_x_min, const int idx_x_max, const int idx_y_min,
+    const int idx_y_max, const int angleIdx, const T *const energies_re,
+    const T *const energies_im, const T *const energy_shift, T *gamma_real,
+    T *gamma_imag, const T *const delta_real, const T *const delta_imag,
     const char *const domainLabel, const T *const domainNormals_x,
     const T *const domainNormals_y, const T *const boundaryDistance,
     const int *const idx_in_gamma, const int *const idx_out_gamma,
@@ -94,11 +92,8 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
     // lattice site. It is updated as we traverse the trajectory.
     thrust::complex<T> gEntry(static_cast<T>(0), static_cast<T>(0));
 
-    // The step from the entry edge to the exit edge of the lattice site.
-    const T step = h / fermiSpeed;
-
     // The step from the center to and edge (entry or exit) of the lattice site.
-    const T halfStep = static_cast<T>(0.5) * step;
+    const T halfStep = static_cast<T>(0.5) * inStep;
 
     // OPTIMIZATION: PRECOMPUTE Y_MIN AND Y_MAX FOR EACH ROTATIONAL FRAME
     // Compute gamma along trajectory
@@ -120,6 +115,10 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       // Read order parameter
       const thrust::complex<T> delta(delta_real[idx], delta_imag[idx]);
 
+      // Read homogeneous solution.
+      const thrust::complex<T> gHomo(gamma_real[gamma_idx],
+                                     gamma_imag[gamma_idx]);
+
       if (nodeType == 1) {
         // Inside domain:
 
@@ -127,7 +126,8 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // and from the center to the exit edge of the lattice site.
         thrust::complex<T> gCenter;
         thrust::complex<T> gExit;
-        GAMMA::computeHalfSteps(delta, energy, gEntry, step, gCenter, gExit);
+        Coherence::computeHalfSteps(gHomo, delta, energy, gEntry, inStep,
+                                    gCenter, gExit);
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();
@@ -148,16 +148,16 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // Distance to exact boundary location from the center of the lattice
         // site.
         const T distance = abs(boundaryDistance[idx]);
-        const T boundaryToCenterStep = distance * step;
+        const T boundaryToCenterStep = distance * inStep;
 
         // Take a step from the grain boundary to the center of the lattice
         // site.
-        const thrust::complex<T> gCenter =
-            GAMMA::computeStep(delta, energy, gBoundary, boundaryToCenterStep);
+        const thrust::complex<T> gCenter = Coherence::computeStep(
+            gHomo, delta, energy, gBoundary, boundaryToCenterStep);
 
         // Take a step from the center to the exit edge of the lattice site.
         const thrust::complex<T> gExit =
-            GAMMA::computeStep(delta, energy, gCenter, halfStep);
+            Coherence::computeStep(gHomo, delta, energy, gCenter, halfStep);
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();
@@ -174,16 +174,16 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
         // Distance to exact boundary location from the center of the lattice
         // site.
         const T distance = abs(boundaryDistance[idx]);
-        const T centerToBoundaryStep = distance * step;
+        const T centerToBoundaryStep = distance * inStep;
 
         // Take a step from the entry edge to the center of the lattice site.
         const thrust::complex<T> gCenter =
-            GAMMA::computeStep(delta, energy, gEntry, halfStep);
+            Coherence::computeStep(gHomo, delta, energy, gEntry, halfStep);
 
         // Take a step from the center of the lattice site to the grain
         // boundary.
-        const thrust::complex<T> gBoundary =
-            GAMMA::computeStep(delta, energy, gCenter, centerToBoundaryStep);
+        const thrust::complex<T> gBoundary = Coherence::computeStep(
+            gHomo, delta, energy, gCenter, centerToBoundaryStep);
 
         // Store coherence function.
         gamma_real[gamma_idx] = gCenter.real();
@@ -211,14 +211,69 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
   }
 }
 
+/// \brief Compute the homogenous solutions to the Riccati equations.
+///
+/// \param inDimX The number of lattice sites along the x-axis.
+/// \param inDimY The number of lattice sites along the y-axis.
+/// \param inNumEnergies The number of energies.
+/// \param inEnergyReal The real part of the energies.
+/// \param inEnergyImag The imag part of the energies.
+/// \param inEnergyShift The spatial energy shift due to the vector potential.
+/// \param inOrderParameterReal The real part of the order parameter.
+/// \param inOrderParameterImag The imag part of the order parameter.
+/// \param outGammaReal The real part of the coherence function gamma.
+/// \param outGammaImag The imag part of the coherence function gamma.
+/// \param outGammaTildeReal The real part of the coherence function gammaTilde.
+/// \param outGammaTildeImag The imag part of the coherence function gammaTilde.
+template <typename T>
+__global__ void
+computeHomogeneous(const int inDimX, const int inDimY, const int inNumEnergies,
+                   const T *const inEnergyReal, const T *const inEnergyImag,
+                   const T *const inEnergyShift,
+                   const T *const inOrderParameterReal,
+                   const T *const inOrderParameterImag, T *const outGammaReal,
+                   T *const outGammaImag, T *const outGammaTildeReal,
+                   T *const outGammaTildeImag) {
+  // Spatial coordinates.
+  const int x = blockDim.x * blockIdx.x + threadIdx.x;
+  const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+  // Energy coordinate.
+  const int z = blockDim.z * blockIdx.z + threadIdx.z;
+
+  // Check if within range.
+  if (x < inDimX && y < inDimY && z < inNumEnergies) {
+    // Indices.
+    const int gamma_idx = z * 2 * inDimX * inDimY + y * inDimX + x;
+    const int idx = y * inDimX + x;
+
+    // Construct complex energy and order parameter.
+    const thrust::complex<T> energy(inEnergyReal[z] + inEnergyShift[idx],
+                                    inEnergyImag[z]);
+    const thrust::complex<T> orderParameter(inOrderParameterReal[idx],
+                                            inOrderParameterImag[idx]);
+
+    // Construct the homogeneous solutions.
+    thrust::complex<T> gammaHomogeneous;
+    thrust::complex<T> gammaTildeHomogeneous;
+    riccati::computeHomogeneous(orderParameter, energy, gammaHomogeneous,
+                                gammaTildeHomogeneous);
+
+    // Write.
+    outGammaReal[gamma_idx] = gammaHomogeneous.real();
+    outGammaImag[gamma_idx] = gammaHomogeneous.imag();
+    outGammaTildeReal[gamma_idx] = gammaTildeHomogeneous.real();
+    outGammaTildeImag[gamma_idx] = gammaTildeHomogeneous.imag();
+  }
+}
+
 /////////////////////////////////////////////
 ////////////////////////////////////////////
 ////////////////////////////////////////////
 // TODO(niclas): This function does not need all of these input parameters!
-template <typename T, typename GAMMA, int DOMAIN_ENTRY, int DOMAIN_EXIT,
-          int DIRECTION>
+template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT, int DIRECTION>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
-    const T h, const int N, const int Ne, const int energyIdx_offset,
+    const int N, const int Ne, const int energyIdx_offset,
     const int idx_x_offset, const int angleIdx, const T *const energies_re,
     const T *const energies_im, const T *const energy_shift,
     const T *const gamma_real, const T *const gamma_imag,
@@ -265,8 +320,10 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
             idx_out_gamma);
 
         // Compute gamma at current grid point
-        const thrust::complex<T> gBoundary =
-            GAMMA::computeHomogeneous(delta, energy);
+        thrust::complex<T> gamma;
+        thrust::complex<T> gammaTilde;
+        riccati::computeHomogeneous(delta, energy, gamma, gammaTilde);
+        const thrust::complex<T> gBoundary = DIRECTION > 0 ? gamma : gammaTilde;
 
         bnd_out_gamma_real[idx_sparse] = gBoundary.real();
         bnd_out_gamma_imag[idx_sparse] = gBoundary.imag();
@@ -278,19 +335,15 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
 }
 } // namespace internal
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-RiccatiSolverConfined<T, GAMMA, POTENTIAL>::RiccatiSolverConfined()
+template <typename T, template <typename> class POTENTIAL>
+RiccatiSolverConfined<T, POTENTIAL>::RiccatiSolverConfined()
     : RiccatiSolver<T>() {}
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-RiccatiSolverConfined<T, GAMMA, POTENTIAL>::~RiccatiSolverConfined() {}
+template <typename T, template <typename> class POTENTIAL>
+RiccatiSolverConfined<T, POTENTIAL>::~RiccatiSolverConfined() {}
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-RiccatiSolverConfined<T, GAMMA, POTENTIAL>::RiccatiSolverConfined(
-    Context<T> *ctx)
+template <typename T, template <typename> class POTENTIAL>
+RiccatiSolverConfined<T, POTENTIAL>::RiccatiSolverConfined(Context<T> *ctx)
     : RiccatiSolver<T>(ctx) {
 #ifndef NDEBUG
   std::cout << "RiccatiSolverConfined::RiccatiSolverConfined( Context<T>* )\n";
@@ -298,18 +351,16 @@ RiccatiSolverConfined<T, GAMMA, POTENTIAL>::RiccatiSolverConfined(
   ctx->set(this);
 }
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-int RiccatiSolverConfined<T, GAMMA, POTENTIAL>::initialize() {
+template <typename T, template <typename> class POTENTIAL>
+int RiccatiSolverConfined<T, POTENTIAL>::initialize() {
   RiccatiSolver<T>::initialize();
   RiccatiSolver<T>::initializeBoundaryStorage();
 
   return 0;
 }
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
+template <typename T, template <typename> class POTENTIAL>
+void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
     const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
     const GridGPU<T> *deltaRot, const int current_angle_idx) {
   typedef RiccatiSolver<T> R;
@@ -320,17 +371,10 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // Determine some scalars
   const T h = param->getGridElementSize();
+  const T fermiSpeed = C::getFermiSurface()->getFermiSpeed(current_angle_idx);
+  const T stepSize = h / fermiSpeed;
   const int N = param->getGridResolutionCoherence();
   const int numAngles = param->getAngularResolution();
-
-  // Get pointers to grids
-  GridGPU<T> *gamma = R::getGamma();
-  GridGPU<T> *gammabar = R::getGammabar();
-
-  GeometryGroup<T> *geom = R::getGeometry();
-  BoundaryStorage<T> *storage = R::getBoundaryStorage();
-
-  dim3 blocksPerGrid, threadsPerBlock;
 
   const int numEnergiesCurrentBlock = energy_iter.getNumInterval();
   const int energyIdxOffset = energy_iter.getCurrentValue();
@@ -339,6 +383,46 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
       C::getIntegrationIterator()->getNumEnergiesInterval();
   const int energyIdxOffset_storage =
       C::getIntegrationIterator()->getEnergyIdxOffset_boundaryStorage();
+
+  // Compute energy shift from magnetic field
+  GridGPU<T> *eShift = R::getEnergyShift();
+
+  // Fetch the vector potential.
+  GridGPU<T> *inducedVectorPotential =
+      C::getContext()->getInducedVectorPotential();
+
+  computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
+                                   current_angle_idx);
+
+  // Get pointers to grids
+  GridGPU<T> *gamma = R::getGamma();
+  GridGPU<T> *gammabar = R::getGammabar();
+
+  // Set the coherence functions to the homogeneous solutions.
+  {
+    const int dimX = gamma->dimX();
+    const int dimY = gamma->dimY();
+
+    dim3 numBlocks;
+    dim3 numThreadsPerBlock;
+    gamma->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+
+    internal::computeHomogeneous<<<numBlocks, numThreadsPerBlock>>>(
+        dimX, dimY, numEnergies_storage,
+        energies->getDataPointer(0, Type::real) + energyIdxOffset,
+        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+        eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
+        deltaRot->getDataPointer(0, Type::imag),
+        gamma->getDataPointer(0, Type::real),
+        gamma->getDataPointer(0, Type::imag),
+        gammabar->getDataPointer(0, Type::real),
+        gammabar->getDataPointer(0, Type::imag));
+  }
+
+  GeometryGroup<T> *geom = R::getGeometry();
+  BoundaryStorage<T> *storage = R::getBoundaryStorage();
+
+  dim3 blocksPerGrid, threadsPerBlock;
 
   R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
                               numEnergiesCurrentBlock, current_angle_idx);
@@ -362,25 +446,13 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   // To allow for efficient computation with no vector potential, it is accessed
   // via a templated function object.
 
-  // Compute energy shift from magnetic field
-  GridGPU<T> *eShift = R::getEnergyShift();
-
-  // Fetch the vector potential.
-  GridGPU<T> *inducedVectorPotential =
-      C::getContext()->getInducedVectorPotential();
-
-  computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
-                                   current_angle_idx);
-
-  const T fermiSpeed = C::getFermiSurface()->getFermiSpeed(current_angle_idx);
-
   // 	Solve gamma by propagating riccati trajectories along positive y
-  internal::computeGammaFunctionTemplate_new_kernel<T, typename GAMMA<T>::Gamma,
-                                                    2, 3, 1>
+  internal::computeGammaFunctionTemplate_new_kernel<
+      T, typename riccati::Gamma<T>, 2, 3, 1>
       <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
           // Model parameters and energy values
-          h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
-          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+          stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+          idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -404,11 +476,11 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
   internal::computeGammaFunctionTemplate_new_kernel<
-      T, typename GAMMA<T>::GammaTilde, 3, 2, -1>
+      T, typename riccati::GammaTilde<T>, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
-          h, fermiSpeed, N, numEnergies_storage, energyIdxOffset_storage,
-          idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+          stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+          idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
@@ -434,28 +506,8 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeCoherenceFunctions(
   cudaStreamDestroy(s2);
 }
 
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::gammaSymmetryTransform() {
-  typedef RiccatiSolver<T> R;
-
-  GridGPU<T> *gamma = R::getGamma();
-  GridGPU<T> *gammabar = R::getGammabar();
-
-  // Do this ONLY if testing negative vF
-  GridGPU<T> gammaTmp(gamma);
-  gammaTmp = *gamma;
-
-  *gamma = *gammabar;
-  gamma->conjugate();
-
-  *gammabar = gammaTmp;
-  gammabar->conjugate();
-}
-
-template <typename T, template <typename> class GAMMA,
-          template <typename> class POTENTIAL>
-void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
+template <typename T, template <typename> class POTENTIAL>
+void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
     const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
     const GridGPU<T> *deltaRot, const int current_angle_idx) {
   typedef RiccatiSolver<T> R;
@@ -465,7 +517,6 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   Parameters<T> *param = C::getParameters();
 
   // Determine some scalars
-  const T h = param->getGridElementSize();
   const int N = param->getGridResolutionCoherence();
   const int numAngles = param->getAngularResolution();
 
@@ -476,19 +527,20 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
 
-  dim3 blocksPerGrid, threadsPerBlock;
+  const int numEnergiesCurrentBlock = energy_iter.getNumInterval();
+  const int energyIdxOffset = energy_iter.getCurrentValue();
 
-  int numEnergiesCurrentBlock = energy_iter.getNumInterval();
-  int energyIdxOffset = energy_iter.getCurrentValue();
-
-  int numEnergies_storage =
+  const int numEnergies_storage =
       C::getIntegrationIterator()->getNumEnergiesInterval();
-  int energyIdxOffset_storage =
+  const int energyIdxOffset_storage =
       C::getIntegrationIterator()->getEnergyIdxOffset_boundaryStorage();
 
   // Get kernel dimensions
-  int trajectoryIdx_start =
+  const int trajectoryIdx_start =
       storage->getTrajectoryStartIndexAngle(current_angle_idx);
+
+  dim3 blocksPerGrid;
+  dim3 threadsPerBlock;
   R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
                               numEnergiesCurrentBlock, current_angle_idx);
 
@@ -496,39 +548,38 @@ void RiccatiSolverConfined<T, GAMMA, POTENTIAL>::computeInitialCondition(
   GridGPU<T> *eShift = R::getEnergyShift();
 
   // 	Solve gamma by propagating riccati trajectories along positive y
-  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
-      T, typename GAMMA<T>::Gamma, 2, 3, 1><<<blocksPerGrid, threadsPerBlock>>>(
-      // Model parameters and energy values
-      h, N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
-      current_angle_idx,
-      energies->getDataPointer(0, Type::real) + energyIdxOffset,
-      energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-      eShift->getDataPointer(),
-      // Grids for gamma and Delta
-      gamma->getDataPointer(0, Type::real),
-      gamma->getDataPointer(0, Type::imag),
-      deltaRot->getDataPointer(0, Type::real),
-      deltaRot->getDataPointer(0, Type::imag),
-      // Grids for domain info/data
-      geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-      geom->getNormalsGrid()->getDataPointer(0, Type::real),
-      geom->getNormalsGrid()->getDataPointer(1, Type::real),
-      geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-      // Data relating to sparse storage for boundary gammas
-      storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
-      storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
-      storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-      storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-      storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-      storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
-
-  // 	Solve gammabar by propagating riccati trajectories along negative y
-  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<
-      T, typename GAMMA<T>::GammaTilde, 3, 2, -1>
+  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 2, 3, 1>
       <<<blocksPerGrid, threadsPerBlock>>>(
           // Model parameters and energy values
-          h, N, numEnergies_storage, energyIdxOffset_storage,
-          trajectoryIdx_start, current_angle_idx,
+          N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
+          current_angle_idx,
+          energies->getDataPointer(0, Type::real) + energyIdxOffset,
+          energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+          eShift->getDataPointer(),
+          // Grids for gamma and Delta
+          gamma->getDataPointer(0, Type::real),
+          gamma->getDataPointer(0, Type::imag),
+          deltaRot->getDataPointer(0, Type::real),
+          deltaRot->getDataPointer(0, Type::imag),
+          // Grids for domain info/data
+          geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+          geom->getNormalsGrid()->getDataPointer(0, Type::real),
+          geom->getNormalsGrid()->getDataPointer(1, Type::real),
+          geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+          // Data relating to sparse storage for boundary gammas
+          storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+          storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+
+  // 	Solve gammabar by propagating riccati trajectories along negative y
+  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 3, 2, -1>
+      <<<blocksPerGrid, threadsPerBlock>>>(
+          // Model parameters and energy values
+          N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
+          current_angle_idx,
           energies->getDataPointer(0, Type::real) + energyIdxOffset,
           energies->getDataPointer(0, Type::imag) + energyIdxOffset,
           eShift->getDataPointer(),
