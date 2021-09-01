@@ -138,8 +138,8 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
 
       // Choose a Riccati solver for a confined geometry, no magnetic fields
       scg::RiccatiSolver<T> *riccatiSolver =
-          new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                         scg::VectorPotential::None>(context);
+          new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(
+              context);
 
       // Set up order parameter
       scg::OrderParameter<T> *orderParameter =

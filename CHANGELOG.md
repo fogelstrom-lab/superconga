@@ -5,6 +5,7 @@
 ### Improvements
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
+- Speed up the coherence function computation by computing the homogeneous solutions separately.
 
 ### Bug fixes
 

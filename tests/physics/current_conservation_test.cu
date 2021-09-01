@@ -153,8 +153,7 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
 
   // Choose a Riccati solver for a confined geometry.
   scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                     scg::VectorPotential::Radial>(context);
+      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(context);
   // Add specular BC
   riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 

@@ -322,12 +322,13 @@ int main(int argc, char *argv[]) {
   // with a solenoid gauge.
   const bool solenoidGuage = simParams["gauge_solenoid"].asBool();
   if (solenoidGuage) {
-    riccatiSolver = new scg::RiccatiSolverConfined<
-        T, scg::Gamma::General, scg::VectorPotential::Solenoid>(&context);
+    riccatiSolver =
+        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Solenoid>(
+            &context);
   } else {
     riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                       scg::VectorPotential::Radial>(&context);
+        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(
+            &context);
   }
 
   // Add specular BC.

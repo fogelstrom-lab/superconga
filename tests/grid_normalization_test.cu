@@ -102,8 +102,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields
     scg::RiccatiSolver<T> *riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                       scg::VectorPotential::None>(context);
+        new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(context);
 
     // Set up order parameter
     scg::OrderParameter<T> *orderParameter =

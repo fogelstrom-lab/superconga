@@ -113,8 +113,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::Gamma::General,
-                                     scg::VectorPotential::None>(context);
+      new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(context);
   // Add specular BC
   riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
 
