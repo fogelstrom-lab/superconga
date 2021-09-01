@@ -21,13 +21,12 @@
 #include "grid.h"
 #include "io/csv_writers.h"
 #include "io/write_utils.h"
-#include "visualization/Visualizer.h"
 
-#ifdef __linux__
-#include <GL/freeglut.h>
-#else
-#include <GLUT/glut.h>
-#endif
+#ifdef CONGA_VISUALIZE
+#include "visualization/Visualizer.h"
+#endif // CONGA_VISUALIZE
+
+#include <json/json.h>
 
 #include <chrono>
 #include <cmath>
@@ -35,7 +34,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <json/json.h>
 #include <limits>
 #include <memory>
 #include <sys/stat.h>
@@ -45,13 +43,6 @@
 
 namespace conga {
 namespace run_utils {
-namespace internal {
-//===----------------------------- Variables -----------------------------===//
-// Constant used to check if user presses 'q' or 's' in the GUI to quit or save.
-bool guiUserQuit = false;
-bool guiUserSaveData = false;
-} // namespace internal
-
 //===----------------------------- Functions -----------------------------===//
 
 /// \brief Calculate scaling and offset for user-provided geometry.
@@ -208,7 +199,7 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
 /// in internal geometry coordinate system. Loop through list and add/remove
 /// geometry objects as specified.
 ///
-/// \param outGeometry Geometry container: instance of Geometry class.
+/// \param outGeometry Geometry container: instance of GeometryGroup class.
 /// \param inSimulationParameters User-defined simulation parameters.
 /// \param inScalingFactor Factor to scale geometry to internal coordinates.
 /// \param inOffsetX Distance along x to translate geometry to origin.
@@ -345,30 +336,6 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
                 << geometryComponentNames[i][0] << "'." << std::endl;
       std::exit(EXIT_FAILURE);
     }
-  }
-}
-
-/// \brief Detect OpenGL key presses
-///
-/// Detect keypresses in OpenGL instance - useful e.g. for changing
-/// parameters live, saving data, quitting the program
-///
-/// \param inKey - Pressed key.
-/// \param inCoordinateX - The GUI x-coordinate of the mouse at the key
-/// press. \param inCoordinateY - The GUI y-coordinate of the mouse at the
-/// key press.
-///
-/// \return - void
-inline void myKeyboardFunc(const unsigned char inKey, const int inX,
-                           const int inY) {
-#ifndef NDEBUG
-  std::cout << "-- Key pressed: " << inKey << ", at (" << inX << ", " << inY
-            << ")\n";
-#endif
-  if (inKey == 'q' || inKey == 'Q') {
-    internal::guiUserQuit = true;
-  } else if (inKey == 's' || inKey == 'S') {
-    internal::guiUserSaveData = true;
   }
 }
 
@@ -630,6 +597,7 @@ void saveGridData(const Context<T> *const inContext,
         bool(textDataSaver) &&
         textDataSaver->save(magneticFluxDensitySave, {"b_z"}, fluxDensityFile);
   }
+
   if (!success) {
     std::cout << "-- ERROR! Could not write: " << fluxDensityFile << std::endl;
     std::exit(EXIT_FAILURE);
@@ -717,146 +685,6 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
   }
 }
 
-/// \brief Create visualization object
-///
-/// \param inContext - Context object.
-///
-/// \return - Visualizer object pointer.
-// TODO(patric): Move this functionality to visualization class.
-template <typename T>
-Visualizer<T> *createVisualization(const Context<T> *const inContext) {
-  // Compute the number of columns and rows. The number of plots in
-  // visualization = numRows * numCols.
-  int numCols = 0;
-  int numRows = 0;
-
-  // Add order parameter.
-  if (inContext->getComputeOrderParameter()) {
-    // One column for each order-parameter component.
-    const int numOrderParameterComponents =
-        inContext->getOrderParameter()->getNumComponents();
-    numCols += numOrderParameterComponents;
-
-    // Two rows: magnitude and phase.
-    numRows = 2;
-  }
-
-  // Add current density.
-  if (inContext->getComputeCurrent()) {
-    // A single column for the current density.
-    numCols++;
-
-    // Three rows: magnitude and x/y-components.
-    numRows = 3;
-  }
-
-  // Add vector potential (and magnetic field).
-  const T penetrationDepth = inContext->getParameters()->getPenetrationDepth();
-  if (penetrationDepth > static_cast<T>(0)) {
-    // One column for the induced vector potential, and one for the induced
-    // magnetic field.
-    numCols += 2;
-
-    // Three rows: magnitude and x/y-components.
-    numRows = 3;
-  }
-
-  // Create visualization object.
-  const int gridResolutionBase =
-      inContext->getParameters()->getGridResolutionBase();
-  Visualizer<T> *gui = new Visualizer<T>(gridResolutionBase, gridResolutionBase,
-                                         numCols, numRows);
-
-  gui->setGeometry(inContext->getGeometry());
-  gui->setPrintParameters(inContext->getParameters());
-  return gui;
-}
-
-/// \brief Plot data in OpenGL GUI.
-///
-/// \param inContext - Context object.
-/// \param inVisualizer - Visualizer object.
-///
-/// \return - void
-template <typename T>
-void display(Context<T> *inContext, Visualizer<T> *inVisualizer) {
-  // Clear the plotting region.
-  inVisualizer->clearImage();
-
-  // Column index of index.
-  int colIdx = 0;
-
-  // Get compute order-parameter object.
-  const ComputeOrderParameter<T> *const computeOrderParameter =
-      inContext->getComputeOrderParameter();
-
-  if (computeOrderParameter) {
-    // Plot the order parameter.
-    const int numOrderParameterComponents =
-        inContext->getOrderParameter()->getNumComponents();
-    const std::vector<std::string> orderParameterTypes =
-        inContext->getOrderParameter()->getTypes();
-    for (; colIdx < numOrderParameterComponents; ++colIdx) {
-      // Get the order parameter component.
-      const GridGPU<T> component =
-          *(inContext->getOrderParameter()->getComponentGrid(colIdx));
-
-      // Plot the order parameter.
-      inVisualizer->label("|Delta_(" + orderParameterTypes[colIdx] + ")|/E_0",
-                          colIdx, inVisualizer->getNumImagesY() - 1);
-      inVisualizer->label("Chi_(" + orderParameterTypes[colIdx] + ")", colIdx,
-                          inVisualizer->getNumImagesY() - 2);
-      inVisualizer->plotImage(component, colIdx);
-    }
-  }
-
-  // Get compute current object.
-  const ComputeCurrent<T> *const computeCurrent =
-      inContext->getComputeCurrent();
-
-  if (computeCurrent) {
-    // Get the current.
-    const GridGPU<T> J = *(inContext->getComputeCurrent()->getResult());
-
-    // Plot the current.
-    inVisualizer->label("|J|/j_d", colIdx, inVisualizer->getNumImagesY() - 1);
-    inVisualizer->label("J_x/j_d", colIdx, inVisualizer->getNumImagesY() - 2);
-    inVisualizer->label("J_y/j_d", colIdx, inVisualizer->getNumImagesY() - 3);
-    inVisualizer->plotImage(J, colIdx);
-    colIdx++;
-
-    // The London penetration depth.
-    const T penetrationDepth =
-        inContext->getParameters()->getPenetrationDepth();
-
-    if (penetrationDepth > static_cast<T>(0)) {
-      // Just to set "erase = false", i.e. plot everywhere, not just in the
-      // grain.
-      const bool erase = false;
-
-      // Get the vector potential.
-      const GridGPU<T> A = *(inContext->getInducedVectorPotential());
-
-      // Plot the induced vector potential.
-      inVisualizer->label("|A|/A_0", colIdx, inVisualizer->getNumImagesY() - 1);
-      inVisualizer->label("A_x/A_0", colIdx, inVisualizer->getNumImagesY() - 2);
-      inVisualizer->label("A_y/A_0", colIdx, inVisualizer->getNumImagesY() - 3);
-      inVisualizer->plotImage(A, colIdx, erase);
-      colIdx++;
-
-      // Plot the induced magnetic field.
-      const T latticeSpacing = inContext->getParameters()->getGridElementSize();
-      const GridGPU<T> divA = A.div(latticeSpacing);
-      const GridGPU<T> magneticFluxDensity = A.curl(latticeSpacing);
-      inVisualizer->label("B/B_0", colIdx, inVisualizer->getNumImagesY() - 1);
-      inVisualizer->plotImage(magneticFluxDensity, colIdx, erase);
-    }
-  }
-
-  // Render the plots.
-  inVisualizer->draw();
-}
-
 /// \brief Iteration status enum class
 ///
 /// kContinue - Everything is fine, carry on.
@@ -907,11 +735,10 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
   }
 
   // Determine what to do.
-  const bool quit = isConverged || patienceReached || internal::guiUserQuit;
-  const bool saveInterval = inSaveDataInterval > 0
-                                ? (numIterations % inSaveDataInterval == 0)
-                                : false;
-  const bool saveData = internal::guiUserSaveData || saveInterval;
+  const bool quit = isConverged || patienceReached;
+  const bool saveData = inSaveDataInterval > 0
+                            ? (numIterations % inSaveDataInterval == 0)
+                            : false;
 
   // Set status.
   Status status;
@@ -919,8 +746,6 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
     status = Status::kQuit;
   } else if (saveData) {
     status = Status::kSave;
-    // Reset save data key stroke.
-    internal::guiUserSaveData = false;
   } else {
     status = Status::kContinue;
   }
@@ -936,9 +761,7 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
 /// \param inVerbose Verbosity.
 /// \param inNumIterationsMin The minimum number of iterations.
 /// \param inNumIterationsMax The maximum number of iterations.
-/// \param inVisualize Run with graphics or in terminal mode.
 /// \param inDataPath Path to data directory.
-/// \param inSaveData Whether to save data or not.
 /// \param inSaveDataInterval How frequently to save data.
 /// \param inGridDataSaveFormat Enum specifying which format to save the
 /// GridData in (see Type::fileFormat).
@@ -948,9 +771,51 @@ template <typename T>
 void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
                    const int inNumIterationsMin = 0,
                    const int inNumIterationsMax = 10000,
-                   const bool inVisualize = false,
                    const std::filesystem::path &inDataPath = {},
-                   const bool inSaveData = false,
+                   const int inSaveDataInterval = 0,
+                   const Type::fileFormat inGridDataSaveFormat = Type::csv) {
+  Status status = Status::kContinue;
+  while (status != Status::kQuit) {
+    // Run one iteration.
+    status = runIteration(inOutContext, inVerbose, inNumIterationsMin,
+                          inNumIterationsMax, inSaveDataInterval);
+
+    if (inSaveDataInterval > 0) {
+      // Append convergence status to file.
+      saveConvergenceStatus(inOutContext, inDataPath, inVerbose,
+                            inGridDataSaveFormat);
+
+      // Save grid data and results.
+      if (status == Status::kSave) {
+        saveDataWrapper(inOutContext, inDataPath, inVerbose,
+                        inGridDataSaveFormat);
+      }
+    }
+  }
+}
+
+#ifdef CONGA_VISUALIZE
+/// \brief Simulation wrapper
+///
+/// Wrapper for running the simulation until convergence.
+///
+/// \param inOutContext Context object for simulation.
+/// \param inVerbose Verbosity.
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVisualize Run with graphics or in terminal mode.
+/// \param inDataPath Path to data directory.
+/// \param inSaveDataInterval How frequently to save data.
+/// \param inGridDataSaveFormat Enum specifying which format to save the
+/// GridData in (see Type::fileFormat).
+///
+/// \return - void.
+template <typename T>
+void runSimulation(Context<T> *inOutContext, Visualizer<T> &inOutVisualizer,
+                   const bool inVerbose = true,
+                   const int inNumIterationsMin = 0,
+                   const int inNumIterationsMax = 10000,
+                   const std::filesystem::path &inDataPath = {},
                    const int inSaveDataInterval = 0,
                    const Type::fileFormat inGridDataSaveFormat = Type::csv) {
   Status status = Status::kContinue;
@@ -962,7 +827,7 @@ void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
       status = runIteration(inOutContext, inVerbose, inNumIterationsMin,
                             inNumIterationsMax, inSaveDataInterval);
 
-      if (inSaveData) {
+      if (inSaveDataInterval > 0) {
         // Append convergence status to file.
         saveConvergenceStatus(inOutContext, inDataPath, inVerbose,
                               inGridDataSaveFormat);
@@ -976,42 +841,71 @@ void runSimulation(Context<T> *inOutContext, const bool inVerbose = true,
     } else {
       // When no computation is done it is unnecessary to update the window as
       // fast as possible.
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(42));
     }
 
-    if (inVisualize) {
-      // Check if the Glut window is open.
-      const int windowID = glutGetWindow();
-      const bool noWindow = windowID == 0;
+    // Check if the window is closed.
+    quit = inOutVisualizer.close();
 
-      // Set quit flag.
-      quit = noWindow || internal::guiUserQuit;
+    if (!quit) {
+      int col = 0;
+      const int numOrderParameterComponents =
+          inOutContext->getOrderParameter()->getNumComponents();
+      for (; col < numOrderParameterComponents; ++col) {
+        // Get order parameter.
+        const GridGPU<T> &orderParameter =
+            *(inOutContext->getOrderParameter()->getComponentGrid(col));
 
-      // Plot data in OpenGL.
-      if (!quit) {
-        glutMainLoopEvent();
+        // Component type.
+        const std::string type =
+            inOutContext->getOrderParameter()->getComponent(col)->getType();
+
+        // Draw.
+        inOutVisualizer.draw(type, col, orderParameter, true);
       }
-    } else {
-      quit = (status == Status::kQuit);
+
+      // Draw the current density.
+      const GridGPU<T> &current =
+          *(inOutContext->getComputeCurrent()->getResult());
+      inOutVisualizer.draw(std::string("J"), col, current, true);
+      col++;
+
+      const T penetrationDepth =
+          inOutContext->getParameters()->getPenetrationDepth();
+      if (penetrationDepth > static_cast<T>(0)) {
+        // Draw the induced vector-potential.
+        const GridGPU<T> &vectorPotential =
+            *(inOutContext->getInducedVectorPotential());
+        inOutVisualizer.draw(std::string("A"), col, vectorPotential, false);
+        col++;
+
+        // Draw the induced flux-density.
+        const T latticeElementSize =
+            inOutContext->getParameters()->getGridElementSize();
+        const GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
+        inOutVisualizer.draw(std::string("B_z"), col, fluxDensity, false);
+      }
+
+      const bool running = status != Status::kQuit;
+      inOutVisualizer.setInfo(running);
+      inOutVisualizer.swapBuffers();
     }
   }
 }
+#endif // CONGA_VISUALIZE
 
 /// \brief Cleanup simulation
 ///
 /// Just deleting the context and visualization objects.
 ///
 /// \param inContext - Context object for simulation.
-/// \param inVisualizer - Visualizer GUI object.
 ///
 /// \return - void.
-template <typename T>
-void cleanup(Context<T> *inContext, Visualizer<T> *inVisualizer = nullptr) {
+template <typename T> void cleanup(Context<T> *inContext) {
 #ifndef NDEBUG
-  std::cout << "-- Cleaning up..." << std::endl;
+  std::cout << "Cleaning up..." << std::endl;
 #endif
 
-  delete inVisualizer;
   delete inContext;
 
 #ifndef NDEBUG

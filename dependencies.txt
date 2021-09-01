@@ -1,0 +1,13 @@
+export LDFLAGS+=' -L/usr/lib'
+
+Arch/Manjaro:
+Mandatory:
+sudo pacman -S cmake cuda fakeroot jsoncpp make ninja pkgconf python-virtualenv yay
+yay -S openblas-lapack armadillo
+
+Optional:
+sudo pacman -S boost glfw-x11 freeimage freeglut freetype2 fontconfig 
+yay -S clang-format-all-git doctest
+
+Ubuntu:
+sudo apt install cmake-curses-gui libboost-all-dev libfontconfig1-dev libfreeimage-dev libglfw3-dev libjsoncpp-dev
