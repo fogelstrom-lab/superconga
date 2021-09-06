@@ -884,7 +884,7 @@ Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
       (inOutContext->isConverged()) && (numIterations >= inNumIterationsMin);
 
   // Check for maximum number of iterations.
-  const bool patienceReached = (numIterations > inNumIterationsMax);
+  const bool patienceReached = (numIterations >= inNumIterationsMax);
 
   // Print status if simulation finished.
   if (inVerbose) {

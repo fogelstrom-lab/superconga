@@ -36,6 +36,7 @@ set(SRC
     order_parameter_bulk_test.cu
     parameters_test.cu
     physics/current_conservation_test.cu
+    physics/current_linear_response_test.cu
     physics/dos_test.cu
     physics/flux_density_test.cu
     physics/low_temp_free_energy_test.cu
