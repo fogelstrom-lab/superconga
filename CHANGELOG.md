@@ -8,10 +8,12 @@
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
 
 ### Bug fixes
+- Fix `runIteration` doing one more iteration than required.
 
 ### Developer changes
 - Change sign of the elementary charge in order to conform with Graf et al.
 - Make minmax a non-static member method.
+- Add unit test of the current density comparing it with the linear-response expression.
 
 ---
 
