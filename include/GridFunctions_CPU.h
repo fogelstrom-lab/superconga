@@ -76,8 +76,8 @@ template <typename T> struct GridFunctions<T, thrust::host_vector<T>> {
   void resample(const int nx_new, const int ny_new);
 
   // Find min and max value of range
-  static void minmax(const GridData<T, thrust::host_vector<T>> &grid, T &minv,
-                     T &maxv, int field, Type::type part);
+  void minmax(const GridData<T, thrust::host_vector<T>> &grid, T &minv, T &maxv,
+              int field, Type::type part) const;
 };
 
 namespace internal {
@@ -686,7 +686,7 @@ void GridFunctions<T, thrust::host_vector<T>>::resample(const int nx_new,
 template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::minmax(
     const GridData<T, thrust::host_vector<T>> &grid, T &minv, T &maxv,
-    int field, Type::type part) {
+    int field, Type::type part) const {
   const thrust::host_vector<T> &vec = grid.getVector();
 
   const size_t start = grid.getFieldComponentOffset(field, part);

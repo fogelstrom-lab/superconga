@@ -10,6 +10,8 @@
 ### Bug fixes
 
 ### Developer changes
+- Change sign of the elementary charge in order to conform with Graf et al.
+- Make minmax a non-static member method.
 
 ---
 

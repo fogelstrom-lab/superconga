@@ -447,7 +447,7 @@ void Visualization<T>::drawField(const GRID &grid, const int field,
   int img_idx = image_idx_y * _num_image_X + image_idx_x;
 
   T minVal, maxVal;
-  GridCPU<T>::minmax(grid_cpu, minVal, maxVal, 0, representation);
+  grid_cpu.minmax(minVal, maxVal, 0, representation);
 
   // Save the min/max values so we can print them in the window.
   _minValImg[img_idx] = static_cast<float>(minVal);

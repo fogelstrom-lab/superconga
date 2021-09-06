@@ -89,8 +89,8 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
                 const int nx_new, const int ny_new) const;
 
   // Find min and max value of range
-  static void minmax(const GridData<T, thrust::device_vector<T>> &grid, T &minv,
-                     T &maxv, int field, Type::type part);
+  void minmax(const GridData<T, thrust::device_vector<T>> &grid, T &minv,
+              T &maxv, int field, Type::type part) const;
 
   // Helper functions to create kernel dimensions
   void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock) const;
@@ -953,7 +953,7 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::minmax(
     const GridData<T, thrust::device_vector<T>> &grid, T &minv, T &maxv,
-    int field, Type::type part) {
+    int field, Type::type part) const {
   const thrust::device_vector<T> &vec = grid.getVector();
 
   const size_t start = grid.getFieldComponentOffset(field, part);
