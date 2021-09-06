@@ -228,6 +228,9 @@ public:
   // Copy single field from this to target
   void copyFieldTo(GridData *target, int thisField, int otherField) const;
 
+  void minmax(T &minv, T &maxv, int field = 0,
+              Type::type part = Type::real) const;
+
   //// Modifying utility functions ////
 
   // Insert other grid into this. <x,y>_offset are offset in discrete elements
@@ -318,11 +321,6 @@ public:
 
   // Used to compute residual
   static T differenceMagnitude(const GridData &A, const GridData &B);
-
-  // FUNCTIONS BELOW SHOULD NOT BE STATIC MEMBERS!! //////////
-  static void minmax(const GridData &grid, T &minv, T &maxv, int field = 0,
-                     Type::type part = Type::real);
-  // TO HERE //////////////////////////////////////////////////////
 
   static size_t allocatedMemTotal() { return _allocatedMemTotal; }
   static void printAllocatedMemTotal() {
@@ -1346,9 +1344,9 @@ T GridData<T, DEV>::differenceMagnitude(const GridData<T, DEV> &A,
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::minmax(const GridData<T, DEV> &grid, T &minv, T &maxv,
-                              int field, Type::type part) {
-  GridFunctions<T, DEV>::minmax(grid, minv, maxv, field, part);
+void GridData<T, DEV>::minmax(T &minv, T &maxv, int field,
+                              Type::type part) const {
+  GridFunctions<T, DEV>::minmax(*this, minv, maxv, field, part);
 }
 
 template <typename T, typename DEV>
