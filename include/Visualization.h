@@ -816,7 +816,7 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
     char txt[256];
     sprintf(txt, "Discrete width = %d,   #Momenta = %d,   #Ozaki Poles = %d",
             param->getGridResolutionBase() - 2 * constants::GRAIN_SIZE_MARGIN,
-            param->getAngularResolution(), param->getNumMatsubaraEnergies());
+            param->getAngularResolution(), param->getNumOzakiEnergies());
 
     for (i = 0; txt[i]; i++) {
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);

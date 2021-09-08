@@ -3,6 +3,7 @@
 ## Latest version (unreleased)
 
 ### Improvements
+- **MAJOR** Set energy cutoff instead of the number of energies.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.

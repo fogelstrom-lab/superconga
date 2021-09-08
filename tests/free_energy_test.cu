@@ -41,8 +41,8 @@ const double POINTS_PER_COHERENCE_LENGTH = 3.0 * (2.0 * M_PI);
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 30;
 
-// Number of discrete energies (poles)
-const int NUM_ENERGIES = 10;
+// The energy cutoff.
+const double ENERGY_CUTOFF = 100.0;
 
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1e-5;
@@ -82,8 +82,8 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   parameters->setAngularResolution(TEST_PARAMS::NUM_ANGLES);
   parameters->setConvergenceCriterion(
       static_cast<T>(TEST_PARAMS::CONVERGENCE_CRITERION));
-  parameters->setNumMatsubaraEnergies(TEST_PARAMS::NUM_ENERGIES);
   parameters->setTemperature(static_cast<T>(TEST_PARAMS::TEMPERATURE));
+  parameters->setEnergyCutoff(static_cast<T>(TEST_PARAMS::ENERGY_CUTOFF));
 
   // Set up a disc.
   scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);

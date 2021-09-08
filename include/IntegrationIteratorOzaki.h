@@ -65,8 +65,6 @@ public:
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
   void compute();
-
-private:
 };
 
 template <typename T>
@@ -161,7 +159,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
   const Parameters<T> *param = ContextModule<T>::getParameters();
 
   const T temperature = param->getTemperature();
-  const int numEnergies = param->getNumMatsubaraEnergies();
+  const int numEnergies = param->getNumOzakiEnergies();
 
   // Set ozaki energies
   GridCPU<T> *ozakiEnergiesCPU = new GridCPU<T>(numEnergies, 1);

@@ -41,8 +41,8 @@ const double POINTS_PER_COHERENCE_LENGTH = 32.0 / GRAIN_SIDE_LENGTH;
 const int NUM_ANGLES_SWAVE = 32;
 const int NUM_ANGLES_DWAVE = 360;
 
-// Number of discrete energies (poles)
-const int NUM_ENERGIES = 256;
+// The energy cutoff.
+const double ENERGY_CUTOFF = 200.0;
 
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
@@ -83,11 +83,11 @@ scg::Parameters<T> *applySimParams(const bool inUseSwave,
   parameters->setConvergenceCriterion(
       static_cast<T>(simParams::CONVERGENCE_CRITERION));
 
-  // Set number of Ozaki poles
-  parameters->setNumMatsubaraEnergies(simParams::NUM_ENERGIES);
-
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
+
+  // Set number of Ozaki poles
+  parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
 
   return parameters;
 }

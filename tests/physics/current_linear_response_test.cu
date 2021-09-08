@@ -54,8 +54,8 @@ const double POINTS_PER_COHERENCE_LENGTH = 10.0 * (2.0 * M_PI);
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 100;
 
-// Number of discrete energies (poles)
-const int NUM_ENERGIES = 32;
+// The energy cutoff.
+const double ENERGY_CUTOFF = 100.0;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = false;
@@ -90,9 +90,10 @@ scg::vector2d<T> computeCurrentDensity(const T inTemperature,
   // Comes from: cutoff = 2 * pi * T * (n + 0.5).
   // But the n is the largest n we need to include, so the number of energies is
   // one more, hence the plus one.
-  const T energyCutoff = static_cast<T>(1e3);
   const int numEnergies =
-      static_cast<int>(energyCutoff / twoPiTemp - static_cast<T>(0.5)) + 1;
+      static_cast<int>(static_cast<T>(ENERGY_CUTOFF) / twoPiTemp -
+                       static_cast<T>(0.5)) +
+      1;
 
   // Compute the factor involving the order parameter and the energy.
   T factorEnergy = static_cast<T>(0);
@@ -131,8 +132,8 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   parameters->setPointsPerCoherenceLength(
       static_cast<T>(POINTS_PER_COHERENCE_LENGTH));
   parameters->setAngularResolution(NUM_ANGLES);
-  parameters->setNumMatsubaraEnergies(NUM_ENERGIES);
   parameters->setTemperature(inTemperature);
+  parameters->setEnergyCutoff(static_cast<T>(ENERGY_CUTOFF));
   parameters->setPenetrationDepth(static_cast<T>(PENETRATION_DEPTH));
 
   // Set geometry.

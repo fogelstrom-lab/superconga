@@ -2,6 +2,7 @@
 	"convergence_criterion": 1e-05,
 	"crystal_axes_rotation": 0.0,
 	"data_path": "data/dwave_octagon",
+	"energy_cutoff": 100.0,
 	"external_flux_quanta": 0.0,
 	"gauge_solenoid": false,
 	"geometry": [
@@ -19,7 +20,6 @@
 	"num_fermi_momenta": 32,
 	"num_iterations_max": 1000,
 	"num_iterations_min": 0,
-	"num_ozaki_energies": 8,
 	"optimizer": {
 		"adaptive": false,
 		"anderson_always": true,
