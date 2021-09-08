@@ -313,10 +313,10 @@ def add_runner_arguments(parser) -> None:
     # Num Ozaki energies.
     parser.add_argument(
         "-e",
-        "--num-ozaki-energies",
-        type=int,
+        "--energy-cutoff",
+        type=float,
         default=None,
-        help="Number of Ozaki energies (similar to Matsubara energies, see the documentation).",
+        help="The energy cutoff (in units of kB*Tc).",
     )
 
     # Green's function accuracy.
@@ -829,7 +829,7 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
     set_value(sim_params, "num_iterations_max", args.num_iterations_max)
     set_value(sim_params, "num_iterations_min", args.num_iterations_min)
-    set_value(sim_params, "num_ozaki_energies", args.num_ozaki_energies)
+    set_value(sim_params, "energy_cutoff", args.energy_cutoff)
 
     group = "optimizer"
     set_value(sim_params, "step_size", args.opt_step_size, group)

@@ -35,8 +35,8 @@ const double GRAIN_SIDE_LENGTH = 10.0;
 const double POINTS_PER_COHERENCE_LENGTH = 55.0 / GRAIN_SIDE_LENGTH;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 5;
-// Number of discrete energies (poles)
-const int NUM_ENERGIES = 10;
+// The energy cutoff.
+const double ENERGY_CUTOFF = 100.0;
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
 } // namespace simParams
@@ -68,10 +68,10 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
   // Set convergence criterion
   parameters->setConvergenceCriterion(
       static_cast<T>(simParams::CONVERGENCE_CRITERION));
-  // Set number of Ozaki poles
-  parameters->setNumMatsubaraEnergies(simParams::NUM_ENERGIES);
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
+  // Set number of Ozaki poles
+  parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
   return parameters;
 }
 

@@ -175,7 +175,7 @@ runner_checks = {
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
     "num_iterations_min": {"type": int, "low_include": 0},
-    "num_ozaki_energies": {"type": int, "low": 0},
+    "energy_cutoff": {"type": float, "low": 0.0},
     "optimizer": {
         "type": dict,
         "fields": {

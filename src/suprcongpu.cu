@@ -128,9 +128,9 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["points_per_coherence_length"].asDouble()));
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
-  // Set number of Ozaki energies.
-  const int numOzakiEnergies = simParams["num_ozaki_energies"].asInt();
-  parameters->setNumMatsubaraEnergies(numOzakiEnergies);
+  // Set energy cutoff.
+  const T energyCutoff = static_cast<T>(simParams["energy_cutoff"].asDouble());
+  parameters->setEnergyCutoff(energyCutoff);
 
   // Number of discrete steps in momentum angle.
   const int numFermiMomenta = simParams["num_fermi_momenta"].asInt();

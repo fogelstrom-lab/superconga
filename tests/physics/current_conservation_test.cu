@@ -41,8 +41,8 @@ const double POINTS_PER_COHERENCE_LENGTH = 5.0 * (2.0 * M_PI);
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 32;
 
-// Number of discrete energies (poles)
-const int NUM_ENERGIES = 8;
+// The energy cutoff.
+const double ENERGY_CUTOFF = 100.0;
 
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1e-5;
@@ -92,11 +92,11 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *inOutContext) {
   parameters->setConvergenceCriterion(
       static_cast<T>(simParams::CONVERGENCE_CRITERION));
 
-  // Set number of Ozaki poles
-  parameters->setNumMatsubaraEnergies(simParams::NUM_ENERGIES);
-
   // Set temperature
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
+
+  // Set number of Ozaki poles
+  parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
 
   // External flux-quanta.
   parameters->setNumFluxQuanta(static_cast<T>(simParams::EXTERNAL_FLUX_QUANTA));

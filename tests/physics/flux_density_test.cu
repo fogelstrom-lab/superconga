@@ -99,8 +99,8 @@ template <typename T> void testFluxDensity(const T inTolerance) {
       scg::utils::toInternalInvLength(static_cast<T>(5)));
   parameters->setAngularResolution(16);
   parameters->setConvergenceCriterion(static_cast<T>(1e-5));
-  parameters->setNumMatsubaraEnergies(16);
   parameters->setTemperature(static_cast<T>(0.1));
+  parameters->setEnergyCutoff(static_cast<T>(100));
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
 

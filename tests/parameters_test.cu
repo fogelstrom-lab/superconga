@@ -41,6 +41,22 @@ template <typename T> void testGridResolution() {
     }
   }
 }
+
+template <typename T> void testNumOzakiEnergies() {
+  // =================== ARRANGE ==================== //
+  scg::Parameters<T> parameters;
+  const T temperature = static_cast<T>(0.5);
+  const T cutoff = static_cast<T>(10);
+
+  // =================== ACT ==================== //
+  parameters.setTemperature(temperature);
+  parameters.setEnergyCutoff(cutoff);
+  const int numOzakiEnergiesTest = parameters.getNumOzakiEnergies();
+
+  // =================== ASSERT ==================== //
+  const int numOzakiEnergiesExpected = 3;
+  CHECK(numOzakiEnergiesTest == numOzakiEnergiesExpected);
+}
 } // namespace helper
 
 // ================= Test grid resolution ================= //
@@ -50,4 +66,13 @@ TEST_CASE("Test grid resolution (float)") {
 
 TEST_CASE("Test grid resolution (double)") {
   helper::testGridResolution<double>();
+}
+
+// ================= Test number of Ozaki energies ================= //
+TEST_CASE("Test number of Ozaki energies (float)") {
+  helper::testNumOzakiEnergies<float>();
+}
+
+TEST_CASE("Test number of Ozaki energies (double)") {
+  helper::testNumOzakiEnergies<double>();
 }
