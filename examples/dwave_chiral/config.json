@@ -1,7 +1,6 @@
 {
 	"convergence_criterion": 1e-05,
 	"crystal_axes_rotation": 0.0,
-	"data_path": "data/dwave_chiral",
 	"energy_cutoff": 100.0,
 	"external_flux_quanta": 0.0,
 	"gauge_solenoid": false,
@@ -44,14 +43,13 @@
 			"symmetry": "dx2-y2"
 		}
 	],
-	"order_parameter_path": "",
 	"penetration_depth": -1.0,
 	"points_per_coherence_length": 8.0,
-	"save_data": false,
-	"save_data_interval": 0,
+	"save_path": "data/examples/dwave_chiral",
+	"save_frequency": -1,
+	"load_path": "",
 	"temperature": 0.5,
 	"vector_potential_error": 1e-06,
-	"vector_potential_path": "",
 	"verbose": true,
 	"visualize": true
 }

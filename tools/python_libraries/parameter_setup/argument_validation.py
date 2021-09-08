@@ -129,7 +129,6 @@ def check_dict(sim_params: dict, checks: dict) -> bool:
 runner_checks = {
     "convergence_criterion": {"type": float, "low": 0.0},
     "crystal_axes_rotation": {"type": float},
-    "data_path": {"type": str},
     "external_flux_quanta": {"type": float},
     "geometry": {
         "type": list,
@@ -204,8 +203,9 @@ runner_checks = {
     },
     "vector_potential_error": {"type": float, "low_include": 0.0},
     "penetration_depth": {"type": float},
-    "save_data": {"type": bool},
-    "save_data_interval": {"type": int},
+    "save_path": {"type": str},
+    "save_frequency": {"type": int},
+    "load_path": {"type": str},
     "temperature": {"type": float, "low": 0.0},
     "verbose": {"type": bool},
     "visualize": {"type": bool},
@@ -213,7 +213,6 @@ runner_checks = {
 
 postprocess_checks = {
     "convergence_criterion": {"type": float, "low": 0.0},
-    "data_path": {"type": str},
     "energy_max": {"type": float, "low_include": 0.0},
     "energy_min": {"type": float, "low_include": 0.0},
     "energy_smearing": {"type": float, "low": 0.0},
@@ -222,7 +221,8 @@ postprocess_checks = {
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
     "num_iterations_min": {"type": int, "low_include": 0},
-    "save_data": {"type": bool},
+    "save_path": {"type": str},
+    "load_path": {"type": str},
     "verbose": {"type": bool},
 }
 

@@ -11,6 +11,7 @@ import argparse
 import json
 import math
 from pathlib import Path
+import os
 import sys
 from typing import Optional, Union
 
@@ -80,20 +81,6 @@ def add_runner_arguments(parser) -> None:
         choices=[32, 64],
         default=64,
         help="The floating point precision. The C++ binary 'build/release/bin/suprcongpu_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
-    )
-
-    parser.add_argument(
-        "--op-path",
-        type=str,
-        default=None,
-        help="Path to order-parameter file. The simulation will start from this order parameter.",
-    )
-
-    parser.add_argument(
-        "--vp-path",
-        type=str,
-        default=None,
-        help="Path to vector-potential file. The simulation will start from this vector potential.",
     )
 
     # =============== PHYSICS =============== #
@@ -334,15 +321,6 @@ def add_runner_arguments(parser) -> None:
         "-V", "--version", action="version", version="%(prog)s " + __version__
     )
 
-    # Data path.
-    parser.add_argument(
-        "-o",
-        "--data-path",
-        type=str,
-        default=None,
-        help="Base folder for output (data and parameter files).",
-    )
-
     # Verbose.
     group_verbose = parser.add_mutually_exclusive_group()
     group_verbose.add_argument(
@@ -358,23 +336,36 @@ def add_runner_arguments(parser) -> None:
         help="Do not print iteration status and other output to terminal.",
     )
 
-    # Save.
-    group_save = parser.add_mutually_exclusive_group()
-    group_save.add_argument(
-        "--save-data",
-        action="store_true",
-        help="Save data files to disk. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
-    )
-    group_save.add_argument(
-        "--no-save-data", action="store_true", help="Do not save data files to disk."
-    )
-
-    # Save data interval.
+    # Save data.
     parser.add_argument(
-        "--save-data-interval",
+        "-S",
+        "--save-path",
+        type=str,
+        default=None,
+        help="Directory where the data will be saved. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
+    )
+    parser.add_argument(
+        "-F",
+        "--save-frequency",
         type=int,
         default=None,
-        help="How frequently to save data (every Nth iteration). Zero means not saving periodically.",
+        help="How frequently to save data (every Nth iteration). Zero means not saving data at all, and a negative value means only saving at the end.",
+    )
+
+    # Load data.
+    group_load = parser.add_mutually_exclusive_group()
+    group_load.add_argument(
+        "-L",
+        "--load-path",
+        type=str,
+        default=None,
+        help="Directory containing data. The simulation will resume from this data.",
+    )
+    group_load.add_argument(
+        "--continue",
+        dest="do_continue",
+        action="store_true",
+        help="Resume the simulation from the data in the '--save-path' directory.",
     )
 
     # Visualize.
@@ -427,13 +418,22 @@ def add_postprocess_arguments(parser) -> None:
         help="Convergence criterion for self-consistency.",
     )
 
-    # Data path.
+    # Save data.
     parser.add_argument(
-        "-p",
-        "--data-path",
+        "-S",
+        "--save-path",
         type=str,
         default=None,
-        help="Base folder for input/output (data and parameter files).",
+        help="Directory where the data will be saved. If files already exist, they will be overwritten. If not set the '--load-path' directory will be used.",
+    )
+
+    # Load data.
+    parser.add_argument(
+        "-L",
+        "--load-path",
+        type=str,
+        default=None,
+        help="Directory containing the data of a converged simulation.",
     )
 
     # Energy max.
@@ -498,21 +498,11 @@ def add_postprocess_arguments(parser) -> None:
 
     # Num Fermi momenta.
     parser.add_argument(
+        "-p",
         "--num-fermi-momenta",
         type=int,
         default=None,
         help="Number of discrete angles in Fermi-surface average. Recommended minimum: 700.",
-    )
-
-    # Save.
-    group_save = parser.add_mutually_exclusive_group()
-    group_save.add_argument(
-        "--save-data",
-        action="store_true",
-        help="Save data files to disk. If files already exist, they will be overwritten.",
-    )
-    group_save.add_argument(
-        "--no-save-data", action="store_true", help="Do not save data files to disk."
     )
 
     # Verbose.
@@ -543,8 +533,9 @@ def add_postprocess_arguments(parser) -> None:
 def add_plotter_arguments(parser) -> None:
     # Path to data.
     parser.add_argument(
-        "-p",
-        "--data-path",
+        "-L",
+        "--load-path",
+        dest="data_path",
         type=str,
         default=None,
         help="Path to data folder.",
@@ -713,8 +704,9 @@ def add_plotter_arguments(parser) -> None:
 def add_ldos_plotter_arguments(parser) -> None:
     # Path to data.
     parser.add_argument(
-        "-p",
-        "--data-path",
+        "-L",
+        "--load-path",
+        dest="data_path",
         type=str,
         default=None,
         help="Path to folder with density of states data.",
@@ -819,7 +811,6 @@ def set_runner_arguments_from_cli(
     # Override values from the command line.
     set_value(sim_params, "convergence_criterion", args.convergence_criterion)
     set_value(sim_params, "crystal_axes_rotation", args.crystal_axes_rotation)
-    set_value(sim_params, "data_path", args.data_path)
     set_value(sim_params, "external_flux_quanta", args.external_flux_quanta)
 
     set_flag(sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial)
@@ -871,16 +862,19 @@ def set_runner_arguments_from_cli(
     )
     set_value(sim_params, "symmetry", args.op_sym, group)
     set_value(sim_params, "penetration_depth", args.penetration_depth)
+    set_value(sim_params, "vector_potential_error", args.vp_error)
 
-    set_flag(sim_params, "save_data", args.save_data, args.no_save_data)
-    set_value(sim_params, "save_data_interval", args.save_data_interval)
     set_value(sim_params, "temperature", args.temperature)
     set_flag(sim_params, "verbose", args.verbose, args.quiet)
     set_flag(sim_params, "visualize", args.visualize, args.no_visualize)
 
-    set_value(sim_params, "order_parameter_path", args.op_path)
-    set_value(sim_params, "vector_potential_error", args.vp_error)
-    set_value(sim_params, "vector_potential_path", args.vp_path)
+    set_value(sim_params, "save_frequency", args.save_frequency)
+    set_value(sim_params, "save_path", args.save_path)
+    if args.do_continue:
+        load_path = sim_params["save_path"]
+    else:
+        load_path = args.load_path
+    set_value(sim_params, "load_path", load_path)
 
 
 # Postprocess: Override json dictionary with command-line input.
@@ -890,7 +884,6 @@ def set_postprocess_arguments_from_cli(
 ) -> None:
     # Override values from the command line.
     set_value(sim_params, "convergence_criterion", args.convergence_criterion)
-    set_value(sim_params, "data_path", args.data_path)
     set_value(sim_params, "energy_max", args.energy_max)
     set_value(sim_params, "energy_min", args.energy_min)
     set_value(sim_params, "energy_smearing", args.energy_smearing)
@@ -899,7 +892,12 @@ def set_postprocess_arguments_from_cli(
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
     set_value(sim_params, "num_iterations_max", args.num_iterations_max)
     set_value(sim_params, "num_iterations_min", args.num_iterations_min)
-    set_flag(sim_params, "save_data", args.save_data, args.no_save_data)
+    set_value(sim_params, "load_path", args.load_path)
+    if args.save_path:
+        save_path = args.save_path
+    else:
+        save_path = sim_params["load_path"]
+    set_value(sim_params, "save_path", save_path)
     set_flag(sim_params, "verbose", args.verbose, args.quiet)
 
 
