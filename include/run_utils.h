@@ -607,11 +607,8 @@ void saveGridData(const Context<T> *const inContext,
     }
   }
 
-  // TODO(niclas): Convert to (reduced) coherence length? I.e. multiply by
-  // 2pi.
-  const T latticeSpacing = parameters->getGridElementSize();
-
   // The magnetic flux-density is simply the curl of the vector potential.
+  const T latticeSpacing = parameters->getGridElementSize();
   const GridGPU<T> magneticFluxDensitySave =
       vectorPotentialSave.curl(latticeSpacing);
 
@@ -791,8 +788,8 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
               colIdx));
 
       // Plot the order parameter.
-      inGUI->label("|Delta_" + std::to_string(colIdx + 1) + "|/k_BT_c", colIdx,
-                   inGUI->getNumImagesY() - 1);
+      inGUI->label("|Delta_" + std::to_string(colIdx + 1) + "|/(2*pi*k_B*T_c)",
+                   colIdx, inGUI->getNumImagesY() - 1);
       inGUI->label("Chi_" + std::to_string(colIdx + 1), colIdx,
                    inGUI->getNumImagesY() - 2);
       inGUI->plotImage(component, colIdx);

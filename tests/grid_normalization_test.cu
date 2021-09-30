@@ -29,14 +29,14 @@
 namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.5;
-// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
+// Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc)
 const double GRAIN_SIDE_LENGTH = 10.0;
 // Number of lattice points per coherence length
 const double POINTS_PER_COHERENCE_LENGTH = 55.0 / GRAIN_SIDE_LENGTH;
 // Number of discrete trajectory angles (on the Fermi-surface)
 const int NUM_ANGLES = 5;
 // The energy cutoff.
-const double ENERGY_CUTOFF = 100.0;
+const double ENERGY_CUTOFF = 16.0;
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;
 } // namespace simParams

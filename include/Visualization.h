@@ -793,7 +793,7 @@ void Visualization<T>::printRangeToImage(int img_row, int img_col, T minVal,
   sprintf(txt, "%s : [%.4f, %.4f]", _textImg[imgIdx].c_str(), minVal, maxVal);
 
   for (i = 0; txt[i]; i++) {
-    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
   }
 
   glRasterPos2f(-1.0f, -1.0f);
@@ -819,18 +819,18 @@ void Visualization<T>::printParametersToImage(const Parameters<T> *param) {
             param->getAngularResolution(), param->getNumOzakiEnergies());
 
     for (i = 0; txt[i]; i++) {
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
     }
 
     glRasterPos2f(posX, posY - 36.0f / getNumPixelsWindowY());
     sprintf(txt,
-            "Physical width = %.3f c.l.,  \n#Ext. flux quanta = %.3f,   T/T_c "
+            "Physical width = %.3f xi_0,  \n#Ext. flux quanta = %.3f,   T/T_c "
             "= %.3f",
-            utils::toInternalInvLength(param->getGrainWidth()),
-            param->getNumFluxQuanta(), param->getTemperature());
+            param->getGrainWidth(), param->getNumFluxQuanta(),
+            param->getTemperature());
 
     for (i = 0; txt[i]; i++) {
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, txt[i]);
+      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
     }
 
     glRasterPos2f(-1.0f, -1.0f);

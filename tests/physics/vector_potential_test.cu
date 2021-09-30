@@ -123,9 +123,9 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
   // Physical side length of a lattice cell.
   const T latticeSpacing = static_cast<T>(0.1);
 
-  // The London penetration depth. It is chosen so that the factor "4/k^2" in
+  // The London penetration depth. It is chosen so that the factor "1/k^2" in
   // "ComputeVectorPotential" is one.
-  const T penetrationDepth = static_cast<T>(2);
+  const T penetrationDepth = static_cast<T>(1);
 
   // The number of "fields" for the current density.
   const int currentDimension = 2;

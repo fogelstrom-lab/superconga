@@ -171,21 +171,18 @@ void OrderParameterComponent<T>::initCouplingConstant(const T *energies,
   const T T_Tc = _param->getTemperature();
   const int numEnergies = _param->getNumOzakiEnergies();
 
-  // For convenience.
-  const T piT = static_cast<T>(M_PI) * T_Tc;
-
   // Compute (inverted) energy sum.
   T energySum = static_cast<T>(0.0);
   for (int i = 0; i < numEnergies; ++i) {
     energySum += residues[i] / energies[i];
   }
-  // A factor of two because we are excluding negative energies.
-  energySum *= static_cast<T>(2.0) * piT;
+  energySum *= T_Tc;
 
   // Note, that here we implicitly assume that the basis functions are
   // normalized. I.e. <|eta|^2> = 1. Otherwise the energySum would be scaled by
   // <|eta|^2>.
-  m_couplingConstant = (piT / (std::log(T_Tc / _Tcthis_Tc) + energySum));
+  m_couplingConstant =
+      (static_cast<T>(0.5) * T_Tc / (std::log(T_Tc / _Tcthis_Tc) + energySum));
   m_isCouplingConstantInitialized = true;
 
 #ifndef NDEBUG

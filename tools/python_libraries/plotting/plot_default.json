@@ -23,14 +23,14 @@
     "magnetic_flux_density": {
         "magnitude": {
             "plot": true,
-            "colorbar_label": "$B_{\\mathrm{ind},z}/(\\Phi_0/\\xi_0^2)$",
+            "colorbar_label": "$B_{\\mathrm{ind},z}//B_0$",
             "colormap": "RdBu"
         }
     },
     "order_parameter": {
         "magnitude": {
             "plot": false,
-            "colorbar_label": "$\\left|\\Delta\\right|/k_{\\mathrm{B}}T_{\\mathrm{c}}$",
+            "colorbar_label": "$\\left|\\Delta\\right|/(2\\pi k_{\\mathrm{B}} T_{\\mathrm{c}})$",
             "colormap": "YlGnBu"
         },
         "phase": {
@@ -59,17 +59,17 @@
     "vector_potential": {
         "magnitude": {
             "plot": true,
-            "colorbar_label": "$\\left|\\mathbf{A}\\right|/(\\Phi_0/\\xi_0)$",
+            "colorbar_label": "$\\left|\\mathbf{A}\\right|/A_0$",
             "colormap": "YlGnBu"
         },
         "x": {
             "plot": true,
-            "colorbar_label": "$A_x/(\\Phi_0/\\xi_0)$",
+            "colorbar_label": "$A_x/A_0$",
             "colormap": "RdBu"
         },
         "y": {
             "plot": true,
-            "colorbar_label": "$A_y/(\\Phi_0/\\xi_0)$",
+            "colorbar_label": "$A_y/A_0$",
             "colormap": "RdBu"
         }
     }

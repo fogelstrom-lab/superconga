@@ -46,7 +46,7 @@ template <typename T> void testNumOzakiEnergies() {
   // =================== ARRANGE ==================== //
   scg::Parameters<T> parameters;
   const T temperature = static_cast<T>(0.5);
-  const T cutoff = static_cast<T>(10);
+  const T cutoff = static_cast<T>(10.0 / (2.0 * M_PI));
 
   // =================== ACT ==================== //
   parameters.setTemperature(temperature);

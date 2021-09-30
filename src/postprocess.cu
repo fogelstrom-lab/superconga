@@ -39,7 +39,6 @@
 #include "io/csv_writers.h"
 #include "io/read_utils.h"
 #include "run_utils.h"
-#include "utils.h"
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
@@ -147,11 +146,8 @@ int main(int argc, char *argv[]) {
   parameters->setTemperature(temperature);
 
   // Set the number of lattice points per coherence length.
-  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
-  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
-  // appropriately.
-  const T pointsPerCoherenceLength = scg::utils::toInternalInvLength(
-      static_cast<T>(simParams["points_per_coherence_length"].asDouble()));
+  const T pointsPerCoherenceLength =
+      static_cast<T>(simParams["points_per_coherence_length"].asDouble());
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set parameters relevant for real-axis energies.
@@ -176,11 +172,8 @@ int main(int argc, char *argv[]) {
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
-  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
-  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
-  // appropriately.
-  const T penetrationDepth = scg::utils::toInternalLength(
-      static_cast<T>(simParams["penetration_depth"].asDouble()));
+  const T penetrationDepth =
+      static_cast<T>(simParams["penetration_depth"].asDouble());
   parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
@@ -204,12 +197,7 @@ int main(int argc, char *argv[]) {
                                          yOffset);
 
   // Set grain sidelength in coherence length.
-  // Note, the internal coherence length is defined as xi_0 = hbar*<vF>/(kB*Tc).
-  // But externally we use xi_0 = hbar*<vF>/(2*pi*kB*Tc), so we must scale it
-  // appropriately.
-  const T geometrySideLengthInternal =
-      scg::utils::toInternalLength(scalingFactor);
-  parameters->setGrainWidth(geometrySideLengthInternal);
+  parameters->setGrainWidth(scalingFactor);
 
   // Fetch relative size of geometry to available simulation space, to account
   // for padding for boundary interpolation.

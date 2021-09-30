@@ -30,8 +30,8 @@ namespace simParams {
 // Temperature in units of T_c
 const double TEMPERATURE = 0.001;
 
-// Size of superconducting grain in coherence lengths hbar*<vF>/(kB*Tc)
-const double GRAIN_SIDE_LENGTH = 10.0 / (2.0 * M_PI);
+// Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc)
+const double GRAIN_SIDE_LENGTH = 10.0;
 
 // Number of lattice points per coherence length
 const double POINTS_PER_COHERENCE_LENGTH = 32.0 / GRAIN_SIDE_LENGTH;
@@ -42,7 +42,7 @@ const int NUM_ANGLES_SWAVE = 32;
 const int NUM_ANGLES_DWAVE = 360;
 
 // The energy cutoff.
-const double ENERGY_CUTOFF = 200.0;
+const double ENERGY_CUTOFF = 32.0;
 
 // Convergence criterion for order-parameter residual
 const double CONVERGENCE_CRITERION = 1E-6;

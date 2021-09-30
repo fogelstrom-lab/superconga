@@ -33,14 +33,11 @@ namespace bulk_internal {
 template <typename T>
 T computeResidual(const T inOrderParameter, const T inTemperature,
                   const int inNumEnergies, const T inCouplingConstant) {
-  // For convenience.
-  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
-
   // Compute sum(1 / sqrt(en^2 + delta^2)).
   T integrand = static_cast<T>(0.0);
   for (int n = inNumEnergies - 1; n >= 0; --n) {
     const T matsubaraEnergy =
-        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
+        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
     integrand +=
         static_cast<T>(1.0) / std::hypot(inOrderParameter, matsubaraEnergy);
   }
@@ -57,9 +54,6 @@ T computeResidual(const T inOrderParameter, const T inTemperature,
 /// \return - The coupling constant
 template <typename T>
 T computeCouplingConstant(const T inTemperature, const int inNumEnergies) {
-  // For convenience.
-  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
-
   // Note, we are iterating from the largest energy to the smallest.
   // This way we are adding larger values as the partial sum increases,
   // which should be numerically preferable. Doing it the other way we would
@@ -68,12 +62,13 @@ T computeCouplingConstant(const T inTemperature, const int inNumEnergies) {
   T energySum = static_cast<T>(0.0);
   for (int n = inNumEnergies - 1; n >= 0; --n) {
     const T matsubaraEnergy =
-        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
+        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
     energySum += static_cast<T>(1.0) / matsubaraEnergy;
   }
 
   const T couplingConstant =
-      static_cast<T>(1.0) / (std::log(inTemperature) / twoPiTemp + energySum);
+      static_cast<T>(1.0) /
+      (std::log(inTemperature) / inTemperature + energySum);
 
   return couplingConstant;
 }
@@ -94,7 +89,7 @@ T computeOrderParameterBulkSWave(
     const T inConvergenceCriterion = static_cast<T>(10.0) *
                                      std::numeric_limits<T>::epsilon(),
     const int inMaxIterations = 10,
-    const T inEnergyCutoff = static_cast<T>(1e3)) {
+    const T inEnergyCutoff = static_cast<T>(100)) {
   // Check if the temperature is outside of the (0, 1), and return known values
   // in that case.
   if (inTemperature >= static_cast<T>(1.0)) {
@@ -107,14 +102,12 @@ T computeOrderParameterBulkSWave(
     return static_cast<T>(constants::S_WAVE_BULK);
   }
 
-  // For convenience.
-  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
-
   // Comes from: cutoff = 2 * pi * T * (n + 0.5).
   // But the n is the largest n we need to include, so the number of energies is
   // one more, hence the plus one.
   const int numEnergies =
-      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5)) + 1;
+      static_cast<int>(inEnergyCutoff / inTemperature - static_cast<T>(0.5)) +
+      1;
 
   const T couplingConstant =
       bulk_internal::computeCouplingConstant(inTemperature, numEnergies);
@@ -229,27 +222,25 @@ T computeOrderParameterBulkSWave(
 
 template <typename T>
 T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
-                             const T inEnergyCutoff = static_cast<T>(1e3)) {
-  // For convenience.
-  const T twoPiTemp = static_cast<T>(2.0 * M_PI) * inTemperature;
-
+                             const T inEnergyCutoff = static_cast<T>(1e2)) {
   // Comes from: cutoff = 2 * pi * T * (n + 0.5).
   // But the n is the largest n we need to include, so the number of energies is
   // one more, hence the plus one.
   const int numEnergies =
-      static_cast<int>(inEnergyCutoff / twoPiTemp - static_cast<T>(0.5)) + 1;
+      static_cast<int>(inEnergyCutoff / inTemperature - static_cast<T>(0.5)) +
+      1;
 
   T energySum = static_cast<T>(0.0);
   for (int n = numEnergies - 1; n >= 0; --n) {
     const T matsubaraEnergy =
-        twoPiTemp * (static_cast<T>(n) + static_cast<T>(0.5));
+        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
     const T Omega = std::hypot(inOrderParameter, matsubaraEnergy);
     // The second term is equal to i (delta^* gamma - delta gammaTilde).
     energySum += (static_cast<T>(1.0) / matsubaraEnergy -
                   static_cast<T>(2.0) / (matsubaraEnergy + Omega));
   }
   const T freeEnergy = inOrderParameter * inOrderParameter *
-                       (std::log(inTemperature) + twoPiTemp * energySum);
+                       (std::log(inTemperature) + inTemperature * energySum);
   return freeEnergy;
 }
 } // namespace scg

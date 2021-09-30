@@ -707,7 +707,7 @@ void ComputeVectorPotential<T>::solveInternal(
   }
 
   // Factor from the equation itself.
-  const T equationFactor = -static_cast<T>(4.0) / (inKappa * inKappa);
+  const T equationFactor = -static_cast<T>(1.0) / (inKappa * inKappa);
 
   // Scale the final result.
   *m_vectorPotential *=

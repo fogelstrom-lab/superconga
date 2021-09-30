@@ -210,28 +210,6 @@ std::vector<T> linspace(const T inMinVal, const T inMaxVal,
   }
   return values;
 }
-
-/// \brief Convert from extern to internal length.The internal coherence length
-/// is defined as xi_0 = hbar*<vF>/(kB*Tc). But externally we use xi_0 =
-/// hbar*<vF>/(2*pi*kB*Tc), so we must scale it appropriately.
-///
-/// \param inLength The external length.
-///
-/// \return The internal length.
-template <typename T> inline T toInternalLength(const T inLength) {
-  return inLength / static_cast<T>(2.0 * M_PI);
-}
-
-/// \brief Convert from extern to internal inverse length.The internal coherence
-/// length is defined as xi_0 = hbar*<vF>/(kB*Tc). But externally we use xi_0 =
-/// hbar*<vF>/(2*pi*kB*Tc), so we must scale it appropriately.
-///
-/// \param inLength The external inverse length.
-///
-/// \return The internal inverse length.
-template <typename T> inline T toInternalInvLength(const T inInvLength) {
-  return inInvLength * static_cast<T>(2.0 * M_PI);
-}
 } // namespace utils
 } // namespace scg
 

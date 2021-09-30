@@ -303,7 +303,7 @@ def add_runner_arguments(parser) -> None:
         "--energy-cutoff",
         type=float,
         default=None,
-        help="The energy cutoff (in units of kB*Tc).",
+        help="The energy cutoff (in units of 2*pi*kB*Tc).",
     )
 
     # Green's function accuracy.

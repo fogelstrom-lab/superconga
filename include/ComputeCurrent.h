@@ -187,7 +187,8 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     _current_real->insertGrid(_current);
 
     const T T_Tc = C::getParameters()->getTemperature();
-    const T factor = static_cast<T>(constants::SIGN_E) * T_Tc;
+    // The factor of 2 comes from defining j_d = 2*pi*kB*Tc*|e|*vF*NF.
+    const T factor = static_cast<T>(2.0 * constants::SIGN_E) * T_Tc;
     *_current_real *= factor;
 
     // Set the current to zero outside of the grain.

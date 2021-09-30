@@ -178,7 +178,9 @@ template <typename T> void IntegrationIteratorOzaki<T>::initEnergies() {
 
   for (int i = 0; i < numEnergies; ++i) {
     ozakiEnergiesReal[i] = static_cast<T>(0.0);
-    ozakiEnergiesImag[i] = ozakiPolesPtr[i] * temperature;
+    // The energy scale is 2*pi*kB*Tc, hence the 2*pi division.
+    ozakiEnergiesImag[i] =
+        ozakiPolesPtr[i] * temperature / static_cast<T>(2.0 * M_PI);
   }
 
   GridGPU<T> *energies = new GridGPU<T>;

@@ -88,19 +88,18 @@ T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
 template <typename T> void testFluxDensity(const T inTolerance) {
   // =================== ARRANGE ==================== //
   // The parameters entering the expression of the expected result.
-  const T grainWidth = scg::utils::toInternalLength(static_cast<T>(20));
-  const T penetrationDepth = scg::utils::toInternalLength(static_cast<T>(1));
+  const T grainWidth = static_cast<T>(20);
+  const T penetrationDepth = static_cast<T>(1);
   const T numFluxQuanta = static_cast<T>(0.5);
 
   scg::Context<T> context;
   scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
   parameters->setGrainWidth(grainWidth);
-  parameters->setPointsPerCoherenceLength(
-      scg::utils::toInternalInvLength(static_cast<T>(5)));
+  parameters->setPointsPerCoherenceLength(static_cast<T>(5));
   parameters->setAngularResolution(16);
   parameters->setConvergenceCriterion(static_cast<T>(1e-5));
   parameters->setTemperature(static_cast<T>(0.1));
-  parameters->setEnergyCutoff(static_cast<T>(100));
+  parameters->setEnergyCutoff(static_cast<T>(16));
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
 
@@ -130,7 +129,9 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   scg::run_utils::runSimulation(&context);
 
   const T area = context.getGeometry()->area();
-  const T externalFluxDensity = numFluxQuanta / area;
+  // The pi factor comes from our choice of units for the flux density:
+  // B_0 = \Phi_0 / (\pi \xi^2_0).
+  const T externalFluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
 
   const T latticeElementSize = context.getParameters()->getGridElementSize();
   const scg::GridGPU<T> vectorPotential =

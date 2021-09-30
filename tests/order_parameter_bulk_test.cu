@@ -59,7 +59,8 @@ void testComputeOrderParameterBulkSWaveIntermediateTemperature(
       inMinTemperature, inMaxTemperature, inNumTemperatures);
 
   // See page 180 of P. Holmvall lic thesis.
-  const T preFactor = std::sqrt(static_cast<T>(8.0 * M_PI * M_PI) /
+  // Note that we are using 2*pi*kB*Tc as our energy scale.
+  const T preFactor = std::sqrt(static_cast<T>(2.0) /
                                 static_cast<T>(7.0 * scg::constants::APERY));
 
   for (const T &temperature : temperatures) {
