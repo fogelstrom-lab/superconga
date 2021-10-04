@@ -9,6 +9,7 @@
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
 - Add option to continue from saved files in `--save-path` folder, and resume from `--load-path`.
+- Change the area of the point DOS in `ldos_plotter.py` to a circle.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
