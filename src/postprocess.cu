@@ -142,12 +142,13 @@ int main(int argc, char *argv[]) {
   scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
 
   // Set temperature.
-  const T temperature = static_cast<T>(simParams["temperature"].asDouble());
+  const T temperature =
+      static_cast<T>(simParams["physics"]["temperature"].asDouble());
   parameters->setTemperature(temperature);
 
   // Set the number of lattice points per coherence length.
-  const T pointsPerCoherenceLength =
-      static_cast<T>(simParams["points_per_coherence_length"].asDouble());
+  const T pointsPerCoherenceLength = static_cast<T>(
+      simParams["accuracy"]["points_per_coherence_length"].asDouble());
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set parameters relevant for real-axis energies.
@@ -173,12 +174,12 @@ int main(int argc, char *argv[]) {
 
   // Set penetration depth.
   const T penetrationDepth =
-      static_cast<T>(simParams["penetration_depth"].asDouble());
+      static_cast<T>(simParams["physics"]["penetration_depth"].asDouble());
   parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
   const T externalFluxQuanta =
-      static_cast<T>(simParams["external_flux_quanta"].asDouble());
+      static_cast<T>(simParams["physics"]["external_flux_quanta"].asDouble());
   parameters->setNumFluxQuanta(externalFluxQuanta);
 
   //***************************************************
@@ -215,44 +216,58 @@ int main(int argc, char *argv[]) {
   // d+is).
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(&context);
 
+  // Get the global crystal-axes rotation.
   const T crystalAxesRotation = static_cast<T>(
-      2.0 * M_PI * simParams["crystal_axes_rotation"].asDouble());
+      2.0 * M_PI * simParams["physics"]["crystal_axes_rotation"].asDouble());
 
-  const Json::Value opCompParamsVec = simParams["order_parameter"];
+  // For convenience.
+  const Json::Value opParams = simParams["physics"]["order_parameter"];
 
-  for (int i = 0; i < opCompParamsVec.size(); ++i) {
-    const Json::Value opCompParams = opCompParamsVec[i];
+  // An array of all supported symmetries.
+  // TODO(niclas): Move to OrderParameterBasis.h?
+  const std::vector<std::string> symmetries = {"dx2-y2", "dxy", "g", "s"};
 
-    // Add a d-wave or an s-wave order-parameter component.
-    const std::string symmetryStr = opCompParams["symmetry"].asString();
+  // Loop over symmetries and add them if present.
+  bool orderParameterSuccess = false;
+  for (const std::string &symmetryStr : symmetries) {
+    if (opParams.isMember(symmetryStr)) {
+      // There is at least one component specified.
+      orderParameterSuccess = true;
 
-    // TODO(niclas): Move this to OrderParameterBasis.h?
-    scg::BasisFunctionSymmetry symmetry;
-    if (symmetryStr == "s") {
-      symmetry = scg::BasisFunctionSymmetry::SWAVE;
-    } else if (symmetryStr == "dx2-y2") {
-      symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-    } else if (symmetryStr == "dxy") {
-      symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
-    } else if (symmetryStr == "g") {
-      symmetry = scg::BasisFunctionSymmetry::GWAVE;
-    } else {
-      std::cerr << "-- Order parameter symmetry '" << symmetryStr
-                << "' not understood." << std::endl;
-      return EXIT_FAILURE;
+      // TODO(niclas): Move to OrderParameterBasis.h?
+      scg::BasisFunctionSymmetry symmetry;
+      if (symmetryStr == "dx2-y2") {
+        symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+      } else if (symmetryStr == "dxy") {
+        symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+      } else if (symmetryStr == "g") {
+        symmetry = scg::BasisFunctionSymmetry::GWAVE;
+      } else {
+        symmetry = scg::BasisFunctionSymmetry::SWAVE;
+      }
+
+      // For convenience.
+      const Json::Value opCompParams = opParams[symmetryStr];
+
+      // Create component.
+      const T criticalTemperature =
+          static_cast<T>(opCompParams["critical_temperature"].asDouble());
+      scg::OrderParameterComponent<T> *orderParameterComponent =
+          new scg::OrderParameterComponent<T>(symmetry, parameters,
+                                              criticalTemperature);
+
+      // Set rotation of crystal axes with respect to the grain geometry.
+      // TODO(niclas): Move to Parameters.h?
+      orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
+
+      // Add the initialized component to the total order parameter.
+      orderParameter->add(orderParameterComponent);
     }
+  }
 
-    const T criticalTemperature =
-        static_cast<T>(opCompParams["critical_temperature"].asDouble());
-    scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(symmetry, parameters,
-                                            criticalTemperature);
-
-    // Set rotation of crystal axes with respect to the grain geometry.
-    orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
-
-    // Add the component to the total order parameter.
-    orderParameter->add(orderParameterComponent);
+  if (!orderParameterSuccess) {
+    std::cerr << "-- ERROR! No order-parameter component set." << std::endl;
+    return EXIT_FAILURE;
   }
 
   // Read the order parameter from file.

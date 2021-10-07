@@ -172,7 +172,7 @@ def plot_all(
         num_plot_columns -= 1
 
     # Add extra columns for multi-component order parameters.
-    num_op_components = len(simulation_parameters["order_parameter"])
+    num_op_components = len(simulation_parameters["physics"]["order_parameter"])
     if plot_parameters["order_parameter"]["plot"]:
         num_plot_columns += num_op_components - 1
 
@@ -217,7 +217,9 @@ def plot_all(
             # Loop over multi-component structure (e.g. Delta_1, Delta_2),
             # which each can have field components (e.g. |Delta_1|, Chi_1,
             # Delta_2, Chi_2, ...).
-            for multi_component_idx in range(0, num_multi_components):
+            for multi_component_idx, pairing_symmetry in enumerate(
+                simulation_parameters["physics"]["order_parameter"].keys()
+            ):
                 # Reset row number: plot one field component per row.
                 row_idx = 0
 
@@ -288,7 +290,10 @@ def plot_all(
                     # Compute extent: scale coordinates to coherence lengths.
                     y_num, x_num = np.shape(data_field)
                     point_length = (
-                        1.0 / simulation_parameters["points_per_coherence_length"]
+                        1.0
+                        / simulation_parameters["accuracy"][
+                            "points_per_coherence_length"
+                        ]
                     )
                     x_lim = 0.5 * (x_num - 1) * point_length
                     y_lim = 0.5 * (x_num - 1) * point_length
@@ -317,9 +322,6 @@ def plot_all(
                         # TODO(patric): fetch this from the column names instead, since
                         # the following code breaks if the ordering differs between the
                         # config file and the columns in the data file.
-                        pairing_symmetry = simulation_parameters["order_parameter"][
-                            multi_component_idx
-                        ]["symmetry"]
                         pairing_symmetry_latex_format = (
                             configuration.symmetry_latex_format[pairing_symmetry]
                         )
@@ -432,7 +434,9 @@ def plot_ldos(
     mask_nan_in=True,
 ):
     # For convenience.
-    point_length = 1.0 / simulation_parameters["points_per_coherence_length"]
+    point_length = (
+        1.0 / simulation_parameters["accuracy"]["points_per_coherence_length"]
+    )
     y_num, x_num = np.shape(ldos_data["ldos"][0])
     x_lim = 0.5 * (x_num - 1) * point_length
     y_lim = 0.5 * (x_num - 1) * point_length

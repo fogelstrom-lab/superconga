@@ -127,9 +127,61 @@ def check_dict(sim_params: dict, checks: dict) -> bool:
 # ------------------------------------------------------------------------------
 # Validation checks for runner: a dict with the checks needed for all parameters.
 runner_checks = {
-    "convergence_criterion": {"type": float, "low": 0.0},
-    "crystal_axes_rotation": {"type": float},
-    "external_flux_quanta": {"type": float},
+    "physics": {
+        "type": dict,
+        "fields": {
+            "temperature": {"type": float, "low": 0.0},
+            "external_flux_quanta": {"type": float},
+            "penetration_depth": {"type": float},
+            "crystal_axes_rotation": {"type": float},
+            "gauge_solenoid": {"type": bool},
+            "order_parameter": {
+                "type": dict,
+                "fields": {
+                    "dx2-y2": {
+                        "type": dict,
+                        "optional": True,
+                        "fields": {
+                            "critical_temperature": {"type": float, "low": 0.0},
+                            "initial_phase_shift": {"type": float},
+                            "initial_phase_winding": {"type": float},
+                            "initial_random_phase_weight": {"type": float},
+                        },
+                    },
+                    "dxy": {
+                        "type": dict,
+                        "optional": True,
+                        "fields": {
+                            "critical_temperature": {"type": float, "low": 0.0},
+                            "initial_phase_shift": {"type": float},
+                            "initial_phase_winding": {"type": float},
+                            "initial_random_phase_weight": {"type": float},
+                        },
+                    },
+                    "g": {
+                        "type": dict,
+                        "optional": True,
+                        "fields": {
+                            "critical_temperature": {"type": float, "low": 0.0},
+                            "initial_phase_shift": {"type": float},
+                            "initial_phase_winding": {"type": float},
+                            "initial_random_phase_weight": {"type": float},
+                        },
+                    },
+                    "s": {
+                        "type": dict,
+                        "optional": True,
+                        "fields": {
+                            "critical_temperature": {"type": float, "low": 0.0},
+                            "initial_phase_shift": {"type": float},
+                            "initial_phase_winding": {"type": float},
+                            "initial_random_phase_weight": {"type": float},
+                        },
+                    },
+                },
+            },
+        },
+    },
     "geometry": {
         "type": list,
         "sub": {
@@ -169,12 +221,18 @@ runner_checks = {
             },
         },
     },
-    "gauge_solenoid": {"type": bool},
-    "points_per_coherence_length": {"type": float, "low": 0.0},
-    "num_fermi_momenta": {"type": int, "low": 0},
-    "num_iterations_max": {"type": int, "low": 0},
-    "num_iterations_min": {"type": int, "low_include": 0},
-    "energy_cutoff": {"type": float, "low": 0.0},
+    "accuracy": {
+        "type": dict,
+        "fields": {
+            "convergence_criterion": {"type": float, "low": 0.0},
+            "energy_cutoff": {"type": float, "low": 0.0},
+            "num_fermi_momenta": {"type": int, "low": 0},
+            "num_iterations_max": {"type": int, "low": 0},
+            "num_iterations_min": {"type": int, "low_include": 0},
+            "points_per_coherence_length": {"type": float, "low": 0.0},
+            "vector_potential_error": {"type": float, "low_include": 0.0},
+        },
+    },
     "optimizer": {
         "type": dict,
         "fields": {
@@ -188,27 +246,16 @@ runner_checks = {
             "step_size": {"type": float, "low": 0.0},
         },
     },
-    "order_parameter": {
-        "type": list,
-        "sub": {
-            "type": dict,
-            "fields": {
-                "critical_temperature": {"type": float, "low": 0.0},
-                "initial_phase_shift": {"type": float},
-                "initial_phase_winding": {"type": float},
-                "initial_random_phase_weight": {"type": float},
-                "symmetry": {"type": str, "one_of": configuration.valid_symmetries},
-            },
+    "misc": {
+        "type": dict,
+        "fields": {
+            "save_path": {"type": str},
+            "save_frequency": {"type": int},
+            "load_path": {"type": str},
+            "verbose": {"type": bool},
+            "visualize": {"type": bool},
         },
     },
-    "vector_potential_error": {"type": float, "low_include": 0.0},
-    "penetration_depth": {"type": float},
-    "save_path": {"type": str},
-    "save_frequency": {"type": int},
-    "load_path": {"type": str},
-    "temperature": {"type": float, "low": 0.0},
-    "verbose": {"type": bool},
-    "visualize": {"type": bool},
 }
 
 postprocess_checks = {
@@ -347,15 +394,28 @@ def validate_runner_arguments(
         print("-- ERROR! Geometry list empty. Please add some geometry objects!")
         success = False
 
-    # Normalize critical temperature so that the maximum is one.
-    Tc_max = 0
-    for comp in sim_params["order_parameter"]:
-        Tc_max = max(Tc_max, comp["critical_temperature"])
-    for i in range(len(sim_params["order_parameter"])):
-        sim_params["order_parameter"][i]["critical_temperature"] /= Tc_max
+    if len(sim_params["physics"]["order_parameter"]) > 0:
+        # Normalize critical temperature so that the maximum is one.
+        Tc_max = 0
+        for comp in sim_params["physics"]["order_parameter"].values():
+            Tc_max = max(Tc_max, comp["critical_temperature"])
+        if Tc_max > 0:
+            for key in sim_params["physics"]["order_parameter"].keys():
+                sim_params["physics"]["order_parameter"][key][
+                    "critical_temperature"
+                ] /= Tc_max
+        else:
+            print("-- ERROR! The maximum critical temperature must be > 0!")
+            success = False
+    else:
+        print("-- ERROR! Order-parameter list empty. Please add some components!")
+        success = False
 
     # Check that the minimum number of iterations is smaller than the maximum.
-    if not (sim_params["num_iterations_max"] >= sim_params["num_iterations_min"]):
+    if not (
+        sim_params["accuracy"]["num_iterations_max"]
+        >= sim_params["accuracy"]["num_iterations_min"]
+    ):
         print(
             "-- ERROR! 'num_iterations_max' must be larger than 'num_iterations_min'."
         )

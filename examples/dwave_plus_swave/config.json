@@ -1,9 +1,25 @@
 {
-	"convergence_criterion": 1e-05,
-	"crystal_axes_rotation": 0.0,
-	"energy_cutoff": 16.0,
-	"external_flux_quanta": 0.0,
-	"gauge_solenoid": false,
+	"physics": {
+		"temperature": 0.5,
+		"external_flux_quanta": 0.0,
+		"penetration_depth": -1.0,
+		"crystal_axes_rotation": 0.0,
+		"gauge_solenoid": false,
+		"order_parameter": {
+			"dxy": {
+				"critical_temperature": 1.0,
+				"initial_phase_shift": 0.0,
+				"initial_phase_winding": 0.0,
+				"initial_random_phase_weight": 0.0
+			},
+			"s": {
+				"critical_temperature": 0.1,
+				"initial_phase_shift": 0.0,
+				"initial_phase_winding": 0.0,
+				"initial_random_phase_weight": 0.0
+			}
+		}
+	},
 	"geometry": [
 		{
 			"disc": {
@@ -14,9 +30,15 @@
 			}
 		}
 	],
-	"num_fermi_momenta": 32,
-	"num_iterations_max": 1000,
-	"num_iterations_min": 0,
+	"accuracy": {
+		"convergence_criterion": 1e-05,
+		"energy_cutoff": 16.0,
+		"num_fermi_momenta": 32,
+		"num_iterations_max": 1000,
+		"num_iterations_min": 0,
+		"points_per_coherence_length": 8.0,
+		"vector_potential_error": 1e-06
+	},
 	"optimizer": {
 		"adaptive": false,
 		"anderson_always": true,
@@ -27,29 +49,11 @@
 		"replace_oldest": true,
 		"step_size": 1.0
 	},
-	"order_parameter": [
-		{
-			"critical_temperature": 1.0,
-			"initial_phase_shift": 0.0,
-			"initial_phase_winding": 0.0,
-			"initial_random_phase_weight": 0.0,
-			"symmetry": "dxy"
-		},
-		{
-			"critical_temperature": 0.1,
-			"initial_phase_shift": 0.0,
-			"initial_phase_winding": 0.0,
-			"initial_random_phase_weight": 0.0,
-			"symmetry": "s"
-		}
-	],
-	"penetration_depth": -1.0,
-	"points_per_coherence_length": 8.0,
-	"save_path": "data/examples/dwave_plus_swave",
-	"save_frequency": -1,
-	"load_path": "",
-	"temperature": 0.5,
-	"vector_potential_error": 1e-06,
-	"verbose": true,
-	"visualize": true
+	"misc": {
+		"save_path": "data/examples/dwave_plus_swave",
+		"save_frequency": -1,
+		"load_path": "",
+		"verbose": true,
+		"visualize": true
+	}
 }

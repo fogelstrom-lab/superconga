@@ -5,11 +5,13 @@
 ### Improvements
 - **MAJOR** Set energy cutoff instead of the number of energies.
 - **MAJOR** Change units so that the energy scale is `2*pi*kB*Tc`, `xi_0 = hbar*vF/(2*pi*kB*Tc)`, `A_0 = Phi_0/(pi*xi_0)`, `B_0 = Phi_0/(pi*xi^2_0)`, and `j_d = 2*pi*kB*Tc*|e|*v_F*N_F` both internally and externally.
+- **MAJOR** Group related parameters in the `config.json` file, and in `--help` message.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
 - Add option to continue from saved files in `--save-path` folder, and resume from `--load-path`.
 - Change the area of the point DOS in `ldos_plotter.py` to a circle.
+- Add argument in all Python tools for dumping the config parameters to the terminal.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

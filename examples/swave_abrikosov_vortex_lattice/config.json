@@ -1,9 +1,19 @@
 {
-	"convergence_criterion": 1e-05,
-	"crystal_axes_rotation": 0.0,
-	"energy_cutoff": 16.0,
-	"external_flux_quanta": 20.0,
-	"gauge_solenoid": false,
+	"physics": {
+		"temperature": 0.2,
+		"external_flux_quanta": 20.0,
+		"penetration_depth": 10.0,
+		"crystal_axes_rotation": 0.0,
+		"gauge_solenoid": false,
+		"order_parameter": {
+			"s": {
+				"critical_temperature": 1.0,
+				"initial_phase_shift": 0.0,
+				"initial_phase_winding": 0.0,
+				"initial_random_phase_weight": 0.0
+			}
+		}
+	},
 	"geometry": [
 		{
 			"regular_polygon": {
@@ -16,9 +26,15 @@
 			}
 		}
 	],
-	"num_fermi_momenta": 32,
-	"num_iterations_max": 1000,
-	"num_iterations_min": 0,
+	"accuracy": {
+		"convergence_criterion": 1e-05,
+		"energy_cutoff": 16.0,
+		"num_fermi_momenta": 32,
+		"num_iterations_max": 1000,
+		"num_iterations_min": 0,
+		"points_per_coherence_length": 15.0,
+		"vector_potential_error": 1e-06
+	},
 	"optimizer": {
 		"adaptive": true,
 		"anderson_always": true,
@@ -29,22 +45,11 @@
 		"replace_oldest": true,
 		"step_size": 1.0
 	},
-	"order_parameter": [
-		{
-			"critical_temperature": 1.0,
-			"initial_phase_shift": 0.0,
-			"initial_phase_winding": 0.0,
-			"initial_random_phase_weight": 0.0,
-			"symmetry": "s"
-		}
-	],
-	"penetration_depth": 10.0,
-	"points_per_coherence_length": 15.0,
-	"save_path": "data/examples/swave_abrikosov_vortex_lattice",
-	"save_frequency": -1,
-	"load_path": "",
-	"temperature": 0.2,
-	"vector_potential_error": 1e-06,
-	"verbose": true,
-	"visualize": true
+	"misc": {
+		"save_path": "data/examples/swave_abrikosov_vortex_lattice",
+		"save_frequency": -1,
+		"load_path": "",
+		"verbose": true,
+		"visualize": true
+	}
 }
