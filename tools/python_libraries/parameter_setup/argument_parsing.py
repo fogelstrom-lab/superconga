@@ -83,6 +83,13 @@ def add_runner_arguments(parser) -> None:
         help="The floating point precision. The C++ binary 'build/release/bin/suprcongpu_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
+    # Dump config parameters.
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Print parameters and exit.",
+    )
+
     # =============== PHYSICS =============== #
 
     # Symmetry.
@@ -409,6 +416,13 @@ def add_postprocess_arguments(parser) -> None:
         help="The floating point precision. The C++ binary 'build/release/bin/postprocess_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
+    # Dump config parameters.
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Print parameters and exit.",
+    )
+
     # Convergence criterion.
     parser.add_argument(
         "-c",
@@ -548,6 +562,13 @@ def add_plotter_arguments(parser) -> None:
         type=str,
         default=None,
         help="Path to JSON file with parameters specifying the plot settings.",
+    )
+
+    # Dump config parameters.
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Print parameters and exit.",
     )
 
     # Use chiral transformation when plotting a two-component superconductor.
@@ -719,6 +740,13 @@ def add_ldos_plotter_arguments(parser) -> None:
         type=str,
         default=None,
         help="Path to JSON file with parameters specifying the plot settings.",
+    )
+
+    # Dump config parameters.
+    parser.add_argument(
+        "--dump",
+        action="store_true",
+        help="Print parameters and exit.",
     )
 
     # Version number.
@@ -1296,6 +1324,11 @@ def parse_command_line_arguments(
 
     # Change deprecated arguments.
     set_deprecated_arguments(sim_params, frontend)
+
+    # Dump parameters to terminal and exit.
+    if args.dump:
+        print(json.dumps(sim_params, sort_keys=False, indent=4))
+        sys.exit(0)
 
     # Get the relative C++ binary path.
     if frontend in ["runner", "postprocess"]:
