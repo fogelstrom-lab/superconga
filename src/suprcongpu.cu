@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     if (argc < 2) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
       scg::run_utils::cleanup(context, gui);
-      return 1;
+      return EXIT_FAILURE;
     }
     const std::string filename = argv[1];
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "-- ERROR! Could not find/open config file '" << filename
                 << "'." << std::endl;
       scg::run_utils::cleanup(context, gui);
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Parse JSON.
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
     JSONCPP_STRING errs;
     if (!parseFromStream(builder, ifile, &simParams, &errs)) {
       std::cout << errs << std::endl;
-      return 1;
+      return EXIT_FAILURE;
     }
 #ifndef NDEBUG
     std::cout << "-- Configuration parameters:" << std::endl;
@@ -116,35 +116,38 @@ int main(int argc, char *argv[]) {
   scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
 
   // Set temperature.
-  const T temperature = static_cast<T>(simParams["temperature"].asDouble());
+  const T temperature =
+      static_cast<T>(simParams["physics"]["temperature"].asDouble());
   parameters->setTemperature(temperature);
 
   // Set the number of lattice points per coherence length.
-  const T pointsPerCoherenceLength =
-      static_cast<T>(simParams["points_per_coherence_length"].asDouble());
+  const T pointsPerCoherenceLength = static_cast<T>(
+      simParams["accuracy"]["points_per_coherence_length"].asDouble());
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set energy cutoff.
-  const T energyCutoff = static_cast<T>(simParams["energy_cutoff"].asDouble());
+  const T energyCutoff =
+      static_cast<T>(simParams["accuracy"]["energy_cutoff"].asDouble());
   parameters->setEnergyCutoff(energyCutoff);
 
   // Number of discrete steps in momentum angle.
-  const int numFermiMomenta = simParams["num_fermi_momenta"].asInt();
+  const int numFermiMomenta =
+      simParams["accuracy"]["num_fermi_momenta"].asInt();
   parameters->setAngularResolution(numFermiMomenta);
 
   // Set convergence criterion.
   const T convergenceCriterion =
-      static_cast<T>(simParams["convergence_criterion"].asDouble());
+      static_cast<T>(simParams["accuracy"]["convergence_criterion"].asDouble());
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
   const T penetrationDepth =
-      static_cast<T>(simParams["penetration_depth"].asDouble());
+      static_cast<T>(simParams["physics"]["penetration_depth"].asDouble());
   parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
   const T externalFluxQuanta =
-      static_cast<T>(simParams["external_flux_quanta"].asDouble());
+      static_cast<T>(simParams["physics"]["external_flux_quanta"].asDouble());
   parameters->setNumFluxQuanta(externalFluxQuanta);
 
   //***************************************************
@@ -181,71 +184,87 @@ int main(int argc, char *argv[]) {
   // d+is).
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
+  // Get the global crystal-axes rotation.
   const T crystalAxesRotation = static_cast<T>(
-      2.0 * M_PI * simParams["crystal_axes_rotation"].asDouble());
+      2.0 * M_PI * simParams["physics"]["crystal_axes_rotation"].asDouble());
 
-  const Json::Value opCompParamsVec = simParams["order_parameter"];
+  // For convenience.
+  const Json::Value opParams = simParams["physics"]["order_parameter"];
 
-  for (int i = 0; i < opCompParamsVec.size(); ++i) {
-    const Json::Value opCompParams = opCompParamsVec[i];
+  // An array of all supported symmetries.
+  // TODO(niclas): Move to OrderParameterBasis.h?
+  const std::vector<std::string> symmetries = {"dx2-y2", "dxy", "g", "s"};
 
-    // Add a d-wave or an s-wave order-parameter component.
-    const std::string symmetryStr = opCompParams["symmetry"].asString();
+  // Loop over symmetries and add them if present.
+  bool orderParameterSuccess = false;
+  for (const std::string &symmetryStr : symmetries) {
+    if (opParams.isMember(symmetryStr)) {
+      // There is at least one component specified.
+      orderParameterSuccess = true;
 
-    // TODO(niclas): Move this to OrderParameterBasis.h?
-    scg::BasisFunctionSymmetry symmetry;
-    if (symmetryStr == "s") {
-      symmetry = scg::BasisFunctionSymmetry::SWAVE;
-    } else if (symmetryStr == "dx2-y2") {
-      symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-    } else if (symmetryStr == "dxy") {
-      symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
-    } else if (symmetryStr == "g") {
-      symmetry = scg::BasisFunctionSymmetry::GWAVE;
-    } else {
-      std::cerr << "-- Order parameter symmetry '" << symmetryStr
-                << "' not understood." << std::endl;
-      scg::run_utils::cleanup(context, gui);
-      return 1;
+      // TODO(niclas): Move to OrderParameterBasis.h?
+      scg::BasisFunctionSymmetry symmetry;
+      if (symmetryStr == "dx2-y2") {
+        symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+      } else if (symmetryStr == "dxy") {
+        symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+      } else if (symmetryStr == "g") {
+        symmetry = scg::BasisFunctionSymmetry::GWAVE;
+      } else {
+        symmetry = scg::BasisFunctionSymmetry::SWAVE;
+      }
+
+      // For convenience.
+      const Json::Value opCompParams = opParams[symmetryStr];
+
+      // Create component.
+      const T criticalTemperature =
+          static_cast<T>(opCompParams["critical_temperature"].asDouble());
+      scg::OrderParameterComponent<T> *orderParameterComponent =
+          new scg::OrderParameterComponent<T>(symmetry, parameters,
+                                              criticalTemperature);
+
+      // Set rotation of crystal axes with respect to the grain geometry.
+      // TODO(niclas): Move to Parameters.h?
+      orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
+
+      // Get initial phase parameters.
+      const T phaseWinding =
+          static_cast<T>(opCompParams["initial_phase_winding"].asDouble());
+      const T randomPhaseWeight = static_cast<T>(
+          opCompParams["initial_random_phase_weight"].asDouble());
+      const T phaseShift = static_cast<T>(
+          2.0 * M_PI * opCompParams["initial_phase_shift"].asDouble());
+
+      // Check if we should initialize to bulk.
+      const T eps = std::numeric_limits<T>::epsilon();
+      const bool useBulk = (std::abs(phaseWinding) < eps) &&
+                           (std::abs(randomPhaseWeight) < eps) &&
+                           (std::abs(phaseShift) < eps);
+
+      // Initialize order parameter with a guess.
+      if (useBulk) {
+        scg::Initial<T>::bulk(orderParameterComponent);
+      } else {
+        scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
+                                               phaseWinding, randomPhaseWeight,
+                                               phaseShift);
+      }
+
+      // Add the initialized component to the total order parameter.
+      orderParameter->add(orderParameterComponent);
     }
+  }
 
-    const T criticalTemperature =
-        static_cast<T>(opCompParams["critical_temperature"].asDouble());
-    scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(symmetry, parameters,
-                                            criticalTemperature);
-
-    // Set rotation of crystal axes with respect to the grain geometry.
-    orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
-
-    // Get initial phase parameters.
-    const T phaseWinding =
-        static_cast<T>(opCompParams["initial_phase_winding"].asDouble());
-    const T randomPhaseWeight =
-        static_cast<T>(opCompParams["initial_random_phase_weight"].asDouble());
-    const T phaseShift = static_cast<T>(
-        2.0 * M_PI * opCompParams["initial_phase_shift"].asDouble());
-
-    // Check if we should initialize to bulk.
-    const T eps = std::numeric_limits<T>::epsilon();
-    const bool useBulk = (std::abs(phaseWinding) < eps) &&
-                         (std::abs(randomPhaseWeight) < eps) &&
-                         (std::abs(phaseShift) < eps);
-
-    // Initialize order parameter with a guess.
-    if (useBulk) {
-      scg::Initial<T>::bulk(orderParameterComponent);
-    } else {
-      scg::Initial<T>::perturbedPhaseWinding(
-          orderParameterComponent, phaseWinding, randomPhaseWeight, phaseShift);
-    }
-
-    // Add the initialized component to the total order parameter.
-    orderParameter->add(orderParameterComponent);
+  if (!orderParameterSuccess) {
+    std::cerr << "-- ERROR! No order-parameter component set." << std::endl;
+    scg::run_utils::cleanup(context, gui);
+    return EXIT_FAILURE;
   }
 
   // Path to directory containing data to load from.
-  const std::filesystem::path loadDataPath(simParams["load_path"].asString());
+  const std::filesystem::path loadDataPath(
+      simParams["misc"]["load_path"].asString());
 
   // Read the order parameter from file, if the path is not empty.
   // TODO(niclas): This is a bit ugly perhaps. If the file contains data for a
@@ -260,7 +279,7 @@ int main(int argc, char *argv[]) {
     // Abort if not successful.
     if (!success) {
       scg::run_utils::cleanup(context, gui);
-      return 1;
+      return EXIT_FAILURE;
     }
   }
 
@@ -269,7 +288,8 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Read the vector potential from file, if the path is not empty.
   if (!loadDataPath.empty()) {
-    const std::string vectorPotentialFile = loadDataPath / "vector_potential.csv";
+    const std::string vectorPotentialFile =
+        loadDataPath / "vector_potential.csv";
 
     // Create the placeholder grid.
     const int gridResolution = parameters->getGridResolutionBase();
@@ -324,8 +344,8 @@ int main(int argc, char *argv[]) {
 
   // Add vector-potential compute object.
   if (penetrationDepth > static_cast<T>(0)) {
-    const T maxError =
-        static_cast<T>(simParams["vector_potential_error"].asDouble());
+    const T maxError = static_cast<T>(
+        simParams["accuracy"]["vector_potential_error"].asDouble());
     auto computeVectorPotential =
         std::make_unique<scg::ComputeVectorPotential<T>>(maxError);
     context->add(std::move(computeVectorPotential));
@@ -340,7 +360,7 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gauge.
-  const bool solenoidGuage = simParams["gauge_solenoid"].asBool();
+  const bool solenoidGuage = simParams["physics"]["gauge_solenoid"].asBool();
   if (solenoidGuage) {
     riccatiSolver =
         new scg::RiccatiSolverConfined<T, scg::VectorPotential::Solenoid>(
@@ -362,7 +382,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // SET UP OPENGL VISUALIZATION
   //***********************************************
-  const bool visualize = simParams["visualize"].asBool();
+  const bool visualize = simParams["misc"]["visualize"].asBool();
   if (visualize) {
     gui = scg::run_utils::createVisualization(context);
     scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
@@ -374,17 +394,18 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // CREATE DIRECTORIES AND SAVE PARAMETERS
   //***********************************************
-  const std::filesystem::path saveDataPath(simParams["save_path"].asString());
+  const std::filesystem::path saveDataPath(
+      simParams["misc"]["save_path"].asString());
 
   // Set the save frequency. If the argument is negative we only save the grid
   // data at the very end.
-  const int saveFrequencyArg = simParams["save_frequency"].asInt();
+  const int saveFrequencyArg = simParams["misc"]["save_frequency"].asInt();
   const int saveFrequency = (saveFrequencyArg < 0)
                                 ? std::numeric_limits<int>::max()
                                 : saveFrequencyArg;
 
   const bool saveData = !saveDataPath.empty() && (saveFrequency > 0);
-  const bool verbose = simParams["verbose"].asBool();
+  const bool verbose = simParams["misc"]["verbose"].asBool();
   if (saveData) {
     // Create directories.
     std::filesystem::create_directories(saveDataPath);
@@ -416,9 +437,9 @@ int main(int argc, char *argv[]) {
   //***********************************************
   const scg::Type::fileFormat dataFormat = scg::Type::csv;
   scg::run_utils::runSimulation(
-      context, verbose, simParams["num_iterations_min"].asInt(),
-      simParams["num_iterations_max"].asInt(), visualize, saveDataPath,
-      saveData, saveFrequency, dataFormat);
+      context, verbose, simParams["accuracy"]["num_iterations_min"].asInt(),
+      simParams["accuracy"]["num_iterations_max"].asInt(), visualize,
+      saveDataPath, saveData, saveFrequency, dataFormat);
 
   //***********************************************
   // SAVE RESULTS
@@ -430,7 +451,7 @@ int main(int argc, char *argv[]) {
 
   // Cleanup dynamically allocated memory.
   scg::run_utils::cleanup(context, gui);
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 // Plot data in OpenGL GUI.

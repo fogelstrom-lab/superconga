@@ -83,6 +83,11 @@ def add_runner_arguments(parser) -> None:
         help="The floating point precision. The C++ binary 'build/release/bin/suprcongpu_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
+    # Version number.
+    parser.add_argument(
+        "-V", "--version", action="version", version="%(prog)s " + __version__
+    )
+
     # Dump config parameters.
     parser.add_argument(
         "--dump",
@@ -91,20 +96,121 @@ def add_runner_arguments(parser) -> None:
     )
 
     # =============== PHYSICS =============== #
+    physics = parser.add_argument_group("Physics")
 
-    # Symmetry.
-    parser.add_argument(
-        "-H",
-        "--op-sym",
-        type=str,
+    # Temperature.
+    physics.add_argument(
+        "-T",
+        "--temperature",
+        type=float,
         default=None,
-        choices=configuration.valid_symmetries,
-        nargs="+",
-        help="Order parameter pairing symmetry. Multiple values can be passed, one for each order parameter component.",
+        help="Temperature in units of the critical temperature T_c.",
     )
 
+    # External flux quanta.
+    physics.add_argument(
+        "-B",
+        "--external-flux-quanta",
+        type=float,
+        default=None,
+        help="External magnetic field, perpendicular to sample, in units of flux quanta. For non-solenoid field, it is distributed uniformly over the sample.",
+    )
+
+    # Penetration depth.
+    physics.add_argument(
+        "-k",
+        "--penetration-depth",
+        type=float,
+        default=None,
+        help="The London penetration depth, expressed in coherence lengths (i.e. the Ginzburg-Landau coefficient). If the value is less than zero, the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
+    )
+
+    # Crystal axes rotation.
+    physics.add_argument(
+        "-r",
+        "--crystal-axes-rotation",
+        type=float,
+        default=None,
+        help="Rotation between grain and crystal ab-axes, in units of 2pi.",
+    )
+
+    # Gauge.
+    gauge = physics.add_mutually_exclusive_group()
+    gauge.add_argument(
+        "--gauge-radial",
+        action="store_true",
+        help="Use the radial gauge, A = 0.5 * B * (-y, x).",
+    )
+    gauge.add_argument(
+        "--gauge-solenoid",
+        action="store_true",
+        help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
+    )
+
+    # =============== ORDER PARAMETER =============== #
+
+    # D_{x^2-y^2}-wave.
+    dx2_y2_wave = physics.add_mutually_exclusive_group()
+    dx2_y2_wave.add_argument(
+        "--no-dx2-y2-wave",
+        action="store_true",
+        help="No D_(x^2-y^2)-wave order-parameter component.",
+    )
+    dx2_y2_wave.add_argument(
+        "--dx2-y2-wave",
+        type=float,
+        default=None,
+        nargs=4,
+        help="D_(x^2-y^2)-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+    )
+
+    # D_{xy}-wave.
+    dxy_wave = physics.add_mutually_exclusive_group()
+    dxy_wave.add_argument(
+        "--no-dxy-wave",
+        action="store_true",
+        help="No D_(xy)-wave order-parameter component.",
+    )
+    dxy_wave.add_argument(
+        "--dxy-wave",
+        type=float,
+        default=None,
+        nargs=4,
+        help="D_(xy)-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+    )
+
+    # G-wave.
+    g_wave = physics.add_mutually_exclusive_group()
+    g_wave.add_argument(
+        "--no-g-wave",
+        action="store_true",
+        help="No G-wave order-parameter component.",
+    )
+    g_wave.add_argument(
+        "--g-wave",
+        type=float,
+        default=None,
+        nargs=4,
+        help="G-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+    )
+
+    # S-wave.
+    s_wave = physics.add_mutually_exclusive_group()
+    s_wave.add_argument(
+        "--no-s-wave",
+        action="store_true",
+        help="No S-wave order-parameter component.",
+    )
+    s_wave.add_argument(
+        "--s-wave",
+        type=float,
+        default=None,
+        nargs=4,
+        help="S-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+    )
+    """
     # Relative Tc.
-    parser.add_argument(
+    physics.add_argument(
         "-C",
         "--op-tc",
         type=float,
@@ -114,7 +220,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Phase shift.
-    parser.add_argument(
+    physics.add_argument(
         "-J",
         "--op-init-phase-shift",
         type=float,
@@ -124,7 +230,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Num phase windings.
-    parser.add_argument(
+    physics.add_argument(
         "-W",
         "--op-init-phase-winding",
         type=float,
@@ -134,7 +240,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Random phase weight.
-    parser.add_argument(
+    physics.add_argument(
         "-R",
         "--op-init-rand-phase-weight",
         type=float,
@@ -142,72 +248,89 @@ def add_runner_arguments(parser) -> None:
         nargs="+",
         help="The weight of the random phase of the initial order parameter guess. Multiple values can be passed, one for each order parameter component.",
     )
-
-    # Temperature.
-    parser.add_argument(
-        "-T",
-        "--temperature",
-        type=float,
-        default=None,
-        help="Temperature in units of the critical temperature T_c.",
-    )
-
-    # External flux quanta.
-    parser.add_argument(
-        "-B",
-        "--external-flux-quanta",
-        type=float,
-        default=None,
-        help="External magnetic field, perpendicular to sample, in units of flux quanta. For non-solenoid field, it is distributed uniformly over the sample.",
-    )
-
-    # Gauge.
-    group_guage = parser.add_mutually_exclusive_group()
-    group_guage.add_argument(
-        "--gauge-radial",
-        action="store_true",
-        help="Use the radial gauge, A = 0.5 * B * (-y, x).",
-    )
-    group_guage.add_argument(
-        "--gauge-solenoid",
-        action="store_true",
-        help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
-    )
-
-    # Penetration depth.
-    parser.add_argument(
-        "-k",
-        "--penetration-depth",
-        type=float,
-        default=None,
-        help="The London penetration depth, expressed in coherence lengths (i.e. the Ginzburg-Landau coefficient). If the value is less than zero, the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
-    )
-
-    # Crystal axes rotation.
-    parser.add_argument(
-        "-r",
-        "--crystal-axes-rotation",
-        type=float,
-        default=None,
-        help="Rotation between grain and crystal ab-axes, in units of 2pi.",
-    )
+    """
 
     # =============== ACCURACY =============== #
+    accuracy = parser.add_argument_group("Accuracy")
 
-    # Optimizer.
-    parser.add_argument(
+    # Convergence criterion.
+    accuracy.add_argument(
+        "-c",
+        "--convergence-criterion",
+        type=float,
+        default=None,
+        help="Convergence criterion for self-consistency.",
+    )
+
+    # Num Ozaki energies.
+    accuracy.add_argument(
+        "-e",
+        "--energy-cutoff",
+        type=float,
+        default=None,
+        help="The energy cutoff (in units of 2*pi*kB*Tc).",
+    )
+
+    # Num Fermi momenta.
+    accuracy.add_argument(
+        "-p",
+        "--num-fermi-momenta",
+        type=int,
+        default=None,
+        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 100.",
+    )
+
+    # Num iterations max.
+    accuracy.add_argument(
+        "-M",
+        "--num-iterations-max",
+        type=int,
+        default=None,
+        help="Maximum number of self-consistent iterations to run.",
+    )
+
+    # Num iterations min.
+    accuracy.add_argument(
+        "-m",
+        "--num-iterations-min",
+        type=int,
+        default=None,
+        help="Minimum number of self-consistent iterations to run.",
+    )
+
+    # Lattice side length.
+    accuracy.add_argument(
+        "-N",
+        "--points-per-coherence-length",
+        type=float,
+        default=None,
+        help="Number of lattice points per coherence length. Recommended value 10 (or larger).",
+    )
+
+    # Green's function accuracy.
+    accuracy.add_argument(
+        "--vp-error",
+        type=float,
+        default=None,
+        help="The maximum error (relative Frobenious norm) of the Green's function used when computing the induced vector-potential.",
+    )
+
+    # =============== OPTIMIZER =============== #
+    optimizer = parser.add_argument_group("Optimizer")
+
+    optimizer.add_argument(
         "--opt-step-size",
         type=float,
         default=None,
         help="The step size in the optimizer.",
     )
-    parser.add_argument(
+    optimizer.add_argument(
         "--opt-inertia",
         type=float,
         default=None,
         help="The inertia of the optimizer.",
     )
-    group_optimiser_adaptive = parser.add_mutually_exclusive_group()
+    group_optimiser_adaptive = optimizer.add_mutually_exclusive_group()
     group_optimiser_adaptive.add_argument(
         "--opt-adaptive",
         action="store_true",
@@ -218,25 +341,25 @@ def add_runner_arguments(parser) -> None:
         action="store_true",
         help="Do not change the step size and inertia adaptively each iteration.",
     )
-    parser.add_argument(
+    optimizer.add_argument(
         "--opt-rank",
         type=int,
         default=None,
         help="The maximal rank of the system of equations in the Anderson step, i.e. the maximum number of stored steps.",
     )
-    parser.add_argument(
+    optimizer.add_argument(
         "--opt-min-mixing",
         type=float,
         default=None,
         help="The minimal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
     )
-    parser.add_argument(
+    optimizer.add_argument(
         "--opt-max-mixing",
         type=float,
         default=None,
         help="The maximal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
     )
-    group_optimiser_replace = parser.add_mutually_exclusive_group()
+    group_optimiser_replace = optimizer.add_mutually_exclusive_group()
     group_optimiser_replace.add_argument(
         "--opt-replace-worst",
         action="store_true",
@@ -247,7 +370,7 @@ def add_runner_arguments(parser) -> None:
         action="store_true",
         help="Replace the oldest stored step in the optimizer, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
     )
-    group_optimiser_anderson = parser.add_mutually_exclusive_group()
+    group_optimiser_anderson = optimizer.add_mutually_exclusive_group()
     group_optimiser_anderson.add_argument(
         "--opt-anderson-always",
         action="store_true",
@@ -259,77 +382,11 @@ def add_runner_arguments(parser) -> None:
         help="Take Anderson steps only when the storage is full. Only applicable if rank > 1.",
     )
 
-    # Convergence criterion.
-    parser.add_argument(
-        "-c",
-        "--convergence-criterion",
-        type=float,
-        default=None,
-        help="Convergence criterion for self-consistency.",
-    )
-
-    # Lattice side length.
-    parser.add_argument(
-        "-N",
-        "--points-per-coherence-length",
-        type=float,
-        default=None,
-        help="Number of lattice points per coherence length. Recommended value 10 (or larger).",
-    )
-
-    # Num Fermi momenta.
-    parser.add_argument(
-        "-p",
-        "--num-fermi-momenta",
-        type=int,
-        default=None,
-        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 100.",
-    )
-
-    # Num iterations max.
-    parser.add_argument(
-        "-M",
-        "--num-iterations-max",
-        type=int,
-        default=None,
-        help="Maximum number of self-consistent iterations to run.",
-    )
-
-    # Num iterations min.
-    parser.add_argument(
-        "-m",
-        "--num-iterations-min",
-        type=int,
-        default=None,
-        help="Minimum number of self-consistent iterations to run.",
-    )
-
-    # Num Ozaki energies.
-    parser.add_argument(
-        "-e",
-        "--energy-cutoff",
-        type=float,
-        default=None,
-        help="The energy cutoff (in units of 2*pi*kB*Tc).",
-    )
-
-    # Green's function accuracy.
-    parser.add_argument(
-        "--vp-error",
-        type=float,
-        default=None,
-        help="The maximum error (relative Frobenious norm) of the Green's function used when computing the induced vector-potential.",
-    )
-
     # =============== MISC =============== #
-
-    # Version number.
-    parser.add_argument(
-        "-V", "--version", action="version", version="%(prog)s " + __version__
-    )
+    misc = parser.add_argument_group("Misc")
 
     # Verbose.
-    group_verbose = parser.add_mutually_exclusive_group()
+    group_verbose = misc.add_mutually_exclusive_group()
     group_verbose.add_argument(
         "-v",
         "--verbose",
@@ -344,14 +401,14 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Save data.
-    parser.add_argument(
+    misc.add_argument(
         "-S",
         "--save-path",
         type=str,
         default=None,
         help="Directory where the data will be saved. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
     )
-    parser.add_argument(
+    misc.add_argument(
         "-F",
         "--save-frequency",
         type=int,
@@ -360,7 +417,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Load data.
-    group_load = parser.add_mutually_exclusive_group()
+    group_load = misc.add_mutually_exclusive_group()
     group_load.add_argument(
         "-L",
         "--load-path",
@@ -376,7 +433,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Visualize.
-    group_visualize = parser.add_mutually_exclusive_group()
+    group_visualize = misc.add_mutually_exclusive_group()
     group_visualize.add_argument(
         "--visualize", action="store_true", help="Run with real-time plotting."
     )
@@ -836,20 +893,92 @@ def set_runner_arguments_from_cli(
     sim_params,
     args,
 ) -> None:
-    # Override values from the command line.
-    set_value(sim_params, "convergence_criterion", args.convergence_criterion)
-    set_value(sim_params, "crystal_axes_rotation", args.crystal_axes_rotation)
-    set_value(sim_params, "external_flux_quanta", args.external_flux_quanta)
-
-    set_flag(sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial)
-    set_value(
-        sim_params, "points_per_coherence_length", args.points_per_coherence_length
+    # ================== PHYSICS ================== #
+    group = "physics"
+    set_value(sim_params, "temperature", args.temperature, group)
+    set_value(sim_params, "external_flux_quanta", args.external_flux_quanta, group)
+    set_value(sim_params, "penetration_depth", args.penetration_depth, group)
+    set_value(sim_params, "crystal_axes_rotation", args.crystal_axes_rotation, group)
+    set_flag(
+        sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial, group
     )
-    set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
-    set_value(sim_params, "num_iterations_max", args.num_iterations_max)
-    set_value(sim_params, "num_iterations_min", args.num_iterations_min)
-    set_value(sim_params, "energy_cutoff", args.energy_cutoff)
 
+    # ================== PHYSICS: ORDER PARAMETER ================== #
+    component = "dx2-y2"
+    if args.no_dx2_y2_wave and (
+        component in sim_params["physics"]["order_parameter"].keys()
+    ):
+        del sim_params["physics"]["order_parameter"][component]
+    elif args.dx2_y2_wave is not None:
+        Tc, phase_shift, phase_winding, random_phase = args.dx2_y2_wave
+        sim_params["physics"]["order_parameter"][component] = {
+            "critical_temperature": Tc,
+            "initial_phase_shift": phase_shift,
+            "initial_phase_winding": phase_winding,
+            "initial_random_phase_weight": random_phase,
+        }
+
+    component = "dxy"
+    if args.no_dxy_wave and (
+        component in sim_params["physics"]["order_parameter"].keys()
+    ):
+        del sim_params["physics"]["order_parameter"][component]
+    elif args.dxy_wave is not None:
+        Tc, phase_shift, phase_winding, random_phase = args.dxy_wave
+        sim_params["physics"]["order_parameter"][component] = {
+            "critical_temperature": Tc,
+            "initial_phase_shift": phase_shift,
+            "initial_phase_winding": phase_winding,
+            "initial_random_phase_weight": random_phase,
+        }
+
+    component = "g"
+    if args.no_g_wave and (
+        component in sim_params["physics"]["order_parameter"].keys()
+    ):
+        del sim_params["physics"]["order_parameter"][component]
+    elif args.g_wave:
+        Tc, phase_shift, phase_winding, random_phase = args.g_wave
+        sim_params["physics"]["order_parameter"][component] = {
+            "critical_temperature": Tc,
+            "initial_phase_shift": phase_shift,
+            "initial_phase_winding": phase_winding,
+            "initial_random_phase_weight": random_phase,
+        }
+
+    component = "s"
+    if args.no_s_wave and (
+        component in sim_params["physics"]["order_parameter"].keys()
+    ):
+        del sim_params["physics"]["order_parameter"][component]
+    elif args.s_wave:
+        Tc, phase_shift, phase_winding, random_phase = args.s_wave
+        sim_params["physics"]["order_parameter"][component] = {
+            "critical_temperature": Tc,
+            "initial_phase_shift": phase_shift,
+            "initial_phase_winding": phase_winding,
+            "initial_random_phase_weight": random_phase,
+        }
+
+    # ================== GEOMETRY ================== #
+    # TODO(niclas): Add geometry CLI support.
+
+    # ================== ACCURACY ================== #
+    group = "accuracy"
+    set_value(sim_params, "convergence_criterion", args.convergence_criterion, group)
+    set_value(sim_params, "energy_cutoff", args.energy_cutoff, group)
+    set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta, group)
+    set_value(sim_params, "num_iterations_max", args.num_iterations_max, group)
+    set_value(sim_params, "num_iterations_min", args.num_iterations_min, group)
+    set_value(
+        sim_params,
+        "points_per_coherence_length",
+        args.points_per_coherence_length,
+        group,
+    )
+    set_value(sim_params, "vector_potential_error", args.vp_error, group)
+
+    # ================== OPTIMIZER ================== #
     group = "optimizer"
     set_value(sim_params, "step_size", args.opt_step_size, group)
     set_value(sim_params, "inertia", args.opt_inertia, group)
@@ -878,31 +1007,17 @@ def set_runner_arguments_from_cli(
         group,
     )
 
-    group = "order_parameter"
-    set_value(sim_params, "critical_temperature", args.op_tc, group)
-    set_value(sim_params, "initial_phase_shift", args.op_init_phase_shift, group)
-    set_value(sim_params, "initial_phase_winding", args.op_init_phase_winding, group)
-    set_value(
-        sim_params,
-        "initial_random_phase_weight",
-        args.op_init_rand_phase_weight,
-        group,
-    )
-    set_value(sim_params, "symmetry", args.op_sym, group)
-    set_value(sim_params, "penetration_depth", args.penetration_depth)
-    set_value(sim_params, "vector_potential_error", args.vp_error)
-
-    set_value(sim_params, "temperature", args.temperature)
-    set_flag(sim_params, "verbose", args.verbose, args.quiet)
-    set_flag(sim_params, "visualize", args.visualize, args.no_visualize)
-
-    set_value(sim_params, "save_frequency", args.save_frequency)
-    set_value(sim_params, "save_path", args.save_path)
+    # ================== MISC ================== #
+    group = "misc"
+    set_value(sim_params, "save_path", args.save_path, group)
+    set_value(sim_params, "save_frequency", args.save_frequency, group)
     if args.do_continue:
-        load_path = sim_params["save_path"]
+        load_path = sim_params["misc"]["save_path"]
     else:
         load_path = args.load_path
-    set_value(sim_params, "load_path", load_path)
+    set_value(sim_params, "load_path", load_path, group)
+    set_flag(sim_params, "verbose", args.verbose, args.quiet, group)
+    set_flag(sim_params, "visualize", args.visualize, args.no_visualize, group)
 
 
 # Postprocess: Override json dictionary with command-line input.
