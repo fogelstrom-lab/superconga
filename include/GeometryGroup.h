@@ -25,7 +25,7 @@ namespace scg {
 template <typename T> class GeometryGroup : public ContextModule<T> {
 public:
   GeometryGroup();
-  virtual ~GeometryGroup();
+  ~GeometryGroup();
 
   GeometryGroup(const GeometryGroup<T> &other);
   GeometryGroup(Context<T> *ctx);
@@ -34,7 +34,7 @@ public:
 
 public:
   // Allocates memory for member variables (grids)
-  virtual int initialize();
+  int initialize() override;
 
   // Add/set geometry component to contribute to resulting compounded geometry
   int add(GeometryComponent<T> *newComponent, Type::type operation);
