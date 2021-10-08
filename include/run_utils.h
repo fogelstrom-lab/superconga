@@ -781,6 +781,8 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
     // Plot the order parameter.
     const int numOrderParameterComponents =
         inContext->getOrderParameter()->getNumOrderParameterComponents();
+    const std::vector<std::string> orderParameterTypes =
+        inContext->getOrderParameter()->getTypes();
     for (; colIdx < numOrderParameterComponents; ++colIdx) {
       // Get the order parameter component.
       const GridGPU<T> component =
@@ -788,9 +790,9 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
               colIdx));
 
       // Plot the order parameter.
-      inGUI->label("|Delta_" + std::to_string(colIdx + 1) + "|/(2*pi*k_B*T_c)",
-                   colIdx, inGUI->getNumImagesY() - 1);
-      inGUI->label("Chi_" + std::to_string(colIdx + 1), colIdx,
+      inGUI->label("|Delta_(" + orderParameterTypes[colIdx] + ")|/E_0", colIdx,
+                   inGUI->getNumImagesY() - 1);
+      inGUI->label("Chi_(" + orderParameterTypes[colIdx] + ")", colIdx,
                    inGUI->getNumImagesY() - 2);
       inGUI->plotImage(component, colIdx);
     }
