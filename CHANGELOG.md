@@ -12,6 +12,7 @@
 - Add option to continue from saved files in `--save-path` folder, and resume from `--load-path`.
 - Change the area of the point DOS in `ldos_plotter.py` to a circle.
 - Add argument in all Python tools for dumping the config parameters to the terminal.
+- Expose discs and regular polygons in the CLI.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

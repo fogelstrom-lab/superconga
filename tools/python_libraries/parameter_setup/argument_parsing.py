@@ -96,7 +96,10 @@ def add_runner_arguments(parser) -> None:
     )
 
     # =============== PHYSICS =============== #
-    physics = parser.add_argument_group("Physics")
+    physics = parser.add_argument_group(
+        title="Physics",
+        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and initial random phase weight. The critical temperatures will be scaled so that the maximum is Tc=1",
+    )
 
     # Temperature.
     physics.add_argument(
@@ -158,10 +161,16 @@ def add_runner_arguments(parser) -> None:
     )
     dx2_y2_wave.add_argument(
         "--dx2-y2-wave",
+        metavar=(
+            "critical_temperature",
+            "initial_phase_shift",
+            "initial_phase_winding",
+            "initial_random_phase_weight",
+        ),
         type=float,
         default=None,
         nargs=4,
-        help="D_(x^2-y^2)-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+        help="D_(x^2-y^2)-wave order-parameter component.",
     )
 
     # D_{xy}-wave.
@@ -173,10 +182,16 @@ def add_runner_arguments(parser) -> None:
     )
     dxy_wave.add_argument(
         "--dxy-wave",
+        metavar=(
+            "critical_temperature",
+            "initial_phase_shift",
+            "initial_phase_winding",
+            "initial_random_phase_weight",
+        ),
         type=float,
         default=None,
         nargs=4,
-        help="D_(xy)-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+        help="D_(xy)-wave order-parameter component.",
     )
 
     # G-wave.
@@ -188,10 +203,16 @@ def add_runner_arguments(parser) -> None:
     )
     g_wave.add_argument(
         "--g-wave",
+        metavar=(
+            "critical_temperature",
+            "initial_phase_shift",
+            "initial_phase_winding",
+            "initial_random_phase_weight",
+        ),
         type=float,
         default=None,
         nargs=4,
-        help="G-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
+        help="G-wave order-parameter component.",
     )
 
     # S-wave.
@@ -203,55 +224,77 @@ def add_runner_arguments(parser) -> None:
     )
     s_wave.add_argument(
         "--s-wave",
+        metavar=(
+            "critical_temperature",
+            "initial_phase_shift",
+            "initial_phase_winding",
+            "initial_random_phase_weight",
+        ),
         type=float,
         default=None,
         nargs=4,
-        help="S-wave order-parameter component. The arguments are relative Tc, initial phase shift, initial phase winding, and initial random phase weight.",
-    )
-    """
-    # Relative Tc.
-    physics.add_argument(
-        "-C",
-        "--op-tc",
-        type=float,
-        default=None,
-        nargs="+",
-        help="Order parameter critical temperature. Multiple values can be passed, one for each order parameter component. Note that all values will be scaled so that the maximum is 1.",
+        help="S-wave order-parameter component.",
     )
 
-    # Phase shift.
-    physics.add_argument(
-        "-J",
-        "--op-init-phase-shift",
-        type=float,
-        default=None,
-        nargs="+",
-        help="The phase shift of the initial order parameter guess, in units of 2pi. Multiple values can be passed, one for each order parameter component.",
+    # =============== GEOMETRY =============== #
+    geometry = parser.add_argument_group(
+        title="Geometry",
+        description="Note that when specifying the geometry via the CLI all components set here will be added before any are removed. If the desired geometry depends on the order of the components, use the config file instead. Furthermore, general polygons, with arbitrary vertex coordinates, is only supported in the config file.",
     )
 
-    # Num phase windings.
-    physics.add_argument(
-        "-W",
-        "--op-init-phase-winding",
-        type=float,
-        default=None,
-        nargs="+",
-        help="The phase winding of the initial order parameter guess, in units of 2pi. Multiple values can be passed, one for each order parameter component.",
+    # Ignore geometry in config file.
+    geometry.add_argument(
+        "--geometry-clear",
+        action="store_true",
+        help="Ignore the geometry specified in the config file.",
     )
 
-    # Random phase weight.
-    physics.add_argument(
-        "-R",
-        "--op-init-rand-phase-weight",
+    # Add disc.
+    geometry.add_argument(
+        "--add-disc",
+        metavar=("diameter", "center_x", "center_y"),
         type=float,
+        action="append",
+        nargs=3,
         default=None,
-        nargs="+",
-        help="The weight of the random phase of the initial order parameter guess. Multiple values can be passed, one for each order parameter component.",
+        help="Add disc to geometry. The arguments are diameter, center x, and center y.",
     )
-    """
+
+    # Remove disc.
+    geometry.add_argument(
+        "--remove-disc",
+        metavar=("diameter", "center_x", "center_y"),
+        type=float,
+        action="append",
+        nargs=3,
+        default=None,
+        help="Remove disc from geometry. The arguments are diameter, center x, and center y.",
+    )
+
+    # Add regular polygon.
+    geometry.add_argument(
+        "--add-regular-polygon",
+        metavar=("side_length", "center_x", "center_y", "num_edges", "rotation"),
+        type=float,
+        action="append",
+        nargs=5,
+        default=None,
+        help="Add regular polygon to geometry. The arguments are side length, center x, center y, the number of edges, and the rotation (in units of 2pi).",
+    )
+
+    # Remove regular polygon.
+    geometry.add_argument(
+        "--remove-regular-polygon",
+        metavar=("side_length", "center_x", "center_y", "num_edges", "rotation"),
+        type=float,
+        action="append",
+        nargs=5,
+        default=None,
+        help="Remove regular polygon from geometry. The arguments are side length, center x, center y, the number of edges, and the rotation (in units of 2pi).",
+    )
 
     # =============== ACCURACY =============== #
-    accuracy = parser.add_argument_group("Accuracy")
+    accuracy = parser.add_argument_group(title="Accuracy")
 
     # Convergence criterion.
     accuracy.add_argument(
@@ -316,7 +359,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # =============== OPTIMIZER =============== #
-    optimizer = parser.add_argument_group("Optimizer")
+    optimizer = parser.add_argument_group(title="Optimizer")
 
     optimizer.add_argument(
         "--opt-step-size",
@@ -383,7 +426,7 @@ def add_runner_arguments(parser) -> None:
     )
 
     # =============== MISC =============== #
-    misc = parser.add_argument_group("Misc")
+    misc = parser.add_argument_group(title="Misc")
 
     # Verbose.
     group_verbose = misc.add_mutually_exclusive_group()
@@ -961,7 +1004,73 @@ def set_runner_arguments_from_cli(
         }
 
     # ================== GEOMETRY ================== #
-    # TODO(niclas): Add geometry CLI support.
+    group = "geometry"
+    if args.geometry_clear:
+        sim_params[group] = []
+
+    # Add discs.
+    if args.add_disc is not None:
+        for disc in args.add_disc:
+            diameter, center_x, center_y = disc
+            sim_params[group].append(
+                {
+                    "disc": {
+                        "add": True,
+                        "diameter": diameter,
+                        "center_x": center_x,
+                        "center_y": center_y,
+                    }
+                }
+            )
+
+    # Add regular polygons.
+    if args.add_regular_polygon is not None:
+        for regular_polygon in args.add_regular_polygon:
+            side_length, center_x, center_y, num_edges, rotation = regular_polygon
+            sim_params[group].append(
+                {
+                    "regular_polygon": {
+                        "add": True,
+                        "side_length": side_length,
+                        "center_x": center_x,
+                        "center_y": center_y,
+                        "num_edges": int(num_edges),
+                        "rotation": rotation,
+                    }
+                }
+            )
+
+    # Remove discs.
+    if args.remove_disc is not None:
+        for disc in args.remove_disc:
+            diameter, center_x, center_y = disc
+            sim_params[group].append(
+                {
+                    "disc": {
+                        "add": False,
+                        "diameter": diameter,
+                        "center_x": center_x,
+                        "center_y": center_y,
+                    }
+                }
+            )
+
+    # Remove regular polygons.
+    if args.remove_regular_polygon is not None:
+        for regular_polygon in args.remove_regular_polygon:
+            side_length, center_x, center_y, num_edges, rotation = regular_polygon
+            sim_params[group].append(
+                {
+                    "regular_polygon": {
+                        "add": False,
+                        "side_length": side_length,
+                        "center_x": center_x,
+                        "center_y": center_y,
+                        "num_edges": int(num_edges),
+                        "rotation": rotation,
+                    }
+                }
+            )
 
     # ================== ACCURACY ================== #
     group = "accuracy"
