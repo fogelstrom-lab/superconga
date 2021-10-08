@@ -98,7 +98,7 @@ def add_runner_arguments(parser) -> None:
     # =============== PHYSICS =============== #
     physics = parser.add_argument_group(
         title="Physics",
-        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and initial random phase weight. The critical temperatures will be scaled so that the maximum is Tc=1",
+        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and initial random phase weight. The critical temperatures will be scaled so that the maximum is Tc = 1.",
     )
 
     # Temperature.
@@ -478,10 +478,12 @@ def add_runner_arguments(parser) -> None:
     # Visualize.
     group_visualize = misc.add_mutually_exclusive_group()
     group_visualize.add_argument(
-        "--visualize", action="store_true", help="Run with real-time plotting."
+        "--visualize",
+        action="store_true",
+        help="Real-time plotting. The units are E_0=2*pi*kB*Tc, j_d = E_0*|e|*v_F*N_F, A_0 = Phi_0 / (pi*xi_0), and B_0 = \Phi_0/(pi*xi^2_0), where xi_0 = hbar*vF/E_0, and Phi_0 = pi*hbar/|e|.",
     )
     group_visualize.add_argument(
-        "--no-visualize", action="store_true", help="Run without real-time plotting."
+        "--no-visualize", action="store_true", help="No real-time plotting."
     )
 
 
