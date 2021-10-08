@@ -7,7 +7,7 @@
 ///
 /// \file
 /// Implementation of a specular boundary condition. Derives from the virtual
-/// BOundaryCondition class.
+/// BoundaryCondition class.
 ///
 //===----------------------------------------------------------------------===//
 #ifndef BOUNDARY_CONDITION_SPECULAR_H_
@@ -25,11 +25,9 @@ template <typename T>
 class BoundaryConditionSpecular : public BoundaryCondition<T> {
 public:
   BoundaryConditionSpecular() : BoundaryCondition<T>() {}
-  virtual ~BoundaryConditionSpecular() {}
+  ~BoundaryConditionSpecular() {}
 
-  virtual void computeBoundaryCondition(Context<T> *ctx);
-
-private:
+  void computeBoundaryCondition(Context<T> *ctx) override;
 };
 
 namespace internal {
