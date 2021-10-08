@@ -23,33 +23,34 @@ template <typename T> class ComputeSpectralCurrent : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
   ComputeSpectralCurrent();
-  virtual ~ComputeSpectralCurrent();
+  ~ComputeSpectralCurrent();
 
   ComputeSpectralCurrent(Context<T> *ctx);
 
-  virtual GridGPU<T> *getResult() { return _lcurrent_all; }
-  virtual IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1);
+  GridGPU<T> *getResult() override { return _lcurrent_all; }
+  IntegrationIterator<T> *
+  createIntegrationIterator(int numEnergiesPerBlock = -1) override;
 
   // Context initialize function
-  virtual int initialize();
+  int initialize() override;
 
   // This should be called once for every iteration, before any integration
   // takes place.
-  virtual void initializeIteration(int numFields = 1);
+  void initializeIteration(int numFields = 1) override;
 
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter,
-                                  GridGPU<T> *gamma, GridGPU<T> *gammabar);
+  void computeGreensAngle(ParameterIterator<int> *iter, GridGPU<T> *gamma,
+                          GridGPU<T> *gammabar) override;
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
-  virtual void integrateGreensAngle(GeometryGroup<T> *geom, const int angleIdx);
+  void integrateGreensAngle(GeometryGroup<T> *geom,
+                            const int angleIdx) override;
 
   // Compute physical property from greens function.
-  virtual void computePropertyFromGreens();
+  void computePropertyFromGreens() override;
 
   GridGPU<T> *getResultInterval(int field = 0) {
     if (field == 0)

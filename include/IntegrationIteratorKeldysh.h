@@ -30,22 +30,22 @@ public:
 
   IntegrationIteratorKeldysh(Context<T> *ctx, int numEnergiesPerBlock = -1);
 
-  int initialize();
+  int initialize() override;
 
   // Configures energy iterators
   void initIterators(int numEnergiesPerBlock);
-  void initEnergies();
+  void initEnergies() override;
 
-  int getNumEnergiesInterval();
-  int getEnergyIdxOffset_boundaryStorage();
+  int getNumEnergiesInterval() override;
+  int getEnergyIdxOffset_boundaryStorage() override;
 
   // Call this once before starting self consistent iteration, or when changing
   // initial condition.
-  void setBoundaryInitialCondition();
+  void setBoundaryInitialCondition() override;
 
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
-  void compute();
+  void compute() override;
 
 private:
   int m_lastEnergyIndex;

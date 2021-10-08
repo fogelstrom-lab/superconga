@@ -25,26 +25,23 @@ template <typename T, template <typename> class POTENTIAL>
 class RiccatiSolverConfined : public RiccatiSolver<T> {
 public:
   // Constructors and Destructors
-
   RiccatiSolverConfined();
-  virtual ~RiccatiSolverConfined();
+  ~RiccatiSolverConfined();
 
   RiccatiSolverConfined(Context<T> *ctx);
 
-  virtual int initialize();
+  int initialize() override;
 
   // Functions
-  virtual void
-  computeInitialCondition(const ParameterIterator<int> &energy_iter,
-                          const GridGPU<T> *energies, const GridGPU<T> *delta,
-                          const int angleIdx);
+  void computeInitialCondition(const ParameterIterator<int> &energy_iter,
+                               const GridGPU<T> *energies,
+                               const GridGPU<T> *delta,
+                               const int angleIdx) override;
 
-  virtual void
-  computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
-                            const GridGPU<T> *energies, const GridGPU<T> *delta,
-                            const int angleIdx);
-
-  void gammaSymmetryTransform();
+  void computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
+                                 const GridGPU<T> *energies,
+                                 const GridGPU<T> *delta,
+                                 const int angleIdx) override;
 
   // Get a string describing the vector potential type, e.g. solenoid.
   std::string getVectorPotentialType() const { return POTENTIAL<T>::type(); }

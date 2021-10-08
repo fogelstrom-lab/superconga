@@ -23,7 +23,7 @@ namespace scg {
 template <typename T> class PolygonGeometry : public GeometryComponent<T> {
 public:
   PolygonGeometry();
-  virtual ~PolygonGeometry();
+  ~PolygonGeometry();
 
   PolygonGeometry(const PolygonGeometry &other);
 
