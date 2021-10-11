@@ -24,5 +24,5 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug $pwd
 
 echo "==============================================================================="
 echo "If build generation was successful, build and compile the code by running ninja in:" 
-echo "$pwd/build/cpu"
-echo "$pwd/build/gpu"
+echo "$pwd/build/release"
+echo "$pwd/build/debug"
