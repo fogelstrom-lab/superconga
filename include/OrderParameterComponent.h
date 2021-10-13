@@ -44,12 +44,8 @@ public:
   T getRelativeTc() const { return _Tcthis_Tc; }
   void setRelativeTc(const T Tc) { _Tcthis_Tc = Tc; }
 
-  void setCrystalAxesRotation(const T inCrystalAxesRotation) {
-    m_crystalAxesRotation = inCrystalAxesRotation;
-  }
-  T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
-
   void computeMomentumDependence(GridGPU<T> *target, const T pX, const T pY,
+                                 const T inCrystalAxesRotation,
                                  bool conjugateBasisFunction = false) const;
 
   void initCouplingConstant(const T *energies, const T *residues);
@@ -80,10 +76,6 @@ private:
   // re-calculated
   bool m_isCouplingConstantInitialized;
 
-  // Specified in radians, as a rotational offset from the default.
-  // A value of 0 (default) aligns the crystal lattice along the x- and y- axes.
-  T m_crystalAxesRotation;
-
   // The basis function of this order-parameter component.
   BasisFunction<T> m_basisFunction;
 
@@ -97,7 +89,7 @@ OrderParameterComponent<T>::OrderParameterComponent(
     : _param(0), _deltaComp(0), _Tcthis_Tc(1.0),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)), m_basisFunction(inSymmetry) {}
+       m_basisFunction(inSymmetry) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
@@ -105,7 +97,6 @@ OrderParameterComponent<T>::OrderParameterComponent(
     : _param(other._param), _Tcthis_Tc(other._Tcthis_Tc),
       m_couplingConstant(other.m_couplingConstant),
       m_isCouplingConstantInitialized(other.m_isCouplingConstantInitialized),
-      m_crystalAxesRotation(other.m_crystalAxesRotation),
       m_basisFunction(other.m_basisFunction) {
   if (other._deltaComp) {
     _deltaComp = new GridGPU<T>(*other._deltaComp);
@@ -118,7 +109,7 @@ OrderParameterComponent<T>::OrderParameterComponent(
     : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
       m_couplingConstant(static_cast<T>(0.0)),
       m_isCouplingConstantInitialized(false),
-      m_crystalAxesRotation(static_cast<T>(0.0)), m_basisFunction(inSymmetry) {
+      m_basisFunction(inSymmetry) {
   // Do an initialization on creation so we can set initial value.
   // Note, pass a null pointer as the Fermi surface so it won't try to
   // initialize the basis function.
@@ -139,7 +130,6 @@ void swap(OrderParameterComponent<T> &A, OrderParameterComponent<T> &B) {
   std::swap(A.m_couplingConstant, B.m_couplingConstant);
   std::swap(A.m_isCouplingConstantInitialized,
             B.m_isCouplingConstantInitialized);
-  std::swap(A.m_crystalAxesRotation, B.m_crystalAxesRotation);
   std::swap(A.m_basisFunction, B.m_basisFunction);
 }
 
@@ -207,11 +197,11 @@ void OrderParameterComponent<T>::applyCouplingConstant(
 
 template <typename T>
 void OrderParameterComponent<T>::computeMomentumDependence(
-    GridGPU<T> *target, const T pX, const T pY,
+    GridGPU<T> *target, const T pX, const T pY, const T inCrystalAxesRotation,
     bool conjugateBasisFunction) const {
   T pXRotated;
   T pYRotated;
-  utils::rotate(m_crystalAxesRotation, pX, pY, pXRotated, pYRotated);
+  utils::rotate(inCrystalAxesRotation, pX, pY, pXRotated, pYRotated);
   const thrust::complex<T> basisFunction =
       m_basisFunction.evaluate(pXRotated, pYRotated);
   (*target) *=
