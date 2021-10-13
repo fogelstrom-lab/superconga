@@ -204,7 +204,7 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
     fermiSurface->getFermiMomentum(angleIdx, momentumX, momentumY);
 
     const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
-
+    const T crystalAxesRotation = _delta->getCrystalAxesRotation();
     for (int i = 0; i < _delta->getNumOrderParameterComponents(); ++i) {
       _deltaTmp->setZero();
 
@@ -214,7 +214,8 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
       // It should be the complex conjugate of the basis function!
       const bool conjugateBasisFunction = true;
       _delta->getOrderParameterComponent(i)->computeMomentumDependence(
-          _deltaTmp, momentumX, momentumY, conjugateBasisFunction);
+          _deltaTmp, momentumX, momentumY, crystalAxesRotation,
+          conjugateBasisFunction);
 
       // Add angle contribution (angle integration)
       *(_delta->getOrderParameterComponent(i)->getOrderParameterField()) +=

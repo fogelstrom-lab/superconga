@@ -32,6 +32,20 @@ public:
 
   OrderParameter<T> &operator=(OrderParameter<T> right);
 
+  /// \brief Set the rotation of the crystal ab-axes.
+  ///
+  /// \param inCrystalAxesRotation The rotation angle in radians.
+  ///
+  /// \return Void.
+  void setCrystalAxesRotation(const T inCrystalAxesRotation) {
+    m_crystalAxesRotation = inCrystalAxesRotation;
+  }
+
+  /// \brief Get the rotation of the crystal ab-axes.
+  ///
+  /// \return The rotation angle in radians.
+  T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
+
   // Functions
   virtual int initialize();
 
@@ -54,6 +68,9 @@ private:
   template <typename S>
   friend void swap(OrderParameter<S> &A, OrderParameter<S> &B);
 
+  // The rotation of the crystal ab-axes.
+  T m_crystalAxesRotation;
+
   std::vector<OrderParameterComponent<T> *> _orderParameterComponentList;
 
   GridGPU<T> *_orderParameterCompound;
@@ -63,12 +80,14 @@ private:
 template <typename T>
 OrderParameter<T>::OrderParameter()
     : ContextModule<T>(), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0) {}
+      _orderParameterCompoundRotated(0),
+      m_crystalAxesRotation(static_cast<T>(0)) {}
 
 template <typename T>
 OrderParameter<T>::OrderParameter(const OrderParameter<T> &other)
-    : ContextModule<T>(other), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0) {
+    : ContextModule<T>(other) {
+  m_crystalAxesRotation = other.getCrystalAxesRotation();
+
   const int Nc = other.getNumOrderParameterComponents();
 
   for (int i = 0; i < Nc; ++i)
@@ -86,7 +105,8 @@ OrderParameter<T>::OrderParameter(const OrderParameter<T> &other)
 template <typename T>
 OrderParameter<T>::OrderParameter(Context<T> *ctx)
     : ContextModule<T>(ctx), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0) {
+      _orderParameterCompoundRotated(0),
+      m_crystalAxesRotation(static_cast<T>(0)) {
   ctx->set(this);
 }
 
@@ -192,7 +212,8 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
     OrderParameterComponent<T> *component = getOrderParameterComponent(i);
     GridGPU<T> grid = *(component->getOrderParameterField());
-    component->computeMomentumDependence(&grid, momentumX, momentumY);
+    component->computeMomentumDependence(&grid, momentumX, momentumY,
+                                         m_crystalAxesRotation);
     opSummed += grid;
   }
 

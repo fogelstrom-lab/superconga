@@ -184,9 +184,10 @@ int main(int argc, char *argv[]) {
   // d+is).
   scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
 
-  // Get the global crystal-axes rotation.
+  // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation = static_cast<T>(
       2.0 * M_PI * simParams["physics"]["crystal_axes_rotation"].asDouble());
+  orderParameter->setCrystalAxesRotation(crystalAxesRotation);
 
   // For convenience.
   const Json::Value opParams = simParams["physics"]["order_parameter"];
@@ -223,10 +224,6 @@ int main(int argc, char *argv[]) {
       scg::OrderParameterComponent<T> *orderParameterComponent =
           new scg::OrderParameterComponent<T>(symmetry, parameters,
                                               criticalTemperature);
-
-      // Set rotation of crystal axes with respect to the grain geometry.
-      // TODO(niclas): Move to Parameters.h?
-      orderParameterComponent->setCrystalAxesRotation(crystalAxesRotation);
 
       // Get initial phase parameters.
       const T phaseWinding =
