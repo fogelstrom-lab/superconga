@@ -135,8 +135,9 @@ __device__ void interpolate(
       static_cast<int>(fractionalAngleIdx) + 1, 0, inNumAngles);
   const int interpAngleIdx[2] = {interpAngleIdx0, interpAngleIdx1};
 
-  // Interpolate gammas from outgoing trajectory from stored
-  // boundary values.
+  const T pointRotationAngles[2] = {
+      inSystemAngle - inSystemAngles[interpAngleIdx[0]],
+      inSystemAngle - inSystemAngles[interpAngleIdx[1]]};
 
   // Get the remainder after subtracting the integer angle index.
   const T interpAngleIdxFraction =
@@ -145,9 +146,6 @@ __device__ void interpolate(
   // Weights for interpolation of discrete angles.
   const T angleWeights[2] = {static_cast<T>(1.0) - interpAngleIdxFraction,
                              interpAngleIdxFraction};
-
-  // TODO(niclas): Is the comment below still relevant?
-  // Only works for one entry/exit per trajectory
 
   // Boundary point to be rotated.
   const T boundaryPointX = static_cast<T>(inIdxX) - inCoordinateOffset;
@@ -161,72 +159,73 @@ __device__ void interpolate(
       static_cast<T>(utils::sign(inDirection)) * inBoundaryDistance -
       inCoordinateOffset;
 
-  const T rot_pt_angle[2] = {inSystemAngle - inSystemAngles[interpAngleIdx[0]],
-                             inSystemAngle - inSystemAngles[interpAngleIdx[1]]};
-
-  // NEW ALGORITHM:
-  // Make energy innermost loop. Need to make numEnergies-sized arrays for
-  // intermediate interpolation values.
-  // Sparse storage majority: Angle, energy, trajectory
-
+  // Results. Will be accumulated.
   outInterpReal = static_cast<T>(0.0);
   outInterpImag = static_cast<T>(0.0);
   outTotalWeight = static_cast<T>(0.0);
 
   for (int rot = 0; rot < 2; ++rot) {
-    // TODO(niclas): What is the "discrete frame"?
-    // Rotate boundary point to discrete frame
-    // Transform coordinate to index
-    T boundary_pt_rot_x;
-    T boundary_pt_rot_y;
-    utils::rotate(rot_pt_angle[rot], boundaryPointX, boundaryPointY,
-                  boundary_pt_rot_x, boundary_pt_rot_y);
-    boundary_pt_rot_x += inCoordinateOffset;
-    boundary_pt_rot_y += inCoordinateOffset;
+    // Rotate boundary point to rotated frame and transform coordinate to index.
+    T rotatedBoundaryPointX;
+    T rotatedBoundaryPointY;
+    utils::rotate(pointRotationAngles[rot], boundaryPointX, boundaryPointY,
+                  rotatedBoundaryPointX, rotatedBoundaryPointY);
+    rotatedBoundaryPointX += inCoordinateOffset;
+    rotatedBoundaryPointY += inCoordinateOffset;
 
-    // Interpolation (points) indices
-    const int idx_interp[2] = {static_cast<int>(boundary_pt_rot_x),
-                               static_cast<int>(boundary_pt_rot_x) + 1};
+    // Interpolation (points) indices.
+    const int interpPointIdx[2] = {static_cast<int>(rotatedBoundaryPointX),
+                                   static_cast<int>(rotatedBoundaryPointX) + 1};
 
-    // Interpolation (points) weights
-    const T pt_idx_frac = boundary_pt_rot_x - floor(boundary_pt_rot_x);
-
-    const T pt_weight[2] = {static_cast<T>(1.0) - pt_idx_frac, pt_idx_frac};
+    // Interpolation (points) weights.
+    const T interpPointIdxFraction =
+        rotatedBoundaryPointX - floor(rotatedBoundaryPointX);
+    const T pointWeights[2] = {static_cast<T>(1.0) - interpPointIdxFraction,
+                               interpPointIdxFraction};
 
     for (int pt = 0; pt < 2; ++pt) {
+      // TODO(niclas): Some magic index.
+      const int someIdx = interpAngleIdx[rot] * inNumX + interpPointIdx[pt];
+
       // Find the number of boundary intersections for current trajectory.
-      const int num_isect =
-          inNumBoundaryIntersections[interpAngleIdx[rot] * inNumX +
-                                     idx_interp[pt]];
+      const int numBoundaryIntersections = inNumBoundaryIntersections[someIdx];
 
-      int isect_current = 0;
+      // Find which intersection corresponds best to the current point.
+      // Note that this is dangerous when there are potentially several
+      // intersections per trajectory. If a trajectory does not hit the
+      // intersection we are interested in, the best one will be some other
+      // intersection. Thus we will interpolate between completely different
+      // trajectories.
+      // TODO(niclas): Fix this!
+      int intersectionIdx = 0;
+      T minDiffY = static_cast<T>(1e6);
+      for (int i = 0; i < numBoundaryIntersections; ++i) {
+        // TODO(niclas): Another magic index.
+        const int anotherIdx = i + inSparseIdxOutCoherence[someIdx];
 
-      // Find which intersection corresponds to current point
-      for (int isect = 0; isect < num_isect; ++isect) {
-        const int sparse_idx =
-            (inSparseIdxOutCoherence[interpAngleIdx[rot] * inNumX +
-                                     idx_interp[pt]] +
-             isect);
+        // The difference in the y-coordinate between the rotated boundary point
+        // and the pre-computed value for this intersection.
+        const T diffY =
+            abs(static_cast<T>(inCoordBoundaryIntersections[anotherIdx]) -
+                rotatedBoundaryPointY);
 
-        const T y_coord_diff =
-            abs(static_cast<T>(inCoordBoundaryIntersections[sparse_idx]) -
-                boundary_pt_rot_y);
-
-        // TODO(niclas): What does this check? Why 2?
-        if (y_coord_diff < static_cast<T>(2.0)) {
-          isect_current = isect;
+        // If the match is better use it instead.
+        if (diffY < minDiffY) {
+          intersectionIdx = i;
+          minDiffY = diffY;
         }
-      } // for isect
+      } // for i
 
       // Get sparse index for intersection
       const int idx_sparse_out = BoundaryStorage<T>::getSparseIndex(
-          interpAngleIdx[rot], inIdxE, idx_interp[pt], isect_current,
+          interpAngleIdx[rot], inIdxE, interpPointIdx[pt], intersectionIdx,
           inNumEnergies, inNumX, inSparseIdxOutCoherence);
 
-      const bool isIdxSparseOutOk = (idx_sparse_out > -1);
+      // If the index is negative this is a failure.
+      const bool success = idx_sparse_out >= 0;
 
-      if (isIdxSparseOutOk) {
-        const T weight = pt_weight[pt] * angleWeights[rot];
+      if (success) {
+        const T weight = pointWeights[pt] * angleWeights[rot];
 
         // Add interpolation contribution to final value.
         outInterpReal += inBoundaryOutCoherenceReal[idx_sparse_out] * weight;
