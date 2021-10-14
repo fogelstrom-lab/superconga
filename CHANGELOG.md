@@ -17,6 +17,7 @@
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
+- Pick the intersection with the smallest difference in y-coordinate when applying boundary condition.
 
 ### Developer changes
 - Change sign of the elementary charge in order to conform with Graf et al.
