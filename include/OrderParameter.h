@@ -23,14 +23,23 @@
 namespace conga {
 template <typename T> class OrderParameter : public ContextModule<T> {
 public:
-  // Constructors and Destructors
+  /// \brief Constructor.
   OrderParameter();
-  virtual ~OrderParameter();
 
-  OrderParameter(const OrderParameter<T> &other);
-  OrderParameter(Context<T> *ctx);
+  /// \brief Constructor.
+  ///
+  /// \param inOther Another order parameter.
+  OrderParameter(const OrderParameter<T> &inOther);
 
-  OrderParameter<T> &operator=(OrderParameter<T> right);
+  /// \brief Constructor.
+  ///
+  /// \param inOutContext Context pointer.
+  OrderParameter(Context<T> *inOutContext);
+
+  /// \brief Destructor.
+  ~OrderParameter();
+
+  OrderParameter<T> &operator=(OrderParameter<T> inOther);
 
   /// \brief Set the rotation of the crystal ab-axes.
   ///
@@ -46,155 +55,183 @@ public:
   /// \return The rotation angle in radians.
   T getCrystalAxesRotation() const { return m_crystalAxesRotation; }
 
-  // Functions
-  virtual int initialize();
+  /// \brief Initialize the order parameter.
+  ///
+  /// \return Whether the initialization was a success.
+  // TODO(niclas): Return bool or status enum.
+  int initialize() override;
 
-  void add(OrderParameterComponent<T> *delta);
+  /// \brief Add component to the order parameter.
+  ///
+  /// \param inComponent The component to add.
+  ///
+  /// \return Void.
+  void add(OrderParameterComponent<T> *inComponent);
 
-  // Getters
-  int getNumOrderParameterComponents() const;
-  OrderParameterComponent<T> *getOrderParameterComponent(int delta_idx) const;
-  GridGPU<T> *getOrderParameterComponentField(int delta_idx) const;
+  /// \brief Get the number of components.
+  ///
+  /// \return The number of components.
+  int getNumComponents() const;
 
-  // Perform rotation and return pointer
-  GridGPU<T> *getOrderParameterFieldRotated(const int angleIdx);
-  GridGPU<T> *getOrderParameterFieldRotated() const {
-    return _orderParameterCompoundRotated;
-  } // Return pointer to current rotational frame
+  /// \brief Get a particular component.
+  ///
+  /// \param inIndex The index of the component.
+  ///
+  /// \return A pointer the the component.
+  OrderParameterComponent<T> *getComponent(int inIndex) const;
 
+  /// \brief Get a particular component's grid.
+  ///
+  /// \param inIndex The index of the component.
+  ///
+  /// \return A pointer the the grid.
+  GridGPU<T> *getComponentGrid(int inIndex) const;
+
+  /// \brief Get the rotated grid of sum of all components with momentum
+  /// dependence for a particular angle index.
+  ///
+  /// \param inAngleIdx The angle index, which determines the momentum and the
+  /// rotation angle.
+  ///
+  /// \return The rotated grid of the total order-parameter for this index.
+  const GridGPU<T> *getRotatedGrid(const int inAngleIdx);
+
+  /// \brief Get the rotated grid of sum of all components with momentum
+  /// dependence for the latest provided angle index.
+  ///
+  /// \return The rotated grid of the total order-parameter for the latest
+  /// index.
+  const GridGPU<T> *getRotatedGrid() const { return m_rotated; }
+
+  /// \brief Get the types of all components.
+  ///
+  /// \return The types, e.g. {"s", "dxy"}.
   std::vector<std::string> getTypes() const;
 
 private:
+  /// \brief Swap to order parameters.
+  ///
+  /// \param inA The first order parameter.
+  /// \param inB The second order parameter.
+  ///
+  /// \return Void.
   template <typename S>
-  friend void swap(OrderParameter<S> &A, OrderParameter<S> &B);
+  friend void swap(OrderParameter<S> &inA, OrderParameter<S> &inB);
 
   // The rotation of the crystal ab-axes.
   T m_crystalAxesRotation;
 
-  std::vector<OrderParameterComponent<T> *> _orderParameterComponentList;
+  // A list of all components.
+  std::vector<OrderParameterComponent<T> *> m_components;
 
-  GridGPU<T> *_orderParameterCompound;
-  GridGPU<T> *_orderParameterCompoundRotated;
+  // The total rotated order-parameter with momentum dependence.
+  GridGPU<T> *m_rotated;
 };
 
 template <typename T>
 OrderParameter<T>::OrderParameter()
-    : ContextModule<T>(), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0),
+    : ContextModule<T>(), m_rotated(nullptr),
       m_crystalAxesRotation(static_cast<T>(0)) {}
 
 template <typename T>
-OrderParameter<T>::OrderParameter(const OrderParameter<T> &other)
-    : ContextModule<T>(other) {
-  m_crystalAxesRotation = other.getCrystalAxesRotation();
+OrderParameter<T>::OrderParameter(const OrderParameter<T> &inOther)
+    : ContextModule<T>(inOther) {
+  m_crystalAxesRotation = inOther.getCrystalAxesRotation();
 
-  const int Nc = other.getNumOrderParameterComponents();
+  const int numComponents = inOther.getNumComponents();
 
-  for (int i = 0; i < Nc; ++i)
-    _orderParameterComponentList.push_back(
-        other._orderParameterComponentList[i]->clone());
+  for (int i = 0; i < numComponents; ++i)
+    m_components.push_back(inOther.m_components[i]->clone());
 
-  if (other._orderParameterCompound)
-    _orderParameterCompound = new GridGPU<T>(*other._orderParameterCompound);
-
-  if (other._orderParameterCompoundRotated)
-    _orderParameterCompoundRotated =
-        new GridGPU<T>(*other._orderParameterCompoundRotated);
+  if (inOther.m_rotated)
+    m_rotated = new GridGPU<T>(*inOther.m_rotated);
 }
 
 template <typename T>
-OrderParameter<T>::OrderParameter(Context<T> *ctx)
-    : ContextModule<T>(ctx), _orderParameterCompound(0),
-      _orderParameterCompoundRotated(0),
+OrderParameter<T>::OrderParameter(Context<T> *inOutContext)
+    : ContextModule<T>(inOutContext), m_rotated(nullptr),
       m_crystalAxesRotation(static_cast<T>(0)) {
-  ctx->set(this);
+  inOutContext->set(this);
 }
 
 template <typename T> OrderParameter<T>::~OrderParameter() {
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
-    delete _orderParameterComponentList[i];
+  for (int i = 0; i < getNumComponents(); ++i) {
+    delete m_components[i];
   }
 
-  if (_orderParameterCompound)
-    delete _orderParameterCompound;
-  if (_orderParameterCompoundRotated)
-    delete _orderParameterCompoundRotated;
+  if (m_rotated) {
+    delete m_rotated;
+  }
 }
 
 template <typename T>
-OrderParameter<T> &OrderParameter<T>::operator=(OrderParameter<T> other) {
-  swap(*this, other);
+OrderParameter<T> &OrderParameter<T>::operator=(OrderParameter<T> inOther) {
+  swap(*this, inOther);
   return *this;
 }
 
-template <typename T> void swap(OrderParameter<T> &A, OrderParameter<T> &B) {
-  std::swap(A._orderParameterComponentList, B._orderParameterComponentList);
-  std::swap(A._orderParameterCompound, B._orderParameterCompound);
-  std::swap(A._orderParameterCompoundRotated, B._orderParameterCompoundRotated);
+template <typename T>
+void swap(OrderParameter<T> &inA, OrderParameter<T> &inB) {
+  std::swap(inA.m_components, inB.m_components);
+  std::swap(inA.m_rotated, inB.m_rotated);
 }
 
 template <typename T> int OrderParameter<T>::initialize() {
-  const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
   const int N1 =
       ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
-  GridGPU<T>::initializeGrid(_orderParameterCompound, N0, N0);
-  GridGPU<T>::initializeGrid(_orderParameterCompoundRotated, N1, N1);
+  GridGPU<T>::initializeGrid(m_rotated, N1, N1);
 
   const FermiSurface<T> *const fermiSurface =
       ContextModule<T>::getFermiSurface();
 
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
+  for (int i = 0; i < getNumComponents(); ++i) {
     // Initialize the component.
-    _orderParameterComponentList[i]->initialize(fermiSurface);
+    m_components[i]->initialize(fermiSurface);
 
     // Zero the values outside of the grain, so that we only compute residuals
     // of values that actually matter.
-    GridGPU<T> *const component = getOrderParameterComponentField(i);
+    GridGPU<T> *const component = getComponentGrid(i);
     ContextModule<T>::getGeometry()->zeroValuesOutsideDomainRef(component);
   }
   return 0;
 }
 
 template <typename T>
-void OrderParameter<T>::add(OrderParameterComponent<T> *delta) {
-  if (!(delta->getParameters()))
-    delta->setParameters(ContextModule<T>::getParameters());
+void OrderParameter<T>::add(OrderParameterComponent<T> *inComponent) {
+  if (!(inComponent->getParameters())) {
+    inComponent->setParameters(ContextModule<T>::getParameters());
+  }
 
-  _orderParameterComponentList.push_back(delta);
+  m_components.push_back(inComponent);
+}
+
+template <typename T> int OrderParameter<T>::getNumComponents() const {
+  return m_components.size();
 }
 
 template <typename T>
-int OrderParameter<T>::getNumOrderParameterComponents() const {
-  return _orderParameterComponentList.size();
-}
-
-template <typename T>
-OrderParameterComponent<T> *
-OrderParameter<T>::getOrderParameterComponent(int delta_idx) const {
-  const int Nc = getNumOrderParameterComponents();
+OrderParameterComponent<T> *OrderParameter<T>::getComponent(int inIndex) const {
+  const int numComponents = getNumComponents();
 
   // TODO(niclas): Is this behaviour really what a user expects? Shouldn't we
   // throw an exception?
-  if (delta_idx >= Nc)
-    delta_idx = Nc - 1;
+  if (inIndex >= numComponents) {
+    inIndex = numComponents - 1;
+  }
 
-  return _orderParameterComponentList[delta_idx];
+  return m_components[inIndex];
 }
 
 template <typename T>
-GridGPU<T> *
-OrderParameter<T>::getOrderParameterComponentField(int delta_idx) const {
-  return getOrderParameterComponent(delta_idx)->getOrderParameterField();
+GridGPU<T> *OrderParameter<T>::getComponentGrid(int inIndex) const {
+  return getComponent(inIndex)->getGrid();
 }
 
 template <typename T>
-GridGPU<T> *
-OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
+const GridGPU<T> *OrderParameter<T>::getRotatedGrid(const int inAngleIdx) {
   // Get global model parameters
   const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
-  const int N1 =
-      ContextModule<T>::getParameters()->getGridResolutionCoherence();
 
   FermiSurface<T> *const fermiSurface = ContextModule<T>::getFermiSurface();
 
@@ -203,15 +240,15 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   // below.
   T momentumX;
   T momentumY;
-  fermiSurface->getFermiMomentum(-angleIdx, momentumX, momentumY);
+  fermiSurface->getFermiMomentum(-inAngleIdx, momentumX, momentumY);
 
   // We need to sum all components with their basis function function
   // multiplied.
   GridGPU<T> opSummed(N0, N0);
   opSummed.setZero();
-  for (int i = 0; i < getNumOrderParameterComponents(); ++i) {
-    OrderParameterComponent<T> *component = getOrderParameterComponent(i);
-    GridGPU<T> grid = *(component->getOrderParameterField());
+  for (int i = 0; i < getNumComponents(); ++i) {
+    OrderParameterComponent<T> *component = getComponent(i);
+    GridGPU<T> grid = *(component->getGrid());
     component->computeMomentumDependence(&grid, momentumX, momentumY,
                                          m_crystalAxesRotation);
     opSummed += grid;
@@ -223,22 +260,21 @@ OrderParameter<T>::getOrderParameterFieldRotated(const int angleIdx) {
   geometry->extendValuesAtBoundaryRef(&opSummed);
 
   // Rotate the order parameter and insert it in the larger grid
-  // _orderParameterCompoundRotated.
-  const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
-  _orderParameterCompoundRotated->setZero();
-  _orderParameterCompoundRotated->insertRotatedGridAdditive(&opSummed,
-                                                            systemAngle, 0);
-  return _orderParameterCompoundRotated;
+  // m_rotated.
+  const T systemAngle = fermiSurface->getSystemAngle(inAngleIdx);
+  m_rotated->setZero();
+  m_rotated->insertRotatedGridAdditive(&opSummed, systemAngle, 0);
+  return m_rotated;
 }
 
 template <typename T>
 std::vector<std::string> OrderParameter<T>::getTypes() const {
-  const int numOrderParameterComponents = getNumOrderParameterComponents();
+  const int numOrderParameterComponents = getNumComponents();
   std::vector<std::string> types;
   types.reserve(numOrderParameterComponents);
 
   for (int i = 0; i < numOrderParameterComponents; ++i) {
-    const std::string componentType = getOrderParameterComponent(i)->getType();
+    const std::string componentType = getComponent(i)->getType();
     types.emplace_back(componentType);
   }
   return types;

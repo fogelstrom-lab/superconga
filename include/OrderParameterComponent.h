@@ -40,7 +40,7 @@ public:
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
 
-  GridGPU<T> *getOrderParameterField() const { return _deltaComp; }
+  GridGPU<T> *getGrid() const { return _deltaComp; }
   T getRelativeTc() const { return _Tcthis_Tc; }
   void setRelativeTc(const T Tc) { _Tcthis_Tc = Tc; }
 

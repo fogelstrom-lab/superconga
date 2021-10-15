@@ -250,9 +250,6 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
   // Get some parameters and variables
   const int numAngles = context->getParameters()->getAngularResolution();
 
-  // Pointer to temporary grid for order parameter in local frame
-  GridGPU<T> *rotatedOrderParameter;
-
   ParameterIterator<int> *energyIterator = I::getEnergyIterator();
   GridGPU<T> *energies = I::getEnergies();
 
@@ -268,8 +265,8 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
 
     // Rotate order parameter field to current angle
-    rotatedOrderParameter =
-        orderParameter->getOrderParameterFieldRotated(-angleIdx);
+    const GridGPU<T> *rotatedOrderParameter =
+        orderParameter->getRotatedGrid(-angleIdx);
 
     // Create discrete geometry data for current angle
     geometryGroup->create(-systemAngle);
@@ -345,8 +342,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
     // TODO(niclas): Slight optimization. Don't do the multiplication with
     // orderParameterFactor if the factor is 1.
     const GridGPU<T> rotatedOrderParameter =
-        *(orderParameter->getOrderParameterFieldRotated(-angleIdx)) *
-        orderParameterFactor;
+        *(orderParameter->getRotatedGrid(-angleIdx)) * orderParameterFactor;
 
     // Solve Riccati equations for current angle and compute propagators.
     for (int i = 0; i < numComputeObjects; ++i) {

@@ -193,16 +193,14 @@ inline bool readOrderParameter(const std::filesystem::path &inFileName,
   const std::map<std::string, std::vector<T>> &map = csvReader.getMap();
 
   // The number of order-parameter components.
-  const int numComponents =
-      inOutOrderParameter.getNumOrderParameterComponents();
+  const int numComponents = inOutOrderParameter.getNumComponents();
 
   // The types of the order-parameter components.
   const std::vector<std::string> types = inOutOrderParameter.getTypes();
 
   for (int i = 0; i < numComponents; ++i) {
     // Get the component grid.
-    GridGPU<T> &component =
-        *(inOutOrderParameter.getOrderParameterComponentField(i));
+    GridGPU<T> &component = *(inOutOrderParameter.getComponentGrid(i));
 
     // Get the dimensions of the grid.
     const int dimX = component.dimX();
