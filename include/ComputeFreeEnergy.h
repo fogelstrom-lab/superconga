@@ -236,9 +236,9 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
     GridGPU<T> *freeEnergyKernelIntegrand =
         ComputeProperty<T>::getGreensCurrentAngle();
 
-    GridGPU<T> *deltaRot =
+    const GridGPU<T> *deltaRot =
         integrationIter->getOrderParameterFieldCurrentAngle();
-    GridGPU<T> *ozakiResidues = integrationIter->getResidues();
+    const GridGPU<T> *ozakiResidues = integrationIter->getResidues();
 
     const int numEnergies = inParameterIterator->getNumInterval();
     const int energyIdxStart = inParameterIterator->getCurrentValue();
@@ -325,21 +325,19 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
 
     // Add contribution from the order parameter.
     const OrderParameter<T> *const orderParameter = C::getOrderParameter();
-    const int numOrderParameterComponents =
-        orderParameter->getNumOrderParameterComponents();
+    const int numOrderParameterComponents = orderParameter->getNumComponents();
 
     for (int i = 0; i < numOrderParameterComponents; ++i) {
       // Fetch a component.
       const OrderParameterComponent<T> *const component =
-          orderParameter->getOrderParameterComponent(i);
+          orderParameter->getComponent(i);
 
       // Compute the temperature dependent factor.
       const T relativeTc = component->getRelativeTc();
       const T factor = std::log(temperature / relativeTc) + sumInverseEnergy;
 
       // Compute the squared absolute value.
-      GridGPU<T> componentSquared =
-          component->getOrderParameterField()->complexMagnitudeSq();
+      GridGPU<T> componentSquared = component->getGrid()->complexMagnitudeSq();
 
       // Set to zero outside of the grain.
       C::getGeometry()->zeroValuesOutsideDomainRef(&componentSquared);

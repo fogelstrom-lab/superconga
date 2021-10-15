@@ -131,11 +131,11 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
 
     // Remove all spurious values outside actual grain
     context->getGeometry()->zeroValuesOutsideDomainRef(
-        orderParameterComponent->getOrderParameterField());
+        orderParameterComponent->getGrid());
 
     // Fetch the grain-summed order-parameter magnitude
     const T testSumOrderParameter =
-        orderParameterComponent->getOrderParameterField()->sumMagnitude();
+        orderParameterComponent->getGrid()->sumMagnitude();
     // Fetch the number of elements in the grain
     const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
 

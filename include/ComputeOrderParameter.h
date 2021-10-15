@@ -106,7 +106,7 @@ template <typename T> int ComputeOrderParameter<T>::initialize() {
   const int N0 = C::getParameters()->getGridResolutionBase();
   const int N1 = C::getParameters()->getGridResolutionCoherence();
 
-  const int Nc = _delta->getNumOrderParameterComponents();
+  const int Nc = _delta->getNumComponents();
 
   GridGPU<T>::initializeGrid(_deltaTmp, N0, N0);
   GridGPU<T>::initializeGrid(_delta_fields, N0, N0, Nc, Type::complex);
@@ -120,8 +120,7 @@ template <typename T> int ComputeOrderParameter<T>::initialize() {
 
   // Initialize coupling constant
   for (int i = 0; i < Nc; ++i) {
-    OrderParameterComponent<T> *component =
-        _delta->getOrderParameterComponent(i);
+    OrderParameterComponent<T> *component = _delta->getComponent(i);
     component->initCouplingConstant(energies_cpu.getDataPointer(0, Type::imag),
                                     residues_cpu.getDataPointer(0, Type::real));
   }
@@ -156,12 +155,10 @@ void ComputeOrderParameter<T>::initializeIteration(int numFields) {
 
   if (ComputeProperty<T>::doCompute()) {
     // Temporary grids for new order parameter components
-    const int numDelta = _delta->getNumOrderParameterComponents();
+    const int numDelta = _delta->getNumComponents();
 
     for (int i = 0; i < numDelta; ++i) {
-      _delta->getOrderParameterComponent(i)
-          ->getOrderParameterField()
-          ->setZero();
+      _delta->getComponent(i)->getGrid()->setZero();
     }
   }
 }
@@ -205,7 +202,7 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 
     const T integrandFactor = fermiSurface->getIntegrandFactor(angleIdx);
     const T crystalAxesRotation = _delta->getCrystalAxesRotation();
-    for (int i = 0; i < _delta->getNumOrderParameterComponents(); ++i) {
+    for (int i = 0; i < _delta->getNumComponents(); ++i) {
       _deltaTmp->setZero();
 
       // Rotate back to reference frame and add momentum dependence.
@@ -213,13 +210,12 @@ void ComputeOrderParameter<T>::integrateGreensAngle(GeometryGroup<T> *geom,
 
       // It should be the complex conjugate of the basis function!
       const bool conjugateBasisFunction = true;
-      _delta->getOrderParameterComponent(i)->computeMomentumDependence(
+      _delta->getComponent(i)->computeMomentumDependence(
           _deltaTmp, momentumX, momentumY, crystalAxesRotation,
           conjugateBasisFunction);
 
       // Add angle contribution (angle integration)
-      *(_delta->getOrderParameterComponent(i)->getOrderParameterField()) +=
-          *_deltaTmp * integrandFactor;
+      *(_delta->getComponent(i)->getGrid()) += *_deltaTmp * integrandFactor;
     }
   }
 }
@@ -230,12 +226,11 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
 
   if (C::doCompute()) {
     Parameters<T> *param = C::getParameters();
-    const int Nc = _delta->getNumOrderParameterComponents();
+    const int Nc = _delta->getNumComponents();
 
     for (int i = 0; i < Nc; ++i) {
       // Compute new delta from anomalous greens function
-      OrderParameterComponent<T> *component =
-          _delta->getOrderParameterComponent(i);
+      OrderParameterComponent<T> *component = _delta->getComponent(i);
       component->applyCouplingConstant();
     }
 
@@ -243,8 +238,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     // compute the residual with values that actually matter.
     const Context<T> *const ctx = ContextModule<T>::getContext();
     for (int i = 0; i < Nc; ++i) {
-      GridGPU<T> *const component =
-          _delta->getOrderParameterComponent(i)->getOrderParameterField();
+      GridGPU<T> *const component = _delta->getComponent(i)->getGrid();
       ctx->getGeometry()->zeroValuesOutsideDomainRef(component);
     }
 
@@ -255,9 +249,8 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     T residual = static_cast<T>(0.0);
     for (int i = 0; i < Nc; ++i) {
       const GridGPU<T> *const componentOld =
-          deltaOld->getOrderParameterComponent(i)->getOrderParameterField();
-      const GridGPU<T> *const componentNew =
-          _delta->getOrderParameterComponent(i)->getOrderParameterField();
+          deltaOld->getComponent(i)->getGrid();
+      const GridGPU<T> *const componentNew = _delta->getComponent(i)->getGrid();
 
       const T residualComponent = computeResidual(*componentOld, *componentNew);
       residual = std::max(residual, residualComponent);
@@ -270,8 +263,7 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
 
     // Copy results to grid with one field per order parameter component.
     for (int i = 0; i < Nc; ++i) {
-      _delta->getOrderParameterComponentField(i)->copyFieldTo(_delta_fields, 0,
-                                                              i);
+      _delta->getComponentGrid(i)->copyFieldTo(_delta_fields, 0, i);
     }
   } else {
     C::setConverged(false);

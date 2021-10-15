@@ -721,7 +721,7 @@ Visualization<T> *createVisualization(const Context<T> *const inContext) {
   if (inContext->getComputeOrderParameter()) {
     // One column for each order-parameter component.
     const int numOrderParameterComponents =
-        inContext->getOrderParameter()->getNumOrderParameterComponents();
+        inContext->getOrderParameter()->getNumComponents();
     numCols += numOrderParameterComponents;
 
     // Two rows: magnitude and phase.
@@ -780,14 +780,13 @@ void display(Context<T> *inContext, Visualization<T> *inGUI) {
   if (computeOrderParameter) {
     // Plot the order parameter.
     const int numOrderParameterComponents =
-        inContext->getOrderParameter()->getNumOrderParameterComponents();
+        inContext->getOrderParameter()->getNumComponents();
     const std::vector<std::string> orderParameterTypes =
         inContext->getOrderParameter()->getTypes();
     for (; colIdx < numOrderParameterComponents; ++colIdx) {
       // Get the order parameter component.
       const GridGPU<T> component =
-          *(inContext->getOrderParameter()->getOrderParameterComponentField(
-              colIdx));
+          *(inContext->getOrderParameter()->getComponentGrid(colIdx));
 
       // Plot the order parameter.
       inGUI->label("|Delta_(" + orderParameterTypes[colIdx] + ")|/E_0", colIdx,

@@ -104,7 +104,7 @@ public:
   }
   OrderParameter<T> *getOrderParameter() const { return m_orderParameter; }
   OrderParameterComponent<T> *getOrderParameterComponent(int idx) const {
-    return m_orderParameter->getOrderParameterComponent(idx);
+    return m_orderParameter->getComponent(idx);
   }
   Parameters<T> *getParameters() const { return m_parameters; }
   RiccatiSolver<T> *getRiccatiSolver() const { return m_riccatiSolver; }

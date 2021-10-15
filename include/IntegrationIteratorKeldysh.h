@@ -190,8 +190,8 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
     const int numAngles = C::getParameters()->getAngularResolution();
     for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
       // Rotate order parameter field to current angle
-      GridGPU<T> *orderParameterRotated =
-          orderParameter->getOrderParameterFieldRotated(-angleIdx);
+      const GridGPU<T> *orderParameterRotated =
+          orderParameter->getRotatedGrid(-angleIdx);
 
       // Angle (in radians) of system in local frame
       const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
@@ -295,8 +295,8 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   const int numAngles = C::getParameters()->getAngularResolution();
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Rotate order parameter.
-    GridGPU<T> *orderParameterRotated =
-        orderParameter->getOrderParameterFieldRotated(-angleIdx);
+    const GridGPU<T> *orderParameterRotated =
+        orderParameter->getRotatedGrid(-angleIdx);
 
     const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
 

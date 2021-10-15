@@ -61,10 +61,10 @@ public:
   GridGPU<T> *getEnergies() const { return _energies; }
   GridGPU<T> *getResidues() const { return _residues; }
 
-  GridGPU<T> *getOrderParameterFieldCurrentAngle() const {
+  const GridGPU<T> *getOrderParameterFieldCurrentAngle() const {
     return ContextModule<T>::getContext()
         ->getOrderParameter()
-        ->getOrderParameterFieldRotated();
+        ->getRotatedGrid();
   }
 
   int getNumIterations() const { return _numIter; }

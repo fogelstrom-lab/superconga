@@ -363,7 +363,7 @@ void Accelerator<T>::compute(const OrderParameter<T> &inOrderParameterX,
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inVectorPotentialG.dimX();
   const int dimY = inVectorPotentialG.dimY();
-  const T numComponents = inOrderParameterG.getNumOrderParameterComponents();
+  const T numComponents = inOrderParameterG.getNumComponents();
   const int complexFactor = 2;
   const int numFields =
       complexFactor * numComponents + inVectorPotentialG.numFields();
@@ -698,7 +698,7 @@ void Accelerator<T>::concatenate(const OrderParameter<T> &inOrderParameter,
   // Dimensions.
   const int dimX = inOutDst.dimX();
   const int dimY = inOutDst.dimY();
-  const int numComponents = inOrderParameter.getNumOrderParameterComponents();
+  const int numComponents = inOrderParameter.getNumComponents();
 
   // Copy order parameter.
   for (int i = 0; i < numComponents; ++i) {
@@ -706,8 +706,7 @@ void Accelerator<T>::concatenate(const OrderParameter<T> &inOrderParameter,
     const int imagIdx = realIdx + 1;
 
     // Get the order parameter component.
-    const GridGPU<T> *const component =
-        inOrderParameter.getOrderParameterComponentField(i);
+    const GridGPU<T> *const component = inOrderParameter.getComponentGrid(i);
 
     acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, component->getDataPointer(0, Type::real),
@@ -740,8 +739,7 @@ void Accelerator<T>::split(const GridGPU<T> &inSrc,
   // Dimensions.
   const int dimX = inSrc.dimX();
   const int dimY = inSrc.dimY();
-  const int numComponents =
-      inOutOrderParameter.getNumOrderParameterComponents();
+  const int numComponents = inOutOrderParameter.getNumComponents();
 
   // Copy order parameter.
   for (int i = 0; i < numComponents; ++i) {
@@ -749,8 +747,7 @@ void Accelerator<T>::split(const GridGPU<T> &inSrc,
     const int imagIdx = realIdx + 1;
 
     // Get the order parameter component.
-    GridGPU<T> *const component =
-        inOutOrderParameter.getOrderParameterComponentField(i);
+    GridGPU<T> *const component = inOutOrderParameter.getComponentGrid(i);
 
     acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, inSrc.getDataPointer(realIdx),
