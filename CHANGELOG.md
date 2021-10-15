@@ -15,6 +15,7 @@
 - Expose discs and regular polygons in the CLI.
 - Define units of plotted quantities in `--help` message.
 - Update README with new CLI syntax.
+- Print free energy using scientific notation.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

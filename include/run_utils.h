@@ -693,7 +693,7 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
     const T freeEnergy = computeFreeEnergy->getFreeEnergyPerUnitArea();
 
     // Print values.
-    std::printf("Iteration = %d | Max Residual = %e | Free Energy = %f | "
+    std::printf("Iteration = %d | Max Residual = %e | Free Energy = %e | "
                 "Iterations / Second = %f\n",
                 numIterations, maxResidual, freeEnergy, iterationsPerSecond);
   } else {
