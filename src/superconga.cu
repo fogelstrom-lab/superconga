@@ -1,6 +1,6 @@
 //===----------- main.cu - Main file for setting up simulations -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -52,7 +52,7 @@ void display();
 //*******************************************************
 // PRECISION
 //*******************************************************
-#ifdef SCG_SINGLE_PRECISION
+#ifdef CONGA_SINGLE_PRECISION
 typedef float T;
 #else
 typedef double T;
@@ -64,9 +64,9 @@ typedef double T;
 //*******************************************************
 namespace {
 // Create context object.
-scg::Context<T> *context = new scg::Context<T>();
+conga::Context<T> *context = new conga::Context<T>();
 // Create visualization object.
-scg::Visualization<T> *gui;
+conga::Visualization<T> *gui;
 } // namespace
 
 //*******************************************************
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   {
     if (argc < 2) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
-      scg::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, gui);
       return EXIT_FAILURE;
     }
     const std::string filename = argv[1];
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
     if (!ifile.good()) {
       std::cerr << "-- ERROR! Could not find/open config file '" << filename
                 << "'." << std::endl;
-      scg::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, gui);
       return EXIT_FAILURE;
     }
 
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
   // APPLY PARAMETERS
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
 
   // Set temperature.
   const T temperature =
@@ -155,15 +155,15 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group.
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
 
   // Parse user-defined geometry. Compute factors to scale and translate
   // geometry to internal coordinate system.
   T scalingFactor;
   T xOffset;
   T yOffset;
-  scg::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
-                                         yOffset);
+  conga::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
+                                           yOffset);
 
   // Set grain sidelength in coherence length.
   parameters->setGrainWidth(scalingFactor);
@@ -174,15 +174,16 @@ int main(int argc, char *argv[]) {
 
   // Parse user-defined geometry, loop through geometry component list and
   // create compund geometry. Scale and translate to internal coordinate system.
-  scg::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
-                                        xOffset, yOffset, grainFraction);
+  conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
+                                          xOffset, yOffset, grainFraction);
 
   //***************************************************
   // SET UP ORDER PARAMETER
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e.
   // d+is).
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(context);
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation = static_cast<T>(
@@ -204,15 +205,15 @@ int main(int argc, char *argv[]) {
       orderParameterSuccess = true;
 
       // TODO(niclas): Move to OrderParameterBasis.h?
-      scg::BasisFunctionSymmetry symmetry;
+      conga::BasisFunctionSymmetry symmetry;
       if (symmetryStr == "dx2-y2") {
-        symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+        symmetry = conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
       } else if (symmetryStr == "dxy") {
-        symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+        symmetry = conga::BasisFunctionSymmetry::DWAVE_XY;
       } else if (symmetryStr == "g") {
-        symmetry = scg::BasisFunctionSymmetry::GWAVE;
+        symmetry = conga::BasisFunctionSymmetry::GWAVE;
       } else {
-        symmetry = scg::BasisFunctionSymmetry::SWAVE;
+        symmetry = conga::BasisFunctionSymmetry::SWAVE;
       }
 
       // For convenience.
@@ -221,9 +222,9 @@ int main(int argc, char *argv[]) {
       // Create component.
       const T criticalTemperature =
           static_cast<T>(opCompParams["critical_temperature"].asDouble());
-      scg::OrderParameterComponent<T> *orderParameterComponent =
-          new scg::OrderParameterComponent<T>(symmetry, parameters,
-                                              criticalTemperature);
+      conga::OrderParameterComponent<T> *orderParameterComponent =
+          new conga::OrderParameterComponent<T>(symmetry, parameters,
+                                                criticalTemperature);
 
       // Get initial phase parameters.
       const T phaseWinding =
@@ -241,11 +242,11 @@ int main(int argc, char *argv[]) {
 
       // Initialize order parameter with a guess.
       if (useBulk) {
-        scg::Initial<T>::bulk(orderParameterComponent);
+        conga::Initial<T>::bulk(orderParameterComponent);
       } else {
-        scg::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
-                                               phaseWinding, randomPhaseWeight,
-                                               phaseShift);
+        conga::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
+                                                 phaseWinding,
+                                                 randomPhaseWeight, phaseShift);
       }
 
       // Add the initialized component to the total order parameter.
@@ -255,7 +256,7 @@ int main(int argc, char *argv[]) {
 
   if (!orderParameterSuccess) {
     std::cerr << "-- ERROR! No order-parameter component set." << std::endl;
-    scg::run_utils::cleanup(context, gui);
+    conga::run_utils::cleanup(context, gui);
     return EXIT_FAILURE;
   }
 
@@ -271,11 +272,11 @@ int main(int argc, char *argv[]) {
 
     // Read the values from file.
     const bool success =
-        scg::io::readOrderParameter(orderParameterFile, *orderParameter);
+        conga::io::readOrderParameter(orderParameterFile, *orderParameter);
 
     // Abort if not successful.
     if (!success) {
-      scg::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, gui);
       return EXIT_FAILURE;
     }
   }
@@ -290,16 +291,16 @@ int main(int argc, char *argv[]) {
 
     // Create the placeholder grid.
     const int gridResolution = parameters->getGridResolutionBase();
-    auto vectorPotential = std::make_unique<scg::GridGPU<T>>(
-        gridResolution, gridResolution, 2, scg::Type::real);
+    auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
+        gridResolution, gridResolution, 2, conga::Type::real);
 
     // Read the values from file.
-    const bool success = scg::io::readVectorPotential(vectorPotentialFile,
-                                                      *(vectorPotential.get()));
+    const bool success = conga::io::readVectorPotential(
+        vectorPotentialFile, *(vectorPotential.get()));
 
     // Abort if not successful.
     if (!success) {
-      scg::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, gui);
       return 1;
     }
 
@@ -324,7 +325,7 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["optimizer"]["min_mixing"].asDouble());
   const T maxMixing =
       static_cast<T>(simParams["optimizer"]["max_mixing"].asDouble());
-  auto optimizer = std::make_unique<scg::Optimizer<T>>(
+  auto optimizer = std::make_unique<conga::Optimizer<T>>(
       stepSize, inertia, adaptive, rank, replaceOldest, andersonAlways,
       minMixing, maxMixing);
   context->set(std::move(optimizer));
@@ -333,18 +334,18 @@ int main(int argc, char *argv[]) {
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Order parameter compute object.
-  new scg::ComputeOrderParameter<T>(context);
+  new conga::ComputeOrderParameter<T>(context);
   // Add current compute object.
-  new scg::ComputeCurrent<T>(context);
+  new conga::ComputeCurrent<T>(context);
   // Add free energy compute object.
-  new scg::ComputeFreeEnergy<T>(context);
+  new conga::ComputeFreeEnergy<T>(context);
 
   // Add vector-potential compute object.
   if (penetrationDepth > static_cast<T>(0)) {
     const T maxError = static_cast<T>(
         simParams["accuracy"]["vector_potential_error"].asDouble());
     auto computeVectorPotential =
-        std::make_unique<scg::ComputeVectorPotential<T>>(maxError);
+        std::make_unique<conga::ComputeVectorPotential<T>>(maxError);
     context->add(std::move(computeVectorPotential));
   }
 
@@ -353,23 +354,23 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // RiccatiSolverConfined: provides analytic solutions to the Riccati equations
   // for a piecewise constant order parameter.
-  scg::RiccatiSolver<T> *riccatiSolver;
+  conga::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gauge.
   const bool solenoidGuage = simParams["physics"]["gauge_solenoid"].asBool();
   if (solenoidGuage) {
     riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Solenoid>(
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
             context);
   } else {
     riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
             context);
   }
 
   // Add specular BC.
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   //***************************************************
   // INITIALIZE SIMULATION
@@ -381,10 +382,10 @@ int main(int argc, char *argv[]) {
   //***********************************************
   const bool visualize = simParams["misc"]["visualize"].asBool();
   if (visualize) {
-    gui = scg::run_utils::createVisualization(context);
-    scg::initGL(argc, argv, gui->getNumPixelsWindowX(),
-                gui->getNumPixelsWindowY());
-    glutKeyboardFunc(scg::run_utils::myKeyboardFunc);
+    gui = conga::run_utils::createVisualization(context);
+    conga::initGL(argc, argv, gui->getNumPixelsWindowX(),
+                  gui->getNumPixelsWindowY());
+    glutKeyboardFunc(conga::run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
   }
 
@@ -409,15 +410,15 @@ int main(int argc, char *argv[]) {
 
     // Save config parameters to JSON file.
     const std::filesystem::path configFileName = saveDataPath / "config.json";
-    scg::io::writeJSON(simParams, configFileName, verbose);
+    conga::io::writeJSON(simParams, configFileName, verbose);
 
     // TODO(niclas): Write internal parameters here as well? They do not change
     // during the simulation.
 
     // Save domain.
     const std::filesystem::path domainFileName = saveDataPath / "domain.csv";
-    const scg::GridGPU<char> &domain = *(geometry->getDomainGrid());
-    const scg::io::CSVGridDataSaveStrategy<char> writer;
+    const conga::GridGPU<char> &domain = *(geometry->getDomainGrid());
+    const conga::io::CSVGridDataSaveStrategy<char> writer;
     const bool success = writer.save(domain, {"domain"}, domainFileName);
     if (verbose) {
       if (!success) {
@@ -432,8 +433,8 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  const scg::Type::fileFormat dataFormat = scg::Type::csv;
-  scg::run_utils::runSimulation(
+  const conga::Type::fileFormat dataFormat = conga::Type::csv;
+  conga::run_utils::runSimulation(
       context, verbose, simParams["accuracy"]["num_iterations_min"].asInt(),
       simParams["accuracy"]["num_iterations_max"].asInt(), visualize,
       saveDataPath, saveData, saveFrequency, dataFormat);
@@ -443,17 +444,18 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // Save at the very end.
   if (saveData) {
-    scg::run_utils::saveDataWrapper(context, saveDataPath, verbose, dataFormat);
+    conga::run_utils::saveDataWrapper(context, saveDataPath, verbose,
+                                      dataFormat);
   }
 
   // Cleanup dynamically allocated memory.
-  scg::run_utils::cleanup(context, gui);
+  conga::run_utils::cleanup(context, gui);
   return EXIT_SUCCESS;
 }
 
 // Plot data in OpenGL GUI.
 void display() {
-  scg::run_utils::display(context, gui);
+  conga::run_utils::display(context, gui);
 
   // Tell Glut to update window.
   glutPostRedisplay();

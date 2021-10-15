@@ -1,6 +1,6 @@
 //===------- armadillo_wrapper.h - wrapper for armadillo inclusion. -------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//

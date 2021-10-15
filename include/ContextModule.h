@@ -1,6 +1,6 @@
 //===---- ContextModule.h - . ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -15,7 +15,7 @@
 #include <iostream>
 #include <string>
 
-namespace scg {
+namespace conga {
 template <typename> class ComputeProperty;
 template <typename> class Context;
 template <typename> class FermiSurface;
@@ -80,6 +80,6 @@ template <typename T> void ContextModule<T>::checkCudaError(std::string msg) {
     std::cout << "-- CUDA ERROR! " << msg << ": " << cudaGetErrorString(err)
               << std::endl;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // CONTEXT_MODULE_H_

@@ -1,6 +1,6 @@
 //===----------------- Optimizer.h - Optimizer base class. ----------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -30,7 +30,7 @@
 #include <thrust/device_vector.h>
 #include <vector>
 
-namespace scg {
+namespace conga {
 template <typename T> class Optimizer {
 public:
   /// \brief Constructor of the optimizer base class.
@@ -763,6 +763,6 @@ void Optimizer<T>::split(const GridGPU<T> &inSrc,
       dimX, dimY, inSrc.getDataPointer(yIdx),
       inOutVectorPotential.getDataPointer(1));
 }
-} // namespace scg
+} // namespace conga
 
 #endif // OPTIMIZER_H_

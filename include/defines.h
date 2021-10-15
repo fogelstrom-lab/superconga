@@ -1,6 +1,6 @@
 //===------ defines.h - Application-level (global) definitions. -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -16,7 +16,7 @@
 #include <array>
 #include <cmath>
 
-namespace scg {
+namespace conga {
 // Convenient 2D vector definition.
 template <typename T> using vector2d = std::array<T, 2>;
 
@@ -52,6 +52,6 @@ const double APERY = std::riemann_zeta(3);
 // The sign of the elementary charge 'e', i.e. SIGN_E = e / |e|.
 const double SIGN_E = 1.0;
 } // namespace constants
-} // namespace scg
+} // namespace conga
 
 #endif // DEFINES_H_

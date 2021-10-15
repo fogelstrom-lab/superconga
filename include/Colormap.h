@@ -1,6 +1,6 @@
 //===----- Colormap.h - Colormaps for heatmaps in live visualization. -----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -16,7 +16,7 @@
 #include <iostream>
 #include <vector>
 
-namespace scg {
+namespace conga {
 class Colormap {
 private:
   // Simple color struct.
@@ -126,6 +126,6 @@ public:
     outBlue = low.blue * lowWeight + high.blue * highWeight;
   }
 };
-} // namespace scg
+} // namespace conga
 
 #endif // COLORMAP_H_

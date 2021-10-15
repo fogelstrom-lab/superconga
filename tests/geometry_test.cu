@@ -21,10 +21,10 @@ namespace helper {
 template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context.
-  scg::Context<T> context;
+  conga::Context<T> context;
 
   // Create parameters, and set the only value the geometruGroup needs.
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
 
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   const T grainWidth = static_cast<T>(10);
@@ -35,7 +35,8 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Create a geometry group.
-  scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(&context);
+  conga::GeometryGroup<T> *geometryGroup =
+      new conga::GeometryGroup<T>(&context);
   const T grainFracton = parameters->getGrainFraction();
   if (inIsDisc) {
     // Add two disconnected discs.
@@ -43,22 +44,22 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
     const T centerX = static_cast<T>(0.25);
     const T centerY = static_cast<T>(0.25);
     geometryGroup->add(
-        new scg::DiscGeometry<T>(grainFracton, diameter, centerX, centerY),
-        scg::Type::add);
+        new conga::DiscGeometry<T>(grainFracton, diameter, centerX, centerY),
+        conga::Type::add);
     geometryGroup->add(
-        new scg::DiscGeometry<T>(grainFracton, diameter, -centerX, -centerY),
-        scg::Type::add);
+        new conga::DiscGeometry<T>(grainFracton, diameter, -centerX, -centerY),
+        conga::Type::add);
   } else {
     const int numVerticesSquare = 4;
     const T holeScale = static_cast<T>(0.25);
     // Add a square.
     geometryGroup->add(
-        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare),
-        scg::Type::add);
+        new conga::PolygonGeometry<T>(grainFracton, numVerticesSquare),
+        conga::Type::add);
     // Remove a square in the middle.
-    geometryGroup->add(
-        new scg::PolygonGeometry<T>(grainFracton, numVerticesSquare, holeScale),
-        scg::Type::remove);
+    geometryGroup->add(new conga::PolygonGeometry<T>(
+                           grainFracton, numVerticesSquare, holeScale),
+                       conga::Type::remove);
   }
 
   // Initialize the geometry group, i.e. compute domain labels.
@@ -67,20 +68,20 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   // Get and set the dimensions of our grids.
   const int numFields = 1;
   const int gridResolution = parameters->getGridResolutionBase();
-  const scg::Type::type representation = scg::Type::real;
+  const conga::Type::type representation = conga::Type::real;
 
   // Create the test grid (on the CPU).
-  scg::GridData<T, thrust::host_vector<T>> testGridCPU(
+  conga::GridData<T, thrust::host_vector<T>> testGridCPU(
       gridResolution, gridResolution, numFields, representation);
 
   // Create the expected grid (on the CPU).
-  scg::GridData<T, thrust::host_vector<T>> expectedGridCPU(
+  conga::GridData<T, thrust::host_vector<T>> expectedGridCPU(
       gridResolution, gridResolution, numFields, representation);
 
   // An extra scope so we can reuse variable names.
   {
     // Copy the domain labels to the CPU.
-    const scg::GridData<char, thrust::host_vector<char>> domainLabels =
+    const conga::GridData<char, thrust::host_vector<char>> domainLabels =
         *(geometryGroup->getDomainGrid());
 
     // Get the pointers to the test grid, expected grid, and the domain labels.
@@ -102,7 +103,7 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 
   // =================== ACT ==================== //
   // Copy test grid to the GPU.
-  scg::GridData<T, thrust::device_vector<T>> gridGPU = testGridCPU;
+  conga::GridData<T, thrust::device_vector<T>> gridGPU = testGridCPU;
 
   // Zero values outside of the grain.
   geometryGroup->zeroValuesOutsideDomainRef(&gridGPU);
@@ -131,10 +132,10 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 template <typename T> void testArea(const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context.
-  scg::Context<T> context;
+  conga::Context<T> context;
 
   // Create parameters, and set the only value the geometruGroup needs.
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
 
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   const T grainWidth = static_cast<T>(1);
@@ -145,18 +146,20 @@ template <typename T> void testArea(const bool inIsDisc) {
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Create a geometry group.
-  scg::GeometryGroup<T> *geometryGroup = new scg::GeometryGroup<T>(&context);
+  conga::GeometryGroup<T> *geometryGroup =
+      new conga::GeometryGroup<T>(&context);
   const T grainFracton = parameters->getGrainFraction();
   if (inIsDisc) {
     // Add a disc.
-    geometryGroup->add(new scg::DiscGeometry<T>(grainFracton), scg::Type::add);
+    geometryGroup->add(new conga::DiscGeometry<T>(grainFracton),
+                       conga::Type::add);
   } else {
     // Add a square.
     const int numVerticesSquare = 4;
     const T sideLength = grainWidth;
-    geometryGroup->add(new scg::PolygonGeometry<T>(
+    geometryGroup->add(new conga::PolygonGeometry<T>(
                            grainFracton, numVerticesSquare, sideLength),
-                       scg::Type::add);
+                       conga::Type::add);
   }
 
   // Initialize the geometry group, i.e. compute domain labels.

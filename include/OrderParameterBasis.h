@@ -1,6 +1,6 @@
 //===-- OrderParameterBasis.h - Order parameter basis functions. ----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -20,7 +20,7 @@
 #include <string>
 #include <thrust/complex.h>
 
-namespace scg {
+namespace conga {
 /// \brief Enum class with the supported basis-function symmetries.
 ///
 /// The following values are supported:
@@ -268,6 +268,6 @@ void BasisFunction<T>::normalize(const std::vector<vector2d<T>> &inMomenta) {
   m_normalizationFactor *=
       static_cast<T>(1.0) / std::sqrt(avgBasisFunctionSquared);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // ORDER_PARAMETER_BASIS_H_

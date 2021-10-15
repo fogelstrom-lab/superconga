@@ -1,6 +1,6 @@
 //===--------------------- Type.h - Enum definitions. ---------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -13,7 +13,7 @@
 #ifndef TYPE_H_
 #define TYPE_H_
 
-namespace scg {
+namespace conga {
 struct Type {
   enum type {
     real = 1,
@@ -27,6 +27,6 @@ struct Type {
   enum location { start = 1, begin = 1, end = 2 };
   enum fileFormat { binary = 0, csv = 1 };
 };
-} // namespace scg
+} // namespace conga
 
 #endif // TYPE_H_

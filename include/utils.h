@@ -1,6 +1,6 @@
 //===-- utils.h - Collection of useful functions --------------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,7 @@
 #include <cmath>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace utils {
 /// \brief Wrap value to range
 ///
@@ -211,6 +211,6 @@ std::vector<T> linspace(const T inMinVal, const T inMaxVal,
   return values;
 }
 } // namespace utils
-} // namespace scg
+} // namespace conga
 
 #endif // UTILS_H_

@@ -1,6 +1,6 @@
 //===-- GridData.h - GridData class. --------------------------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -41,7 +41,7 @@
 #include <thrust/transform.h>
 #include <thrust/transform_reduce.h>
 
-namespace scg {
+namespace conga {
 // Forward declarations. These can be used when we want to refer to another
 // class without including the .h file.
 template <typename> class Parameters;
@@ -1810,6 +1810,6 @@ int GridData<T, DEV>::readParameters(const std::filesystem::path &filename,
     return 1;
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // GRID_DATA_H_

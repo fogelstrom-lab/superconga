@@ -1,6 +1,6 @@
 //===--------- dispersion_test.cu - Unit tests of the dispersion  --------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -27,8 +27,8 @@ enum class Symmetry { mirrorX, mirrorY, rotate180, mirrorDiag };
 
 // Apply some (square) symmetry operation to the momentum.
 template <typename T>
-scg::vector2d<T> applySymmetry(const scg::vector2d<T> &inMomentum,
-                               const Symmetry inSymmetry) {
+conga::vector2d<T> applySymmetry(const conga::vector2d<T> &inMomentum,
+                                 const Symmetry inSymmetry) {
   T kX = inMomentum[0];
   T kY = inMomentum[1];
   switch (inSymmetry) {
@@ -69,12 +69,12 @@ void checkResult(const T inExpected, const T inComputed, const T inTolerance,
 
 // For checking the results in testSquareSymmetry.
 template <typename T>
-void checkResult(const scg::vector2d<T> &inExpected,
-                 const scg::vector2d<T> &inComputed, const T inTolerance,
+void checkResult(const conga::vector2d<T> &inExpected,
+                 const conga::vector2d<T> &inComputed, const T inTolerance,
                  const Symmetry inSymmetry) {
   // The symmetries considered are involutory, i.e. the operation is its own
   // inverse.
-  const scg::vector2d<T> computed = applySymmetry(inComputed, inSymmetry);
+  const conga::vector2d<T> computed = applySymmetry(inComputed, inSymmetry);
 
   REQUIRE(inExpected[0] == doctest::Approx(computed[0]).epsilon(inTolerance));
   REQUIRE(inExpected[1] == doctest::Approx(computed[1]).epsilon(inTolerance));
@@ -88,32 +88,32 @@ void testSquareSymmetry(const T inTolerance,
   // Next-nearest neighbour.
   const T minHoppingNNN = static_cast<T>(-0.5);
   const T maxHoppingNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNN = scg::utils::linspace(
+  const std::vector<T> a_hoppingNNN = conga::utils::linspace(
       minHoppingNNN, maxHoppingNNN, inNumTestsPerParameter);
 
   // Next-next-earest neighbour.
   const T minHoppingNNNN = static_cast<T>(-0.5);
   const T maxHoppingNNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNNN = scg::utils::linspace(
+  const std::vector<T> a_hoppingNNNN = conga::utils::linspace(
       minHoppingNNNN, maxHoppingNNNN, inNumTestsPerParameter);
 
   // Chemical potential.
   const T minChemicalPotential = static_cast<T>(-1.0);
   const T maxChemicalPotential = static_cast<T>(1.0);
-  const std::vector<T> a_chemicalPotential = scg::utils::linspace(
+  const std::vector<T> a_chemicalPotential = conga::utils::linspace(
       minChemicalPotential, maxChemicalPotential, inNumTestsPerParameter);
 
   // X-component of momentum.
   const T minKX = static_cast<T>(0.0);
   const T maxKX = static_cast<T>(2.0 * M_PI);
   const std::vector<T> a_kX =
-      scg::utils::linspace(minKX, maxKX, inNumTestsPerParameter);
+      conga::utils::linspace(minKX, maxKX, inNumTestsPerParameter);
 
   // Y-component of momentum.
   const T minKY = static_cast<T>(0.0);
   const T maxKY = static_cast<T>(2.0 * M_PI);
   const std::vector<T> a_kY =
-      scg::utils::linspace(minKY, maxKY, inNumTestsPerParameter);
+      conga::utils::linspace(minKY, maxKY, inNumTestsPerParameter);
 
   const int numSymmetries = 4;
   const std::array<Symmetry, numSymmetries> symmetries = {
@@ -124,22 +124,22 @@ void testSquareSymmetry(const T inTolerance,
     for (const T &hoppingNNNN : a_hoppingNNNN) {
       for (const T &chemicalPotential : a_chemicalPotential) {
         // Create the dispersion object.
-        const scg::DispersionTightBinding<T> dispersion(hoppingNNN, hoppingNNNN,
-                                                        chemicalPotential);
+        const conga::DispersionTightBinding<T> dispersion(
+            hoppingNNN, hoppingNNNN, chemicalPotential);
         for (const T &kX : a_kX) {
           for (const T &kY : a_kY) {
-            const scg::vector2d<T> momentum = {kX, kY};
+            const conga::vector2d<T> momentum = {kX, kY};
             const T valueExpected = dispersion.evaluate(momentum);
-            const scg::vector2d<T> gradientExpected =
+            const conga::vector2d<T> gradientExpected =
                 dispersion.derivative(momentum);
 
             for (const Symmetry &symmetry : symmetries) {
-              const scg::vector2d<T> momentumSym =
+              const conga::vector2d<T> momentumSym =
                   applySymmetry(momentum, symmetry);
 
               // =================== ACT ==================== //
               const T value = dispersion.evaluate(momentumSym);
-              const scg::vector2d<T> gradient =
+              const conga::vector2d<T> gradient =
                   dispersion.derivative(momentumSym);
 
               // =================== ASSERT ==================== //
@@ -164,32 +164,32 @@ void testDispersionDerivative(
   // Next-nearest neighbour.
   const T minHoppingNNN = static_cast<T>(-0.5);
   const T maxHoppingNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNN = scg::utils::linspace(
+  const std::vector<T> a_hoppingNNN = conga::utils::linspace(
       minHoppingNNN, maxHoppingNNN, inNumTestsPerParameter);
 
   // Next-next-earest neighbour.
   const T minHoppingNNNN = static_cast<T>(-0.5);
   const T maxHoppingNNNN = static_cast<T>(0.5);
-  const std::vector<T> a_hoppingNNNN = scg::utils::linspace(
+  const std::vector<T> a_hoppingNNNN = conga::utils::linspace(
       minHoppingNNNN, maxHoppingNNNN, inNumTestsPerParameter);
 
   // Chemical potential.
   const T minChemicalPotential = static_cast<T>(-1.0);
   const T maxChemicalPotential = static_cast<T>(1.0);
-  const std::vector<T> a_chemicalPotential = scg::utils::linspace(
+  const std::vector<T> a_chemicalPotential = conga::utils::linspace(
       minChemicalPotential, maxChemicalPotential, inNumTestsPerParameter);
 
   // X-component of momentum.
   const T minKX = static_cast<T>(0.0);
   const T maxKX = static_cast<T>(2.0 * M_PI);
   const std::vector<T> a_kX =
-      scg::utils::linspace(minKX, maxKX, inNumTestsPerParameter);
+      conga::utils::linspace(minKX, maxKX, inNumTestsPerParameter);
 
   // Y-component of momentum.
   const T minKY = static_cast<T>(0.0);
   const T maxKY = static_cast<T>(2.0 * M_PI);
   const std::vector<T> a_kY =
-      scg::utils::linspace(minKY, maxKY, inNumTestsPerParameter);
+      conga::utils::linspace(minKY, maxKY, inNumTestsPerParameter);
 
   // For convenience.
   const T invDenom = static_cast<T>(1.0) / (static_cast<T>(2.0) * inKEpsilon);
@@ -198,13 +198,13 @@ void testDispersionDerivative(
     for (const T &hoppingNNNN : a_hoppingNNNN) {
       for (const T &chemicalPotential : a_chemicalPotential) {
         // Create the dispersion object.
-        const scg::DispersionTightBinding<T> dispersion(hoppingNNN, hoppingNNNN,
-                                                        chemicalPotential);
+        const conga::DispersionTightBinding<T> dispersion(
+            hoppingNNN, hoppingNNNN, chemicalPotential);
         for (const T &kX : a_kX) {
           for (const T &kY : a_kY) {
             // =================== ACT ==================== //
             // Compute the analytical derivatives.
-            const scg::vector2d<T> dE = dispersion.derivative({kX, kY});
+            const conga::vector2d<T> dE = dispersion.derivative({kX, kY});
             const T dEdX = dE[0];
             const T dEdY = dE[1];
 

@@ -73,8 +73,8 @@ void testHomogeneousSolutionsParticular(const T inTolerance) {
   // Compute coherence functions.
   thrust::complex<T> testGamma;
   thrust::complex<T> testGammaTilde;
-  scg::riccati::computeHomogeneous(orderParameter, energy, testGamma,
-                                   testGammaTilde);
+  conga::riccati::computeHomogeneous(orderParameter, energy, testGamma,
+                                     testGammaTilde);
 
   // =================== ASSERT ==================== //
   // Compute expected coherence functions.
@@ -123,9 +123,9 @@ void testHomogeneousSolutionsGeneral(const T inTolerance) {
           // For some reason the inputs can not be std::complex.
           thrust::complex<T> testGamma;
           thrust::complex<T> testGammaTilde;
-          scg::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
-                                           thrust::complex<T>(energy),
-                                           testGamma, testGammaTilde);
+          conga::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
+                                             thrust::complex<T>(energy),
+                                             testGamma, testGammaTilde);
 
           // =================== ASSERT ==================== //
           // Compute expected coherence functions.
@@ -177,19 +177,19 @@ void testSteppingSolutionsParticular(const T inTolerance) {
   // Compute homogeneous coherence functions.
   thrust::complex<T> gammaHomo;
   thrust::complex<T> gammaTildeHomo;
-  scg::riccati::computeHomogeneous(orderParameter, energy, gammaHomo,
-                                   gammaTildeHomo);
+  conga::riccati::computeHomogeneous(orderParameter, energy, gammaHomo,
+                                     gammaTildeHomo);
 
   // Set initial values.
   const thrust::complex<T> gammaInit = gammaHomo * initialFactor;
   const thrust::complex<T> gammaTildeInit = gammaTildeHomo * initialFactor;
 
   // Compute coherence functions.
-  const thrust::complex<T> testGamma = scg::riccati::Gamma<T>::computeStep(
+  const thrust::complex<T> testGamma = conga::riccati::Gamma<T>::computeStep(
       gammaHomo, orderParameter, energy, gammaInit, step);
   const thrust::complex<T> testGammaTilde =
-      scg::riccati::GammaTilde<T>::computeStep(gammaTildeHomo, orderParameter,
-                                               energy, gammaTildeInit, step);
+      conga::riccati::GammaTilde<T>::computeStep(gammaTildeHomo, orderParameter,
+                                                 energy, gammaTildeInit, step);
 
   // =================== ASSERT ==================== //
   // Compute expected coherence functions.
@@ -226,7 +226,7 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
   // The coherence functions can never have a magnitude larger than unity.
   const int numMagnitudes = 5;
   const bool includeEndPoint = true;
-  const std::vector<T> gammaMagnitudeValues = scg::utils::linspace(
+  const std::vector<T> gammaMagnitudeValues = conga::utils::linspace(
       static_cast<T>(0), static_cast<T>(1), numMagnitudes, includeEndPoint);
   const std::vector<T> gammaPhaseValues = {
       -static_cast<T>(1), -static_cast<T>(SMALL), static_cast<T>(0),
@@ -248,9 +248,9 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
           // For some reason the inputs can not be std::complex.
           thrust::complex<T> gammaHomo;
           thrust::complex<T> gammaTildeHomo;
-          scg::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
-                                           thrust::complex<T>(energy),
-                                           gammaHomo, gammaTildeHomo);
+          conga::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
+                                             thrust::complex<T>(energy),
+                                             gammaHomo, gammaTildeHomo);
 
           for (const T gammaInitMagnitude : gammaMagnitudeValues) {
             for (const T gammaInitPhase : gammaPhaseValues) {
@@ -263,10 +263,10 @@ template <typename T> void testSteppingSolutionsGeneral(const T inTolerance) {
               for (const T step : valuesPositive) {
                 // Compute coherence functions.
                 const thrust::complex<T> testGamma =
-                    scg::riccati::Gamma<T>::computeStep(
+                    conga::riccati::Gamma<T>::computeStep(
                         gammaHomo, orderParameter, energy, gammaInit, step);
                 const thrust::complex<T> testGammaTilde =
-                    scg::riccati::GammaTilde<T>::computeStep(
+                    conga::riccati::GammaTilde<T>::computeStep(
                         gammaTildeHomo, orderParameter, energy, gammaInit,
                         step);
 
@@ -317,7 +317,7 @@ void testHalfSteppingSolutionsGeneral(const T inTolerance) {
   // The coherence functions can never have a magnitude larger than unity.
   const int numMagnitudes = 5;
   const bool includeEndPoint = true;
-  const std::vector<T> gammaMagnitudeValues = scg::utils::linspace(
+  const std::vector<T> gammaMagnitudeValues = conga::utils::linspace(
       static_cast<T>(0), static_cast<T>(1), numMagnitudes, includeEndPoint);
   const std::vector<T> gammaPhaseValues = {
       -static_cast<T>(1), -static_cast<T>(SMALL), static_cast<T>(0),
@@ -339,9 +339,9 @@ void testHalfSteppingSolutionsGeneral(const T inTolerance) {
           // For some reason the inputs can not be std::complex.
           thrust::complex<T> gammaHomo;
           thrust::complex<T> gammaTildeHomo;
-          scg::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
-                                           thrust::complex<T>(energy),
-                                           gammaHomo, gammaTildeHomo);
+          conga::riccati::computeHomogeneous(thrust::complex<T>(orderParameter),
+                                             thrust::complex<T>(energy),
+                                             gammaHomo, gammaTildeHomo);
 
           for (const T gammaInitMagnitude : gammaMagnitudeValues) {
             for (const T gammaInitPhase : gammaPhaseValues) {
@@ -355,13 +355,13 @@ void testHalfSteppingSolutionsGeneral(const T inTolerance) {
                 // Compute coherence functions.
                 thrust::complex<T> testGammaCenter;
                 thrust::complex<T> testGammaExit;
-                scg::riccati::Gamma<T>::computeHalfSteps(
+                conga::riccati::Gamma<T>::computeHalfSteps(
                     gammaHomo, orderParameter, energy, gammaInit, step,
                     testGammaCenter, testGammaExit);
 
                 thrust::complex<T> testGammaTildeCenter;
                 thrust::complex<T> testGammaTildeExit;
-                scg::riccati::GammaTilde<T>::computeHalfSteps(
+                conga::riccati::GammaTilde<T>::computeHalfSteps(
                     gammaTildeHomo, orderParameter, energy, gammaInit, step,
                     testGammaTildeCenter, testGammaTildeExit);
 

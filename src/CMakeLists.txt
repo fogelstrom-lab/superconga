@@ -1,10 +1,12 @@
-# #############################################################################
+# ##############################################################################
 # SOURCE FILES
-# #############################################################################
-message(STATUS "################## Building SuprConGPU source files ##################")
+# ##############################################################################
+message(
+  STATUS
+    "################## Building SuperConga source files ##################")
 
 # Define the main set of source files
-set(SRC suprcongpu.cu postprocess.cu)
+set(SRC superconga.cu postprocess.cu)
 
 # Define precisions.
 set(SINGLE_PRECISION OFF ON)
@@ -53,7 +55,7 @@ foreach(file ${SRC})
 
     # Apply compiler options.
     if(single_precision)
-      target_compile_definitions(${name} PUBLIC SCG_SINGLE_PRECISION)
+      target_compile_definitions(${name} PUBLIC CONGA_SINGLE_PRECISION)
     endif(single_precision)
 
     # Set DEBUG compile flags
@@ -68,4 +70,6 @@ foreach(file ${SRC})
   endforeach(single_precision ${SINGLE_PRECISION})
 endforeach(file ${SRC})
 
-message(STATUS "######################################################################")
+message(
+  STATUS
+    "######################################################################")

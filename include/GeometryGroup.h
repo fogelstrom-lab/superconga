@@ -1,6 +1,6 @@
 //===---- GeometryGroup.h - Container for geometry component objects. -----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include <cuda.h>
 #include <thrust/complex.h>
 
-namespace scg {
+namespace conga {
 template <typename T> class GeometryGroup : public ContextModule<T> {
 public:
   GeometryGroup();
@@ -1096,6 +1096,6 @@ template <typename T> T *GeometryGroup<T>::getNormals(const int dim) const {
 template <typename T> T *GeometryGroup<T>::getBoundaryDistance() const {
   return _boundaryDistance->getDataPointer();
 }
-} // namespace scg
+} // namespace conga
 
 #endif // GEOMETRY_GROUP_H_

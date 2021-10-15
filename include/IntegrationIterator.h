@@ -1,6 +1,6 @@
 //===-- Integrationiterator.h - Integration iterator base class. ----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include "ParameterIterator.h"
 #include "RiccatiSolver.h"
 
-namespace scg {
+namespace conga {
 template <typename T> class IntegrationIterator : public ContextModule<T> {
 public:
   IntegrationIterator();
@@ -174,6 +174,6 @@ void IntegrationIterator<T>::setNumEnergiesPerBlock(int num) {
     initialize();
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // INTEGRATION_ITERATOR_H_

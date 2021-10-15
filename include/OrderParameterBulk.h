@@ -1,6 +1,6 @@
 //===-- OrderParameterBulk.h - Order parameter bulk calculation. ----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include <limits>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace bulk_internal {
 /// \brief A helper function for computing the residual of the self-consistency
 /// equation
@@ -243,6 +243,6 @@ T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
                        (std::log(inTemperature) + inTemperature * energySum);
   return freeEnergy;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // ORDER_PARAMETER_BULK_H_

@@ -1,6 +1,6 @@
 //=== ComputeSpectralCurrent.h - Class for spectral current compute object. ==//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 #include <cmath>
 #include <limits>
 
-namespace scg {
+namespace conga {
 template <typename T> class ComputeSpectralCurrent : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
@@ -274,6 +274,6 @@ void ComputeSpectralCurrent<T>::computePropertyFromGreens() {
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_SPECTRAL_CURRENT_H_

@@ -1,6 +1,6 @@
 //== ParameterIterator.h - Convenience class for iterating over parameters. ==//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -12,7 +12,7 @@
 #ifndef PARAMETER_ITERATOR_H_
 #define PARAMETER_ITERATOR_H_
 
-namespace scg {
+namespace conga {
 template <typename T> class ParameterIterator {
 public:
   ParameterIterator();
@@ -209,6 +209,6 @@ template <typename T> T ParameterIterator<T>::getNumInterval() const {
   else
     return getIncrement();
 }
-} // namespace scg
+} // namespace conga
 
 #endif // PARAMETER_ITERATOR_H_

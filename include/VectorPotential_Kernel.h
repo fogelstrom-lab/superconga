@@ -1,6 +1,6 @@
 //===- VectorPotential_Kernel.h - CUDA kernel for computing energy shift. -===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include <cuda.h>
 #include <math.h>
 
-namespace scg {
+namespace conga {
 template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShiftOnlyExternalKernel(
     const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
@@ -95,6 +95,6 @@ __global__ void computeEnergyShiftKernel(
                            inFermiVelocityY * vectorPotentialY);
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // VECTOR_POTENTIAL_KERNEL_H_

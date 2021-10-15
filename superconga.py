@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Copyright (C) 2019 and after, SuprConGPU team.
+# Copyright (C) 2019 and after, SuperConga team.
 # All rights reserved.
-# This file is part of the SuprConGPU Project, under the GNU LGPL v3
+# This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
-"""Frontend for SuprConGPU: Superconductivity simulation framework on GPU.
+"""Frontend for SuperConga: Superconductivity simulation framework on GPU.
 
-SuprConGPU Main file for setting up self-consistent simulations in a confined
+SuperConga Main file for setting up self-consistent simulations in a confined
 geometry (a mesoscopic grain). Different superconducting order parameters and
 geometries can be specified, as well as physical parameters such as temperature
 and external fields. To set these, create a .json parameter-file as in examples
@@ -36,8 +36,8 @@ def main() -> None:
     # Front-end is e.g. runner or plotter.
     frontend = "runner"
     # Program name and description for command-line help message.
-    program_name = "SuprConGPU"
-    program_description = "SuprConGPU Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in the folders in 'examples/', and give the path to this file with the -f option. All parameters can be overridden using the command-line options specified below."
+    program_name = "SuperConga"
+    program_description = "SuperConga Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in the folders in 'examples/', and give the path to this file with the -f option. All parameters can be overridden using the command-line options specified below."
     # Parse command-line arguments, and possibly a JSON file which specifies
     # config plotting parameters. The JSON file is provided via: -f|--file.
     simulation_parameters, cpp_info = AP.parse_command_line_arguments(
@@ -65,7 +65,7 @@ def main() -> None:
     if cpp_path is None:
         cpp_path = os.path.join(
             os.path.dirname(__file__),
-            "build/release/bin/suprcongpu_f" + str(cpp_precision),
+            "build/release/bin/superconga_f" + str(cpp_precision),
         )
     binary_caller.run_cpp_binary(cpp_path, simulation_parameters)
 

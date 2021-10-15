@@ -1,6 +1,6 @@
 //===---- ComputeCurrent.h - Class for order parameter compute object. ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include "Grid.h"
 #include "IntegrationIteratorOzaki.h"
 
-namespace scg {
+namespace conga {
 template <typename T> class ComputeOrderParameter : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
@@ -277,6 +277,6 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
     C::setConverged(false);
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_ORDER_PARAMETER_H_

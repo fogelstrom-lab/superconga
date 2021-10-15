@@ -62,10 +62,10 @@ namespace helper {
 
 // Helper class for setting up simulation parameters
 template <typename T>
-scg::Parameters<T> *applySimParams(const bool inUseSwave,
-                                   scg::Context<T> *inOutContext) {
+conga::Parameters<T> *applySimParams(const bool inUseSwave,
+                                     conga::Context<T> *inOutContext) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(inOutContext);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(inOutContext);
 
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
@@ -98,62 +98,66 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
                            const bool inUseSwave, const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context
-  scg::Context<T> *context = new scg::Context<T>();
+  conga::Context<T> *context = new conga::Context<T>();
 
   // Set parameters to the values specified in simParams struct
-  scg::Parameters<T> *parameters = applySimParams<T>(inUseSwave, context);
+  conga::Parameters<T> *parameters = applySimParams<T>(inUseSwave, context);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
   const T grainFraction = parameters->getGrainFraction();
   if (inIsDisc) {
-    geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
+    geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
   } else {
     const int numVerticesSquare = 4;
-    geometry->add(new scg::PolygonGeometry<T>(grainFraction, numVerticesSquare),
-                  scg::Type::add);
+    geometry->add(
+        new conga::PolygonGeometry<T>(grainFraction, numVerticesSquare),
+        conga::Type::add);
   }
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
-  scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(context);
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
+          context);
   // Add specular BC
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(context);
 
   // Add a d-wave or an s-wave order-parameter component.
-  const scg::BasisFunctionSymmetry symmetry =
-      inUseSwave ? scg::BasisFunctionSymmetry::SWAVE
-                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-  scg::OrderParameterComponent<T> *orderParameterComponent =
-      new scg::OrderParameterComponent<T>(symmetry, parameters);
+  const conga::BasisFunctionSymmetry symmetry =
+      inUseSwave ? conga::BasisFunctionSymmetry::SWAVE
+                 : conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  conga::OrderParameterComponent<T> *orderParameterComponent =
+      new conga::OrderParameterComponent<T>(symmetry, parameters);
 
   // Initialize order-parameter component to the bulk value.
   // It is interesting to have a test with non-bulk initialization. It passes
   // either way but it takes shorter time with bulk initialization. Also, if
   // everything is correct it should converge after one iteration, something
   // which we cannot see if we don't use bulk.
-  scg::Initial<T>::bulk(orderParameterComponent);
+  conga::Initial<T>::bulk(orderParameterComponent);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
   // Create compute objects
-  scg::ComputeOrderParameter<T> *computeOrderParameter =
-      new scg::ComputeOrderParameter<T>(context);
-  scg::ComputeFreeEnergy<T> *computeFreeEnergy =
-      new scg::ComputeFreeEnergy<T>(context);
-  scg::ComputeCurrent<T> *computeCurrent = new scg::ComputeCurrent<T>(context);
+  conga::ComputeOrderParameter<T> *computeOrderParameter =
+      new conga::ComputeOrderParameter<T>(context);
+  conga::ComputeFreeEnergy<T> *computeFreeEnergy =
+      new conga::ComputeFreeEnergy<T>(context);
+  conga::ComputeCurrent<T> *computeCurrent =
+      new conga::ComputeCurrent<T>(context);
 
   // =================== ACT ==================== //
   // Initialize simulation
   context->initialize();
 
-  scg::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
-                                simParams::NUM_ITERATIONS_MIN,
-                                simParams::NUM_ITERATIONS_MAX);
+  conga::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
+                                  simParams::NUM_ITERATIONS_MIN,
+                                  simParams::NUM_ITERATIONS_MAX);
 
   // Remove all spurious values outside actual grain
   context->getGeometry()->zeroValuesOutsideDomainRef(
@@ -178,8 +182,8 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   // =================== ASSERT ==================== //
   // Expected average bulk gap
   const T expectedAverageOrderParameter =
-      (inUseSwave ? static_cast<T>(scg::constants::S_WAVE_BULK)
-                  : static_cast<T>(scg::constants::D_WAVE_BULK));
+      (inUseSwave ? static_cast<T>(conga::constants::S_WAVE_BULK)
+                  : static_cast<T>(conga::constants::D_WAVE_BULK));
   // Expected average current density
   const T expectedAverageCurrent = static_cast<T>(0.0);
   // The bulk free energy, see page 106 of P. Holmvall PhD Thesis
@@ -203,7 +207,7 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   CHECK(context->isConverged());
 
   // Clean up context
-  scg::run_utils::cleanup(context);
+  conga::run_utils::cleanup(context);
 }
 } // namespace helper
 

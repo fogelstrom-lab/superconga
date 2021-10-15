@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(
-  suprcongpu
+  superconga
   VERSION 0.7.0
   LANGUAGES CUDA CXX)
 
@@ -8,22 +8,22 @@ project(
 message(
   STATUS "Building ${CMAKE_PROJECT_NAME} version ${CMAKE_PROJECT_VERSION}.")
 
-###############################################################################
+# ##############################################################################
 # CTEST AND DOCTEST
-###############################################################################
+# ##############################################################################
 # Enable CTest.
 include(CTest)
 
-###############################################################################
+# ##############################################################################
 # INCLUDE DEPENDENCIES WITH FIND_PACKAGE()
-###############################################################################
+# ##############################################################################
 # Find BLAS and LAPACK
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-###############################################################################
+# ##############################################################################
 # FETCH EXTERNAL LIBRARIES WITH FETCHCONTENT(): JSON
-###############################################################################
+# ##############################################################################
 # So we can download libs at build time.
 include(FetchContent)
 
@@ -45,9 +45,9 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-###############################################################################
+# ##############################################################################
 # CUDA
-###############################################################################
+# ##############################################################################
 # Check the CUDA compiler
 include(CheckLanguage)
 check_language(CUDA)
@@ -58,8 +58,8 @@ if(NOT CMAKE_CUDA_COMPILER)
 endif()
 
 # Fetch CUDA CMake-CUDA functionality. NOTE: FindCUDA is formally deprecated,
-# but no standalone alternative exists as of yet for automatic detection of
-# GPU architecture, so we use it.
+# but no standalone alternative exists as of yet for automatic detection of GPU
+# architecture, so we use it.
 find_package(CUDA REQUIRED)
 
 set(CUDA_ARCH
@@ -70,7 +70,7 @@ if(CUDA_ARCH)
   set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
 else()
   # Autodetect architecture and fetch architecture version.
-  CUDA_DETECT_INSTALLED_GPUS(DETECTED_CUDA_ARCH)
+  cuda_detect_installed_gpus(DETECTED_CUDA_ARCH)
   # Convert to number valid in architecture flags: remove dots.
   string(REPLACE "." "" CUDA_ARCH "${DETECTED_CUDA_ARCH}")
 
@@ -106,7 +106,7 @@ set(NVCC_WARN
     -Wformat=2")
 
 # Set CMAKE_CUDA_ARCHITECTURES, which is needed in CMake>=3.18.
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
   # Set CMake policies.
   cmake_policy(SET CMP0104 NEW)
   cmake_policy(SET CMP0105 NEW)
@@ -114,18 +114,18 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
   # Set CUDA architecture flag (new in CMake>=3.18).
   set(CMAKE_CUDA_ARCHITECTURES "${CUDA_ARCH}")
   message(STATUS "Set CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
-endif (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+endif(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
 
-###############################################################################
+# ##############################################################################
 # SUBDIRECTORIES
-###############################################################################
+# ##############################################################################
 # Add subdirectories
 add_subdirectory(src)
 add_subdirectory(tests)
 
-###############################################################################
+# ##############################################################################
 # TEMPLATES
-###############################################################################
+# ##############################################################################
 # Export variables and macro defines to be synchronized throughout the project,
 # in particular this is e.g. the version number, the project name and build
 # paths. These variables can then be specified in a single place. Generate

@@ -1,6 +1,6 @@
 //===--------------------- Context.h - Context class. ---------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,7 @@
 #include <iostream>
 #include <memory>
 
-namespace scg {
+namespace conga {
 template <typename> class ComputeCurrent;
 template <typename> class ComputeSpectralCurrent;
 template <typename> class ComputeFreeEnergy;
@@ -485,6 +485,6 @@ template <typename T> bool Context<T>::isConverged() const {
   }
   return success;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // CONTEXT_H_

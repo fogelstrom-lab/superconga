@@ -1,11 +1,11 @@
 # Examples
 
-A collection of parameter files, one per example, demonstrating different physical aspects of superconductors that are computable through the SuprConGPU framework. Run the examples with `suprcongpu.py` with the `--file` argument (from the root directory from the repository):
+A collection of parameter files, one per example, demonstrating different physical aspects of superconductors that are computable through the SuperConga framework. Run the examples with `superconga.py` with the `--file` argument (from the root directory from the repository):
 ```shell
-python3 suprcongpu.py --file examples/swave_abrikosov_vortex_lattice/config.json
+python3 superconga.py --file examples/swave_abrikosov_vortex_lattice/config.json
 ```
 
-See tutorials in the [online documentation](https://suprcongpu.gitlab.io/suprcongpu-doc/) for more information.
+See tutorials in the [online documentation](https://superconga.gitlab.io/superconga-doc/) for more information.
 
 ## D-Wave Chiral
 

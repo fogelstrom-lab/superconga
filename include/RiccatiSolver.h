@@ -1,6 +1,6 @@
 //===----- RiccatiSolver.h - Base class for riccati equation solver. ------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -29,7 +29,7 @@
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE
 /////////////////////////////////////////////////////////
 
-namespace scg {
+namespace conga {
 template <typename T> class BoundaryStorage;
 
 template <typename T> class RiccatiSolver : public ContextModule<T> {
@@ -323,6 +323,6 @@ void RiccatiSolver<T>::getKernelDimensionsOptim(dim3 &blocksPerGrid,
   threadsPerBlock = dim3(tpb_x, tpb_y);
   blocksPerGrid = dim3(bpg_x, bpg_y);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // RICCATI_SOLVER_H_

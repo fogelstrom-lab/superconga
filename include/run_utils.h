@@ -1,6 +1,6 @@
 //===----- run_utils.h - Useful functions for run file examples --===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -43,7 +43,7 @@
 #include <GLUT/glut.h>
 #endif
 
-namespace scg {
+namespace conga {
 namespace run_utils {
 namespace internal {
 //===----------------------------- Variables -----------------------------===//
@@ -233,10 +233,10 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
     const std::string geometryComponentName = geometryComponentNames[0];
 
     // Check whether component is to be added or removed.
-    const scg::Type::type addOrRemove =
+    const Type::type addOrRemove =
         (geometryComponentVector[i][geometryComponentName]["add"].asBool())
-            ? scg::Type::add
-            : scg::Type::remove;
+            ? Type::add
+            : Type::remove;
 
     // Add/remove the appropriate geometry component.
     if (geometryComponentName == "disc") {
@@ -262,9 +262,9 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
           inScalingFactor;
 
       // Add/remove disc.
-      outGeometry->add(new scg::DiscGeometry<T>(inGrainFraction, diameter,
-                                                xCenterTranslatedScaled,
-                                                yCenterTranslatedScaled),
+      outGeometry->add(new DiscGeometry<T>(inGrainFraction, diameter,
+                                           xCenterTranslatedScaled,
+                                           yCenterTranslatedScaled),
                        addOrRemove);
     } else if (geometryComponentVector[i].isMember("polygon")) {
       //***************************************************
@@ -296,8 +296,8 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
       }
 
       // Add/remove polygon.
-      outGeometry->add(new scg::PolygonGeometry<T>(inGrainFraction, numVertices,
-                                                   xVertices, yVertices),
+      outGeometry->add(new PolygonGeometry<T>(inGrainFraction, numVertices,
+                                              xVertices, yVertices),
                        addOrRemove);
     } else if (geometryComponentVector[i].isMember("regular_polygon")) {
       //***************************************************
@@ -333,7 +333,7 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
           geometryComponentVector[i]["regular_polygon"]["rotation"].asDouble());
 
       // Add/remove regular polygon.
-      outGeometry->add(new scg::PolygonGeometry<T>(
+      outGeometry->add(new PolygonGeometry<T>(
                            inGrainFraction, numEdges, sideLength, rotation,
                            xCenterTranslatedScaled, yCenterTranslatedScaled),
                        addOrRemove);
@@ -1007,6 +1007,6 @@ void cleanup(Context<T> *inContext, Visualization<T> *inGUI = nullptr) {
 #endif
 }
 } // namespace run_utils
-} // namespace scg
+} // namespace conga
 
 #endif // RUN_UTILS_H_

@@ -55,9 +55,9 @@ T computeTolerance(const T inToleranceBaseFactor = static_cast<T>(5.0)) {
 
 // Helper class for setting up simulation parameters
 template <typename T>
-scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
+conga::Parameters<T> *applySimParams(conga::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
   // Set the number of lattice points per coherence length.
@@ -86,43 +86,44 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
   for (const bool useSwave : {true, false}) {
     // =================== ARRANGE ==================== //
     // Create Context
-    scg::Context<T> *context = new scg::Context<T>();
+    conga::Context<T> *context = new conga::Context<T>();
 
     // Set parameters to the values specified in simParams struct
-    scg::Parameters<T> *parameters = applySimParams<T>(context);
+    conga::Parameters<T> *parameters = applySimParams<T>(context);
 
     // Create geometry group: add/remove geometry objects (e.g. discs,
     // polygons) from the geometry group
-    scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+    conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
     const T grainFracton = parameters->getGrainFraction();
     geometry->add(
-        new scg::PolygonGeometry<T>(grainFracton, NUM_VERTICES_SQUARE),
-        scg::Type::add);
+        new conga::PolygonGeometry<T>(grainFracton, NUM_VERTICES_SQUARE),
+        conga::Type::add);
 
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields
-    scg::RiccatiSolver<T> *riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(context);
+    conga::RiccatiSolver<T> *riccatiSolver =
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
+            context);
 
     // Set up order parameter
-    scg::OrderParameter<T> *orderParameter =
-        new scg::OrderParameter<T>(context);
+    conga::OrderParameter<T> *orderParameter =
+        new conga::OrderParameter<T>(context);
 
     // Add a d-wave or an s-wave order-parameter component.
-    const scg::BasisFunctionSymmetry symmetry =
-        useSwave ? scg::BasisFunctionSymmetry::SWAVE
-                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-    scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(symmetry, parameters);
+    const conga::BasisFunctionSymmetry symmetry =
+        useSwave ? conga::BasisFunctionSymmetry::SWAVE
+                 : conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
+    conga::OrderParameterComponent<T> *orderParameterComponent =
+        new conga::OrderParameterComponent<T>(symmetry, parameters);
 
-    scg::Initial<T>::constant(orderParameterComponent, inStartRealPart,
-                              inStartImaginaryPart);
+    conga::Initial<T>::constant(orderParameterComponent, inStartRealPart,
+                                inStartImaginaryPart);
     // Add the initialized s-wave component to the total order parameter
     orderParameter->add(orderParameterComponent);
 
     // Create compute objects
-    scg::ComputeOrderParameter<T> *computeOrderParameter =
-        new scg::ComputeOrderParameter<T>(context);
+    conga::ComputeOrderParameter<T> *computeOrderParameter =
+        new conga::ComputeOrderParameter<T>(context);
 
     // =================== ACT ==================== //
     // Initialize simulation
@@ -147,7 +148,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
           doctest::Approx(expectedSumOrderParameter).epsilon(inTolerance));
 
     // Clean up context
-    scg::run_utils::cleanup(context);
+    conga::run_utils::cleanup(context);
   }
 }
 } // namespace helper

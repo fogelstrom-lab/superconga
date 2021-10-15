@@ -1,6 +1,6 @@
 //===---- ComputeCurrent.h - Class for current density compute object. ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include "defines.h"
 #include "utils.h"
 
-namespace scg {
+namespace conga {
 template <typename T> class ComputeCurrent : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
@@ -206,6 +206,6 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     C::setConverged(false);
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_CURRENT_H_

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Copyright (C) 2019 and after, SuprConGPU team.
+# Copyright (C) 2019 and after, SuperConga team.
 # All rights reserved.
-# This file is part of the SuprConGPU Project, under the GNU LGPL v3
+# This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
 """Convenience functions for parsing command-line input."""
@@ -80,7 +80,7 @@ def add_runner_arguments(parser) -> None:
         type=int,
         choices=[32, 64],
         default=64,
-        help="The floating point precision. The C++ binary 'build/release/bin/suprcongpu_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
+        help="The floating point precision. The C++ binary 'build/release/bin/superconga_fXX', where XX is the precision, relative to the supercongpu.py script will be used. Note that 32 bit precision is less accurate.",
     )
 
     # Version number.

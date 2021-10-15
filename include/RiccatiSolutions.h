@@ -1,6 +1,6 @@
 //===- RiccatiSolutions.h - Coherence func. solutions to the Riccati eq. -===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -29,7 +29,7 @@
 #endif
 #endif
 
-namespace scg {
+namespace conga {
 namespace riccati {
 /// \brief Riccati equation homogeneous: gamma and gammaTilde.
 ///
@@ -251,6 +251,6 @@ _HD_ void GammaTilde<T>::computeHalfSteps(
   outGammaTildeExit = inGammaTildeHomogeneous + A * decay / (B + C * decay);
 }
 } // namespace riccati
-} // namespace scg
+} // namespace conga
 
 #endif // RICCATI_SOLUTIONS_H

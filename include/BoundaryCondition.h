@@ -1,6 +1,6 @@
 //===---------- BoundaryCondition.h - Boundary condition class. -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -15,7 +15,7 @@
 
 #include "Context.h"
 
-namespace scg {
+namespace conga {
 template <typename T> class BoundaryCondition {
 public:
   BoundaryCondition() {}
@@ -23,6 +23,6 @@ public:
 
   virtual void computeBoundaryCondition(Context<T> *ctx) = 0;
 };
-} // namespace scg
+} // namespace conga
 
 #endif // BOUNDARY_CONDITION_H_

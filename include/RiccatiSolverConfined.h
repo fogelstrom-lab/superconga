@@ -1,6 +1,6 @@
 //= RiccatiSolverConfined.h - Solve Riccati equations in confined geometry. =//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -20,7 +20,7 @@
 #include <string>
 #include <thrust/complex.h>
 
-namespace scg {
+namespace conga {
 template <typename T, template <typename> class POTENTIAL>
 class RiccatiSolverConfined : public RiccatiSolver<T> {
 public:
@@ -598,6 +598,6 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
           storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
 }
-} // namespace scg
+} // namespace conga
 
 #endif // RICCATI_SOLVER_CONFINED_H_

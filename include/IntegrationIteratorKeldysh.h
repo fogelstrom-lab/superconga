@@ -1,6 +1,6 @@
 //===-- IntegrationiteratorKeldysh.h - Keldysh integration iterator. -----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include "RiccatiSolver.h"
 #include "utils.h"
 
-namespace scg {
+namespace conga {
 template <typename T>
 class IntegrationIteratorKeldysh : public IntegrationIterator<T> {
 public:
@@ -364,6 +364,6 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
   // Update iteration counter.
   I::increaseIterationCount();
 }
-} // namespace scg
+} // namespace conga
 
 #endif // INTEGRATION_ITERATOR_KELDYSH_H_

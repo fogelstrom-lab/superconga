@@ -37,13 +37,13 @@ void testGetFractionalAngleIndex(const T inTolerance,
         // Loop over angles.
         for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
           // Construct the Fermi momentum.
-          const T phi =
-              scg::internal::getPolarAngle(angleIdx, inNumAngles, angleOffset);
+          const T phi = conga::internal::getPolarAngle(angleIdx, inNumAngles,
+                                                       angleOffset);
           const T fermiMomentumX = cos(phi) + originOffsetX;
           const T fermiMomentumY = sin(phi) + originOffsetY;
 
           // Compute the fractional angle index.
-          const T fractionalAngleIdx = scg::internal::getFractionalAngleIndex(
+          const T fractionalAngleIdx = conga::internal::getFractionalAngleIndex(
               fermiMomentumX, fermiMomentumY, originOffsetX, originOffsetY,
               angleOffset, inNumAngles);
 
@@ -81,8 +81,8 @@ void testGetSystemAngle(const T inTolerance, const int inNumAngles = 100) {
     for (int angleIdx = 0; angleIdx < inNumAngles; ++angleIdx) {
       // Get phi simply fetches an angle, the value doesn't matter.
       const T fermiVelocityAngle =
-          scg::internal::getPolarAngle(angleIdx, inNumAngles, angleOffset);
-      const T systemAngle = scg::internal::getSystemAngle(fermiVelocityAngle);
+          conga::internal::getPolarAngle(angleIdx, inNumAngles, angleOffset);
+      const T systemAngle = conga::internal::getSystemAngle(fermiVelocityAngle);
 
       // Because the trajectories go along the y-axis, the Fermi velocity angle
       // and the angle we should rotate the system differ by pi/2.

@@ -1,6 +1,6 @@
 //===-------------- GridFunctions_CPU.h - CPU grid functions. -------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-namespace scg {
+namespace conga {
 ///////////////////////////////////////////
 // Code path for CPU (host) specific code
 ///////////////////////////////////////////
@@ -698,6 +698,6 @@ void GridFunctions<T, thrust::host_vector<T>>::minmax(
   minv = *result.first;
   maxv = *result.second;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // GRID_FUNCTIONS_CPU_H_

@@ -1,6 +1,6 @@
 //===----------- csv_writers.h - classes for writing csv files -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace io {
 //===------------------------------ Classes------------------------------===//
 /// \brief Interface for saving per-iteration data
@@ -356,6 +356,6 @@ private:
   }
 };
 } // namespace io
-} // namespace scg
+} // namespace conga
 
 #endif // CSV_WRITERS_H_

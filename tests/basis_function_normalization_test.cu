@@ -41,23 +41,23 @@ void testBasisFunctionNormaliztation(const T inTolerance,
   // =================== ARRANGE ==================== //
   // Set up Fermi surface angles
   const int numAngles = 100;
-  const std::vector<T> angles = scg::utils::linspace(
+  const std::vector<T> angles = conga::utils::linspace(
       static_cast<T>(0.0), static_cast<T>(2.0 * M_PI), numAngles);
 
   // Create Fermi surface object
-  std::unique_ptr<scg::FermiSurface<T>> fermiSurface;
+  std::unique_ptr<conga::FermiSurface<T>> fermiSurface;
 
   // Loop over Fermi surface types
   for (FermiSurfaceModels fermiSurfaceModel : allFermiSurfaceModels) {
     // Construct appropriate fermi surface
     if (fermiSurfaceModel == FermiSurfaceModels::circular) {
-      fermiSurface = std::make_unique<scg::FermiSurfaceCircle<T>>();
+      fermiSurface = std::make_unique<conga::FermiSurfaceCircle<T>>();
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs1) {
-      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<conga::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS1), static_cast<T>(HOPPING_NNNN_FS1),
           static_cast<T>(CHEMICAL_POTENTIAL_FS1));
     } else if (fermiSurfaceModel == FermiSurfaceModels::fs2) {
-      fermiSurface = std::make_unique<scg::FermiSurfaceTightBinding<T>>(
+      fermiSurface = std::make_unique<conga::FermiSurfaceTightBinding<T>>(
           static_cast<T>(HOPPING_NNN_FS2), static_cast<T>(HOPPING_NNNN_FS2),
           static_cast<T>(CHEMICAL_POTENTIAL_FS2));
     } else {
@@ -68,9 +68,9 @@ void testBasisFunctionNormaliztation(const T inTolerance,
     fermiSurface->initialize(numAngles);
 
     // Basis functions.
-    scg::BasisFunction<T> basisFunctionS(scg::BasisFunctionSymmetry::SWAVE);
-    scg::BasisFunction<T> basisFunctionD(
-        scg::BasisFunctionSymmetry::DWAVE_X2_Y2);
+    conga::BasisFunction<T> basisFunctionS(conga::BasisFunctionSymmetry::SWAVE);
+    conga::BasisFunction<T> basisFunctionD(
+        conga::BasisFunctionSymmetry::DWAVE_X2_Y2);
 
     for (int i = 0; i < inNumNormalizations; ++i) {
       // Normalize basis function. It should not matter whether we have called

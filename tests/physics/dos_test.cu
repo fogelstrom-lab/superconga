@@ -1,6 +1,6 @@
 //===--------- dost_test.cu - Unit tests of the density of states  --------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -74,10 +74,10 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
                          const T inConvergenceCriterion) {
   // =================== ARRANGE ==================== //
   // Create Context
-  scg::Context<T> *context = new scg::Context<T>();
+  conga::Context<T> *context = new conga::Context<T>();
 
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
   // Set the number of lattice points per coherence length.
@@ -97,68 +97,70 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
   const T grainFraction = parameters->getGrainFraction();
   if (inUseSwave) {
     // Add a disc to the simulation geometry.
     // Note, corners introduce artifacts. For an s-wave we can have a disc
     // instead, and lower the tolerance.
-    geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
+    geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
   } else {
     // Add a square to the simulation geometry.
     const int numVertices = 4;
-    geometry->add(new scg::PolygonGeometry<T>(grainFraction, numVertices),
-                  scg::Type::add);
+    geometry->add(new conga::PolygonGeometry<T>(grainFraction, numVertices),
+                  conga::Type::add);
   }
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
-  scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(context);
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
+          context);
   // Add specular BC
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(context);
 
   // Use s-wave or d-wave.
-  const scg::BasisFunctionSymmetry symmetry =
-      inUseSwave ? scg::BasisFunctionSymmetry::SWAVE
-                 : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  const conga::BasisFunctionSymmetry symmetry =
+      inUseSwave ? conga::BasisFunctionSymmetry::SWAVE
+                 : conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
-  scg::OrderParameterComponent<T> *orderParameterComponent =
-      new scg::OrderParameterComponent<T>(symmetry, parameters);
+  conga::OrderParameterComponent<T> *orderParameterComponent =
+      new conga::OrderParameterComponent<T>(symmetry, parameters);
 
   // Initialize order-parameter component to the bulk value.
-  scg::Initial<T>::bulk(orderParameterComponent);
+  conga::Initial<T>::bulk(orderParameterComponent);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
   // Add LDOS compute object.
-  new scg::ComputeLDOS<T>(context);
+  new conga::ComputeLDOS<T>(context);
 
   // Initialize everything.
   context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
 
   // =================== ACT ==================== //
   const bool verbose = true;
-  scg::run_utils::runSimulation(context, verbose, 0,
-                                simParams::NUM_ITERATIONS_MAX);
+  conga::run_utils::runSimulation(context, verbose, 0,
+                                  simParams::NUM_ITERATIONS_MAX);
 
   // Get results.
-  scg::GridCPU<T> *dosObject = context->getComputeLDOS()->getDOS();
+  conga::GridCPU<T> *dosObject = context->getComputeLDOS()->getDOS();
   const T *const energies = dosObject->getDataPointer(0);
   const T *const dos = dosObject->getDataPointer(1);
 
   // =================== ASSERT ==================== //
   // Make circular Fermi surface.
-  scg::FermiSurfaceCircle<T> fermiSurface;
+  conga::FermiSurfaceCircle<T> fermiSurface;
   fermiSurface.initialize(simParams::NUM_ANGLES);
 
   // In order to compute the expected DOS we need the bulk order parameter and
   // the normalization factor for the basis function.
   // TODO(niclas): The basis functions should return normalized values.
   const T orderParameterBulk = orderParameterComponent->deltaBulk();
-  scg::BasisFunction<T> basisFunction(symmetry);
+  conga::BasisFunction<T> basisFunction(symmetry);
   basisFunction.normalize(&fermiSurface);
 
   // Loop over energies and check the DOS for each.

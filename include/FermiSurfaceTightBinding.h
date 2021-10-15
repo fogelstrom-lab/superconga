@@ -1,6 +1,6 @@
 //===-- FermiSurfaceTightBinding.h - Tight-binding Fermi surface class ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@
 #include <thrust/host_vector.h>
 #include <utility>
 
-namespace scg {
+namespace conga {
 // Fermi surface from a tight-binding dispersion.
 // Note, there are tacit assumptions:
 // 1. A single species of atom.
@@ -512,6 +512,6 @@ void FermiSurfaceTightBinding<T>::getMomentumOffset(T &outOffsetX,
   outOffsetX = m_originOffset[0];
   outOffsetY = m_originOffset[1];
 }
-} // namespace scg
+} // namespace conga
 
 #endif // FERMI_SURFACE_TIGHT_BINDING_H_

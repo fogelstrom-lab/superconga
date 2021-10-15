@@ -1,6 +1,6 @@
 //===-- OrderParameterComponent.h - Component of order parameter group. ---===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace scg {
+namespace conga {
 template <typename T> class OrderParameterComponent {
 public:
   // Constructors and destructor.
@@ -88,8 +88,7 @@ OrderParameterComponent<T>::OrderParameterComponent(
     const BasisFunctionSymmetry inSymmetry)
     : _param(0), _deltaComp(0), _Tcthis_Tc(1.0),
       m_couplingConstant(static_cast<T>(0.0)),
-      m_isCouplingConstantInitialized(false),
-       m_basisFunction(inSymmetry) {}
+      m_isCouplingConstantInitialized(false), m_basisFunction(inSymmetry) {}
 
 template <typename T>
 OrderParameterComponent<T>::OrderParameterComponent(
@@ -108,8 +107,7 @@ OrderParameterComponent<T>::OrderParameterComponent(
     const BasisFunctionSymmetry inSymmetry, Parameters<T> *param, T Tcthis_Tc)
     : _param(param), _deltaComp(0), _Tcthis_Tc(Tcthis_Tc),
       m_couplingConstant(static_cast<T>(0.0)),
-      m_isCouplingConstantInitialized(false),
-      m_basisFunction(inSymmetry) {
+      m_isCouplingConstantInitialized(false), m_basisFunction(inSymmetry) {
   // Do an initialization on creation so we can set initial value.
   // Note, pass a null pointer as the Fermi surface so it won't try to
   // initialize the basis function.
@@ -233,6 +231,6 @@ template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
   }
   return sWaveBulk * scale;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // ORDER_PARAMETER_COMPONENT_H_

@@ -1,6 +1,6 @@
 //===-- ComputeVectorPotential.h - Compute object for vector potential. ---===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -27,7 +27,7 @@
 #include <limits>
 #include <thrust/device_vector.h>
 
-namespace scg {
+namespace conga {
 /// \brief Class for computing the vector potential.
 template <typename T> class ComputeVectorPotential {
 private:
@@ -743,8 +743,8 @@ void ComputeVectorPotential<T>::computeResidual(const GridGPU<T> &inLHS) {
   // TODO(niclas): We need to specifiy the namespace in order to avoid
   // compilation errors due to this method having the same name as the function
   // being called.
-  m_residual = scg::computeResidual(inLHS, *m_vectorPotential);
+  m_residual = conga::computeResidual(inLHS, *m_vectorPotential);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_VECTOR_POTENTIAL_H_
