@@ -40,7 +40,7 @@ namespace internal {
 ///
 /// \return Void.
 // TODO(niclas): This is essentially identical to the kernel with the same name
-// in the Optimizer. Perhaps move both to a better place.
+// in the Accelerator. Perhaps move both to a better place.
 template <typename T>
 __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc1,
                      const T *const inSrc2, T *const outDst1,

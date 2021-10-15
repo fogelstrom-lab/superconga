@@ -179,8 +179,8 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
   // Add free energy compute object.
   new conga::ComputeFreeEnergy<T>(context);
 
-  // Set optimizer.
-  context->set(std::make_unique<conga::Optimizer<T>>());
+  // Set accelerator.
+  context->set(std::make_unique<conga::Accelerator<T>>());
 
   // =================== ACT ==================== //
   context->initialize();

@@ -1,4 +1,5 @@
-//===----------------- Optimizer.h - Optimizer base class. ----------------===//
+//===----------------- Accelerator.h - Accelerator base class.
+//----------------===//
 //
 // Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
@@ -6,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Optimzier base class, i.e. for different kinds of self-consistency
+/// Accelerator base class, i.e. for different kinds of self-consistency
 /// accelerators.
 ///
 //===----------------------------------------------------------------------===//
-#ifndef OPTIMIZER_H_
-#define OPTIMIZER_H_
+#ifndef ACCELERATOR_H_
+#define ACCELERATOR_H_
 
 // Because we are compiling with NVCC and not GCC.
 #ifndef ARMA_ALLOW_FAKE_GCC
@@ -19,7 +20,6 @@
 #endif
 
 #include "Grid.h"
-#include "Optimizer.h"
 #include "Type.h"
 #include "armadillo_wrapper.h"
 #include <algorithm>
@@ -31,9 +31,13 @@
 #include <vector>
 
 namespace conga {
-template <typename T> class Optimizer {
+// We need to forward declare the order parameter so it can compile.
+// TODO(niclas): Disentangle the class dependencies.
+template <typename> class OrderParameter;
+
+template <typename T> class Accelerator {
 public:
-  /// \brief Constructor of the optimizer base class.
+  /// \brief Constructor of the accelerator base class.
   ///
   /// It tries to find a solution to the fixed-point problem
   ///
@@ -90,16 +94,17 @@ public:
   /// Anderson step.
   /// \param inMaxMixing The maximum allowed value of the mixing factor in the
   /// Anderson step.
-  explicit Optimizer(const T inStepSize = static_cast<T>(1),
-                     const T inInertia = static_cast<T>(0),
-                     const bool inAdaptive = true, const std::size_t inRank = 1,
-                     const bool inReplaceOldest = true,
-                     const bool inAndersonAlways = true,
-                     const T inMinMixing = static_cast<T>(1),
-                     const T inMaxMixing = static_cast<T>(1));
+  explicit Accelerator(const T inStepSize = static_cast<T>(1),
+                       const T inInertia = static_cast<T>(0),
+                       const bool inAdaptive = true,
+                       const std::size_t inRank = 1,
+                       const bool inReplaceOldest = true,
+                       const bool inAndersonAlways = true,
+                       const T inMinMixing = static_cast<T>(1),
+                       const T inMaxMixing = static_cast<T>(1));
 
-  /// \brief Destructor of the optimizer base class.
-  ~Optimizer(){};
+  /// \brief Destructor of the accelerator base class.
+  ~Accelerator(){};
 
   /// \brief Compute the next order parameter and vector potential.
   ///
@@ -127,9 +132,9 @@ public:
   void update(OrderParameter<T> &outOrderParameter,
               GridGPU<T> &outVectorPotential) const;
 
-  /// \brief Reset the optimizer.
+  /// \brief Reset the accelerator.
   ///
-  /// Remove all stored grids etc. The next time the optimizer is called, it
+  /// Remove all stored grids etc. The next time the accelerator is called, it
   /// will be like it is the first time.
   ///
   /// \return Void.
@@ -287,10 +292,11 @@ private:
 };
 
 template <typename T>
-Optimizer<T>::Optimizer(const T inStepSize, const T inInertia,
-                        const bool inAdaptive, const std::size_t inRank,
-                        const bool inReplaceOldest, const bool inAndersonAlways,
-                        const T inMinMixing, const T inMaxMixing)
+Accelerator<T>::Accelerator(const T inStepSize, const T inInertia,
+                            const bool inAdaptive, const std::size_t inRank,
+                            const bool inReplaceOldest,
+                            const bool inAndersonAlways, const T inMinMixing,
+                            const T inMaxMixing)
     : m_stepSizeInit(inStepSize), m_inertiaInit(inInertia),
       m_adaptive(inAdaptive), m_rank(inRank), m_replaceOldest(inReplaceOldest),
       m_andersonAlways(inAndersonAlways), m_minMixing(inMinMixing),
@@ -298,7 +304,7 @@ Optimizer<T>::Optimizer(const T inStepSize, const T inInertia,
       m_increase(std::cbrt(static_cast<T>(2))),
       m_decrease(static_cast<T>(2.0 * M_PI)), m_epsilon(static_cast<T>(1e-6)) {}
 
-template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
+template <typename T> void Accelerator<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
   const int dimY = inX.dimY();
   const int numFields = inX.numFields();
@@ -317,7 +323,7 @@ template <typename T> void Optimizer<T>::initialize(const GridGPU<T> &inX) {
   m_next.setZero();
 }
 
-template <typename T> void Optimizer<T>::prune() {
+template <typename T> void Accelerator<T>::prune() {
   if (m_rank > 1) {
     // Compute the median squared residual.
     std::vector<T> tmp = m_squaredResiduals;
@@ -350,10 +356,10 @@ template <typename T> void Optimizer<T>::prune() {
 }
 
 template <typename T>
-void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
-                           const GridGPU<T> &inVectorPotentialX,
-                           const OrderParameter<T> &inOrderParameterG,
-                           const GridGPU<T> &inVectorPotentialG) {
+void Accelerator<T>::compute(const OrderParameter<T> &inOrderParameterX,
+                             const GridGPU<T> &inVectorPotentialX,
+                             const OrderParameter<T> &inOrderParameterG,
+                             const GridGPU<T> &inVectorPotentialG) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inVectorPotentialG.dimX();
   const int dimY = inVectorPotentialG.dimY();
@@ -370,8 +376,8 @@ void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
 
   // Concatenate the order parameter and the vector potential to real-valued
   // grids.
-  Optimizer<T>::concatenate(inOrderParameterX, inVectorPotentialX, X);
-  Optimizer<T>::concatenate(inOrderParameterG, inVectorPotentialG, G);
+  Accelerator<T>::concatenate(inOrderParameterX, inVectorPotentialX, X);
+  Accelerator<T>::concatenate(inOrderParameterG, inVectorPotentialG, G);
 
   if (m_iterationIdx == 0) {
     initialize(X);
@@ -442,14 +448,14 @@ void Optimizer<T>::compute(const OrderParameter<T> &inOrderParameterX,
 }
 
 template <typename T>
-void Optimizer<T>::update(OrderParameter<T> &outOrderParameter,
-                          GridGPU<T> &outVectorPotential) const {
+void Accelerator<T>::update(OrderParameter<T> &outOrderParameter,
+                            GridGPU<T> &outVectorPotential) const {
   // Split the grid into its constituent order parameter and vector potential.
-  Optimizer<T>::split(m_next, outOrderParameter, outVectorPotential);
+  Accelerator<T>::split(m_next, outOrderParameter, outVectorPotential);
 }
 
 template <typename T>
-bool Optimizer<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inF) {
+bool Accelerator<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inF) {
   // Slight optimization, compute it here instead of every time in 'solve'.
   const T squaredResidual = inF.sumSquare();
 
@@ -488,7 +494,7 @@ bool Optimizer<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inF) {
   return success;
 }
 
-template <typename T> bool Optimizer<T>::solve(std::vector<T> &outWeights) {
+template <typename T> bool Accelerator<T>::solve(std::vector<T> &outWeights) {
   assert(m_F.size() == m_X.size());
   assert(m_F.size() == m_squaredResiduals.size());
 
@@ -554,7 +560,7 @@ template <typename T> bool Optimizer<T>::solve(std::vector<T> &outWeights) {
   return success;
 }
 
-namespace opt_internal {
+namespace acc_internal {
 template <typename T>
 __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc,
                      T *const outDst) {
@@ -595,11 +601,11 @@ __global__ void computeNext(const int inDimX, const int inDimY,
     outResult[idx] = inX[idx] - inStepSize[z] * step;
   }
 }
-} // namespace opt_internal
+} // namespace acc_internal
 
 template <typename T>
-void Optimizer<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
-                               GridGPU<T> &outNewX) {
+void Accelerator<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
+                                 GridGPU<T> &outNewX) {
   const int dimX = inX.dimX();
   const int dimY = inX.dimY();
   const int numFields = inX.numFields();
@@ -614,7 +620,7 @@ void Optimizer<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
   const GridGPU<T> gradient = inX - inG;
 
   // TODO(niclas): The adaptive scheme is basically just an educated guess. It
-  // seems to work pretty well in practice, but the optimizer can end up in a
+  // seems to work pretty well in practice, but the accelerator can end up in a
   // weird state where the gradient is always perpendicular to the previous
   // step, and the solution spirals towards the solution (which is not optimal).
   if (m_adaptive) {
@@ -654,14 +660,14 @@ void Optimizer<T>::computeNext(const GridGPU<T> &inX, const GridGPU<T> &inG,
   const thrust::device_vector<T> inertiaGPU(m_inertia);
 
   // Take a step.
-  opt_internal::computeNext<<<numBlocks, numThreadsPerBlock>>>(
+  acc_internal::computeNext<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, numFields, thrust::raw_pointer_cast(stepSizeGPU.data()),
       thrust::raw_pointer_cast(inertiaGPU.data()), inX.getDataPointer(),
       gradient.getDataPointer(), m_step.getDataPointer(),
       outNewX.getDataPointer());
 }
 
-template <typename T> void Optimizer<T>::reset() {
+template <typename T> void Accelerator<T>::reset() {
   m_F.clear();
   m_X.clear();
   m_squaredResiduals.clear();
@@ -671,7 +677,8 @@ template <typename T> void Optimizer<T>::reset() {
   m_inertia.clear();
 }
 
-template <typename T> T Optimizer<T>::sumGrid(const GridGPU<T> &inGrid) const {
+template <typename T>
+T Accelerator<T>::sumGrid(const GridGPU<T> &inGrid) const {
   T sum = static_cast<T>(0);
   for (int i = 0; i < inGrid.numFields(); ++i) {
     sum += inGrid.sumField(i);
@@ -680,9 +687,9 @@ template <typename T> T Optimizer<T>::sumGrid(const GridGPU<T> &inGrid) const {
 }
 
 template <typename T>
-void Optimizer<T>::concatenate(const OrderParameter<T> &inOrderParameter,
-                               const GridGPU<T> &inVectorPotential,
-                               GridGPU<T> &inOutDst) const {
+void Accelerator<T>::concatenate(const OrderParameter<T> &inOrderParameter,
+                                 const GridGPU<T> &inVectorPotential,
+                                 GridGPU<T> &inOutDst) const {
   // Kernel parameters.
   dim3 numBlocks;
   dim3 numThreadsPerBlock;
@@ -702,10 +709,10 @@ void Optimizer<T>::concatenate(const OrderParameter<T> &inOrderParameter,
     const GridGPU<T> *const component =
         inOrderParameter.getOrderParameterComponentField(i);
 
-    opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+    acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, component->getDataPointer(0, Type::real),
         inOutDst.getDataPointer(realIdx));
-    opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+    acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, component->getDataPointer(0, Type::imag),
         inOutDst.getDataPointer(imagIdx));
   }
@@ -713,18 +720,18 @@ void Optimizer<T>::concatenate(const OrderParameter<T> &inOrderParameter,
   // Copy vector potential.
   const int xIdx = 2 * numComponents;
   const int yIdx = xIdx + 1;
-  opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+  acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, inVectorPotential.getDataPointer(0),
       inOutDst.getDataPointer(xIdx));
-  opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+  acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, inVectorPotential.getDataPointer(1),
       inOutDst.getDataPointer(yIdx));
 }
 
 template <typename T>
-void Optimizer<T>::split(const GridGPU<T> &inSrc,
-                         OrderParameter<T> &inOutOrderParameter,
-                         GridGPU<T> &inOutVectorPotential) const {
+void Accelerator<T>::split(const GridGPU<T> &inSrc,
+                           OrderParameter<T> &inOutOrderParameter,
+                           GridGPU<T> &inOutVectorPotential) const {
   // Kernel parameters.
   dim3 numBlocks;
   dim3 numThreadsPerBlock;
@@ -745,10 +752,10 @@ void Optimizer<T>::split(const GridGPU<T> &inSrc,
     GridGPU<T> *const component =
         inOutOrderParameter.getOrderParameterComponentField(i);
 
-    opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+    acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, inSrc.getDataPointer(realIdx),
         component->getDataPointer(0, Type::real));
-    opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+    acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
         dimX, dimY, inSrc.getDataPointer(imagIdx),
         component->getDataPointer(0, Type::imag));
   }
@@ -756,13 +763,13 @@ void Optimizer<T>::split(const GridGPU<T> &inSrc,
   // Copy vector potential.
   const int xIdx = 2 * numComponents;
   const int yIdx = xIdx + 1;
-  opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+  acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, inSrc.getDataPointer(xIdx),
       inOutVectorPotential.getDataPointer(0));
-  opt_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
+  acc_internal::copy<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, inSrc.getDataPointer(yIdx),
       inOutVectorPotential.getDataPointer(1));
 }
 } // namespace conga
 
-#endif // OPTIMIZER_H_
+#endif // ACCELERATOR_H_

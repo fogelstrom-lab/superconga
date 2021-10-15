@@ -358,69 +358,69 @@ def add_runner_arguments(parser) -> None:
         help="The maximum error (relative Frobenious norm) of the Green's function used when computing the induced vector-potential.",
     )
 
-    # =============== OPTIMIZER =============== #
-    optimizer = parser.add_argument_group(title="Optimizer")
+    # =============== ACCELERATOR =============== #
+    accelerator = parser.add_argument_group(title="Accelerator")
 
-    optimizer.add_argument(
-        "--opt-step-size",
+    accelerator.add_argument(
+        "--step-size",
         type=float,
         default=None,
-        help="The step size in the optimizer.",
+        help="The step size in the accelerator.",
     )
-    optimizer.add_argument(
-        "--opt-inertia",
+    accelerator.add_argument(
+        "--inertia",
         type=float,
         default=None,
-        help="The inertia of the optimizer.",
+        help="The inertia of the accelerator.",
     )
-    group_optimiser_adaptive = optimizer.add_mutually_exclusive_group()
+    group_optimiser_adaptive = accelerator.add_mutually_exclusive_group()
     group_optimiser_adaptive.add_argument(
-        "--opt-adaptive",
+        "--adaptive",
         action="store_true",
         help="Change the step size and inertia adaptively each iteration.",
     )
     group_optimiser_adaptive.add_argument(
-        "--opt-no-adaptive",
+        "--no-adaptive",
         action="store_true",
         help="Do not change the step size and inertia adaptively each iteration.",
     )
-    optimizer.add_argument(
-        "--opt-rank",
+    accelerator.add_argument(
+        "--rank",
         type=int,
         default=None,
         help="The maximal rank of the system of equations in the Anderson step, i.e. the maximum number of stored steps.",
     )
-    optimizer.add_argument(
-        "--opt-min-mixing",
+    accelerator.add_argument(
+        "--min-mixing",
         type=float,
         default=None,
         help="The minimal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
     )
-    optimizer.add_argument(
-        "--opt-max-mixing",
+    accelerator.add_argument(
+        "--max-mixing",
         type=float,
         default=None,
         help="The maximal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
     )
-    group_optimiser_replace = optimizer.add_mutually_exclusive_group()
+    group_optimiser_replace = accelerator.add_mutually_exclusive_group()
     group_optimiser_replace.add_argument(
-        "--opt-replace-worst",
+        "--replace-worst",
         action="store_true",
-        help="Replace the worst stored step in the optimizer, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
+        help="Replace the worst stored step in the accelerator, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
     )
     group_optimiser_replace.add_argument(
-        "--opt-replace-oldest",
+        "--replace-oldest",
         action="store_true",
-        help="Replace the oldest stored step in the optimizer, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
+        help="Replace the oldest stored step in the accelerator, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
     )
-    group_optimiser_anderson = optimizer.add_mutually_exclusive_group()
+    group_optimiser_anderson = accelerator.add_mutually_exclusive_group()
     group_optimiser_anderson.add_argument(
-        "--opt-anderson-always",
+        "--anderson-always",
         action="store_true",
         help="Take Anderson steps all the time. Only applicable if rank > 1.",
     )
     group_optimiser_anderson.add_argument(
-        "--opt-anderson-full",
+        "--anderson-full",
         action="store_true",
         help="Take Anderson steps only when the storage is full. Only applicable if rank > 1.",
     )
@@ -1089,32 +1089,32 @@ def set_runner_arguments_from_cli(
     )
     set_value(sim_params, "vector_potential_error", args.vp_error, group)
 
-    # ================== OPTIMIZER ================== #
-    group = "optimizer"
-    set_value(sim_params, "step_size", args.opt_step_size, group)
-    set_value(sim_params, "inertia", args.opt_inertia, group)
+    # ================== ACCELERATOR ================== #
+    group = "accelerator"
+    set_value(sim_params, "step_size", args.step_size, group)
+    set_value(sim_params, "inertia", args.inertia, group)
     set_flag(
         sim_params,
         "adaptive",
-        args.opt_adaptive,
-        args.opt_no_adaptive,
+        args.adaptive,
+        args.no_adaptive,
         group,
     )
-    set_value(sim_params, "rank", args.opt_rank, group)
-    set_value(sim_params, "min_mixing", args.opt_min_mixing, group)
-    set_value(sim_params, "max_mixing", args.opt_max_mixing, group)
+    set_value(sim_params, "rank", args.rank, group)
+    set_value(sim_params, "min_mixing", args.min_mixing, group)
+    set_value(sim_params, "max_mixing", args.max_mixing, group)
     set_flag(
         sim_params,
         "replace_oldest",
-        args.opt_replace_oldest,
-        args.opt_replace_worst,
+        args.replace_oldest,
+        args.replace_worst,
         group,
     )
     set_flag(
         sim_params,
         "anderson_always",
-        args.opt_anderson_always,
-        args.opt_anderson_full,
+        args.anderson_always,
+        args.anderson_full,
         group,
     )
 
