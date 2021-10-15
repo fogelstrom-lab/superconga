@@ -29,6 +29,7 @@
 - Remove temperature subdirectory in data path. Save examples to `data/examples`.
 - Add tool `old_data_scaler.py` for scaling old data to the new units.
 - Move `crystalAxesRotation` to `OrderParameter.h`.
+- Rename `Optimizer` to `Accelerator`.
 
 ---
 
