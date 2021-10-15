@@ -120,7 +120,7 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   conga::Initial<T>::bulk(orderParameterComponent);
   orderParameter->add(orderParameterComponent);
 
-  context.set(std::make_unique<conga::Optimizer<T>>(static_cast<T>(0.001)));
+  context.set(std::make_unique<conga::Accelerator<T>>(static_cast<T>(0.001)));
 
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeCurrent<T>(&context);

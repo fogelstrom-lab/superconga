@@ -35,7 +35,7 @@
 		"points_per_coherence_length": 8.0,
 		"vector_potential_error": 1e-06
 	},
-	"optimizer": {
+	"accelerator": {
 		"adaptive": false,
 		"anderson_always": true,
 		"inertia": 0.5,

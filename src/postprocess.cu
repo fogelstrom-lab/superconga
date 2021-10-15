@@ -26,7 +26,6 @@
 #include "DiscGeometry.h"
 #include "GeometryGroup.h"
 #include "Grid.h"
-#include "Optimizer.h"
 #include "OrderParameter.h"
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"

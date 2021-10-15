@@ -233,7 +233,7 @@ runner_checks = {
             "vector_potential_error": {"type": float, "low_include": 0.0},
         },
     },
-    "optimizer": {
+    "accelerator": {
         "type": dict,
         "fields": {
             "adaptive": {"type": bool},
@@ -421,10 +421,10 @@ def validate_runner_arguments(
         )
         success = False
 
-    # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
+    # Check that minimum value of the accelerator parameter 'p' is smallar than the maximum.
     if (
-        not sim_params["optimizer"]["max_mixing"]
-        >= sim_params["optimizer"]["min_mixing"]
+        not sim_params["accelerator"]["max_mixing"]
+        >= sim_params["accelerator"]["min_mixing"]
     ):
         print("-- ERROR! 'max_mixing' must be larger than, or equal to, 'min_mixing'.")
         success = False
@@ -445,7 +445,7 @@ def validate_postprocess_arguments(
         )
         success = False
 
-    # Check that minimum value of the optimizer parameter 'p' is smallar than the maximum.
+    # Check that minimum value of the accelerator parameter 'p' is smallar than the maximum.
     if not sim_params["energy_max"] >= sim_params["energy_min"]:
         print("-- ERROR! 'energy_max' must be larger than, or equal to, 'energy_min'.")
         success = False

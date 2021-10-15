@@ -171,8 +171,8 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   new conga::ComputeCurrent<T>(context);
   context->add(std::make_unique<conga::ComputeVectorPotential<T>>());
 
-  // Set optimizer.
-  context->set(std::make_unique<conga::Optimizer<T>>());
+  // Set accelerator.
+  context->set(std::make_unique<conga::Accelerator<T>>());
 
   // =================== ACT ==================== //
   // Initialize and run simulation.

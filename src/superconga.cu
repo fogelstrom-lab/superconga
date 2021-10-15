@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "Accelerator.h"
 #include "BoundaryConditionSpecular.h"
 #include "ComputeCurrent.h"
 #include "ComputeFreeEnergy.h"
@@ -22,7 +23,6 @@
 #include "Context.h"
 #include "DiscGeometry.h"
 #include "GeometryGroup.h"
-#include "Optimizer.h"
 #include "OrderParameter.h"
 #include "OrderParameterBasis.h"
 #include "OrderParameterComponent.h"
@@ -309,26 +309,27 @@ int main(int argc, char *argv[]) {
   }
 
   //***************************************************
-  // OPTIMIZER
+  // ACCELERATOR
   //***************************************************
   const T stepSize =
-      static_cast<T>(simParams["optimizer"]["step_size"].asDouble());
+      static_cast<T>(simParams["accelerator"]["step_size"].asDouble());
   const T inertia =
-      static_cast<T>(simParams["optimizer"]["inertia"].asDouble());
-  const T adaptive = simParams["optimizer"]["adaptive"].asBool();
+      static_cast<T>(simParams["accelerator"]["inertia"].asDouble());
+  const T adaptive = simParams["accelerator"]["adaptive"].asBool();
   const std::size_t rank =
-      static_cast<std::size_t>(simParams["optimizer"]["rank"].asInt());
-  const bool replaceOldest = simParams["optimizer"]["replace_oldest"].asBool();
+      static_cast<std::size_t>(simParams["accelerator"]["rank"].asInt());
+  const bool replaceOldest =
+      simParams["accelerator"]["replace_oldest"].asBool();
   const bool andersonAlways =
-      simParams["optimizer"]["anderson_always"].asBool();
+      simParams["accelerator"]["anderson_always"].asBool();
   const T minMixing =
-      static_cast<T>(simParams["optimizer"]["min_mixing"].asDouble());
+      static_cast<T>(simParams["accelerator"]["min_mixing"].asDouble());
   const T maxMixing =
-      static_cast<T>(simParams["optimizer"]["max_mixing"].asDouble());
-  auto optimizer = std::make_unique<conga::Optimizer<T>>(
+      static_cast<T>(simParams["accelerator"]["max_mixing"].asDouble());
+  auto accelerator = std::make_unique<conga::Accelerator<T>>(
       stepSize, inertia, adaptive, rank, replaceOldest, andersonAlways,
       minMixing, maxMixing);
-  context->set(std::move(optimizer));
+  context->set(std::move(accelerator));
 
   //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE

@@ -13,12 +13,12 @@
 #ifndef CONTEXT_H_
 #define CONTEXT_H_
 
+#include "Accelerator.h"
 #include "ComputeVectorPotential.h"
 #include "ContextModule.h"
 #include "FermiSurface.h"
 #include "FermiSurfaceCircle.h"
 #include "Grid.h"
-#include "Optimizer.h"
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -71,13 +71,13 @@ public:
     m_inducedVectorPotential = std::move(inInducedVectorPotential);
   }
 
-  /// \brief Set the optimizer.
+  /// \brief Set the accelerator.
   ///
-  /// \param inOptimizer The optimizer as a unique pointer.
+  /// \param inAccelerator The accelerator as a unique pointer.
   ///
   /// \return Void.
-  void set(std::unique_ptr<Optimizer<T>> inOptimizer) {
-    m_optimizer = std::move(inOptimizer);
+  void set(std::unique_ptr<Accelerator<T>> inAccelerator) {
+    m_accelerator = std::move(inAccelerator);
   }
 
   // Adders of compute objects.
@@ -154,9 +154,9 @@ private:
   std::unique_ptr<GridGPU<T>> m_inducedVectorPotential;
   std::unique_ptr<ComputeVectorPotential<T>> m_computeVectorPotential;
 
-  // The optimizer. It is only used when computing the order parameter and/or
+  // The accelerator. It is only used when computing the order parameter and/or
   // the vector potential.
-  std::unique_ptr<Optimizer<T>> m_optimizer;
+  std::unique_ptr<Accelerator<T>> m_accelerator;
 
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
@@ -180,7 +180,7 @@ Context<T>::Context()
       m_ComputeSpectralCurrent(nullptr), m_computeFreeEnergy(nullptr),
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
       m_computeVectorPotential(nullptr), m_computeTime(static_cast<T>(0.0)),
-      m_numIterations(0), m_optimizer(std::make_unique<Optimizer<T>>()) {}
+      m_numIterations(0), m_accelerator(std::make_unique<Accelerator<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
 #ifndef NDEBUG
@@ -417,23 +417,23 @@ template <typename T> void Context<T>::compute() {
     // Compute the next order parameter and vector potential, but do not
     // update.
     if (m_computeOrderParameter && computeVectorPotential) {
-      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
-                           *(m_computeOrderParameter->getOrderParameter()),
-                           *(m_computeVectorPotential->getResult()));
+      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
+                             *(m_computeOrderParameter->getOrderParameter()),
+                             *(m_computeVectorPotential->getResult()));
     } else if (m_computeOrderParameter && !computeVectorPotential) {
-      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
-                           *(m_computeOrderParameter->getOrderParameter()),
-                           *m_inducedVectorPotential);
+      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
+                             *(m_computeOrderParameter->getOrderParameter()),
+                             *m_inducedVectorPotential);
     } else if (!m_computeOrderParameter && computeVectorPotential) {
-      m_optimizer->compute(*m_orderParameter, *m_inducedVectorPotential,
-                           *m_orderParameter,
-                           *(m_computeVectorPotential->getResult()));
+      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
+                             *m_orderParameter,
+                             *(m_computeVectorPotential->getResult()));
     }
 
     // Update the order parameter and vector potential.
     // TODO(niclas): Should we really update when we have reached convergence?
     // The update might screw it up (slightly).
-    m_optimizer->update(*m_orderParameter, *m_inducedVectorPotential);
+    m_accelerator->update(*m_orderParameter, *m_inducedVectorPotential);
   }
 
   // Stop timer.
