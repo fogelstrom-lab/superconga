@@ -74,9 +74,9 @@ namespace helper {
 
 // Helper class for setting up simulation parameters
 template <typename T>
-scg::Parameters<T> *applySimParams(scg::Context<T> *inOutContext) {
+conga::Parameters<T> *applySimParams(conga::Context<T> *inOutContext) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(inOutContext);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(inOutContext);
 
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
@@ -106,22 +106,22 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *inOutContext) {
 
 // *** Test bulk free energy and order-parameter value at low temperature *** //
 template <typename T>
-void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
+void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
                              const int inNumVertices) {
   // =================== ARRANGE ==================== //
   // Create Context
-  scg::Context<T> *context = new scg::Context<T>();
+  conga::Context<T> *context = new conga::Context<T>();
 
   // Set parameters to the values specified in simParams struct
-  scg::Parameters<T> *parameters = applySimParams<T>(context);
+  conga::Parameters<T> *parameters = applySimParams<T>(context);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
   const T grainFraction = parameters->getGrainFraction();
   const bool isDisc = inNumVertices < 0;
   if (isDisc) {
-    geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
+    geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
   } else {
     // TODO(niclas): This should live within some geometry class!
     const T angleStep =
@@ -147,48 +147,50 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
     const T sideLength =
         static_cast<T>(2) * radius * std::sin(static_cast<T>(0.5) * angleStep);
     geometry->add(
-        new scg::PolygonGeometry<T>(grainFraction, inNumVertices, sideLength),
-        scg::Type::add);
+        new conga::PolygonGeometry<T>(grainFraction, inNumVertices, sideLength),
+        conga::Type::add);
   }
 
   // Choose a Riccati solver for a confined geometry.
-  scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(context);
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+          context);
   // Add specular BC
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(context);
 
   // Add an order-parameter component.
-  scg::OrderParameterComponent<T> *orderParameterComponent =
-      new scg::OrderParameterComponent<T>(inSymmetry, parameters);
+  conga::OrderParameterComponent<T> *orderParameterComponent =
+      new conga::OrderParameterComponent<T>(inSymmetry, parameters);
 
   // Initialize order-parameter component to the bulk value.
-  scg::Initial<T>::bulk(orderParameterComponent);
+  conga::Initial<T>::bulk(orderParameterComponent);
   // Add the initialized order-parameter component
   orderParameter->add(orderParameterComponent);
 
   // Create compute objects
   // Order parameter compute object.
-  new scg::ComputeOrderParameter<T>(context);
+  new conga::ComputeOrderParameter<T>(context);
   // Add current compute object.
-  new scg::ComputeCurrent<T>(context);
+  new conga::ComputeCurrent<T>(context);
   // Add free energy compute object.
-  new scg::ComputeFreeEnergy<T>(context);
+  new conga::ComputeFreeEnergy<T>(context);
 
   // Set optimizer.
-  context->set(std::make_unique<scg::Optimizer<T>>());
+  context->set(std::make_unique<conga::Optimizer<T>>());
 
   // =================== ACT ==================== //
   context->initialize();
 
-  scg::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
-                                simParams::NUM_ITERATIONS_MIN,
-                                simParams::NUM_ITERATIONS_MAX);
+  conga::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
+                                  simParams::NUM_ITERATIONS_MIN,
+                                  simParams::NUM_ITERATIONS_MAX);
 
   // Fetch the grain-summed current-density magnitude
-  const scg::GridGPU<T> currentDensity =
+  const conga::GridGPU<T> currentDensity =
       *(context->getComputeCurrent()->getResult());
   // Fetch the number of elements in the grain
   const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
@@ -221,14 +223,15 @@ void testCurrentConservation(const scg::BasisFunctionSymmetry inSymmetry,
   CHECK(context->isConverged());
 
   // Clean up context
-  scg::run_utils::cleanup(context);
+  conga::run_utils::cleanup(context);
 }
 } // namespace helper
 
 // ================= Test current conservation ================= //
 
 TEST_CASE("Test current conservation - s-wave (float)") {
-  const scg::BasisFunctionSymmetry symmetry = scg::BasisFunctionSymmetry::SWAVE;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::SWAVE;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -237,7 +240,8 @@ TEST_CASE("Test current conservation - s-wave (float)") {
 }
 
 TEST_CASE("Test current conservation - s-wave (double)") {
-  const scg::BasisFunctionSymmetry symmetry = scg::BasisFunctionSymmetry::SWAVE;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::SWAVE;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -246,8 +250,8 @@ TEST_CASE("Test current conservation - s-wave (double)") {
 }
 
 TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (float)") {
-  const scg::BasisFunctionSymmetry symmetry =
-      scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -256,8 +260,8 @@ TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (float)") {
 }
 
 TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (double)") {
-  const scg::BasisFunctionSymmetry symmetry =
-      scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -266,8 +270,8 @@ TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (double)") {
 }
 
 TEST_CASE("Test current conservation - d_{xy}-wave (float)") {
-  const scg::BasisFunctionSymmetry symmetry =
-      scg::BasisFunctionSymmetry::DWAVE_XY;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::DWAVE_XY;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -276,8 +280,8 @@ TEST_CASE("Test current conservation - d_{xy}-wave (float)") {
 }
 
 TEST_CASE("Test current conservation - d_{xy}-wave (double)") {
-  const scg::BasisFunctionSymmetry symmetry =
-      scg::BasisFunctionSymmetry::DWAVE_XY;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::DWAVE_XY;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -286,7 +290,8 @@ TEST_CASE("Test current conservation - d_{xy}-wave (double)") {
 }
 
 TEST_CASE("Test current conservation - g-wave (float)") {
-  const scg::BasisFunctionSymmetry symmetry = scg::BasisFunctionSymmetry::GWAVE;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::GWAVE;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
@@ -295,7 +300,8 @@ TEST_CASE("Test current conservation - g-wave (float)") {
 }
 
 TEST_CASE("Test current conservation - g-wave (double)") {
-  const scg::BasisFunctionSymmetry symmetry = scg::BasisFunctionSymmetry::GWAVE;
+  const conga::BasisFunctionSymmetry symmetry =
+      conga::BasisFunctionSymmetry::GWAVE;
 
   for (const int numVertices : simParams::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;

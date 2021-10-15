@@ -1,6 +1,6 @@
 //===---- read_utils.h - utils functions for reading data from files. ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,7 @@
 #include <thrust/device_vector.h>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace io {
 namespace internal {
 /// \brief CUDA kernel for copying two arrays, to two other arrays.
@@ -264,6 +264,6 @@ inline bool readOrderParameter(const std::filesystem::path &inFileName,
   return true;
 }
 } // namespace io
-} // namespace scg
+} // namespace conga
 
 #endif // READ_UTILS_H_

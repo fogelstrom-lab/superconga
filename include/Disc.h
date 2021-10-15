@@ -1,6 +1,6 @@
 //===------------------------ Disc.h - Disc class. ------------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -12,7 +12,7 @@
 #ifndef DISC_H_
 #define DISC_H_
 
-namespace scg {
+namespace conga {
 template <typename T> class Disc {
 public:
   Disc();
@@ -78,6 +78,6 @@ template <typename T> void Disc<T>::setPosX(const T inCenterX) {
 template <typename T> void Disc<T>::setPosY(const T inCenterY) {
   m_centerY = inCenterY;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // DISC_H_

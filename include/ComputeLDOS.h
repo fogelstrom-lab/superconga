@@ -1,6 +1,6 @@
 //===-- ComputeLDOS.h - Class for local density of states compute object. -===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include "Grid.h"
 #include "IntegrationIteratorKeldysh.h"
 
-namespace scg {
+namespace conga {
 template <typename T> class ComputeLDOS : public ComputeProperty<T> {
 public:
   // Constructors and Destructors
@@ -250,6 +250,6 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_LDOS_H_

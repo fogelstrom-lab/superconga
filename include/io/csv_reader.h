@@ -1,6 +1,6 @@
 //===---- csv_reader.h - functionality for reading data from csv files. ---===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace io {
 template <typename T> class CSVReader {
 private:
@@ -188,6 +188,6 @@ bool CSVReader<T>::contains(const std::string &inKey) const {
   return false;
 }
 } // namespace io
-} // namespace scg
+} // namespace conga
 
 #endif // CSV_READER_H_

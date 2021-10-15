@@ -29,8 +29,8 @@ const double MAX_ERROR = 1e-6;
 ///
 /// \return The relative Frobenius norm.
 template <typename T>
-T computeRelativeFrobeniusNorm(const scg::GridCPU<T> &inTest,
-                               const scg::GridCPU<T> &inRef) {
+T computeRelativeFrobeniusNorm(const conga::GridCPU<T> &inTest,
+                               const conga::GridCPU<T> &inRef) {
 
   const T *const testPtr = inTest.getDataPointer();
   const T *const refPtr = inRef.getDataPointer();
@@ -62,7 +62,7 @@ T computeRelativeFrobeniusNorm(const scg::GridCPU<T> &inTest,
 ///
 /// \return Void.
 template <typename T>
-void testSymmetry(const scg::GridCPU<T> &inVectorPotential,
+void testSymmetry(const conga::GridCPU<T> &inVectorPotential,
                   const T inTolerance) {
   // Get pointers.
   const T *const ptrX = inVectorPotential.getDataPointer(0);
@@ -135,8 +135,9 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
   const T center = static_cast<T>(N - 1) * static_cast<T>(0.5);
 
   // Construct the current density, and the expected potential, on the CPU.
-  scg::GridCPU<T> currenDensityCPU(N, N, currentDimension, scg::Type::real);
-  scg::GridCPU<T> expectedPotential(N, N, currentDimension, scg::Type::real);
+  conga::GridCPU<T> currenDensityCPU(N, N, currentDimension, conga::Type::real);
+  conga::GridCPU<T> expectedPotential(N, N, currentDimension,
+                                      conga::Type::real);
 
   // Get the pointers.
   T *const srcPtrX = currenDensityCPU.getDataPointer(0);
@@ -198,17 +199,17 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
   }
 
   // Copy the current density to the GPU.
-  const scg::GridGPU<T> currenDensityGPU(currenDensityCPU);
+  const conga::GridGPU<T> currenDensityGPU(currenDensityCPU);
 
   // =================== ACT ==================== //
   // Compute the induced vector potential.
-  scg::ComputeVectorPotential<T> computeVectorPotential(inMaxError,
-                                                        inAnalytical);
+  conga::ComputeVectorPotential<T> computeVectorPotential(inMaxError,
+                                                          inAnalytical);
   computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
   computeVectorPotential.solve(currenDensityGPU, penetrationDepth);
 
   // Copy the vector potential to the CPU.
-  const scg::GridCPU<T> potentialCPU = *(computeVectorPotential.getResult());
+  const conga::GridCPU<T> potentialCPU = *(computeVectorPotential.getResult());
 
   // =================== ASSERT ==================== //
   const T expectedRelativeFrobeniusNorm = static_cast<T>(0);

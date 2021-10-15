@@ -1,6 +1,6 @@
 //===------------------ bdg.h - BdG related functions ------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@
 #include <utility>
 #include <vector>
 
-namespace scg {
+namespace conga {
 namespace bdg {
 namespace internal {
 /// \brief Compute softplus(x).
@@ -247,6 +247,6 @@ std::pair<bool, T> computeCriticalTemperature(
   return {isConverged, Tc};
 }
 } // namespace bdg
-} // namespace scg
+} // namespace conga
 
 #endif // BDG_H_

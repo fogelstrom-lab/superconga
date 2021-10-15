@@ -1,6 +1,6 @@
 //===---------- ComputeProperty.h - ComputeProperty base class. -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -23,7 +23,7 @@
 #include "ParameterIterator.h"
 #include "Parameters.h"
 
-namespace scg {
+namespace conga {
 template <typename> class IntegrationIterator;
 
 template <typename T> class ComputeProperty : public ContextModule<T> {
@@ -171,6 +171,6 @@ template <typename T>
 void ComputeProperty<T>::initGreensAngle(const int N, const int numFields) {
   GridGPU<T>::initializeGrid(_greensCurrentAngle, N, N, numFields);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_PROPERTY_H_

@@ -1,6 +1,6 @@
 //===--------------------- Polygon.h - Polygon class. ---------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -16,7 +16,7 @@
 #include "Grid.h"
 #include <cmath>
 
-namespace scg {
+namespace conga {
 template <typename T> class Polygon {
 public:
   Polygon();
@@ -176,6 +176,6 @@ void Polygon<T>::transformPhysicalToNormalized(const int inNumVertices,
     inOutVerticesY[i] = yPhysical * scale + offset;
   }
 }
-} // namespace scg
+} // namespace conga
 
 #endif // POLYGON_H_

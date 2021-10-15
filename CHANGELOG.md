@@ -1,4 +1,4 @@
-# SuprConGPU changelog
+# SuperConga changelog
 
 ## Latest version (unreleased)
 
@@ -20,6 +20,7 @@
 - Pick the intersection with the smallest difference in y-coordinate when applying boundary condition.
 
 ### Developer changes
+- **MAJOR** Rename project to SuperConga and the namespace to `conga`.
 - Change sign of the elementary charge in order to conform with Graf et al.
 - Make minmax a non-static member method.
 - Add unit test of the current density comparing it with the linear-response expression.
@@ -209,7 +210,7 @@ This release (re-)adds the ability to save data to file. This includes configura
 ---
 
 ## Version v0.2.0 (November 12, 2020)
-This point-release is a major cleanup of the legacy code, adding numerous new functionality and improvements. This release is used in the [BdG comparison repository](https://gitlab.com/suprcongpu/research/bdg-comparison), which was used in the following paper:
+This point-release is a major cleanup of the legacy code, adding numerous new functionality and improvements. This release is used in the [BdG comparison repository](https://gitlab.com/superconga/research/bdg-comparison), which was used in the following paper:
 
 - N\. Wall Wennerdal, A. Ask, P. Holmvall, T. Löfwander, and M. Fogelström, "[Breaking time-reversal and translational symmetry at edges of d-wave superconductors: microscopic theory and comparison with quasiclassical theory](https://journals.aps.org/prresearch/abstract/10.1103/PhysRevResearch.2.043198)", Physical Review Research **2**, 043198 (2020).
 

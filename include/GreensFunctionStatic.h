@@ -1,6 +1,6 @@
 //===-- GreensFunctionStatic.h - Green function computation wrapper. ------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include "Parameters.h"
 #include <thrust/complex.h>
 
-namespace scg {
+namespace conga {
 template <typename> class GeometryGroup;
 
 template <typename T, template <typename> class GREENS>
@@ -227,6 +227,6 @@ void GreensFunctionStatic<T, GREENS>::getKernelDimensions(
   threadsPerBlock = dim3(tpb_x, tpb_y, 1);
   blocksPerGrid = dim3(bpg_x, bpg_y, numEnergies);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // GREENS_FUNCTION_STATIC_H_

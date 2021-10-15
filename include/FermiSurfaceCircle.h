@@ -1,6 +1,6 @@
 //===-- FermiSurfaceCircular.h - Circular Fermi surface class -------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-namespace scg {
+namespace conga {
 template <typename T> class FermiSurfaceCircle : public FermiSurface<T> {
 public:
   // Constructor.
@@ -178,6 +178,6 @@ void FermiSurfaceCircle<T>::getMomentumOffset(T &outOffsetX,
   outOffsetX = offset[0];
   outOffsetY = offset[1];
 }
-} // namespace scg
+} // namespace conga
 
 #endif // FERMI_SURFACE_CIRCLE_H_

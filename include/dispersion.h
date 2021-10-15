@@ -1,6 +1,6 @@
 //===------------------ dispersion.h - The dispersion class --------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace scg {
+namespace conga {
 /// \brief Dispersion base class.
 template <typename T> class Dispersion {
 public:
@@ -171,6 +171,6 @@ public:
     outVelocityY = (termNNdY + termNNNdY + termNNNNdY);
   }
 };
-} // namespace scg
+} // namespace conga
 
 #endif // DISPERSION_H_

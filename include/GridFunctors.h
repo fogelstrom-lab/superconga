@@ -1,6 +1,6 @@
 //===---------- GridFunctors.h - Functors used by Grid data class. --------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -22,7 +22,7 @@
 #define __HD__
 #endif
 
-namespace scg {
+namespace conga {
 namespace GridFunctors {
 
 template <typename T> struct squareRoot {
@@ -35,6 +35,6 @@ template <typename T> struct absVal {
   void operator()(T &val) { val = std::abs(val); }
 };
 } // namespace GridFunctors
-} // namespace scg
+} // namespace conga
 
 #endif // GRID_FUNCTORS_H_

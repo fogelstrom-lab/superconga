@@ -50,7 +50,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
 
       // Construct a GridData object of (numX*numY) complex numbers, with
       // numFields number of components
-      DEVICE testComplexGrid(numX, numY, numFields, scg::Type::complex);
+      DEVICE testComplexGrid(numX, numY, numFields, conga::Type::complex);
 
       // Stepsize between each different value to try
       const T valueStep =
@@ -63,7 +63,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
             valueStep * static_cast<T>(realPartIdx) + inMinValue;
 
         for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-          testComplexGrid.setValue(realPartValue, scg::Type::real, fieldIdx);
+          testComplexGrid.setValue(realPartValue, conga::Type::real, fieldIdx);
         }
 
         // Vary the imaginary part
@@ -74,7 +74,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
               valueStep * static_cast<T>(imaginaryPartIdx) + inMinValue;
 
           for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-            testComplexGrid.setValue(imaginaryPartValue, scg::Type::imag,
+            testComplexGrid.setValue(imaginaryPartValue, conga::Type::imag,
                                      fieldIdx);
           }
 
@@ -123,7 +123,7 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
       // Construct a GridData object of (numX*numY) real numbers, with
       // numFields number of components
-      DEVICE testRealGrid(numX, numY, numFields, scg::Type::real);
+      DEVICE testRealGrid(numX, numY, numFields, conga::Type::real);
 
       // Stepsize between each different value to try
       const T valueStep =
@@ -135,7 +135,7 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
         const T testValue = valueStep * static_cast<T>(valueIdx) + inMinValue;
 
         for (int fieldIdx = 0; fieldIdx < numFields; ++fieldIdx) {
-          testRealGrid.setValue(testValue, scg::Type::real, fieldIdx);
+          testRealGrid.setValue(testValue, conga::Type::real, fieldIdx);
         }
 
         // =================== ACT ==================== //
@@ -163,33 +163,33 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
 // =============== Test GridData::sumMagnitude =============== //
 TEST_CASE("Test GridData<float>::sumMagnitude - Complex, GPU") {
-  helper::testSumMagnitudeComplex<float, scg::GridGPU<float>>();
+  helper::testSumMagnitudeComplex<float, conga::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Complex, CPU") {
-  helper::testSumMagnitudeComplex<float, scg::GridCPU<float>>();
+  helper::testSumMagnitudeComplex<float, conga::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Real, GPU") {
-  helper::testSumMagnitudeReal<float, scg::GridGPU<float>>();
+  helper::testSumMagnitudeReal<float, conga::GridGPU<float>>();
 }
 
 TEST_CASE("Test GridData<float>::sumMagnitude - Real, CPU") {
-  helper::testSumMagnitudeReal<float, scg::GridCPU<float>>();
+  helper::testSumMagnitudeReal<float, conga::GridCPU<float>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Complex, GPU") {
-  helper::testSumMagnitudeComplex<double, scg::GridGPU<double>>();
+  helper::testSumMagnitudeComplex<double, conga::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Complex, CPU") {
-  helper::testSumMagnitudeComplex<double, scg::GridCPU<double>>();
+  helper::testSumMagnitudeComplex<double, conga::GridCPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Real, GPU") {
-  helper::testSumMagnitudeReal<double, scg::GridGPU<double>>();
+  helper::testSumMagnitudeReal<double, conga::GridGPU<double>>();
 }
 
 TEST_CASE("Test GridData<double>::sumMagnitude - Real, CPU") {
-  helper::testSumMagnitudeReal<double, scg::GridCPU<double>>();
+  helper::testSumMagnitudeReal<double, conga::GridCPU<double>>();
 }

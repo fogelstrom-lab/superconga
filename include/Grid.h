@@ -1,6 +1,6 @@
 //===------------- Grid.h - GridData wrapper for CPU or GPU. -------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-namespace scg {
+namespace conga {
 #ifdef __CUDACC__
 template <typename T> using VectorGPU = thrust::device_vector<T>;
 template <typename T> using GridGPU = GridData<T, thrust::device_vector<T>>;
@@ -35,6 +35,6 @@ template <typename T> using GridGPU = GridData<T, thrust::host_vector<T>>;
 
 template <typename T> using VectorCPU = thrust::host_vector<T>;
 template <typename T> using GridCPU = GridData<T, thrust::host_vector<T>>;
-} // namespace scg
+} // namespace conga
 
 #endif // GRID_H_

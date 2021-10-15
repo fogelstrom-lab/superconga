@@ -1,6 +1,6 @@
 //===------ write_utils.h - utils functions for writing data to files -----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 #include <memory>
 #include <string>
 
-namespace scg {
+namespace conga {
 namespace io {
 inline std::string getFileExtension(Type::fileFormat format) {
   switch (format) {
@@ -87,6 +87,6 @@ inline void writeJSON(const Json::Value &inJSON,
   }
 }
 } // namespace io
-} // namespace scg
+} // namespace conga
 
 #endif // WRITE_UTILS_H_

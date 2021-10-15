@@ -1,6 +1,6 @@
 //===-------------- OrderParameterInitial.h - Polygon class. --------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -24,7 +24,7 @@
 #include <iostream>
 #include <limits>
 
-namespace scg {
+namespace conga {
 template <typename T> struct Initial {
 public:
   /// \brief Initialize order parameter to bulk value.
@@ -423,6 +423,6 @@ int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
 
   return read(inOutDeltaComponent, fn);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // ORDER_PARAMETER_INITIAL_H_

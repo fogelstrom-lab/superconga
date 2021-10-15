@@ -8,7 +8,7 @@
 namespace helper {
 template <typename T> void testGridResolution() {
   // =================== ARRANGE ==================== //
-  scg::Parameters<T> parameters;
+  conga::Parameters<T> parameters;
 
   // =================== ACT ==================== //
   // Loop over some semi-random values to test.
@@ -44,7 +44,7 @@ template <typename T> void testGridResolution() {
 
 template <typename T> void testNumOzakiEnergies() {
   // =================== ARRANGE ==================== //
-  scg::Parameters<T> parameters;
+  conga::Parameters<T> parameters;
   const T temperature = static_cast<T>(0.5);
   const T cutoff = static_cast<T>(10.0 / (2.0 * M_PI));
 

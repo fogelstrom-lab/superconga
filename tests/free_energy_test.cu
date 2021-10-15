@@ -60,11 +60,12 @@ const int NUM_ITERATIONS_MIN = 1;
 const double EPSILON_TOLERANCE = 10.0;
 
 // The OP symmetries.
-const scg::vector2d<scg::BasisFunctionSymmetry> SYMMETRIES = {
-    scg::BasisFunctionSymmetry::SWAVE, scg::BasisFunctionSymmetry::DWAVE_XY};
+const conga::vector2d<conga::BasisFunctionSymmetry> SYMMETRIES = {
+    conga::BasisFunctionSymmetry::SWAVE,
+    conga::BasisFunctionSymmetry::DWAVE_XY};
 
 // The OP relative TCs.
-const scg::vector2d<float> RELATIVE_TCS = {0.1f, 1.0f};
+const conga::vector2d<float> RELATIVE_TCS = {0.1f, 1.0f};
 } // namespace TEST_PARAMS
 
 namespace helper {
@@ -72,10 +73,10 @@ namespace helper {
 
 template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   // Create context.
-  scg::Context<T> *context = new scg::Context<T>();
+  conga::Context<T> *context = new conga::Context<T>();
 
   // Set parameters.
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
   parameters->setGrainWidth(static_cast<T>(TEST_PARAMS::GRAIN_SIDE_LENGTH));
   parameters->setPointsPerCoherenceLength(
       static_cast<T>(TEST_PARAMS::POINTS_PER_COHERENCE_LENGTH));
@@ -86,47 +87,49 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   parameters->setEnergyCutoff(static_cast<T>(TEST_PARAMS::ENERGY_CUTOFF));
 
   // Set up a disc.
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
   const T grainFraction = parameters->getGrainFraction();
-  geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
+  geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
 
   // Choose a Riccati solver for a confined geometry.
-  scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(context);
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+          context);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter.
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(context);
-  const scg::vector2d<int> indices = {static_cast<int>(inSwapOrder),
-                                      static_cast<int>(!inSwapOrder)};
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(context);
+  const conga::vector2d<int> indices = {static_cast<int>(inSwapOrder),
+                                        static_cast<int>(!inSwapOrder)};
   for (const int i : indices) {
-    scg::OrderParameterComponent<T> *orderParameterComponent =
-        new scg::OrderParameterComponent<T>(
+    conga::OrderParameterComponent<T> *orderParameterComponent =
+        new conga::OrderParameterComponent<T>(
             TEST_PARAMS::SYMMETRIES[i], parameters,
             static_cast<T>(TEST_PARAMS::RELATIVE_TCS[i]));
-    scg::Initial<T>::bulk(orderParameterComponent);
+    conga::Initial<T>::bulk(orderParameterComponent);
     orderParameter->add(orderParameterComponent);
   }
 
   // Create compute objects.
-  new scg::ComputeOrderParameter<T>(context);
-  new scg::ComputeFreeEnergy<T>(context);
+  new conga::ComputeOrderParameter<T>(context);
+  new conga::ComputeFreeEnergy<T>(context);
 
   // Set optimizer.
-  context->set(std::make_unique<scg::Optimizer<T>>());
+  context->set(std::make_unique<conga::Optimizer<T>>());
 
   // Initialize and run simulation.
   context->initialize();
-  scg::run_utils::runSimulation(context, TEST_PARAMS::PRINT_ITERATION_STATUS,
-                                TEST_PARAMS::NUM_ITERATIONS_MIN,
-                                TEST_PARAMS::NUM_ITERATIONS_MAX);
+  conga::run_utils::runSimulation(context, TEST_PARAMS::PRINT_ITERATION_STATUS,
+                                  TEST_PARAMS::NUM_ITERATIONS_MIN,
+                                  TEST_PARAMS::NUM_ITERATIONS_MAX);
 
   // Get the free energy, our result.
   const T freeEnergy =
       context->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
 
   // Clean up context.
-  scg::run_utils::cleanup(context);
+  conga::run_utils::cleanup(context);
 
   return freeEnergy;
 }

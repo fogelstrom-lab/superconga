@@ -1,6 +1,6 @@
 //===-- LocalVectorPotential.h - Compute energy from vector potential. ----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #define _HD_ __host__ __device__
 #endif
 
-namespace scg {
+namespace conga {
 namespace VectorPotential {
 template <typename T> struct None {
   _HD_ static void computeVectorPotential_local(const T inFluxDensity,
@@ -97,6 +97,6 @@ _HD_ void VectorPotential::Solenoid<T>::computeVectorPotential_local(
   outVectorPotentialX = -inY * factor;
   outVectorPotentialY = inX * factor;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // LOCAL_VECTOR_POTENTIAL_H_

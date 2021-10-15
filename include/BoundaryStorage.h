@@ -1,6 +1,6 @@
 //===------ BoundaryStorage.h - Coherence function boundary storage. ------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include "utils.h"
 #include <iostream>
 
-namespace scg {
+namespace conga {
 template <typename T> class ComputeProperty;
 
 template <typename T> class BoundaryStorage {
@@ -583,6 +583,6 @@ template <typename T> void BoundaryStorage<T>::setBoundaryZero() {
   _boundary_in_gammabar->setZero();
   _boundary_out_gammabar->setZero();
 }
-} // namespace scg
+} // namespace conga
 
 #endif // BOUNDARY_STORAGE_H_

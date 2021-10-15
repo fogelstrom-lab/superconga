@@ -1,6 +1,6 @@
 //===-- FermiSurface.h - Abstract Fermi surface class ---------------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include <cmath>
 #include <iostream>
 
-namespace scg {
+namespace conga {
 /// \brief Enum class with the implemented Fermi-surface types.
 ///
 /// The following values are supported:
@@ -218,6 +218,6 @@ __host__ __device__ T FermiSurface<T>::getFractionalAngleIndex(
                                            inOffsetY, m_angleOffset,
                                            inNumAngles);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // FERMI_SURFACE_H_

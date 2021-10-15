@@ -1,6 +1,6 @@
 //===------------- Visualization.h - OpenGL live visualization. -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -30,7 +30,7 @@
 #include "GeometryGroup.h"
 #endif
 
-namespace scg {
+namespace conga {
 template <typename T> class Visualization {
 public:
   Visualization();
@@ -870,6 +870,6 @@ template <typename T> void Visualization<T>::draw() {
   drawInfo();
   glutSwapBuffers();
 }
-} // namespace scg
+} // namespace conga
 
 #endif // VISUALIZATION_H_

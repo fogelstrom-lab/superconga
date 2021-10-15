@@ -1,6 +1,6 @@
 //===----- BoundaryConditionSpecular.h - Specular boundary condition. -----===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -20,7 +20,7 @@
 #include <cmath>
 #include <cuda.h>
 
-namespace scg {
+namespace conga {
 template <typename T>
 class BoundaryConditionSpecular : public BoundaryCondition<T> {
 public:
@@ -464,6 +464,6 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   cudaStreamDestroy(s1);
   cudaStreamDestroy(s2);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // BOUNDARY_CONDITION_SPECULAR_H_

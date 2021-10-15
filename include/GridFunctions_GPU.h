@@ -1,6 +1,6 @@
 //===-------------- GridFunctions_GPU.h - GPU grid functions. -------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 #include <cmath>
 #include <thrust/device_vector.h>
 
-namespace scg {
+namespace conga {
 ///////////////////////////////////////////
 // Code path for GPU (device) specific code
 ///////////////////////////////////////////
@@ -1012,6 +1012,6 @@ int GridFunctions<T, thrust::device_vector<T>>::checkCudaError(
   } else
     return 0;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // GRID_FUNCTIONS_GPU_H_

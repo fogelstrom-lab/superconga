@@ -1,6 +1,6 @@
 //===----- ComputeResidual.h - Functionality for computing residual. ------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -17,7 +17,7 @@
 #include <cmath>
 #include <limits>
 
-namespace scg {
+namespace conga {
 namespace compute_residual_internal {
 template <typename T> T getGoodEpsilon(const int inNumElements) {
   const T epsilon = std::sqrt(std::numeric_limits<T>::epsilon()) *
@@ -53,6 +53,6 @@ T computeResidual(const GridData<T, DEV> &inOld,
   // We are interested in the relative error, hence the division.
   return diff / std::max(old, epsilon);
 }
-} // namespace scg
+} // namespace conga
 
 #endif // COMPUTE_RESIDUAL_H_

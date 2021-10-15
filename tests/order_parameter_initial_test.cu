@@ -43,9 +43,9 @@ T computeTolerance(const T inToleranceBaseFactor = static_cast<T>(5.0)) {
 
 // Helper class for setting up simulation parameters
 template <typename T>
-scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
+conga::Parameters<T> *applySimParams(conga::Context<T> *context) {
   // Storage for system simulation parameters (e.g. temperature, lattice size)
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
   // Set the number of lattice points per coherence length.
@@ -55,7 +55,9 @@ scg::Parameters<T> *applySimParams(scg::Context<T> *context) {
 }
 
 // Cleanup of context objects.
-template <typename T> void cleanup(scg::Context<T> *context) { delete context; }
+template <typename T> void cleanup(conga::Context<T> *context) {
+  delete context;
+}
 
 // ======================== Wrappers for test cases ======================== //
 // **** Test that order parameter grid is normalized properly **** /
@@ -74,92 +76,92 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
     for (GrainShape grainShape : allGrainShapes) {
       // =================== ARRANGE ==================== //
       // Create Context
-      scg::Context<T> *context = new scg::Context<T>();
+      conga::Context<T> *context = new conga::Context<T>();
 
       // Set parameters to the values specified in simParams struct
-      scg::Parameters<T> *parameters = applySimParams<T>(context);
+      conga::Parameters<T> *parameters = applySimParams<T>(context);
 
       // Create geometry group: add/remove geometry objects (e.g. discs,
       // polygons) from the geometry group
-      scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(context);
+      conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
       const T grainFraction = parameters->getGrainFraction();
       switch (grainShape) {
       case GrainShape::disc: {
         const T discGrainScale = static_cast<T>(0.8);
-        geometry->add(new scg::DiscGeometry<T>(grainFraction, discGrainScale),
-                      scg::Type::add);
+        geometry->add(new conga::DiscGeometry<T>(grainFraction, discGrainScale),
+                      conga::Type::add);
         break;
       }
       case GrainShape::square: {
         const int numVerticesSquare = 4;
         geometry->add(
-            new scg::PolygonGeometry<T>(grainFraction, numVerticesSquare),
-            scg::Type::add);
+            new conga::PolygonGeometry<T>(grainFraction, numVerticesSquare),
+            conga::Type::add);
         break;
       }
       case GrainShape::octagon: {
         const int numVerticesOctagon = 8;
         const T octagonGrainScale = static_cast<T>(0.75);
-        geometry->add(new scg::PolygonGeometry<T>(
+        geometry->add(new conga::PolygonGeometry<T>(
                           grainFraction, numVerticesOctagon, octagonGrainScale),
-                      scg::Type::add);
+                      conga::Type::add);
         break;
       }
       case GrainShape::irregular: {
         // Add irregular pentagon
         const int numVertices = 5;
         const T xVertices[numVertices] = {
-            static_cast<T>(0.9 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(0.0 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(-1.0 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.8 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(0.5 * scg::constants::MAXIMUM_COORDINATE)};
+            static_cast<T>(0.9 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-1.0 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.5 * conga::constants::MAXIMUM_COORDINATE)};
         const T yVertices[numVertices] = {
-            static_cast<T>(0.8 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(1.0 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(0.0 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.8 * scg::constants::MAXIMUM_COORDINATE),
-            static_cast<T>(-0.6 * scg::constants::MAXIMUM_COORDINATE)};
-        geometry->add(new scg::PolygonGeometry<T>(grainFraction, numVertices,
-                                                  xVertices, yVertices),
-                      scg::Type::add);
+            static_cast<T>(0.8 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(1.0 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(0.0 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.8 * conga::constants::MAXIMUM_COORDINATE),
+            static_cast<T>(-0.6 * conga::constants::MAXIMUM_COORDINATE)};
+        geometry->add(new conga::PolygonGeometry<T>(grainFraction, numVertices,
+                                                    xVertices, yVertices),
+                      conga::Type::add);
         // Remove small disc
         const T discGrainScale = static_cast<T>(0.2);
         const T discCenterX =
-            static_cast<T>(0.2 * scg::constants::MAXIMUM_COORDINATE);
+            static_cast<T>(0.2 * conga::constants::MAXIMUM_COORDINATE);
         const T discCenterY =
-            static_cast<T>(0.1 * scg::constants::MAXIMUM_COORDINATE);
-        geometry->add(new scg::DiscGeometry<T>(grainFraction, discGrainScale,
-                                               discCenterX, discCenterY),
-                      scg::Type::remove);
+            static_cast<T>(0.1 * conga::constants::MAXIMUM_COORDINATE);
+        geometry->add(new conga::DiscGeometry<T>(grainFraction, discGrainScale,
+                                                 discCenterX, discCenterY),
+                      conga::Type::remove);
         break;
       }
       }
 
       // Choose a Riccati solver for a confined geometry, no magnetic fields
-      scg::RiccatiSolver<T> *riccatiSolver =
-          new scg::RiccatiSolverConfined<T, scg::VectorPotential::None>(
+      conga::RiccatiSolver<T> *riccatiSolver =
+          new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
               context);
 
       // Set up order parameter
-      scg::OrderParameter<T> *orderParameter =
-          new scg::OrderParameter<T>(context);
-      const scg::BasisFunctionSymmetry symmetry =
-          useSwave ? scg::BasisFunctionSymmetry::SWAVE
-                   : scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
-      scg::OrderParameterComponent<T> *orderParameterComponent =
-          new scg::OrderParameterComponent<T>(symmetry, parameters);
+      conga::OrderParameter<T> *orderParameter =
+          new conga::OrderParameter<T>(context);
+      const conga::BasisFunctionSymmetry symmetry =
+          useSwave ? conga::BasisFunctionSymmetry::SWAVE
+                   : conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
+      conga::OrderParameterComponent<T> *orderParameterComponent =
+          new conga::OrderParameterComponent<T>(symmetry, parameters);
 
       // Temporary initialization has to be done before adding it to the order
       // parameter. This is because we have to add it outside the inner for
       // loops.
-      scg::Initial<T>::constant(orderParameterComponent);
+      conga::Initial<T>::constant(orderParameterComponent);
       // Add the initialized s-wave component to the total order parameter
       orderParameter->add(orderParameterComponent);
 
       // Create compute objects
-      scg::ComputeOrderParameter<T> *computeOrderParameter =
-          new scg::ComputeOrderParameter<T>(context);
+      conga::ComputeOrderParameter<T> *computeOrderParameter =
+          new conga::ComputeOrderParameter<T>(context);
 
       // Loop over maxVales (small and large initialization values)
       for (const T &maxValue : maxValues) {
@@ -183,8 +185,8 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
                 valueStep * static_cast<T>(imaginaryPartIdx) + minValue;
 
             // Initialize order-parameter component to the (real) bulk value
-            scg::Initial<T>::constant(orderParameterComponent, realPartValue,
-                                      imaginaryPartValue);
+            conga::Initial<T>::constant(orderParameterComponent, realPartValue,
+                                        imaginaryPartValue);
 
             // Initialize simulation
             context->initialize();

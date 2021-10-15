@@ -1,6 +1,6 @@
 //===--------- PolygonGeometry.h - Polygon shape primitive class. ---------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -19,7 +19,7 @@
 #include <cmath>
 #include <cuda.h>
 
-namespace scg {
+namespace conga {
 template <typename T> class PolygonGeometry : public GeometryComponent<T> {
 public:
   PolygonGeometry();
@@ -398,6 +398,6 @@ PolygonGeometry<T>::createDomain(const int inLatticeSideLength) const {
 
   return dom_component;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // POLYGON_GEOMETRY_H_

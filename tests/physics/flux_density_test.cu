@@ -64,7 +64,7 @@ T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
                              R - static_cast<T>(2) * k);
 
     // The update of the penetration depth.
-    const T dk = r * static_cast<T>(scg::utils::sign(drdk)) /
+    const T dk = r * static_cast<T>(conga::utils::sign(drdk)) /
                  std::max(std::abs(drdk), std::numeric_limits<T>::epsilon());
 
     // Check convergence.
@@ -92,8 +92,8 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   const T penetrationDepth = static_cast<T>(1);
   const T numFluxQuanta = static_cast<T>(0.5);
 
-  scg::Context<T> context;
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
+  conga::Context<T> context;
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   parameters->setGrainWidth(grainWidth);
   parameters->setPointsPerCoherenceLength(static_cast<T>(5));
   parameters->setAngularResolution(16);
@@ -103,30 +103,32 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
 
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(&context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
-  geometry->add(new scg::DiscGeometry<T>(grainFraction), scg::Type::add);
+  geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
 
-  scg::RiccatiSolver<T> *riccatiSolver =
-      new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(&context);
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+          &context);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(&context);
-  scg::OrderParameterComponent<T> *orderParameterComponent =
-      new scg::OrderParameterComponent<T>(scg::BasisFunctionSymmetry::SWAVE,
-                                          parameters);
-  scg::Initial<T>::bulk(orderParameterComponent);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(&context);
+  conga::OrderParameterComponent<T> *orderParameterComponent =
+      new conga::OrderParameterComponent<T>(conga::BasisFunctionSymmetry::SWAVE,
+                                            parameters);
+  conga::Initial<T>::bulk(orderParameterComponent);
   orderParameter->add(orderParameterComponent);
 
-  context.set(std::make_unique<scg::Optimizer<T>>(static_cast<T>(0.001)));
+  context.set(std::make_unique<conga::Optimizer<T>>(static_cast<T>(0.001)));
 
-  new scg::ComputeOrderParameter<T>(&context);
-  new scg::ComputeCurrent<T>(&context);
-  context.add(std::make_unique<scg::ComputeVectorPotential<T>>());
+  new conga::ComputeOrderParameter<T>(&context);
+  new conga::ComputeCurrent<T>(&context);
+  context.add(std::make_unique<conga::ComputeVectorPotential<T>>());
 
   // =================== ACT ==================== //
   context.initialize();
-  scg::run_utils::runSimulation(&context);
+  conga::run_utils::runSimulation(&context);
 
   const T area = context.getGeometry()->area();
   // The pi factor comes from our choice of units for the flux density:
@@ -134,9 +136,9 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   const T externalFluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
 
   const T latticeElementSize = context.getParameters()->getGridElementSize();
-  const scg::GridGPU<T> vectorPotential =
+  const conga::GridGPU<T> vectorPotential =
       *(context.getInducedVectorPotential());
-  scg::GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
+  conga::GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
   context.getGeometry()->zeroValuesOutsideDomainRef(&fluxDensity);
   const int numGrainLatticeSites =
       context.getGeometry()->getNumGrainLatticeSites();

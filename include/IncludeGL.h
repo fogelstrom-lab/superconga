@@ -1,6 +1,6 @@
 //===----------- IncludeGL.h - Utility functions used by OpenGL. ----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 #include <GLUT/glut.h>
 #endif
 
-namespace scg {
+namespace conga {
 // Key logging functions
 namespace Key {
 unsigned char g_key_pressed;
@@ -73,6 +73,6 @@ int initGL(int argc, char *argv[], const int nx, const int ny) {
 
   return windowID;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // INCLUDE_GL_H_

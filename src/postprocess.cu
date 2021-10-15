@@ -1,6 +1,6 @@
 //===----------- main.cu - Main file for setting up simulations -----------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -51,7 +51,7 @@
 //*******************************************************
 // PRECISION
 //*******************************************************
-#ifdef SCG_SINGLE_PRECISION
+#ifdef CONGA_SINGLE_PRECISION
 typedef float T;
 #else
 typedef double T;
@@ -133,13 +133,13 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // CREATE CONTEXT
   //***************************************************
-  scg::Context<T> context;
+  conga::Context<T> context;
 
   //***************************************************
   // APPLY PARAMETERS
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  scg::Parameters<T> *parameters = new scg::Parameters<T>(&context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
 
   // Set temperature.
   const T temperature =
@@ -187,15 +187,15 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group.
-  scg::GeometryGroup<T> *geometry = new scg::GeometryGroup<T>(&context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
 
   // Parse user-defined geometry. Compute factors to scale and translate
   // geometry to internal coordinate system.
   T scalingFactor;
   T xOffset;
   T yOffset;
-  scg::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
-                                         yOffset);
+  conga::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
+                                           yOffset);
 
   // Set grain sidelength in coherence length.
   parameters->setGrainWidth(scalingFactor);
@@ -206,15 +206,16 @@ int main(int argc, char *argv[]) {
 
   // Parse user-defined geometry, loop through geometry component list and
   // create compund geometry. Scale and translate to internal coordinate system.
-  scg::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
-                                        xOffset, yOffset, grainFraction);
+  conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
+                                          xOffset, yOffset, grainFraction);
 
   //***************************************************
   // SET UP ORDER PARAMETER
   //***************************************************
   // Create order parameter (which might contain multiple components, i.e.
   // d+is).
-  scg::OrderParameter<T> *orderParameter = new scg::OrderParameter<T>(&context);
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(&context);
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation = static_cast<T>(
@@ -236,15 +237,15 @@ int main(int argc, char *argv[]) {
       orderParameterSuccess = true;
 
       // TODO(niclas): Move to OrderParameterBasis.h?
-      scg::BasisFunctionSymmetry symmetry;
+      conga::BasisFunctionSymmetry symmetry;
       if (symmetryStr == "dx2-y2") {
-        symmetry = scg::BasisFunctionSymmetry::DWAVE_X2_Y2;
+        symmetry = conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
       } else if (symmetryStr == "dxy") {
-        symmetry = scg::BasisFunctionSymmetry::DWAVE_XY;
+        symmetry = conga::BasisFunctionSymmetry::DWAVE_XY;
       } else if (symmetryStr == "g") {
-        symmetry = scg::BasisFunctionSymmetry::GWAVE;
+        symmetry = conga::BasisFunctionSymmetry::GWAVE;
       } else {
-        symmetry = scg::BasisFunctionSymmetry::SWAVE;
+        symmetry = conga::BasisFunctionSymmetry::SWAVE;
       }
 
       // For convenience.
@@ -253,9 +254,9 @@ int main(int argc, char *argv[]) {
       // Create component.
       const T criticalTemperature =
           static_cast<T>(opCompParams["critical_temperature"].asDouble());
-      scg::OrderParameterComponent<T> *orderParameterComponent =
-          new scg::OrderParameterComponent<T>(symmetry, parameters,
-                                              criticalTemperature);
+      conga::OrderParameterComponent<T> *orderParameterComponent =
+          new conga::OrderParameterComponent<T>(symmetry, parameters,
+                                                criticalTemperature);
 
       // Add the initialized component to the total order parameter.
       orderParameter->add(orderParameterComponent);
@@ -272,7 +273,7 @@ int main(int argc, char *argv[]) {
     const std::string orderParameterFile = loadDataPath / "order_parameter.csv";
     // Read the values from file.
     const bool success =
-        scg::io::readOrderParameter(orderParameterFile, *orderParameter);
+        conga::io::readOrderParameter(orderParameterFile, *orderParameter);
 
     // Abort if not successful.
     if (!success) {
@@ -288,12 +289,12 @@ int main(int argc, char *argv[]) {
   {
     // Create the placeholder grid.
     const int gridResolution = parameters->getGridResolutionBase();
-    auto vectorPotential = std::make_unique<scg::GridGPU<T>>(
-        gridResolution, gridResolution, 2, scg::Type::real);
+    auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
+        gridResolution, gridResolution, 2, conga::Type::real);
 
     // Read the values from file.
-    const bool success = scg::io::readVectorPotential(vectorPotentialFile,
-                                                      *(vectorPotential.get()));
+    const bool success = conga::io::readVectorPotential(
+        vectorPotentialFile, *(vectorPotential.get()));
 
     // Abort if not successful.
     if (!success) {
@@ -308,7 +309,7 @@ int main(int argc, char *argv[]) {
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Add LDOS compute object.
-  new scg::ComputeLDOS<T>(&context);
+  new conga::ComputeLDOS<T>(&context);
   // TODO(niclas): Add spectral current?
 
   //***************************************************
@@ -316,23 +317,23 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // RiccatiSolverConfined: provides analytic solutions to the Riccati equations
   // for a piecewise constant order parameter.
-  scg::RiccatiSolver<T> *riccatiSolver;
+  conga::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
   // with a solenoid gauge.
   const bool solenoidGuage = simParams["gauge_solenoid"].asBool();
   if (solenoidGuage) {
     riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Solenoid>(
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
             &context);
   } else {
     riccatiSolver =
-        new scg::RiccatiSolverConfined<T, scg::VectorPotential::Radial>(
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
             &context);
   }
 
   // Add specular BC.
-  riccatiSolver->add(new scg::BoundaryConditionSpecular<T>);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   //***************************************************
   // INITIALIZE SIMULATION
@@ -342,7 +343,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  scg::run_utils::runSimulation(
+  conga::run_utils::runSimulation(
       &context, postProcessConfig["verbose"].asBool(),
       postProcessConfig["num_iterations_min"].asInt(),
       postProcessConfig["num_iterations_max"].asInt());
@@ -365,25 +366,25 @@ int main(int argc, char *argv[]) {
     // Save post-process config.
     const std::filesystem::path configFileName =
         saveDataPath / "postprocess.json";
-    scg::io::writeJSON(postProcessConfig, configFileName,
-                       postProcessConfig["verbose"].asBool());
+    conga::io::writeJSON(postProcessConfig, configFileName,
+                         postProcessConfig["verbose"].asBool());
 
     // Get file extension.
-    const scg::Type::fileFormat dataFormat = scg::Type::csv;
-    const std::string extension = scg::io::getFileExtension(dataFormat);
+    const conga::Type::fileFormat dataFormat = conga::Type::csv;
+    const std::string extension = conga::io::getFileExtension(dataFormat);
 
     // Save the DOS.
     {
       // Create CSV writer.
       const bool writeIndices = false;
-      const scg::io::CSVGridDataSaveStrategy<T> writer(writeIndices);
+      const conga::io::CSVGridDataSaveStrategy<T> writer(writeIndices);
 
       // Create filename.
       const std::filesystem::path dosFileName =
           saveDataPath / ("dos" + extension);
 
       // Get the DOS.
-      const scg::GridCPU<T> &dos = *(context.getComputeLDOS()->getDOS());
+      const conga::GridCPU<T> &dos = *(context.getComputeLDOS()->getDOS());
 
       // Write data.
       const bool success = writer.save(dos, {"energy", "dos"}, dosFileName);
@@ -398,14 +399,15 @@ int main(int argc, char *argv[]) {
     // Save the LDOS.
     {
       // Create CSV writer.
-      const scg::io::CSVGridDataSaveStrategy<T> writer;
+      const conga::io::CSVGridDataSaveStrategy<T> writer;
 
       // Create filename.
       const std::filesystem::path ldosFileName =
           saveDataPath / ("ldos" + extension);
 
       // Get the LDOS.
-      const scg::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
+      const conga::GridGPU<T> &ldos =
+          (*(context.getComputeLDOS()->getResult()));
 
       // Write data.
       const bool success = writer.save(ldos, {"ldos"}, ldosFileName);

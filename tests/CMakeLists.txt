@@ -1,7 +1,7 @@
 # =========================================================== #
 # EXTERNAL LIBRARIES
 # =========================================================== #
-message(STATUS "################### Building SuprConGPU test files ###################")
+message(STATUS "################### Building SuperConga test files ###################")
 # Declare the doctest lib.
 FetchContent_Declare(
   doctest

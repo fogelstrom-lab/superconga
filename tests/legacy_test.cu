@@ -126,9 +126,9 @@ __global__ void computeVectorPotential2d_kernel(
 } // namespace internal
 
 template <typename T>
-void computeVectorPotential(scg::GridGPU<T> &inOutVectorPotential,
-                            const scg::GridGPU<T> &inCurrentDensity,
-                            const scg::GridGPU<char> &inDomainLabels,
+void computeVectorPotential(conga::GridGPU<T> &inOutVectorPotential,
+                            const conga::GridGPU<T> &inCurrentDensity,
+                            const conga::GridGPU<char> &inDomainLabels,
                             const T inLatticeSpacing, const T inKappa) {
   // Set to zero because we'll add stuff to it.
   inOutVectorPotential.setZero();
@@ -187,7 +187,7 @@ void testLegacyAtan2(const T inTolerance, const int inNumAngles = 32,
       const T y = radius * sin(angle);
 
       const T angleOld = legacy::atan2(y, x);
-      const T angleNew = scg::utils::wrapToRangeTwoPi(atan2(y, x));
+      const T angleNew = conga::utils::wrapToRangeTwoPi(atan2(y, x));
       CHECK(angle == doctest::Approx(angleNew).epsilon(inTolerance));
       CHECK(angleOld == doctest::Approx(angleNew).epsilon(inTolerance));
     }
@@ -211,7 +211,7 @@ void testComputeOrderParameterBulkSWave(const T inTolerance) {
 
     // Compute the new value.
     const T newOrderParameter =
-        scg::computeOrderParameterBulkSWave(temperature);
+        conga::computeOrderParameterBulkSWave(temperature);
 
     // Compare results.
     CHECK(oldOrderParameter ==
@@ -236,16 +236,16 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   const int currentDimension = 2;
 
   // Set the domain labels to "1" everywhere.
-  scg::GridGPU<char> domainLabels(N, N, domainDimension, scg::Type::real);
-  domainLabels.setValue('1', scg::Type::real);
+  conga::GridGPU<char> domainLabels(N, N, domainDimension, conga::Type::real);
+  domainLabels.setValue('1', conga::Type::real);
 
   // Construct the current density.
-  scg::GridGPU<T> currenDensity(N, N, currentDimension, scg::Type::real);
-  currenDensity.setValue(static_cast<T>(1), scg::Type::real);
+  conga::GridGPU<T> currenDensity(N, N, currentDimension, conga::Type::real);
+  currenDensity.setValue(static_cast<T>(1), conga::Type::real);
 
   // =================== ACT ==================== //
   // Construct a vector-potential grid on the GPU.
-  scg::GridGPU<T> vectorPotential(N, N, currentDimension, scg::Type::real);
+  conga::GridGPU<T> vectorPotential(N, N, currentDimension, conga::Type::real);
 
   legacy::computeVectorPotential(vectorPotential, currenDensity, domainLabels,
                                  latticeSpacing, penetrationDepth);
@@ -265,14 +265,15 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   const int numGrainLatticeSites = N * N;
 
   // Compute the induced vector potential.
-  scg::ComputeVectorPotential<T> computeVectorPotential(
+  conga::ComputeVectorPotential<T> computeVectorPotential(
       maxError, analytical, enforceCurrentConservation);
   computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
   computeVectorPotential.solve(currenDensity, penetrationDepth);
 
-  scg::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
+  conga::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
 
-  const T residual = scg::computeResidual(vectorPotential, expVectorPotential);
+  const T residual =
+      conga::computeResidual(vectorPotential, expVectorPotential);
 
   // Compare results.
   const T expResidual = static_cast<T>(0);

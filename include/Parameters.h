@@ -1,6 +1,6 @@
 //===--------------- Parameters.h - Parameter storage class. --------------===//
 //
-// Part of the SuprConGPU Project, under the GNU LGPL v3 license or higher.
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
 //
 //===----------------------------------------------------------------------===//
@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace scg {
+namespace conga {
 template <typename T> class Parameters : public ContextModule<T> {
 public:
   Parameters() : m_version(2) {}
@@ -523,6 +523,6 @@ template <typename T> void Parameters<T>::print() const {
   std::cout << "Convergence Criterion: " << m_convergenceCriterion << std::endl;
   std::cout << "Cutoff parameter: " << m_energyCutoff << std::endl;
 }
-} // namespace scg
+} // namespace conga
 
 #endif // PARAMETERS_H_
