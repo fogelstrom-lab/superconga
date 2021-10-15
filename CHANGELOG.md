@@ -14,6 +14,7 @@
 - Add argument in all Python tools for dumping the config parameters to the terminal.
 - Expose discs and regular polygons in the CLI.
 - Define units of plotted quantities in `--help` message.
+- Update README with new CLI syntax.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

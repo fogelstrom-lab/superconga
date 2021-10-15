@@ -39,23 +39,27 @@ or refer to the [tutorial](https://superconga.gitlab.io/superconga-doc/tutorials
 
 
 ## Data post-processing and visualization
-Simulation data can be saved to file by running the program with the `--save-data` flag
+By default the examples save data at the end of the simulation. It is written to the path specified by the `save_path` option in `config.json` (which can also be overriden by the command-line argument `--save-path`). Whatever path was used, it will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. columns of Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/examples/swave_abrikosov_vortex_lattice/`, use the `--load-path` argument:
 ```shell
-python superconga.py --save-data --file examples/swave_abrikosov_vortex_lattice/config.json
-```
-This saves data in the path specified by the `"data_path"` option in `config.json` (which can also be overriden by the command-line argument `--data-path`). Whatever data path was used, will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. columns of Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/swave_abrikosov_vortex_lattice/T0.200000/`, use the `--data-path` argument:
-```shell
-python plotter.py --data-path data/swave_abrikosov_vortex_lattice/T0.200000
+python plotter.py --load-path data/examples/swave_abrikosov_vortex_lattice
 ```
 To see further usage instructions, run `python plotter.py --help`, or refer to the [tutorials](https://superconga.gitlab.io/superconga-doc/tutorials.html).
 
+After a simulation has converged the local density of states can be computed by running
+```shell
+python postprocess.py --file examples/swave_abrikosov_vortex_lattice/postprocess.json
+```
+which will generate more data files in `data/examples/swave_abrikosov_vortex_lattice/`. The local density of states can then be visualized using the tool `ldos_plotter.py`
+```shell
+python ldos_plotter.py --load-path data/examples/swave_abrikosov_vortex_lattice
+```
 
 ## Contribute
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 We encourage any useful contributions to the development of SuperConga, by forking this repository and sending merge requests, sharing bug reports or suggestions via the [issues page](https://gitlab.com/superconga/superconga/-/issues), or contacting us with any questions and discussions.
 
-All contributions are acknowledged in the [contributors section](https://superconga.gitlab.io/superconga-doc/contributors.html). For more information, including technical advice, please see [Contributing to SuperConGPU development](https://superconga.gitlab.io/superconga-doc/contribute.html) in the online documentation. Please note that any contribution must adhere to our [code of conduct](CODE_OF_CONDUCT.md).
+All contributions are acknowledged in the [contributors section](https://superconga.gitlab.io/superconga-doc/contributors.html). For more information, including technical advice, please see [Contributing to SuperConga development](https://superconga.gitlab.io/superconga-doc/contribute.html) in the online documentation. Please note that any contribution must adhere to our [code of conduct](CODE_OF_CONDUCT.md).
 
 
 ## License
