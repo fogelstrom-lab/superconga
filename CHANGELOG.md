@@ -32,6 +32,7 @@
 - Move `crystalAxesRotation` to `OrderParameter.h`.
 - Rename `Optimizer` to `Accelerator`.
 - Add Doxygen comments, removed unused code, shorten method names etc in `OrderParameter.h`.
+- Add test of the flux density in an s-wave disc with a small magnetic field comparing with analytical expression involving Bessel functions.
 
 ---
 

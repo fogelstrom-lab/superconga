@@ -4,6 +4,7 @@
 #include "ComputeCurrent.h"
 #include "ComputeFreeEnergy.h"
 #include "ComputeOrderParameter.h"
+#include "ComputeResidual.h"
 #include "Context.h"
 #include "DiscGeometry.h"
 #include "GeometryGroup.h"
@@ -24,63 +25,7 @@
 #include <limits>
 
 namespace helper {
-/// \brief Fit the the penetration depth to the flux via the London expression.
-///
-/// \param inPenetrationDepth The expected penetration depth (it is used as the
-/// initial value).
-/// \param inExternalFluxDensity The external flux-density.
-/// \param inGrainWidth The width of the grain.
-/// \param inFlux The flux through the grain.
-///
-/// \return The fitted penetration depth.
-template <typename T>
-T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
-                      const T inGrainWidth, const T inFlux) {
-  // The radius of the disc.
-  const T R = inGrainWidth * static_cast<T>(0.5);
-
-  // Common factor. For convenience.
-  const T factor = static_cast<T>(2.0 * M_PI) * inExternalFluxDensity;
-
-  // Convergence criterion.
-  const T convergenceCriterion = static_cast<T>(1e-6);
-
-  // Compute the effective penetration depth by fitting it to the result via the
-  // London expression.
-  T k = inPenetrationDepth;
-
-  bool isConverged = false;
-
-  std::cout << "-- Fitting the penetration depth..." << std::endl;
-  while (!isConverged) {
-    // The flux from the London expression
-    const T flux = factor * k * ((R - k) + k * std::exp(-R / k));
-
-    // Residual.
-    const T r = flux - inFlux;
-
-    // The derivative of the residual with respect to the pentration depth.
-    const T drdk = factor * ((R + static_cast<T>(2) * k) * std::exp(-R / k) +
-                             R - static_cast<T>(2) * k);
-
-    // The update of the penetration depth.
-    const T dk = r * static_cast<T>(conga::utils::sign(drdk)) /
-                 std::max(std::abs(drdk), std::numeric_limits<T>::epsilon());
-
-    // Check convergence.
-    isConverged = std::abs(dk / k) < convergenceCriterion;
-    std::printf("|dk/k| = %e\n", std::abs(dk / k));
-
-    // Update the penetration depth.
-    k -= dk;
-  }
-  std::cout << "-- Done!" << std::endl;
-
-  return k;
-}
-
-/// \brief Test that the flux density in a disc in a weak magnetic field is
-/// similar to the London expression.
+/// \brief Test that induced vector potential comparing to analytical results.
 ///
 /// \param inTolerance The acceptable tolerance.
 ///
@@ -88,17 +33,17 @@ T fitPenetrationDepth(const T inPenetrationDepth, const T inExternalFluxDensity,
 template <typename T> void testFluxDensity(const T inTolerance) {
   // =================== ARRANGE ==================== //
   // The parameters entering the expression of the expected result.
-  const T grainWidth = static_cast<T>(20);
-  const T penetrationDepth = static_cast<T>(1);
-  const T numFluxQuanta = static_cast<T>(0.5);
+  const T grainWidth = static_cast<T>(25);
+  const T penetrationDepth = static_cast<T>(10);
+  const T numFluxQuanta = static_cast<T>(0.01);
 
   conga::Context<T> context;
   conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   parameters->setGrainWidth(grainWidth);
-  parameters->setPointsPerCoherenceLength(static_cast<T>(5));
+  parameters->setPointsPerCoherenceLength(static_cast<T>(10));
   parameters->setAngularResolution(16);
   parameters->setConvergenceCriterion(static_cast<T>(1e-5));
-  parameters->setTemperature(static_cast<T>(0.1));
+  parameters->setTemperature(static_cast<T>(0.2));
   parameters->setEnergyCutoff(static_cast<T>(16));
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
@@ -130,45 +75,80 @@ template <typename T> void testFluxDensity(const T inTolerance) {
   context.initialize();
   conga::run_utils::runSimulation(&context);
 
-  const T area = context.getGeometry()->area();
-  // The pi factor comes from our choice of units for the flux density:
-  // B_0 = \Phi_0 / (\pi \xi^2_0).
-  const T externalFluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
-
-  const T latticeElementSize = context.getParameters()->getGridElementSize();
-  const conga::GridGPU<T> vectorPotential =
-      *(context.getInducedVectorPotential());
-  conga::GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
-  context.getGeometry()->zeroValuesOutsideDomainRef(&fluxDensity);
-  const int numGrainLatticeSites =
-      context.getGeometry()->getNumGrainLatticeSites();
-  const T flux =
-      area * (externalFluxDensity +
-              fluxDensity.sumField() / static_cast<T>(numGrainLatticeSites));
-
-  const T testPenetrationDepth = fitPenetrationDepth(
-      penetrationDepth, externalFluxDensity, grainWidth, flux);
+  const T latticeSpacing = context.getParameters()->getGridElementSize();
+  // Compute the magnetic field.
+  conga::GridGPU<T> testFluxDensityGPU =
+      context.getInducedVectorPotential()->curl(latticeSpacing);
+  context.getGeometry()->zeroValuesOutsideDomainRef(&testFluxDensityGPU);
+  const conga::GridCPU<T> testFluxDensity = testFluxDensityGPU;
 
   // =================== ASSERT ==================== //
-  // Note, the way doctest compares two floating point numbers, A and B, is the
-  // following: |A - B| < epsilon * (scale + max(|A|, |B|))
-  CHECK(penetrationDepth == doctest::Approx(testPenetrationDepth)
-                                .epsilon(inTolerance)
-                                .scale(static_cast<T>(0)));
+  // The pi factor comes from our choice of units for the flux density:
+  // B_0 = \Phi_0 / (\pi \xi^2_0).
+  const T area = context.getGeometry()->area();
+  const T externalFluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
+
+  const int N = context.getParameters()->getGridResolutionBase();
+  conga::GridCPU<T> expectedFluxDensity(N, N, 1, conga::Type::real);
+
+  // The radius and center coordinate of a disk.
+  const T R = grainWidth * static_cast<T>(0.5);
+  const T center = static_cast<T>(N - 1) * static_cast<T>(0.5);
+
+  // Constant factor.
+  const T ratio = R / penetrationDepth;
+  const T numer =
+      static_cast<T>(2) * externalFluxDensity * R * penetrationDepth;
+  const T denom = R * std::cyl_bessel_i(static_cast<T>(0), ratio) +
+                  static_cast<T>(2) * penetrationDepth *
+                      std::cyl_bessel_i(static_cast<T>(1), ratio) +
+                  R * std::cyl_bessel_i(static_cast<T>(2), ratio);
+  const T factor = numer / denom;
+
+  // Get the pointer.
+  T *const ptr = expectedFluxDensity.getDataPointer();
+
+  for (int j = 0; j < N; ++j) {
+    // Y-coordinate relative to the center of the disc.
+    const T y = latticeSpacing * (static_cast<T>(j) - center);
+    for (int i = 0; i < N; ++i) {
+      // Y-coordinate relative to the center of the disc.
+      const T x = latticeSpacing * (static_cast<T>(i) - center);
+
+      // The distance from the center of the disc.
+      const T r = std::hypot(x, y);
+
+      // Whether a point is within the disk.
+      const bool inDomain = r <= R;
+
+      const T v = r / penetrationDepth;
+      const T val = std::cyl_bessel_i(static_cast<T>(1), v) /
+                        std::max(r, static_cast<T>(1e-6)) +
+                    (std::cyl_bessel_i(static_cast<T>(0), v) +
+                     std::cyl_bessel_i(static_cast<T>(2), v)) /
+                        (static_cast<T>(2) * penetrationDepth);
+      // Set.
+      const int idx = j * N + i;
+      ptr[idx] =
+          inDomain ? (val * factor - externalFluxDensity) : static_cast<T>(0);
+    }
+  }
+
+  const T residual = (expectedFluxDensity - testFluxDensity).L2Norm() /
+                     expectedFluxDensity.L2Norm();
+  CHECK(residual < inTolerance);
   CHECK(context.isConverged());
 }
 } // namespace helper
 
 // === Test flux density in a disc === //
 
-TEST_CASE("Test flux density (float)") {
-  // TODO(niclas): Is this really an acceptable tolerance?
-  const float tolerance = 0.1f;
+TEST_CASE("Test flux density <float>") {
+  const float tolerance = 0.02f;
   helper::testFluxDensity(tolerance);
 }
 
-TEST_CASE("Test flux density (double)") {
-  // TODO(niclas): Is this really an acceptable tolerance?
-  const double tolerance = 0.1;
+TEST_CASE("Test flux density <double>") {
+  const double tolerance = 0.02;
   helper::testFluxDensity(tolerance);
 }

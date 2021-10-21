@@ -1,7 +1,8 @@
-# =========================================================== #
-# EXTERNAL LIBRARIES
-# =========================================================== #
-message(STATUS "################### Building SuperConga test files ###################")
+# =========================================================== # EXTERNAL
+# LIBRARIES =========================================================== #
+message(
+  STATUS
+    "################### Building SuperConga test files ###################")
 # Declare the doctest lib.
 FetchContent_Declare(
   doctest
@@ -15,10 +16,9 @@ if(NOT doctest_POPULATED)
   add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
-# =========================================================== #
-# SOURCE FILES
-# =========================================================== #
-# Define the main set of source files
+# =========================================================== # SOURCE FILES
+# =========================================================== # Define the main
+# set of source files
 set(SRC
     basis_function_normalization_test.cu
     bdg_utils_test.cu
@@ -40,6 +40,7 @@ set(SRC
     physics/dos_test.cu
     physics/flux_density_test.cu
     physics/low_temp_free_energy_test.cu
+    physics/penetration_depth_test.cu
     physics/vector_potential_test.cu
     riccati_solutions_test.cu
     utils_test.cu)
@@ -49,7 +50,7 @@ enable_testing()
 
 foreach(file ${SRC})
   message(STATUS "# -- Setting up test executable: ${file}.")
-  
+
   get_filename_component(name ${file} NAME_WE)
 
   # Create command-line executable.
@@ -96,4 +97,6 @@ foreach(file ${SRC})
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
 endforeach()
 
-message(STATUS "######################################################################")
+message(
+  STATUS
+    "######################################################################")
