@@ -102,7 +102,7 @@ void testSymmetry(const conga::GridCPU<T> &inVectorPotential,
 }
 
 /// \brief Test vector-potential computations against analytical solution on a
-/// disk.
+/// disc.
 ///
 /// \param inAnalytical Whether to use the analytical expression for the Green
 /// function matrix-elements.
@@ -182,7 +182,7 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
       const T expectedAngularValueInside =
           static_cast<T>(0.125) * (static_cast<T>(2) * R2 - r2);
 
-      // Angular part of the expected potential inside the disc.
+      // Angular part of the expected potential outside the disc.
       const T expectedAngularValueOutside =
           static_cast<T>(0.125) * R2 * R2 / r2;
 
@@ -219,7 +219,7 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
         doctest::Approx(expectedRelativeFrobeniusNorm).epsilon(inTolerance));
 
   // It is a bit ugly to test the symmetry here as well. But it saves time.
-  testSymmetry(potentialCPU, inSymmetryTolerance);
+  SUBCASE("Symmetry") { testSymmetry(potentialCPU, inSymmetryTolerance); }
 }
 } // namespace helper
 
