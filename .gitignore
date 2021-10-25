@@ -1,19 +1,20 @@
-# Visual studio code
+# Visual studio code.
 .vscode
 
-# CMake build directory
+# CMake build directory.
 build/
 
-# Python compiled code
+# Python compiled code.
 *.pyc
 
 # The temporary JSON config file created by the Python wrapper.
 .tmp_config.json
 
-# If passing --save-data to the Python wrapper it is saved here.
+# The examples are saved here.
 data/
 
-# Virtual environments.
+# Virtual environment.
 venv/
-venv2/
-venv3/
+
+# For saving some temporary files, e.g. run scripts.
+tmp/
