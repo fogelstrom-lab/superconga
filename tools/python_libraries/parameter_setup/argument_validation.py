@@ -145,7 +145,7 @@ runner_checks = {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
                             "initial_phase_winding": {"type": float},
-                            "initial_random_phase_weight": {"type": float},
+                            "initial_noise_stddev": {"type": float},
                         },
                     },
                     "dxy": {
@@ -155,7 +155,7 @@ runner_checks = {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
                             "initial_phase_winding": {"type": float},
-                            "initial_random_phase_weight": {"type": float},
+                            "initial_noise_stddev": {"type": float},
                         },
                     },
                     "g": {
@@ -165,7 +165,7 @@ runner_checks = {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
                             "initial_phase_winding": {"type": float},
-                            "initial_random_phase_weight": {"type": float},
+                            "initial_noise_stddev": {"type": float},
                         },
                     },
                     "s": {
@@ -175,7 +175,7 @@ runner_checks = {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
                             "initial_phase_winding": {"type": float},
-                            "initial_random_phase_weight": {"type": float},
+                            "initial_noise_stddev": {"type": float},
                         },
                     },
                 },
