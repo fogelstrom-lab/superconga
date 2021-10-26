@@ -29,29 +29,29 @@ template <typename T> struct Initial {
 public:
   /// \brief Initialize order parameter to bulk value.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inPhase - Order parameter phase.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inPhase Order parameter phase.
   ///
-  /// \return - void.
+  /// \return void.
   static void bulk(OrderParameterComponent<T> *inOutDeltaComponent,
                    const T inPhase = 0.0);
 
   /// \brief Initialize order parameter to a constant.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inRealPart - Order parameter real part in k_B*T_c.
-  /// \param inImaginaryPart - Order parameter imaginary part in k_B*T_c.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inRealPart Order parameter real part in k_B*T_c.
+  /// \param inImaginaryPart Order parameter imaginary part in k_B*T_c.
   ///
-  /// \return - void.
+  /// \return void.
   static void constant(OrderParameterComponent<T> *inOutDeltaComponent,
                        const T inRealPart = 1.0, const T inImaginaryPart = 0.0);
 
   /// \brief Initialize order parameter from an existing one.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inGrid - Order parameter to initialize from.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inGrid Order parameter to initialize from.
   ///
-  /// \return - void.
+  /// \return void.
   static void grid(OrderParameterComponent<T> *inOutDeltaComponent,
                    const GridGPU<T> &inGrid);
 
@@ -63,25 +63,18 @@ public:
   /// leads to e.g. opposite current circulation in a solenoid or around an
   /// Abrikosov vortex.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inNumWinding - Phase winding.
-  /// \param inPhaseShift - Arbitrary shift to phase.
-  /// \param inCenterX - Center of phase winding: x-coordinate in [-1,1].
-  /// \param inCenterY - Center of phase winding: y-coordinate in [-1,1].
-  /// \param inCutoffRadius - Radius below which order parameter = 0, which is
-  /// appropriate since a phase winding corresponds to a topological defect in
-  /// the order parameter (the order parameter usually goes smoothly to zero in
-  /// an Abrikosov vortex core). Note that coordinates are scaled by a factor
-  /// sqrt(2) between discs and polygons: the user has to divide center with
-  /// sqrt(2) when using polygon.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inNumWinding Phase winding.
+  /// \param inPhaseShift Arbitrary shift to phase.
+  /// \param inCenterX Center of phase winding: x-coordinate in [-1,1].
+  /// \param inCenterY Center of phase winding: y-coordinate in [-1,1].
   ///
-  /// \return - void.
+  /// \return void.
   static void
   phaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
                const T inNumWinding, const T inPhaseShift = static_cast<T>(0.0),
                const T inCenterX = static_cast<T>(0.0),
-               const T inCenterY = static_cast<T>(0.0),
-               const T inCutoffRadius = static_cast<T>(0.0));
+               const T inCenterY = static_cast<T>(0.0));
 
   /// \brief Initialize order parameter to an "edge phase crystal".
   ///
@@ -93,14 +86,14 @@ public:
   /// away from it (y): chi(x,y) = -cos(q_x*x)*(1+y/y_0)*exp(-y/y_0). Here, q_x
   /// is the wave number and y_0 the decay length.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inPeriod - Period of phase oscillation.
-  /// \param inDecayLength - Decay length of phase, in coherence lengths.
-  /// \param inCenterX - x origin of phase crystal (coordinate on edge).
-  /// \param inCenterY - y origin of phase crystal (coordinate on edge).
-  /// \param inRotAngle - Rotation angle (in radians) of edge.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inPeriod Period of phase oscillation.
+  /// \param inDecayLength Decay length of phase, in coherence lengths.
+  /// \param inCenterX x origin of phase crystal (coordinate on edge).
+  /// \param inCenterY y origin of phase crystal (coordinate on edge).
+  /// \param inRotAngle Rotation angle (in radians) of edge.
   ///
-  /// \return - void.
+  /// \return void.
   static void
   edgePhaseCrystal(OrderParameterComponent<T> *const inOutDeltaComponent,
                    const T inPeriod, const T inDecayLength, const T inCenterX,
@@ -108,16 +101,15 @@ public:
 
   /// \brief Initialize order parameter to bulk with random phase perturbation.
   ///
-  /// Set the order parameter to bulk value with a spatially random phase
-  /// perturbation between inRandomPhaseMix*[0,2pi].
+  /// Set the order parameter to bulk value with added Gaussian noise.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inRandomPhaseMix - Mixing term for (spatially) random phase factor.
-  /// \param inPhase - Overall phase of order parameter.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inNoiseStdDev Standard deviation of the additive Gaussian noise.
+  /// \param inPhase Overall phase of order parameter.
   ///
-  /// \return - void.
+  /// \return void.
   static void random(OrderParameterComponent<T> *inOutDeltaComponent,
-                     const T inRandomPhaseMix = 0.5, const T inPhase = 0.0);
+                     const T inNoiseStdDev = 0.5, const T inPhase = 0.0);
 
   /// \brief Initialize order parameter to bulk w. phase winding + random phase.
   ///
@@ -127,45 +119,38 @@ public:
   /// leads to e.g. opposite current circulation in a solenoid or around an
   /// Abrikosov vortex.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inNumWinding - Phase winding.
-  /// \param inPhaseShift - Arbitrary shift to phase.
-  /// \param inRandomPhaseMix - Mixing term for (spatially) random phase factor.
-  /// \param inCenterX - Center of phase winding: x-coordinate in [-1,1].
-  /// \param inCenterY - Center of phase winding: y-coordinate in [-1,1].
-  /// \param inCutoffRadius - Radius below which order parameter = 0, which is
-  /// appropriate since a phase winding corresponds to a topological defect in
-  /// the order parameter (the order parameter usually goes smoothly to zero in
-  /// an Abrikosov vortex core). Note that coordinates are scaled by a factor
-  /// sqrt(2) between discs and polygons: the user has to divide center with
-  /// sqrt(2) when using polygon.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inNumWinding Phase winding.
+  /// \param inPhaseShift Arbitrary shift to phase.
+  /// \param inNoiseStdDev Standard deviation of the additive Gaussian noise.
+  /// \param inCenterX Center of phase winding: x-coordinate in [-1,1].
+  /// \param inCenterY Center of phase winding: y-coordinate in [-1,1].
   ///
-  /// \return - void.
+  /// \return void.
   static void
   perturbedPhaseWinding(OrderParameterComponent<T> *const inOutDeltaComponent,
                         const T inNumWinding,
-                        const T inRandomPhaseMix = static_cast<T>(0.5),
+                        const T inNoiseStdDev = static_cast<T>(0.01),
                         const T inPhaseShift = static_cast<T>(0.0),
                         const T inCenterX = static_cast<T>(0.0),
-                        const T inCenterY = static_cast<T>(0.0),
-                        const T inCutoffRadius = static_cast<T>(0.0));
+                        const T inCenterY = static_cast<T>(0.0));
 
   /// \brief Initialize order parameter from existing one via file.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inFilename - Filename (full path) of existing order parameter.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inFilename Filename (full path) of existing order parameter.
   ///
-  /// \return - void.
+  /// \return void.
   static int read(OrderParameterComponent<T> *inOutDeltaComponent,
                   const char *const inFilename);
 
   /// \brief Initialize order parameter from existing one via file.
   ///
-  /// \param inOutDeltaComponent - Pointer to order parameter.
-  /// \param inFilename - Filename (full path) of existing order parameter.
-  /// \param inFileNumber - Number to append to file name.
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inFilename Filename (full path) of existing order parameter.
+  /// \param inFileNumber Number to append to file name.
   ///
-  /// \return - void.
+  /// \return void.
   static int read(OrderParameterComponent<T> *inOutDeltaComponent,
                   const char *const inFilename, const int inFileNumber);
 };
@@ -174,9 +159,8 @@ namespace internal {
 template <typename T>
 __global__ void perturbedPhaseWindingKernel(
     T *const outReal, T *const outImag, const int inNumX, const int inNumY,
-    const T inNumWinding, const T inRandomPhaseMix, const T inPhaseShift,
-    const T inCenterX, const T inCenterY, const T inCutoffRadius,
-    const T inDeltaBulk, const T inEpsilon) {
+    const T inNumWinding, const T inNoiseStdDev, const T inPhaseShift,
+    const T inCenterX, const T inCenterY, const T inDeltaBulk) {
   // Discrete coordinates in discretized order parameter lattice.
   const int i = blockIdx.x * blockDim.x + threadIdx.x;
   const int j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -188,20 +172,14 @@ __global__ void perturbedPhaseWindingKernel(
                 static_cast<T>(1.0) - inCenterX;
     const T y = static_cast<T>(2 * j) / static_cast<T>(inNumY - 1) -
                 static_cast<T>(1.0) - inCenterY;
-    const T radius = sqrt(x * x + y * y);
+    const T radius = hypot(x, y);
 
-    // Check if point is within cutoff, set to zero in that case. Otherwise,
-    // compute angle and add phase shift.
-    const bool isPointWithinCutoff = (radius <= inCutoffRadius);
-    const T angle = isPointWithinCutoff ? static_cast<T>(0.0) : atan2(y, x);
+    // Avoid x=y=0.
+    const T angle =
+        radius > static_cast<T>(0) ? atan2(y, x) : static_cast<T>(0.0);
 
-    // Check if point is at the center. If so, set to zero, otherwise use
-    // the bulk value.
-    const bool isPointAtCenter = (radius < inEpsilon);
-    const T magnitude =
-        (isPointAtCenter && (std::abs(inNumWinding) > inEpsilon))
-            ? static_cast<T>(0.0)
-            : inDeltaBulk;
+    // Compute the total phase.
+    const T phase = angle * inNumWinding + inPhaseShift;
 
     // Compute unique coordinate index (for storage and seed).
     const int idx = j * inNumX + i;
@@ -214,17 +192,15 @@ __global__ void perturbedPhaseWindingKernel(
     const int seedOffsetPerCall = 0;
     curand_init(seed, seedSubSequence, seedOffsetPerCall, &state);
 
-    // Compute random phase shift from [-pi,pi].
-    const T randomPhase = static_cast<T>(2.0 * M_PI) *
-                          static_cast<T>(curand_uniform_double(&state) - 0.5);
-
-    // Compute the total phase.
-    const T phase =
-        angle * inNumWinding + randomPhase * inRandomPhaseMix + inPhaseShift;
+    // Noise.
+    const T realNoise =
+        inNoiseStdDev * static_cast<T>(curand_normal_double(&state));
+    const T imagNoise =
+        inNoiseStdDev * static_cast<T>(curand_normal_double(&state));
 
     // Store result.
-    outReal[idx] = magnitude * cos(phase);
-    outImag[idx] = magnitude * sin(phase);
+    outReal[idx] = inDeltaBulk * cos(phase) + realNoise;
+    outImag[idx] = inDeltaBulk * sin(phase) + imagNoise;
   }
 }
 
@@ -252,10 +228,9 @@ __global__ void edgePhaseCrystalKernel(
     const T yOriginMargin =
         yOrigin / (static_cast<T>(1.0) - constants::GRAIN_SIZE_MARGIN);
 
+    // Rotate coordinate system with angle given by argument
     T xRotated;
     T yRotated;
-
-    // Rotate coordinate system with angle given by argument
     utils::rotate(inRotAngle, xOriginMargin, yOriginMargin, xRotated, yRotated);
 
     // Translate coordinate system to origin given by arguments
@@ -311,16 +286,13 @@ void Initial<T>::grid(OrderParameterComponent<T> *inOutDeltaComponent,
 template <typename T>
 void Initial<T>::perturbedPhaseWinding(
     OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
-    const T inRandomPhaseMix, const T inPhaseShift, const T inCenterX,
-    const T inCenterY, const T inCutoffRadius) {
+    const T inNoiseStdDev, const T inPhaseShift, const T inCenterX,
+    const T inCenterY) {
   // Get pointer to order parameter data.
   GridGPU<T> *deltaGrid = inOutDeltaComponent->getGrid();
 
   // Compute order parameter bulk value.
   const T deltaBulk = inOutDeltaComponent->deltaBulk();
-
-  // Used to compare floating-point numbers with "zero".
-  const T epsilon = std::numeric_limits<T>::epsilon();
 
   // Number of lattice points in order parameter lattice.
   const int numLatticePoints = deltaGrid->dimX();
@@ -335,19 +307,18 @@ void Initial<T>::perturbedPhaseWinding(
     internal::perturbedPhaseWindingKernel<<<blocksPerGrid, threadsPerBlock>>>(
         deltaGrid->getDataPointer(c, Type::real),
         deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
-        numLatticePoints, inNumWinding, inRandomPhaseMix, inPhaseShift,
-        inCenterX, inCenterY, inCutoffRadius, deltaBulk, epsilon);
+        numLatticePoints, inNumWinding, inNoiseStdDev, inPhaseShift, inCenterX,
+        inCenterY, deltaBulk);
   }
 }
 
 template <typename T>
 void Initial<T>::phaseWinding(
     OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
-    const T inPhaseShift, const T inCenterX, const T inCenterY,
-    const T inCutoffRadius) {
-  const T randomPhaseMix = static_cast<T>(0);
-  perturbedPhaseWinding(inOutDeltaComponent, inNumWinding, randomPhaseMix,
-                        inPhaseShift, inCenterX, inCenterY, inCutoffRadius);
+    const T inPhaseShift, const T inCenterX, const T inCenterY) {
+  const T noiseStdDev = static_cast<T>(0);
+  perturbedPhaseWinding(inOutDeltaComponent, inNumWinding, noiseStdDev,
+                        inPhaseShift, inCenterX, inCenterY);
 }
 
 // Set the order parameter to a 'phase crystal', at the coordinates specified by
@@ -388,13 +359,12 @@ void Initial<T>::edgePhaseCrystal(
 
 template <typename T>
 void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
-                        const T inRandomPhaseMix, const T inPhase) {
+                        const T inNoiseStdDev, const T inPhase) {
   const T phaseWinding = static_cast<T>(0);
   const T centerX = static_cast<T>(0);
   const T centerY = static_cast<T>(0);
-  const T cutoffRadius = static_cast<T>(0);
-  perturbedPhaseWinding(inOutDeltaComponent, phaseWinding, inRandomPhaseMix,
-                        inPhase, centerX, centerY, cutoffRadius);
+  perturbedPhaseWinding(inOutDeltaComponent, phaseWinding, inNoiseStdDev,
+                        inPhase, centerX, centerY);
 }
 
 template <typename T>

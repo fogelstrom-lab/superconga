@@ -32,7 +32,8 @@ dwave_octagon
 
 A simulation of a d_{x^2 - y^2}-wave superconductor in a diamond shaped grain, with a single pair-breaking edge.
 The temperature is low, inducing a crystallization of the phase, eliciting spontaneous current loops and magnetic fields.
-Raising the temperature to e.g. T = 0.2 T_c destroys the phase crystal.
+Raising the temperature to e.g. T = 0.2 T_c destroys the phase crystal. Note that the number of iterations
+needed for convergence, and the results, differ between runs due to the random initialization.
 
 Folder:
 ```

@@ -98,7 +98,7 @@ def add_runner_arguments(parser) -> None:
     # =============== PHYSICS =============== #
     physics = parser.add_argument_group(
         title="Physics",
-        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and initial random phase weight. The critical temperatures will be scaled so that the maximum is Tc = 1.",
+        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and standard deviation of the additive initial (Gaussian) noise. The critical temperatures will be scaled so that the maximum is Tc = 1.",
     )
 
     # Temperature.
@@ -165,7 +165,7 @@ def add_runner_arguments(parser) -> None:
             "critical_temperature",
             "initial_phase_shift",
             "initial_phase_winding",
-            "initial_random_phase_weight",
+            "initial_noise_stddev",
         ),
         type=float,
         default=None,
@@ -186,7 +186,7 @@ def add_runner_arguments(parser) -> None:
             "critical_temperature",
             "initial_phase_shift",
             "initial_phase_winding",
-            "initial_random_phase_weight",
+            "initial_noise_stddev",
         ),
         type=float,
         default=None,
@@ -207,7 +207,7 @@ def add_runner_arguments(parser) -> None:
             "critical_temperature",
             "initial_phase_shift",
             "initial_phase_winding",
-            "initial_random_phase_weight",
+            "initial_noise_stddev",
         ),
         type=float,
         default=None,
@@ -228,7 +228,7 @@ def add_runner_arguments(parser) -> None:
             "critical_temperature",
             "initial_phase_shift",
             "initial_phase_winding",
-            "initial_random_phase_weight",
+            "initial_noise_stddev",
         ),
         type=float,
         default=None,
@@ -955,12 +955,12 @@ def set_runner_arguments_from_cli(
     ):
         del sim_params["physics"]["order_parameter"][component]
     elif args.dx2_y2_wave is not None:
-        Tc, phase_shift, phase_winding, random_phase = args.dx2_y2_wave
+        Tc, phase_shift, phase_winding, noise_stddev = args.dx2_y2_wave
         sim_params["physics"]["order_parameter"][component] = {
             "critical_temperature": Tc,
             "initial_phase_shift": phase_shift,
             "initial_phase_winding": phase_winding,
-            "initial_random_phase_weight": random_phase,
+            "initial_noise_stddev": noise_stddev,
         }
 
     component = "dxy"
@@ -969,12 +969,12 @@ def set_runner_arguments_from_cli(
     ):
         del sim_params["physics"]["order_parameter"][component]
     elif args.dxy_wave is not None:
-        Tc, phase_shift, phase_winding, random_phase = args.dxy_wave
+        Tc, phase_shift, phase_winding, noise_stddev = args.dxy_wave
         sim_params["physics"]["order_parameter"][component] = {
             "critical_temperature": Tc,
             "initial_phase_shift": phase_shift,
             "initial_phase_winding": phase_winding,
-            "initial_random_phase_weight": random_phase,
+            "initial_noise_stddev": noise_stddev,
         }
 
     component = "g"
@@ -983,12 +983,12 @@ def set_runner_arguments_from_cli(
     ):
         del sim_params["physics"]["order_parameter"][component]
     elif args.g_wave:
-        Tc, phase_shift, phase_winding, random_phase = args.g_wave
+        Tc, phase_shift, phase_winding, noise_stddev = args.g_wave
         sim_params["physics"]["order_parameter"][component] = {
             "critical_temperature": Tc,
             "initial_phase_shift": phase_shift,
             "initial_phase_winding": phase_winding,
-            "initial_random_phase_weight": random_phase,
+            "initial_noise_stddev": noise_stddev,
         }
 
     component = "s"
@@ -997,12 +997,12 @@ def set_runner_arguments_from_cli(
     ):
         del sim_params["physics"]["order_parameter"][component]
     elif args.s_wave:
-        Tc, phase_shift, phase_winding, random_phase = args.s_wave
+        Tc, phase_shift, phase_winding, noise_stddev = args.s_wave
         sim_params["physics"]["order_parameter"][component] = {
             "critical_temperature": Tc,
             "initial_phase_shift": phase_shift,
             "initial_phase_winding": phase_winding,
-            "initial_random_phase_weight": random_phase,
+            "initial_noise_stddev": noise_stddev,
         }
 
     # ================== GEOMETRY ================== #

@@ -16,6 +16,7 @@
 - Define units of plotted quantities in `--help` message.
 - Update README with new CLI syntax.
 - Print free energy using scientific notation.
+- Set standard deviation of additive Gaussian noise via `initial_noise_stddev` parameter.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

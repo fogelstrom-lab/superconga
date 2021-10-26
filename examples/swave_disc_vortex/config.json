@@ -10,7 +10,7 @@
 				"critical_temperature": 1.0,
 				"initial_phase_shift": 0.0,
 				"initial_phase_winding": 1.0,
-				"initial_random_phase_weight": 0.0
+				"initial_noise_stddev": 0.0
 			}
 		}
 	},

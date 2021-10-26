@@ -229,24 +229,23 @@ int main(int argc, char *argv[]) {
       // Get initial phase parameters.
       const T phaseWinding =
           static_cast<T>(opCompParams["initial_phase_winding"].asDouble());
-      const T randomPhaseWeight = static_cast<T>(
-          opCompParams["initial_random_phase_weight"].asDouble());
+      const T noiseStdDev =
+          static_cast<T>(opCompParams["initial_noise_stddev"].asDouble());
       const T phaseShift = static_cast<T>(
           2.0 * M_PI * opCompParams["initial_phase_shift"].asDouble());
 
       // Check if we should initialize to bulk.
       const T eps = std::numeric_limits<T>::epsilon();
       const bool useBulk = (std::abs(phaseWinding) < eps) &&
-                           (std::abs(randomPhaseWeight) < eps) &&
+                           (std::abs(noiseStdDev) < eps) &&
                            (std::abs(phaseShift) < eps);
 
       // Initialize order parameter with a guess.
       if (useBulk) {
         conga::Initial<T>::bulk(orderParameterComponent);
       } else {
-        conga::Initial<T>::perturbedPhaseWinding(orderParameterComponent,
-                                                 phaseWinding,
-                                                 randomPhaseWeight, phaseShift);
+        conga::Initial<T>::perturbedPhaseWinding(
+            orderParameterComponent, phaseWinding, noiseStdDev, phaseShift);
       }
 
       // Add the initialized component to the total order parameter.
