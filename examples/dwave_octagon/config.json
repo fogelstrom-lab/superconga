@@ -46,9 +46,9 @@
 		"step_size": 2.0
 	},
 	"misc": {
-		"save_path": "data/examples/dwave_octagon",
-		"save_frequency": -1,
 		"load_path": "",
+		"save_frequency": -1,
+		"save_path": "data/examples/dwave_octagon",
 		"verbose": true,
 		"visualize": true
 	}

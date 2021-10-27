@@ -55,9 +55,9 @@
 		"step_size": 1.0
 	},
 	"misc": {
-		"save_path": "data/examples/dwave_phase_crystal",
-		"save_frequency": -1,
 		"load_path": "",
+		"save_frequency": -1,
+		"save_path": "data/examples/dwave_phase_crystal",
 		"verbose": true,
 		"visualize": true
 	}

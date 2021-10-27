@@ -8,7 +8,7 @@
 	"num_fermi_momenta": 720,
 	"num_iterations_max": 1000,
 	"num_iterations_min": 10,
-	"save_path": "",
 	"load_path": "data/examples/swave_abrikosov_vortex_lattice",
+	"save_path": "",
 	"verbose": true
 }
