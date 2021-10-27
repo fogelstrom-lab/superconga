@@ -249,9 +249,9 @@ runner_checks = {
     "misc": {
         "type": dict,
         "fields": {
-            "save_path": {"type": str},
-            "save_frequency": {"type": int},
             "load_path": {"type": str},
+            "save_frequency": {"type": int},
+            "save_path": {"type": str},
             "verbose": {"type": bool},
             "visualize": {"type": bool},
         },
@@ -268,8 +268,8 @@ postprocess_checks = {
     "num_fermi_momenta": {"type": int, "low": 0},
     "num_iterations_max": {"type": int, "low": 0},
     "num_iterations_min": {"type": int, "low_include": 0},
-    "save_path": {"type": str},
     "load_path": {"type": str},
+    "save_path": {"type": str},
     "verbose": {"type": bool},
 }
 

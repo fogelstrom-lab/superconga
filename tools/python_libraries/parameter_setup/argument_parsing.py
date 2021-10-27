@@ -428,37 +428,6 @@ def add_runner_arguments(parser) -> None:
     # =============== MISC =============== #
     misc = parser.add_argument_group(title="Misc")
 
-    # Verbose.
-    group_verbose = misc.add_mutually_exclusive_group()
-    group_verbose.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Print iteration status and other output to terminal.",
-    )
-    group_verbose.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="Do not print iteration status and other output to terminal.",
-    )
-
-    # Save data.
-    misc.add_argument(
-        "-S",
-        "--save-path",
-        type=str,
-        default=None,
-        help="Directory where the data will be saved. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
-    )
-    misc.add_argument(
-        "-F",
-        "--save-frequency",
-        type=int,
-        default=None,
-        help="How frequently to save data (every Nth iteration). Zero means not saving data at all, and a negative value means only saving at the end.",
-    )
-
     # Load data.
     group_load = misc.add_mutually_exclusive_group()
     group_load.add_argument(
@@ -473,6 +442,37 @@ def add_runner_arguments(parser) -> None:
         dest="do_continue",
         action="store_true",
         help="Resume the simulation from the data in the '--save-path' directory.",
+    )
+
+    # Save data.
+    misc.add_argument(
+        "-F",
+        "--save-frequency",
+        type=int,
+        default=None,
+        help="How frequently to save data (every Nth iteration). Zero means not saving data at all, and a negative value means only saving at the end.",
+    )
+    misc.add_argument(
+        "-S",
+        "--save-path",
+        type=str,
+        default=None,
+        help="Directory where the data will be saved. If files already exist, they will be overwritten. The exception is the file convergence.csv, which will have data appended to it.",
+    )
+
+    # Verbose.
+    group_verbose = misc.add_mutually_exclusive_group()
+    group_verbose.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print iteration status and other output to terminal.",
+    )
+    group_verbose.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Do not print iteration status and other output to terminal.",
     )
 
     # Visualize.
