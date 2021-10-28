@@ -27,9 +27,9 @@
 
 namespace helper {
 // Tolerances.
-const double TOLERANCE_FLUX_DENSITY = 0.02;
+const double TOLERANCE_FLUX_DENSITY = 0.01;
 const double TOLERANCE_VECTOR_POTENTIAL_RADIAL = 1e-7;
-const double TOLERANCE_VECTOR_POTENTIAL_ANGULAR = 0.03;
+const double TOLERANCE_VECTOR_POTENTIAL_ANGULAR = 0.01;
 
 /// \brief Test that induced vector potential comparing to analytical results.
 ///
@@ -38,15 +38,15 @@ template <typename T> void testFluxDensity() {
   // =================== ARRANGE ==================== //
   // The parameters entering the expression of the expected result.
   const T grainWidth = static_cast<T>(25);
-  const T penetrationDepth = static_cast<T>(10);
+  const T penetrationDepth = static_cast<T>(20);
   const T numFluxQuanta = static_cast<T>(0.01);
 
   conga::Context<T> context;
   conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   parameters->setGrainWidth(grainWidth);
-  parameters->setPointsPerCoherenceLength(static_cast<T>(10));
-  parameters->setAngularResolution(16);
-  parameters->setConvergenceCriterion(static_cast<T>(1e-5));
+  parameters->setPointsPerCoherenceLength(static_cast<T>(18));
+  parameters->setAngularResolution(24);
+  parameters->setConvergenceCriterion(static_cast<T>(1e-6));
   parameters->setTemperature(static_cast<T>(0.2));
   parameters->setEnergyCutoff(static_cast<T>(16));
   parameters->setNumFluxQuanta(numFluxQuanta);
