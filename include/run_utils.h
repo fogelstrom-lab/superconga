@@ -402,6 +402,9 @@ void saveParametersWrapper(const Context<T> *const inContext,
   const int numGrainLatticeSites =
       inContext->getGeometry()->getNumGrainLatticeSites();
 
+  // Side length of lattice site.
+  const T latticeElementSize = inContext->getParameters()->getGridElementSize();
+
   // Json for various results.
   Json::Value resultsJSON;
 
@@ -422,13 +425,17 @@ void saveParametersWrapper(const Context<T> *const inContext,
       inContext->getComputeCurrent()->getResult()->sumMagnitude() /
       static_cast<T>(numGrainLatticeSites);
 
+  // Magnetic moment per unit area.
+  resultsJSON["magnetic_moment_per_unit_area"] =
+      inContext->getComputeCurrent()->getResult()->moment(latticeElementSize) /
+      inContext->getGeometry()->area();
+
   // Get the vector potential. It is used both for the average vector potential,
   // and average flux density.
   GridGPU<T> vectorPotential = *(inContext->getInducedVectorPotential());
 
   // Average flux density.
   // TODO(niclas): Should this be computed outside of the grain?
-  const T latticeElementSize = inContext->getParameters()->getGridElementSize();
   GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
   inContext->getGeometry()->zeroValuesOutsideDomainRef(&fluxDensity);
   resultsJSON["flux_density_average"] =

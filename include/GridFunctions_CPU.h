@@ -15,6 +15,7 @@
 
 #include "Type.h"
 #include "utils.h"
+#include <cassert>
 #include <cmath>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -49,6 +50,14 @@ template <typename T> struct GridFunctions<T, thrust::host_vector<T>> {
   // Compute gradient of complex phase of this grid.
   void complexPhaseGradient(GridData<T, thrust::host_vector<T>> *result,
                             const T h) const;
+
+  /// \brief Compute the moment: 0.5 * sum(cross(r, grid)). Note that the only
+  /// the z-component is returned.
+  ///
+  /// \param h The side length of a lattice site.
+  ///
+  /// \return The result.
+  T moment(const T h) const;
 
   // Compute the magnitude of the real part of this vector field.
   void fieldMagnitude(GridData<T, thrust::host_vector<T>> *result) const;
@@ -271,6 +280,43 @@ template <typename T>
 void GridFunctions<T, thrust::host_vector<T>>::complexPhase(
     GridData<T, thrust::host_vector<T>> *result) const {
   iterTwoComplexToReal(*grid, *result, internal::ComplexPhaseFunc<T>());
+}
+
+template <typename T>
+T GridFunctions<T, thrust::host_vector<T>>::moment(const T h) const {
+  // Sanity check.
+  assert(grid->numFields() == 2);
+  assert(grid->representation() == Type::real);
+
+  // Get pointers.
+  const T *const srcX = grid->getDataPointer(0, Type::real);
+  const T *const srcY = grid->getDataPointer(1, Type::real);
+
+  // Dimensions.
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+
+  // Coordinate of the center.
+  const T centerX = static_cast<T>(0.5) * static_cast<T>(dimX - 1);
+  const T centerY = static_cast<T>(0.5) * static_cast<T>(dimY - 1);
+
+  // Do cross product and sum.
+  T sum = static_cast<T>(0);
+  for (int yIdx = 0; yIdx < dimY; ++yIdx) {
+    for (int xIdx = 0; xIdx < dimX; ++xIdx) {
+      const int idx = yIdx * dimY + xIdx;
+      const T x = static_cast<T>(xIdx) - centerX;
+      const T y = static_cast<T>(yIdx) - centerY;
+      sum += x * srcY[idx] - y * srcX[idx];
+    }
+  }
+
+  // Two factors of h comes from the integral, the other from the position
+  // vector.
+  const T factor = static_cast<T>(0.5) * h * h * h;
+  const T result = factor * sum;
+
+  return result;
 }
 
 template <typename T>
