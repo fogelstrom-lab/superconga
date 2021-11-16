@@ -43,7 +43,44 @@ if(NOT json_POPULATED)
       OFF
       CACHE BOOL "Do not build tests." FORCE)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+endif(NOT json_POPULATED)
+
+# ##############################################################################
+# FETCH EXTERNAL LIBRARIES WITH FETCHCONTENT(): ARMADILLO
+# ##############################################################################
+# Download Armadillo, but don't build it: we want to use header-only version.
+# Note that we could let CMake check for Armadillo first, but this way we can
+# enforce a specific version we know works well with SuperConga.
+message(STATUS "Setting up Armadillo via FetchContent.")
+FetchContent_Declare(
+  armadillo
+  GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
+  GIT_TAG d9b38626f0cb6cadb828a8d836162df089ed668b # version 10.7.x
+  CMAKE_ARGS        ""
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND     ""
+  INSTALL_COMMAND   ""
+  TEST_COMMAND      ""
+)
+
+# Fetch properties for armadillo target: POPULATED, SOURCE_DIR, BINARY_DIR.
+FetchContent_GetProperties(armadillo)
+# Only populate if it is not already done.
+if(NOT armadillo_POPULATED)
+  FetchContent_Populate(armadillo)
+  # Note: We intentionally avoid add_subdirectory. Otherwise we indicate that
+  # CMake should include these to the build, and we want a header-only
+  # version of armadillo to include.
+endif(NOT armadillo_POPULATED)
+
+# Set variables with capital names, to conform with variables from find_package.
+set(ARMADILLO_SOURCE_DIR "${armadillo_SOURCE_DIR}")
+set(ARMADILLO_BINARY_DIR "${armadillo_BINARY_DIR}")
+set(ARMADILLO_INCLUDE_DIRS "${armadillo_SOURCE_DIR}/include")
+
+message(STATUS "ARMADILLO_SOURCE_DIR: ${ARMADILLO_SOURCE_DIR}")
+message(STATUS "ARMADILLO_BINARY_DIR: ${ARMADILLO_BINARY_DIR}")
+message(STATUS "ARMADILLO_INCLUDE_DIRS: ${ARMADILLO_INCLUDE_DIRS}")
 
 # ##############################################################################
 # CUDA
@@ -55,7 +92,7 @@ check_language(CUDA)
 # Check that CUDA compiler can be found.
 if(NOT CMAKE_CUDA_COMPILER)
   message(FATAL_ERROR "ERROR! Could not find CUDA compiler!")
-endif()
+endif(NOT CMAKE_CUDA_COMPILER)
 
 # Fetch CUDA CMake-CUDA functionality. NOTE: FindCUDA is formally deprecated,
 # but no standalone alternative exists as of yet for automatic detection of GPU
@@ -68,7 +105,7 @@ set(CUDA_ARCH
 if(CUDA_ARCH)
   message(STATUS "Setting user-defined arch: ${CUDA_ARCH}")
   set(ARCH_FLAGS "-gencode;arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}")
-else()
+else(CUDA_ARCH)
   # Autodetect architecture and fetch architecture version.
   cuda_detect_installed_gpus(DETECTED_CUDA_ARCH)
   # Convert to number valid in architecture flags: remove dots.
@@ -87,7 +124,7 @@ else()
 
   message(STATUS "Detected CUDA architectures: ${CUDA_ARCH}")
   message(STATUS "Detected CUDA architecture flags: ${ARCH_FLAGS}")
-endif()
+endif(CUDA_ARCH)
 
 # Format architecture flags for compiler.
 string(REPLACE ";" " " ARCH_FLAGS_DISPLAY "${ARCH_FLAGS}")

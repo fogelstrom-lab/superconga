@@ -30,7 +30,7 @@ foreach(file ${SRC})
     # Include directories: equivalent to -I.
     target_include_directories(
       ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
-                      ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
+                      ${ARMADILLO_INCLUDE_DIRS})
 
     # Build src binaries into build/xxx/bin/ (where xxx is e.g. release).
     set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
