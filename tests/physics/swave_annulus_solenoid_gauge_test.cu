@@ -26,50 +26,28 @@
 #include <vector>
 
 namespace helper {
-/// \brief Compute the Yoshida function Y_{3/2} at a given temperature.
-///
-/// \param inTemperature The temperature [Tc].
-/// \param inOrderParameter The bulk order-parameter [2*pi*kB*Tc].
-/// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
-///
-/// \return Y_{3/2}(T).
-template <typename T>
-T yoshida(const T inTemperature, const T inOrderParameter,
-          const T inEnergyCutoff) {
-  const int numEnergies =
-      static_cast<int>(inEnergyCutoff / inTemperature - static_cast<T>(0.5)) +
-      1;
-
-  T energySum = static_cast<T>(0);
-  for (int n = numEnergies - 1; n >= 0; --n) {
-    const T matsubaraEnergy =
-        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
-    const T Omega = std::hypot(inOrderParameter, matsubaraEnergy);
-    energySum += static_cast<T>(1) / std::pow(Omega, 3);
-  }
-
-  return inTemperature * inOrderParameter * inOrderParameter * energySum;
-}
-
 /// \brief Test that the free energy of an s-wave superconductor in an annulus,
 /// with solenoid gauge, behaves as expected. I.e. that the free energy is
 /// parabolic in the phase winding with minimas located at numFluxQuanta =
 /// phaseWinding.
 ///
 /// \return Void.
-template <typename T> void testFluxQuantization() {
+template <typename T> void testSWaveAnnulusSolenoid() {
   // =================== ARRANGE ==================== //
   // The accuracy of the test.
   const T tolerance = static_cast<T>(1e-3);
   const T scale = static_cast<T>(0);
 
   // The outer (R) and inner (r) radii of the annulus.
-  const T R = static_cast<T>(25);
+  const T R = static_cast<T>(20);
   const T r = static_cast<T>(10);
 
   // General parameters.
+  // TODO(niclas): For large phase windings a very high spatial resolution is
+  // needed. This needs to be investigated! Here a small phase winding and low
+  // resolution is used in order for the test to not take forever.
   const T grainWidth = static_cast<T>(2) * R;
-  const T pointsPerCoherenceLength = static_cast<T>(3);
+  const T pointsPerCoherenceLength = static_cast<T>(4);
   const int numMomenta = 16;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);
@@ -78,8 +56,9 @@ template <typename T> void testFluxQuantization() {
   const T stepSize = static_cast<T>(0.001);
 
   // Flux quantas to loop over.
-  const std::vector<T> numFluxQuantas = {static_cast<T>(0.5), static_cast<T>(1),
-                                         static_cast<T>(1.5)};
+  const std::vector<T> numFluxQuantas = {phaseWinding - static_cast<T>(0.5),
+                                         phaseWinding,
+                                         phaseWinding + static_cast<T>(0.5)};
 
   // =================== ACT ==================== //
   // For storing the results.
@@ -148,8 +127,10 @@ template <typename T> void testFluxQuantization() {
       conga::computeFreeEnergyBulkSWave(temperature, orderParameterBulk);
 
   // Common factor of the kinetic free energy.
-  const T Y = yoshida(temperature, orderParameterBulk, energyCutoff);
-  const T factor = static_cast<T>(0.25) * Y * std::log(R / r) / (R * R - r * r);
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      temperature, orderParameterBulk, energyCutoff);
+  const T factor =
+      static_cast<T>(0.25) * yoshida * std::log(R / r) / (R * R - r * r);
 
   // Loop over flux quantas and compare results.
   for (std::size_t i = 0; i < numFluxQuantas.size(); ++i) {
@@ -172,10 +153,10 @@ template <typename T> void testFluxQuantization() {
 }
 } // namespace helper
 
-TEST_CASE("Test flux quantization <float>") {
-  helper::testFluxQuantization<float>();
+TEST_CASE("Test s-wave annulus (solenoid gauge) - <float>") {
+  helper::testSWaveAnnulusSolenoid<float>();
 }
 
-TEST_CASE("Test flux quantization <double>") {
-  helper::testFluxQuantization<double>();
+TEST_CASE("Test s-wave annulus (solenoid gauge) - <double>") {
+  helper::testSWaveAnnulusSolenoid<double>();
 }
