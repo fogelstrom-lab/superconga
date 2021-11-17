@@ -36,6 +36,7 @@
 - Rename `Optimizer` to `Accelerator`.
 - Add Doxygen comments, removed unused code, shorten method names etc in `OrderParameter.h`.
 - Add test of the flux density and vector potential in an s-wave disc with a small magnetic field comparing with analytical expression involving Bessel functions.
+- Add test of an s-wave annulus using solenoid gauge.
 
 ---
 
