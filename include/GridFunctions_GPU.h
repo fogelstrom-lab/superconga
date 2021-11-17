@@ -52,6 +52,14 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
   void complexPhaseGradient(GridData<T, thrust::device_vector<T>> *result,
                             const T h) const;
 
+  /// \brief Compute the moment: 0.5 * sum(cross(r, grid)). Note that the only
+  /// the z-component is returned.
+  ///
+  /// \param h The side length of a lattice site.
+  ///
+  /// \return The result.
+  T moment(const T h) const;
+
   // Compute the magnitude of the real part of this vector field.
   void fieldMagnitude(GridData<T, thrust::device_vector<T>> *result) const;
 
@@ -523,6 +531,23 @@ __global__ void resample_kernel(const T *data, T *data_tmp, const int Nx,
     data_tmp[idx_new] = ((T)1.0 - y_frac) * x1_interp + y_frac * x2_interp;
   }
 }
+
+template <typename T>
+__global__ void momentKernel(const int inDimX, const int inDimY,
+                             const T *const inSrcX, const T *const inSrcY,
+                             T *const outDst) {
+  const int xIdx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int yIdx = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if ((xIdx < inDimX) && (yIdx < inDimY)) {
+    const int idx = yIdx * inDimY + xIdx;
+    const T x =
+        static_cast<T>(xIdx) - static_cast<T>(0.5) * static_cast<T>(inDimX - 1);
+    const T y =
+        static_cast<T>(yIdx) - static_cast<T>(0.5) * static_cast<T>(inDimY - 1);
+    outDst[idx] = x * inSrcY[idx] - y * inSrcX[idx];
+  }
+}
 } // namespace internal
 
 template <typename T>
@@ -614,6 +639,37 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
       result->getDataPointer(1, Type::real), h, grid->_dimX, grid->_dimY);
 
   checkCudaError("GridData<T>::complexPhaseGradient()");
+}
+
+template <typename T>
+T GridFunctions<T, thrust::device_vector<T>>::moment(const T h) const {
+  // Sanity check.
+  assert(grid->numFields() == 2);
+  assert(grid->representation() == Type::real);
+
+  // Kernel parameters.
+  dim3 tpb, bpg;
+  getKernelDimensions(bpg, tpb);
+
+  // Dimensions.
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+
+  thrust::device_vector<T> dst(dimX * dimY);
+  internal::momentKernel<<<bpg, tpb>>>(dimX, dimY,
+                                       grid->getDataPointer(0, Type::real),
+                                       grid->getDataPointer(1, Type::real),
+                                       thrust::raw_pointer_cast(dst.data()));
+
+  checkCudaError("GridData<T>::moment()");
+
+  // Two factors of h comes from the integral, the other from the position
+  // vector.
+  const T factor = static_cast<T>(0.5) * h * h * h;
+  const T init = static_cast<T>(0);
+  const T result = factor * thrust::reduce(dst.begin(), dst.end(), init);
+
+  return result;
 }
 
 template <typename T>

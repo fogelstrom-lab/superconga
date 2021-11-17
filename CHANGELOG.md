@@ -18,6 +18,7 @@
 - Print free energy using scientific notation.
 - Set standard deviation of additive Gaussian noise via `initial_noise_stddev` parameter.
 - Put `misc` parameters in the `config.json` file in alphabetical order.
+- Add magnetic moment to `results.json`.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

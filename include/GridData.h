@@ -24,6 +24,7 @@
 #include "GridFunctions.h"
 #include "GridFunctors.h"
 #include "Type.h"
+#include <cassert>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -182,6 +183,14 @@ public:
   // Compute the L2 norm
   T L2Norm() const;
 
+  /// \brief Compute the moment: 0.5 * sum(cross(r, grid)). Note that the only
+  /// the z-component is returned.
+  ///
+  /// \param h The side length of a lattice site.
+  ///
+  /// \return The result.
+  T moment(const T h = static_cast<T>(1)) const;
+
   // Compute the complex magnitude squared
   void complexMagnitudeSq(GridData *result) const;
   GridData complexMagnitudeSq() const;
@@ -191,26 +200,27 @@ public:
   GridData complexPhase() const;
 
   // Compute complex phase gradient of this grid
-  void complexPhaseGradient(GridData *result, const T h = 1.0) const;
-  GridData complexPhaseGradient(const T h = 1.0) const;
+  void complexPhaseGradient(GridData *result,
+                            const T h = static_cast<T>(1)) const;
+  GridData complexPhaseGradient(const T h = static_cast<T>(1)) const;
 
   // Compute the magnitude of this (real valued) vector field
   void fieldMagnitude(GridData *result) const;
   GridData fieldMagnitude() const;
 
   // Compute divergence of vector field (Not implemented for CPU!!!)
-  void div(GridData *result, const T h = 1.0) const;
-  GridData div(const T h = 1.0) const;
+  void div(GridData *result, const T h = static_cast<T>(1)) const;
+  GridData div(const T h = static_cast<T>(1)) const;
 
   // Compute curl of vector field (Not implemented for CPU!!!)
   // Only returns z-component, since x- and y-components will be zero for a
   // 2d-field
-  void curl(GridData *result, const T h = 1.0) const;
-  GridData curl(const T h = 1.0) const;
+  void curl(GridData *result, const T h = static_cast<T>(1)) const;
+  GridData curl(const T h = static_cast<T>(1)) const;
 
   // Compute laplacian (div(grad)) of field (Not implemented for CPU!!!)
-  void del2(GridData *result, const T h = 1.0) const;
-  GridData del2(const T h = 1.0) const;
+  void del2(GridData *result, const T h = static_cast<T>(1)) const;
+  GridData del2(const T h = static_cast<T>(1)) const;
 
   // Sum all field components.
   void sumFieldComponents(GridData *result) const;
@@ -1006,6 +1016,11 @@ template <typename T, typename DEV> T GridData<T, DEV>::L2Norm() const {
   // Calculate the L2 Norm using the elementwise sum of squares
   const T resultNorm = std::sqrt(this->sumSquare());
   return resultNorm;
+}
+
+template <typename T, typename DEV>
+T GridData<T, DEV>::moment(const T h) const {
+  return GridFunctions<T, DEV>::moment(h);
 }
 
 template <typename T, typename DEV>
