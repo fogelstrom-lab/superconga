@@ -1,0 +1,167 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+
+#include "BoundaryConditionSpecular.h"
+#include "ComputeCurrent.h"
+#include "ComputeFreeEnergy.h"
+#include "ComputeOrderParameter.h"
+#include "Context.h"
+#include "DiscGeometry.h"
+#include "GeometryGroup.h"
+#include "Grid.h"
+#include "OrderParameter.h"
+#include "OrderParameterBasis.h"
+#include "OrderParameterBulk.h"
+#include "OrderParameterComponent.h"
+#include "OrderParameterInitial.h"
+#include "Parameters.h"
+#include "RiccatiSolverConfined.h"
+#include "Type.h"
+#include "defines.h"
+#include "doctest_wrapper.h"
+#include "run_utils.h"
+#include "utils.h"
+
+#include <cmath>
+
+namespace helper {
+/// \brief Helper function for computing the expected free energy.
+///
+/// \param inTemperature The temperature [Tc].
+/// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
+/// \param inPenetrationDepth The penetration depth [xi0].
+/// \param inNumFluxQuanta The number of external flux quanta.
+/// \param inRadius The radius of the disc [xi0].
+///
+/// \return The free energy.
+template <typename T>
+T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
+                            const T inPenetrationDepth, const T inNumFluxQuanta,
+                            const T inRadius) {
+  // Compute bulk free energy.
+  const T orderParameterBulk =
+      conga::computeOrderParameterBulkSWave(inTemperature);
+  const T freeEnergyBulk =
+      conga::computeFreeEnergyBulkSWave(inTemperature, orderParameterBulk);
+
+  // For convenience.
+  const T R = inRadius;
+  const T area = static_cast<T>(M_PI) * R * R;
+
+  // Common factor for the magnetic and kinetic terms.
+  const T exteralFluxDensity = static_cast<T>(M_PI) * inNumFluxQuanta / area;
+  const T factor = static_cast<T>(M_PI) *
+                   std::pow(inPenetrationDepth * exteralFluxDensity, 2) / area;
+
+  // Relevant Bessel functions.
+  const T ratio = R / inPenetrationDepth;
+  const T I0 = std::cyl_bessel_i(static_cast<T>(0), ratio);
+  const T I1 = std::cyl_bessel_i(static_cast<T>(1), ratio);
+
+  // Magnetic term.
+  const T tmp = R * I1 / I0;
+  const T freeEnergyMagnetic =
+      factor * (R * R - static_cast<T>(2) * inPenetrationDepth * tmp -
+                static_cast<T>(0.5) * tmp * tmp);
+
+  // Kinetic term.
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      inTemperature, orderParameterBulk, inEnergyCutoff);
+  const T freeEnergyKinetic =
+      factor * yoshida * static_cast<T>(0.5) * R *
+      (-R * I0 * I0 + 2 * inPenetrationDepth * I0 * I1 + R * I1 * I1) /
+      (I0 * I0);
+
+  return freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
+}
+
+/// \brief Test that the free energy of an s-wave superconductor in a disc, with
+/// zero phase winding, behaves as expected. The free energy can be computed
+/// analytically.
+///
+/// \return Void.
+template <typename T> void testSWaveDisc() {
+  // =================== ARRANGE ==================== //
+  // The accuracy of the test.
+  const T tolerance = static_cast<T>(1e-3);
+  const T scale = static_cast<T>(0);
+
+  // The radius of the disc.
+  const T R = static_cast<T>(20);
+
+  // General parameters.
+  const T grainWidth = static_cast<T>(2) * R;
+  const T pointsPerCoherenceLength = static_cast<T>(4);
+  const int numMomenta = 16;
+  const T convergenceCriterion = static_cast<T>(1e-5);
+  const T temperature = static_cast<T>(0.2);
+  const T energyCutoff = static_cast<T>(16);
+  const T numFluxQuanta = static_cast<T>(5);
+  const T penetrationDepth = static_cast<T>(5);
+  const T stepSize = static_cast<T>(0.01);
+
+  // =================== ACT ==================== //
+  // Create context.
+  conga::Context<T> context;
+
+  // Set parameters.
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
+  parameters->setGrainWidth(grainWidth);
+  parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
+  parameters->setAngularResolution(numMomenta);
+  parameters->setConvergenceCriterion(convergenceCriterion);
+  parameters->setTemperature(temperature);
+  parameters->setEnergyCutoff(energyCutoff);
+  parameters->setNumFluxQuanta(numFluxQuanta);
+  parameters->setPenetrationDepth(penetrationDepth);
+
+  // Create disc geometry.
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
+  const T grainFraction = parameters->getGrainFraction();
+  geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
+
+  // Create solver with solenoid gauge.
+  conga::RiccatiSolver<T> *riccatiSolver =
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+          &context);
+  riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
+
+  // Create s-wave order parameter with phase winding.
+  conga::OrderParameter<T> *orderParameter =
+      new conga::OrderParameter<T>(&context);
+  conga::OrderParameterComponent<T> *orderParameterComponent =
+      new conga::OrderParameterComponent<T>(conga::BasisFunctionSymmetry::SWAVE,
+                                            parameters);
+  conga::Initial<T>::bulk(orderParameterComponent);
+  orderParameter->add(orderParameterComponent);
+
+  // Create accelerator.
+  context.set(std::make_unique<conga::Accelerator<T>>(stepSize));
+
+  // Compute order parameter, current density, free energy, and vector
+  // potential.
+  new conga::ComputeOrderParameter<T>(&context);
+  new conga::ComputeCurrent<T>(&context);
+  new conga::ComputeFreeEnergy<T>(&context);
+  context.add(std::make_unique<conga::ComputeVectorPotential<T>>());
+
+  // Run the simulation.
+  context.initialize();
+  conga::run_utils::runSimulation(&context);
+
+  // Save the result.
+  const T freeEnergy =
+      context.getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+
+  // =================== ASSERT ==================== //
+  const T freeEnergyExpected = computeFreeEnergyAnalytic(
+      temperature, energyCutoff, penetrationDepth, numFluxQuanta, R);
+
+  // Compare results.
+  CHECK(freeEnergy ==
+        doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
+}
+} // namespace helper
+
+TEST_CASE("Test s-wave disc - <float>") { helper::testSWaveDisc<float>(); }
+
+TEST_CASE("Test s-wave disc - <double>") { helper::testSWaveDisc<double>(); }

@@ -38,11 +38,11 @@ set(SRC
     physics/current_conservation_test.cu
     physics/current_linear_response_test.cu
     physics/dos_test.cu
-    physics/flux_density_test.cu
     physics/low_temp_free_energy_test.cu
     physics/penetration_depth_test.cu
     physics/swave_annulus_radial_gauge_test.cu
     physics/swave_annulus_solenoid_gauge_test.cu
+    physics/swave_disc_test.cu
     physics/vector_potential_test.cu
     riccati_solutions_test.cu
     utils_test.cu)
