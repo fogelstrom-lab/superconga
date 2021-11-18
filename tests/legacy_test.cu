@@ -1,15 +1,16 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "ComputeResidual.h"
-#include "ComputeVectorPotential.h"
-#include "Grid.h"
-#include "OrderParameterBulk.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/compute/ComputeResidual.h"
+#include "conga/compute/ComputeVectorPotential.h"
+#include "conga/grid.h"
+#include "conga/order_parameter/OrderParameterBulk.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
+
+#include <thrust/host_vector.h>
 
 #include <cmath>
 #include <limits>
-#include <thrust/host_vector.h>
 
 namespace helper {
 namespace legacy {

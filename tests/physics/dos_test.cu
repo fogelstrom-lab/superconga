@@ -14,30 +14,32 @@
 
 // TODO(niclas): These should not have to be included! They are needed because
 // "Context" only has forward declarations.
-#include "BoundaryConditionSpecular.h"
-#include "ComputeCurrent.h"
-#include "ComputeFreeEnergy.h"
-#include "ComputeLDOS.h"
-#include "ComputeOrderParameter.h"
-#include "Context.h"
-#include "DiscGeometry.h"
-#include "FermiSurfaceCircle.h"
-#include "GeometryGroup.h"
-#include "Grid.h"
-#include "OrderParameter.h"
-#include "OrderParameterBasis.h"
-#include "OrderParameterInitial.h"
-#include "Parameters.h"
-#include "PolygonGeometry.h"
-#include "RiccatiSolverConfined.h"
-#include "defines.h"
-#include "doctest_wrapper.h"
-#include "run_utils.h"
+#include "conga/compute/ComputeCurrent.h"
+#include "conga/compute/ComputeFreeEnergy.h"
+#include "conga/compute/ComputeOrderParameter.h"
+
+#include "conga/Context.h"
+#include "conga/Parameters.h"
+#include "conga/boundary/BoundaryConditionSpecular.h"
+#include "conga/compute/ComputeLDOS.h"
+#include "conga/defines.h"
+#include "conga/fermi_surface/FermiSurfaceCircle.h"
+#include "conga/geometry/DiscGeometry.h"
+#include "conga/geometry/GeometryGroup.h"
+#include "conga/geometry/PolygonGeometry.h"
+#include "conga/grid.h"
+#include "conga/order_parameter/OrderParameter.h"
+#include "conga/order_parameter/OrderParameterBasis.h"
+#include "conga/order_parameter/OrderParameterInitial.h"
+#include "conga/riccati/RiccatiSolverConfined.h"
+#include "conga/run_utils.h"
+#include "conga/wrappers/doctest.h"
+
+#include <thrust/complex.h>
 
 #include <complex>
 #include <iostream>
 #include <stdlib.h>
-#include <thrust/complex.h>
 
 //*******************************************************
 // SIMULATION PARAMETERS common between test cases

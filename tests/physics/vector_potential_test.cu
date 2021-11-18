@@ -1,15 +1,16 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "ComputeVectorPotential.h"
-#include "Grid.h"
-#include "Type.h"
-#include "doctest_wrapper.h"
+#include "conga/Type.h"
+#include "conga/compute/ComputeVectorPotential.h"
+#include "conga/grid.h"
+#include "conga/wrappers/doctest.h"
+
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 #include <cmath>
 #include <iostream>
 #include <limits>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
 
 namespace helper {
 // All float/double tests use the same tolerances.

@@ -14,32 +14,34 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Accelerator.h"
-#include "BoundaryConditionSpecular.h"
-#include "ComputeCurrent.h"
-#include "ComputeFreeEnergy.h"
-#include "ComputeOrderParameter.h"
-#include "ComputeVectorPotential.h"
-#include "Context.h"
-#include "DiscGeometry.h"
-#include "GeometryGroup.h"
-#include "OrderParameter.h"
-#include "OrderParameterBasis.h"
-#include "OrderParameterComponent.h"
-#include "OrderParameterInitial.h"
-#include "Parameters.h"
-#include "PolygonGeometry.h"
-#include "RiccatiSolverConfined.h"
-#include "Type.h"
-#include "Visualization.h"
-#include "configure.h"
-#include "io/read_utils.h"
-#include "run_utils.h"
+#include "conga/Accelerator.h"
+#include "conga/Context.h"
+#include "conga/Parameters.h"
+#include "conga/Type.h"
+#include "conga/boundary/BoundaryConditionSpecular.h"
+#include "conga/compute/ComputeCurrent.h"
+#include "conga/compute/ComputeFreeEnergy.h"
+#include "conga/compute/ComputeOrderParameter.h"
+#include "conga/compute/ComputeVectorPotential.h"
+#include "conga/configure.h"
+#include "conga/geometry/DiscGeometry.h"
+#include "conga/geometry/GeometryGroup.h"
+#include "conga/geometry/PolygonGeometry.h"
+#include "conga/io/read_utils.h"
+#include "conga/order_parameter/OrderParameter.h"
+#include "conga/order_parameter/OrderParameterBasis.h"
+#include "conga/order_parameter/OrderParameterComponent.h"
+#include "conga/order_parameter/OrderParameterInitial.h"
+#include "conga/riccati/RiccatiSolverConfined.h"
+#include "conga/run_utils.h"
+#include "conga/visualization/Visualizer.h"
+
+#include <json/json.h>
+
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
-#include <json/json.h>
 #include <limits>
 #include <memory>
 #include <string>
@@ -66,7 +68,7 @@ namespace {
 // Create context object.
 conga::Context<T> *context = new conga::Context<T>();
 // Create visualization object.
-conga::Visualization<T> *gui;
+conga::Visualizer<T> *visualizer;
 } // namespace
 
 //*******************************************************
@@ -80,7 +82,7 @@ int main(int argc, char *argv[]) {
   {
     if (argc < 2) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
-      conga::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
     const std::string filename = argv[1];
@@ -90,7 +92,7 @@ int main(int argc, char *argv[]) {
     if (!ifile.good()) {
       std::cerr << "-- ERROR! Could not find/open config file '" << filename
                 << "'." << std::endl;
-      conga::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
 
@@ -255,7 +257,7 @@ int main(int argc, char *argv[]) {
 
   if (!orderParameterSuccess) {
     std::cerr << "-- ERROR! No order-parameter component set." << std::endl;
-    conga::run_utils::cleanup(context, gui);
+    conga::run_utils::cleanup(context, visualizer);
     return EXIT_FAILURE;
   }
 
@@ -275,7 +277,7 @@ int main(int argc, char *argv[]) {
 
     // Abort if not successful.
     if (!success) {
-      conga::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
   }
@@ -299,7 +301,7 @@ int main(int argc, char *argv[]) {
 
     // Abort if not successful.
     if (!success) {
-      conga::run_utils::cleanup(context, gui);
+      conga::run_utils::cleanup(context, visualizer);
       return 1;
     }
 
@@ -382,9 +384,9 @@ int main(int argc, char *argv[]) {
   //***********************************************
   const bool visualize = simParams["misc"]["visualize"].asBool();
   if (visualize) {
-    gui = conga::run_utils::createVisualization(context);
-    conga::initGL(argc, argv, gui->getNumPixelsWindowX(),
-                  gui->getNumPixelsWindowY());
+    visualizer = conga::run_utils::createVisualization(context);
+    conga::initGL(argc, argv, visualizer->getNumPixelsWindowX(),
+                  visualizer->getNumPixelsWindowY());
     glutKeyboardFunc(conga::run_utils::myKeyboardFunc);
     glutDisplayFunc(display);
   }
@@ -449,13 +451,13 @@ int main(int argc, char *argv[]) {
   }
 
   // Cleanup dynamically allocated memory.
-  conga::run_utils::cleanup(context, gui);
+  conga::run_utils::cleanup(context, visualizer);
   return EXIT_SUCCESS;
 }
 
 // Plot data in OpenGL GUI.
 void display() {
-  conga::run_utils::display(context, gui);
+  conga::run_utils::display(context, visualizer);
 
   // Tell Glut to update window.
   glutPostRedisplay();

@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "Parameters.h"
-#include "doctest_wrapper.h"
+#include "conga/Parameters.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 

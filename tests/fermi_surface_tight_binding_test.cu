@@ -1,10 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "FermiSurfaceTightBinding.h"
-#include "defines.h"
-#include "dispersion.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/defines.h"
+#include "conga/fermi_surface/DispersionTightBinding.h"
+#include "conga/fermi_surface/FermiSurfaceTightBinding.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 #include <functional>

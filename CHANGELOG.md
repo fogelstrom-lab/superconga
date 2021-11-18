@@ -43,6 +43,7 @@
 - Add test of an s-wave disc with zero phase winding.
 - Remove armadillo as submodule, let CMake take care of it automatically.
 - Update JsonCpp.
+- Group source files in folders.
 
 ---
 
