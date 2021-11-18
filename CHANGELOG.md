@@ -19,6 +19,9 @@
 - Set standard deviation of additive Gaussian noise via `initial_noise_stddev` parameter.
 - Put `misc` parameters in the `config.json` file in alphabetical order.
 - Add magnetic moment to `results.json`.
+- Allow user to let CMake choose build system (via `setup.sh --no-ninja`).
+- Add `compile.sh` to let CMake call the build system and compiler.
+- Only build/compile Debug if running `setup.sh`/`compile.sh` with `--debug` flag.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
@@ -38,6 +41,7 @@
 - Add test of an s-wave annulus using solenoid gauge.
 - Add test of an s-wave annulus using radial gauge.
 - Add test of an s-wave disc with zero phase winding.
+- Remove armadillo as submodule, let CMake take care of it automatically.
 
 ---
 

@@ -7,7 +7,7 @@ message(
 FetchContent_Declare(
   doctest
   GIT_REPOSITORY https://github.com/onqtam/doctest.git
-  GIT_TAG 2.4.0)
+  GIT_TAG 2.4.6)
 
 # Fetch the doctest lib.
 FetchContent_GetProperties(doctest)
@@ -64,7 +64,7 @@ foreach(file ${SRC})
   # Include directories: equivalent to -I.
   target_include_directories(
     ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
-                    ${PROJECT_SOURCE_DIR}/.ext/armadillo/include)
+                    ${ARMADILLO_INCLUDE_DIRS})
 
   # External libraries: equivalent to -l.
   target_link_libraries(
