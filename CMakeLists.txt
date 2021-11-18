@@ -31,7 +31,7 @@ include(FetchContent)
 FetchContent_Declare(
   json
   GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
-  GIT_TAG 1.9.4)
+  GIT_TAG 1.9.5)
 
 # Fetch the JSON lib.
 FetchContent_GetProperties(json)
@@ -56,12 +56,16 @@ FetchContent_Declare(
   armadillo
   GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
   GIT_TAG d9b38626f0cb6cadb828a8d836162df089ed668b # version 10.7.x
-  CMAKE_ARGS        ""
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND     ""
-  INSTALL_COMMAND   ""
-  TEST_COMMAND      ""
-)
+  CMAKE_ARGS
+  ""
+  CONFIGURE_COMMAND
+  ""
+  BUILD_COMMAND
+  ""
+  INSTALL_COMMAND
+  ""
+  TEST_COMMAND
+  "")
 
 # Fetch properties for armadillo target: POPULATED, SOURCE_DIR, BINARY_DIR.
 FetchContent_GetProperties(armadillo)
@@ -69,8 +73,8 @@ FetchContent_GetProperties(armadillo)
 if(NOT armadillo_POPULATED)
   FetchContent_Populate(armadillo)
   # Note: We intentionally avoid add_subdirectory. Otherwise we indicate that
-  # CMake should include these to the build, and we want a header-only
-  # version of armadillo to include.
+  # CMake should include these to the build, and we want a header-only version
+  # of armadillo to include.
 endif(NOT armadillo_POPULATED)
 
 # Set variables with capital names, to conform with variables from find_package.

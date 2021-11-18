@@ -42,6 +42,7 @@
 - Add test of an s-wave annulus using radial gauge.
 - Add test of an s-wave disc with zero phase winding.
 - Remove armadillo as submodule, let CMake take care of it automatically.
+- Update JsonCpp.
 
 ---
 
