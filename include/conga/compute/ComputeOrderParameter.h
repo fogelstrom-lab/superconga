@@ -46,8 +46,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  void computeGreensAngle(ParameterIterator<int> *iter, GridGPU<T> *gamma,
-                          GridGPU<T> *gammabar) override;
+  void computeGreensAngle(const GridGPU<T> *const inGamma,
+                          const GridGPU<T> *const inGammaTilde) override;
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -169,16 +169,15 @@ template <typename T> void ComputeOrderParameter<T>::initializeGreensAngle() {
 }
 
 template <typename T>
-void ComputeOrderParameter<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                                  GridGPU<T> *gamma,
-                                                  GridGPU<T> *gammabar) {
+void ComputeOrderParameter<T>::computeGreensAngle(
+    const GridGPU<T> *const inGamma, const GridGPU<T> *const inGammaTilde) {
   if (ComputeProperty<T>::doCompute()) {
     typedef ComputeProperty<T> C;
     IntegrationIterator<T> *ii = ContextModule<T>::getIntegrationIterator();
-    GridGPU<T> *residues = ii->getResidues();
+    const GridGPU<T> *residues = ii->getResidues();
 
     GreensFunctionStatic<T, Greens_Delta>::computeGreensSumEnergy(
-        C::getGreensCurrentAngle(), iter, residues, gamma, gammabar);
+        inGamma, inGammaTilde, residues, C::getGreensCurrentAngle());
   }
 }
 

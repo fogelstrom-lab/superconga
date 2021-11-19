@@ -20,211 +20,253 @@
 
 #include <thrust/complex.h>
 
+#include <cassert>
+
 namespace conga {
 template <typename T, template <typename> class GREENS>
 struct GreensFunctionStatic {
-  // Greens function functions
-  static void computeGreens(GridGPU<T> *result,
-                            const ParameterIterator<int> *const iter,
-                            const GridGPU<T> *const gamma,
-                            const GridGPU<T> *const gammabar);
+  /// \brief Compute Green function for all energies.
+  ///
+  /// \param inGamma The coherence function "gamma".
+  /// \param inGammaTilde The coherence function "gammaTilde".
+  /// \param outResult The result.
+  ///
+  /// \return Void.
+  static void computeGreens(const GridGPU<T> *const inGamma,
+                            const GridGPU<T> *const inGammaTilde,
+                            GridGPU<T> *outResult);
 
-  static void computeGreensSumEnergy(GridGPU<T> *result,
-                                     const ParameterIterator<int> *const iter,
-                                     const GridGPU<T> *const gamma,
-                                     const GridGPU<T> *const gammabar);
+  /// \brief Compute Green function for all energies and sum over energies.
+  ///
+  /// \param inGamma The coherence function "gamma".
+  /// \param inGammaTilde The coherence function "gammaTilde".
+  /// \param outResult The result.
+  ///
+  /// \return Void.
+  static void computeGreensSumEnergy(const GridGPU<T> *const inGamma,
+                                     const GridGPU<T> *const inGammaTilde,
+                                     GridGPU<T> *outResult);
 
-  static void computeGreensSumEnergy(GridGPU<T> *result,
-                                     const ParameterIterator<int> *const iter,
-                                     const GridGPU<T> *const summandFactor,
-                                     const GridGPU<T> *const gamma,
-                                     const GridGPU<T> *const gammabar);
-
-  // Helper functions
-  static void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
-                                  const GridGPU<T> *grid, int numEnergies = 0);
+  /// \brief Compute Green function for all energies and sum over energies.
+  ///
+  /// \param inGamma The coherence function "gamma".
+  /// \param inGammaTilde The coherence function "gammaTilde".
+  /// \param inResidues Residues to multiply the Green function (for each
+  /// energy) before summing.
+  /// \param outResult The result.
+  ///
+  /// \return Void.
+  static void computeGreensSumEnergy(const GridGPU<T> *const inGamma,
+                                     const GridGPU<T> *const inGammaTilde,
+                                     const GridGPU<T> *const inResidues,
+                                     GridGPU<T> *outResult);
 };
 
 namespace internal {
 template <typename T, template <typename> class GREENS>
 __global__ void
-computeGreens_kernel(const int N, T *greens_re, T *greens_im,
-                     const T *const gamma_re, const T *const gamma_im,
-                     const T *const gammabar_re, const T *const gammabar_im) {
-  const int x = blockIdx.x * blockDim.x + threadIdx.x; // x index
-  const int y = blockIdx.y * blockDim.y + threadIdx.y; // y index
-  const int e_idx = blockIdx.z;                        // energy index
+computeGreens_kernel(const int inDimX, const int inDimY, const int inDimZ,
+                     const T *const inGammaReal, const T *const inGammaImag,
+                     const T *const inGammaTildeReal,
+                     const T *const inGammaTildeImag, T *outResultReal,
+                     T *outResultImag) {
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+  const int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-  if (x < N) {
-    const int gamma_idx = e_idx * 2 * N * N + y * N + x;
+  if ((x < inDimX) && (y < inDimY) && (z < inDimZ)) {
+    // TODO(niclas): Make this a macro.
+    const int idx = z * 2 * inDimX * inDimY + y * inDimX + x;
 
-    const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
-    const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
-                                      gammabar_im[gamma_idx]);
+    const thrust::complex<T> gamma(inGammaReal[idx], inGammaImag[idx]);
+    const thrust::complex<T> gammaTilde(inGammaTildeReal[idx],
+                                        inGammaTildeImag[idx]);
 
-    thrust::complex<T> greens_local;
-    GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
+    const thrust::complex<T> val = GREENS<T>::compute(gamma, gammaTilde);
 
-    greens_re[gamma_idx] = greens_local.real();
-    greens_im[gamma_idx] = greens_local.imag();
-  }
-}
-
-template <typename T, template <typename> class GREENS>
-__global__ void computeGreensSumEnergy_kernel(const int N, const int Ne,
-                                              T *greens_re, T *greens_im,
-                                              const T *const gamma_re,
-                                              const T *const gamma_im,
-                                              const T *const gammabar_re,
-                                              const T *const gammabar_im) {
-  const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
-  const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
-
-  if (x < N) {
-    const int greens_idx = y * N + x;
-
-    thrust::complex<T> greens_sum(static_cast<T>(0), static_cast<T>(0));
-
-    for (int e_idx = 0; e_idx < Ne; ++e_idx) {
-      const int gamma_idx = e_idx * 2 * N * N + greens_idx;
-
-      const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
-      const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
-                                        gammabar_im[gamma_idx]);
-
-      thrust::complex<T> greens_local;
-      GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
-
-      greens_sum += greens_local;
-    }
-
-    greens_re[greens_idx] += greens_sum.real();
-    greens_im[greens_idx] += greens_sum.imag();
+    outResultReal[idx] = val.real();
+    outResultImag[idx] = val.imag();
   }
 }
 
 template <typename T, template <typename> class GREENS>
 __global__ void computeGreensSumEnergy_kernel(
-    const int N, const int Ne, const T *const summandFactor, T *greens_re,
-    T *greens_im, const T *const gamma_re, const T *const gamma_im,
-    const T *const gammabar_re, const T *const gammabar_im) {
-  const int x = blockDim.x * blockIdx.x + threadIdx.x; // x index
-  const int y = blockDim.y * blockIdx.y + threadIdx.y; // y index
+    const int inDimX, const int inDimY, const int inDimZ,
+    const T *const inGammaReal, const T *const inGammaImag,
+    const T *const inGammaTildeReal, const T *const inGammaTildeImag,
+    T *const outResultReal, T *const outResultImag) {
+  const int x = blockDim.x * blockIdx.x + threadIdx.x;
+  const int y = blockDim.y * blockIdx.y + threadIdx.y;
 
-  if (x < N) {
-    const int greens_idx = y * N + x;
+  if ((x < inDimX) && (y < inDimY)) {
+    // TODO(niclas): Make this a macro.
+    const int greens_idx = y * inDimX + x;
 
-    thrust::complex<T> greens_sum(static_cast<T>(0), static_cast<T>(0));
+    thrust::complex<T> sum(static_cast<T>(0), static_cast<T>(0));
 
-    for (int e_idx = 0; e_idx < Ne; ++e_idx) {
-      const int gamma_idx = e_idx * 2 * N * N + greens_idx;
+    for (int z = 0; z < inDimZ; ++z) {
+      // TODO(niclas): Make this a macro.
+      const int gamma_idx = z * 2 * inDimX * inDimY + greens_idx;
 
-      const thrust::complex<T> gamma(gamma_re[gamma_idx], gamma_im[gamma_idx]);
-      const thrust::complex<T> gammabar(gammabar_re[gamma_idx],
-                                        gammabar_im[gamma_idx]);
+      const thrust::complex<T> gamma(inGammaReal[gamma_idx],
+                                     inGammaImag[gamma_idx]);
+      const thrust::complex<T> gammaTilde(inGammaTildeReal[gamma_idx],
+                                          inGammaTildeImag[gamma_idx]);
 
-      thrust::complex<T> greens_local;
-      GREENS<T>::computeGreens_local(gamma, gammabar, greens_local);
-
-      greens_sum += summandFactor[e_idx] * greens_local;
+      const thrust::complex<T> val = GREENS<T>::compute(gamma, gammaTilde);
+      sum += val;
     }
 
-    greens_re[greens_idx] += greens_sum.real();
-    greens_im[greens_idx] += greens_sum.imag();
+    outResultReal[greens_idx] += sum.real();
+    outResultImag[greens_idx] += sum.imag();
+  }
+}
+
+template <typename T, template <typename> class GREENS>
+__global__ void computeGreensSumEnergy_kernel(
+    const int inDimX, const int inDimY, const int inDimZ,
+    const T *const inGammaReal, const T *const inGammaImag,
+    const T *const inGammaTildeReal, const T *const inGammaTildeImag,
+    const T *const inSummandFactor, T *const outResultReal,
+    T *const outResultImag) {
+  const int x = blockDim.x * blockIdx.x + threadIdx.x;
+  const int y = blockDim.y * blockIdx.y + threadIdx.y;
+
+  if ((x < inDimX) && (y < inDimY)) {
+    // TODO(niclas): Make this a macro.
+    const int greens_idx = y * inDimX + x;
+
+    thrust::complex<T> sum(static_cast<T>(0), static_cast<T>(0));
+
+    for (int z = 0; z < inDimZ; ++z) {
+      // TODO(niclas): Make this a macro.
+      const int gamma_idx = z * 2 * inDimX * inDimY + greens_idx;
+
+      const thrust::complex<T> gamma(inGammaReal[gamma_idx],
+                                     inGammaImag[gamma_idx]);
+      const thrust::complex<T> gammaTilde(inGammaTildeReal[gamma_idx],
+                                          inGammaTildeImag[gamma_idx]);
+
+      const thrust::complex<T> val = GREENS<T>::compute(gamma, gammaTilde);
+      sum += inSummandFactor[z] * val;
+    }
+
+    outResultReal[greens_idx] += sum.real();
+    outResultImag[greens_idx] += sum.imag();
   }
 }
 } // namespace internal
 
-// All these kernels can be optimized by using getKernelDimensionsOptim() !!!!
+// Note, all these kernel calls can be optimized by using
+// getKernelDimensionsOptim().
 
-// Compute greens function for all energies, without integrating (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreens(
-    GridGPU<T> *result, const ParameterIterator<int> *iter,
-    const GridGPU<T> *gamma, const GridGPU<T> *gammabar) {
-  int numEnergies = iter->getNumInterval();
+    const GridGPU<T> *const inGamma, const GridGPU<T> *const inGammaTilde,
+    GridGPU<T> *const outResult) {
+  // Sanity checks.
+  assert(inGamma->dimX() == inGammaTilde->dimX());
+  assert(inGamma->dimY() == inGammaTilde->dimY());
+  assert(inGamma->numFields() == inGammaTilde->numFields());
+  assert(inGamma->dimX() == outResult->dimX());
+  assert(inGamma->dimY() == outResult->dimY());
+  assert(inGamma->numFields() == outResult->numFields());
+  assert(inGamma->isComplex());
+  assert(inGammaTilde->isComplex());
+  assert(outResult->isComplex());
 
-  dim3 bpg, tpb;
-  GreensFunctionStatic<T, GREENS>::getKernelDimensions(bpg, tpb, result,
-                                                       numEnergies);
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  outResult->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
-  // Compute Greens function from gamma and gammabar
-  internal::computeGreens_kernel<T, GREENS>
-      <<<bpg, tpb>>>(result->dimX(), result->getDataPointer(0, Type::real),
-                     result->getDataPointer(0, Type::imag),
-                     gamma->getDataPointer(0, Type::real),
-                     gamma->getDataPointer(0, Type::imag),
-                     gammabar->getDataPointer(0, Type::real),
-                     gammabar->getDataPointer(0, Type::imag));
+  // Dimensions.
+  const int dimX = inGamma->dimX();
+  const int dimY = inGamma->dimY();
+  const int numEnergies = inGamma->numFields();
+
+  // Compute Greens function from gamma and gammaTilde
+  internal::computeGreens_kernel<T, GREENS><<<numBlocks, numThreadsPerBlock>>>(
+      dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
+      inGamma->getDataPointer(0, Type::imag),
+      inGammaTilde->getDataPointer(0, Type::real),
+      inGammaTilde->getDataPointer(0, Type::imag),
+      outResult->getDataPointer(0, Type::real),
+      outResult->getDataPointer(0, Type::imag));
 }
 
-// Compute greens function for all energies and integrate (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
-    GridGPU<T> *result, const ParameterIterator<int> *iter,
-    const GridGPU<T> *gamma, const GridGPU<T> *gammabar) {
-  int numEnergies = iter->getNumInterval();
+    const GridGPU<T> *const inGamma, const GridGPU<T> *const inGammaTilde,
+    GridGPU<T> *const outResult) {
+  // Sanity checks.
+  assert(inGamma->dimX() == inGammaTilde->dimX());
+  assert(inGamma->dimY() == inGammaTilde->dimY());
+  assert(inGamma->numFields() == inGammaTilde->numFields());
+  assert(inGamma->dimX() == outResult->dimX());
+  assert(inGamma->dimY() == outResult->dimY());
+  assert(outResult->numFields() == 1);
+  assert(inGamma->isComplex());
+  assert(inGammaTilde->isComplex());
+  assert(outResult->isComplex());
 
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  outResult->getKernelDimensions(numBlocks, numThreadsPerBlock);
 
-  // Compute Greens function from gamma and gammabar
-  internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
-      result->dimX(), numEnergies, result->getDataPointer(0, Type::real),
-      result->getDataPointer(0, Type::imag),
-      gamma->getDataPointer(0, Type::real),
-      gamma->getDataPointer(0, Type::imag),
-      gammabar->getDataPointer(0, Type::real),
-      gammabar->getDataPointer(0, Type::imag));
+  // Dimensions.
+  const int dimX = inGamma->dimX();
+  const int dimY = inGamma->dimY();
+  const int numEnergies = inGamma->numFields();
+
+  // Compute Greens function from gamma and gammaTilde.
+  internal::computeGreensSumEnergy_kernel<T, GREENS>
+      <<<numBlocks, numThreadsPerBlock>>>(
+          dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
+          inGamma->getDataPointer(0, Type::imag),
+          inGammaTilde->getDataPointer(0, Type::real),
+          inGammaTilde->getDataPointer(0, Type::imag),
+          outResult->getDataPointer(0, Type::real),
+          outResult->getDataPointer(0, Type::imag));
 }
 
-// Compute greens function for all energies and integrate (over energies)
 template <typename T, template <typename> class GREENS>
 void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
-    GridGPU<T> *result, const ParameterIterator<int> *const iter,
-    const GridGPU<T> *const summandFactor, const GridGPU<T> *const gamma,
-    const GridGPU<T> *const gammabar) {
-  int numEnergies = iter->getNumInterval();
+    const GridGPU<T> *const inGamma, const GridGPU<T> *const inGammaTilde,
+    const GridGPU<T> *const inResidues, GridGPU<T> *const outResult) {
+  // Sanity checks.
+  assert(inGamma->dimX() == inGammaTilde->dimX());
+  assert(inGamma->dimY() == inGammaTilde->dimY());
+  assert(inGamma->numFields() == inGammaTilde->numFields());
+  assert(inGamma->dimX() == outResult->dimX());
+  assert(inGamma->dimY() == outResult->dimY());
+  assert(inGamma->numFields() == inResidues->numElements());
+  assert(outResult->numFields() == 1);
+  assert(inGamma->isComplex());
+  assert(inGammaTilde->isComplex());
+  assert(outResult->isComplex());
 
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, result->dimX(), result->dimY(), 1);
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  outResult->getKernelDimensions(numBlocks, numThreadsPerBlock);
 
-  // Compute Greens function from gamma and gammabar
-  internal::computeGreensSumEnergy_kernel<T, GREENS><<<bpg, tpb>>>(
-      result->dimX(), numEnergies, summandFactor->getDataPointer(0, Type::real),
-      result->getDataPointer(0, Type::real),
-      result->getDataPointer(0, Type::imag),
-      gamma->getDataPointer(0, Type::real),
-      gamma->getDataPointer(0, Type::imag),
-      gammabar->getDataPointer(0, Type::real),
-      gammabar->getDataPointer(0, Type::imag));
-}
+  // Dimensions.
+  const int dimX = inGamma->dimX();
+  const int dimY = inGamma->dimY();
+  const int numEnergies = inGamma->numFields();
 
-template <typename T, template <typename> class GREENS>
-void GreensFunctionStatic<T, GREENS>::getKernelDimensions(
-    dim3 &blocksPerGrid, dim3 &threadsPerBlock, const GridGPU<T> *grid,
-    int numEnergies) {
-  const int N = grid->dimX();
-
-  if (numEnergies == 0)
-    numEnergies = grid->numFields();
-
-  int tpb_x, tpb_y, bpg_x, bpg_y;
-
-  tpb_x = N;
-  tpb_y = 1;
-
-  bpg_x = 1;
-
-  if (tpb_x > 1024) {
-    tpb_x = N / 2 + 1;
-    bpg_x = 2;
-  }
-
-  bpg_y = N;
-
-  threadsPerBlock = dim3(tpb_x, tpb_y, 1);
-  blocksPerGrid = dim3(bpg_x, bpg_y, numEnergies);
+  // Compute Greens function from gamma and gammaTilde.
+  internal::computeGreensSumEnergy_kernel<T, GREENS>
+      <<<numBlocks, numThreadsPerBlock>>>(
+          dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
+          inGamma->getDataPointer(0, Type::imag),
+          inGammaTilde->getDataPointer(0, Type::real),
+          inGammaTilde->getDataPointer(0, Type::imag),
+          inResidues->getDataPointer(0, Type::real),
+          outResult->getDataPointer(0, Type::real),
+          outResult->getDataPointer(0, Type::imag));
 }
 } // namespace conga
 

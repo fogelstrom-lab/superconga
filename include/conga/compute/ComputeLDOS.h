@@ -46,8 +46,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  void computeGreensAngle(ParameterIterator<int> *iter, GridGPU<T> *gamma,
-                          GridGPU<T> *gammabar) override;
+  void computeGreensAngle(const GridGPU<T> *const inGamma,
+                          const GridGPU<T> *const inGammaTilde) override;
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -149,12 +149,11 @@ template <typename T> void ComputeLDOS<T>::initializeGreensAngle() {
 }
 
 template <typename T>
-void ComputeLDOS<T>::computeGreensAngle(ParameterIterator<int> *iter,
-                                        GridGPU<T> *gamma,
-                                        GridGPU<T> *gammabar) {
+void ComputeLDOS<T>::computeGreensAngle(const GridGPU<T> *const inGamma,
+                                        const GridGPU<T> *const inGammaTilde) {
   if (ComputeProperty<T>::doCompute()) {
     GreensFunctionStatic<T, Greens>::computeGreens(
-        ComputeProperty<T>::getGreensCurrentAngle(), iter, gamma, gammabar);
+        inGamma, inGammaTilde, ComputeProperty<T>::getGreensCurrentAngle());
   }
 }
 

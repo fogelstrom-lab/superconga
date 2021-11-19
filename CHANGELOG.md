@@ -44,6 +44,7 @@
 - Remove armadillo as submodule, let CMake take care of it automatically.
 - Update JsonCpp.
 - Group source files in folders.
+- Cleanup Green function computation (Doxygen comments, remove unnecessary code, etc).
 
 ---
 
