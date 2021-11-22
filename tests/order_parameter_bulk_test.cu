@@ -1,9 +1,9 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "OrderParameterBulk.h"
-#include "defines.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/defines.h"
+#include "conga/order_parameter/OrderParameterBulk.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 #include <limits>

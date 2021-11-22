@@ -1,13 +1,14 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "RiccatiSolutions.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/riccati/RiccatiSolutions.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
+
+#include <thrust/complex.h>
 
 #include <cmath>
 #include <complex>
 #include <limits>
-#include <thrust/complex.h>
 #include <vector>
 
 namespace helper {

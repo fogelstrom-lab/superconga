@@ -1,17 +1,18 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "FermiSurface.h"
-#include "FermiSurfaceCircle.h"
-#include "FermiSurfaceTightBinding.h"
-#include "OrderParameterBasis.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/fermi_surface/FermiSurface.h"
+#include "conga/fermi_surface/FermiSurfaceCircle.h"
+#include "conga/fermi_surface/FermiSurfaceTightBinding.h"
+#include "conga/order_parameter/OrderParameterBasis.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
+
+#include <thrust/complex.h>
 
 #include <cmath>
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <thrust/complex.h>
 #include <vector>
 
 namespace helper {

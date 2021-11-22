@@ -1,8 +1,8 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "FermiSurfaceCircle.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/fermi_surface/FermiSurfaceCircle.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 

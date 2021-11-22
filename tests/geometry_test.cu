@@ -1,17 +1,17 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "ComputeCurrent.h"
-#include "ComputeFreeEnergy.h"
-#include "ComputeOrderParameter.h"
-#include "Context.h"
-#include "DiscGeometry.h"
-#include "GeometryGroup.h"
-#include "GridData.h"
-#include "OrderParameter.h"
-#include "Parameters.h"
-#include "PolygonGeometry.h"
-#include "Type.h"
-#include "doctest_wrapper.h"
+#include "conga/Context.h"
+#include "conga/Parameters.h"
+#include "conga/Type.h"
+#include "conga/compute/ComputeCurrent.h"
+#include "conga/compute/ComputeFreeEnergy.h"
+#include "conga/compute/ComputeOrderParameter.h"
+#include "conga/geometry/DiscGeometry.h"
+#include "conga/geometry/GeometryGroup.h"
+#include "conga/geometry/PolygonGeometry.h"
+#include "conga/grid.h"
+#include "conga/order_parameter/OrderParameter.h"
+#include "conga/wrappers/doctest.h"
 
 #include <array>
 #include <cmath>
@@ -71,18 +71,17 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   const conga::Type::type representation = conga::Type::real;
 
   // Create the test grid (on the CPU).
-  conga::GridData<T, thrust::host_vector<T>> testGridCPU(
-      gridResolution, gridResolution, numFields, representation);
+  conga::GridCPU<T> testGridCPU(gridResolution, gridResolution, numFields,
+                                representation);
 
   // Create the expected grid (on the CPU).
-  conga::GridData<T, thrust::host_vector<T>> expectedGridCPU(
-      gridResolution, gridResolution, numFields, representation);
+  conga::GridCPU<T> expectedGridCPU(gridResolution, gridResolution, numFields,
+                                    representation);
 
   // An extra scope so we can reuse variable names.
   {
     // Copy the domain labels to the CPU.
-    const conga::GridData<char, thrust::host_vector<char>> domainLabels =
-        *(geometryGroup->getDomainGrid());
+    const conga::GridCPU<char> domainLabels = *(geometryGroup->getDomainGrid());
 
     // Get the pointers to the test grid, expected grid, and the domain labels.
     T *const testPtrCPU = testGridCPU.getDataPointer();
@@ -103,7 +102,7 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
 
   // =================== ACT ==================== //
   // Copy test grid to the GPU.
-  conga::GridData<T, thrust::device_vector<T>> gridGPU = testGridCPU;
+  conga::GridGPU<T> gridGPU = testGridCPU;
 
   // Zero values outside of the grain.
   geometryGroup->zeroValuesOutsideDomainRef(&gridGPU);

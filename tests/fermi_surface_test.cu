@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "FermiSurface.h"
-#include "doctest_wrapper.h"
+#include "conga/fermi_surface/FermiSurface.h"
+#include "conga/wrappers/doctest.h"
 
 #include <array>
 #include <cmath>

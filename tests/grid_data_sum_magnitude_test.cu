@@ -1,10 +1,9 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "Grid.h"
-#include "GridData.h"
-#include "Type.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/Type.h"
+#include "conga/grid.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 
@@ -31,7 +30,7 @@ T computeTolerance(const int inNumX, const int inNumY,
 // field. Instantiate a GridData object and check that the grid-summed magnitude
 // is correct. Every element is set to the same value, ranging from inMinValue
 // to inMaxValue.
-template <typename T, typename DEVICE>
+template <typename T, typename Grid>
 void testSumMagnitudeComplex(const int inNumValues = 4,
                              const T inMinValue = static_cast<T>(1e-3),
                              const T inMaxValue = static_cast<T>(1e3)) {
@@ -50,7 +49,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
 
       // Construct a GridData object of (numX*numY) complex numbers, with
       // numFields number of components
-      DEVICE testComplexGrid(numX, numY, numFields, conga::Type::complex);
+      Grid testComplexGrid(numX, numY, numFields, conga::Type::complex);
 
       // Stepsize between each different value to try
       const T valueStep =
@@ -105,7 +104,7 @@ void testSumMagnitudeComplex(const int inNumValues = 4,
 // field. Instantiate a GridData object and check that the grid-summed magnitude
 // is correct. Every element is set to the same value, ranging from inMinValue
 // to inMaxValue.
-template <typename T, typename DEVICE>
+template <typename T, typename Grid>
 void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
                           const T inMaxValue = 1e3) {
 
@@ -123,7 +122,7 @@ void testSumMagnitudeReal(const int inNumValues = 4, const T inMinValue = 1e-3,
 
       // Construct a GridData object of (numX*numY) real numbers, with
       // numFields number of components
-      DEVICE testRealGrid(numX, numY, numFields, conga::Type::real);
+      Grid testRealGrid(numX, numY, numFields, conga::Type::real);
 
       // Stepsize between each different value to try
       const T valueStep =

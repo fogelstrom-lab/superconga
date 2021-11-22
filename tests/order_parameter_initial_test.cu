@@ -1,18 +1,18 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "BoundaryConditionSpecular.h" // Boundary condition for perfect specular reflection
-#include "ComputeOrderParameter.h" // Compute order parameter
-#include "Context.h" // The context that connects all classes (helpful since enacpsulation is used)
-#include "DiscGeometry.h"  // Used to constructed simulated grain from discs
-#include "GeometryGroup.h" // The geometry group stores a list of polygons/discs/... that together define the sample geometry (container class for GeometryComponent)
-#include "OrderParameter.h" // Container class for order parameter components
-#include "OrderParameterComponent.h"
-#include "OrderParameterInitial.h" // Used for generating initial guess for order parameter
-#include "Parameters.h" // Parameters specifying which the superconducting system to simulate
-#include "PolygonGeometry.h" // Used to constructed simulated grain from polygons
-#include "RiccatiSolverConfined.h" // Riccati solver for confined geometries
-#include "defines.h"
-#include "doctest_wrapper.h"
+#include "conga/Context.h"
+#include "conga/Parameters.h"
+#include "conga/boundary/BoundaryConditionSpecular.h"
+#include "conga/compute/ComputeOrderParameter.h"
+#include "conga/defines.h"
+#include "conga/geometry/DiscGeometry.h"
+#include "conga/geometry/GeometryGroup.h"
+#include "conga/geometry/PolygonGeometry.h"
+#include "conga/order_parameter/OrderParameter.h"
+#include "conga/order_parameter/OrderParameterComponent.h"
+#include "conga/order_parameter/OrderParameterInitial.h"
+#include "conga/riccati/RiccatiSolverConfined.h"
+#include "conga/wrappers/doctest.h"
 
 #include <iostream>
 

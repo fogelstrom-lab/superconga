@@ -1,7 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <array>
 #include <limits>

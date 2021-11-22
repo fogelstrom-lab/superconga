@@ -16,33 +16,35 @@
 
 // TODO(niclas): These should not have to be included! They are needed because
 // "Context" only has forward declarations.
-#include "ComputeCurrent.h"
-#include "ComputeFreeEnergy.h"
-#include "ComputeOrderParameter.h"
+#include "conga/compute/ComputeCurrent.h"
+#include "conga/compute/ComputeFreeEnergy.h"
+#include "conga/compute/ComputeOrderParameter.h"
 
-#include "BoundaryConditionSpecular.h"
-#include "ComputeLDOS.h"
-#include "Context.h"
-#include "DiscGeometry.h"
-#include "GeometryGroup.h"
-#include "Grid.h"
-#include "OrderParameter.h"
-#include "OrderParameterBasis.h"
-#include "OrderParameterComponent.h"
-#include "OrderParameterInitial.h"
-#include "Parameters.h"
-#include "PolygonGeometry.h"
-#include "RiccatiSolverConfined.h"
-#include "Type.h"
-#include "configure.h"
-#include "io/csv_writers.h"
-#include "io/read_utils.h"
-#include "run_utils.h"
+#include "conga/Context.h"
+#include "conga/Parameters.h"
+#include "conga/Type.h"
+#include "conga/boundary/BoundaryConditionSpecular.h"
+#include "conga/compute/ComputeLDOS.h"
+#include "conga/configure.h"
+#include "conga/geometry/DiscGeometry.h"
+#include "conga/geometry/GeometryGroup.h"
+#include "conga/geometry/PolygonGeometry.h"
+#include "conga/grid.h"
+#include "conga/io/csv_writers.h"
+#include "conga/io/read_utils.h"
+#include "conga/order_parameter/OrderParameter.h"
+#include "conga/order_parameter/OrderParameterBasis.h"
+#include "conga/order_parameter/OrderParameterComponent.h"
+#include "conga/order_parameter/OrderParameterInitial.h"
+#include "conga/riccati/RiccatiSolverConfined.h"
+#include "conga/run_utils.h"
+
+#include <json/json.h>
+
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
-#include <json/json.h>
 #include <limits>
 #include <memory>
 #include <string>

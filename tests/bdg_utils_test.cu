@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
-#include "OrderParameterBasis.h"
-#include "bdg_utils.h"
-#include "defines.h"
-#include "dispersion.h"
-#include "doctest_wrapper.h"
-#include "utils.h"
+#include "conga/defines.h"
+#include "conga/fermi_surface/DispersionTightBinding.h"
+#include "conga/fermi_surface/bdg_utils.h"
+#include "conga/order_parameter/OrderParameterBasis.h"
+#include "conga/utils.h"
+#include "conga/wrappers/doctest.h"
 
 #include <cmath>
 #include <limits>
