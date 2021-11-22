@@ -45,6 +45,7 @@
 - Update JsonCpp.
 - Group source files in folders.
 - Cleanup Green function computation (Doxygen comments, remove unnecessary code, etc).
+- Reduce grid tests spatial dimensions.
 
 ---
 
