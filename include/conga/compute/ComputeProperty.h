@@ -16,7 +16,6 @@
 #define CONGA_COMPUTE_PROPERTY_H_
 
 #include "../ContextModule.h"
-#include "../ParameterIterator.h"
 #include "../Parameters.h"
 #include "../geometry/GeometryGroup.h"
 #include "../green/GreensFunctionStatic.h"
@@ -72,8 +71,8 @@ public:
 
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies.
-  virtual void computeGreensAngle(ParameterIterator<int> *iter,
-                                  GridGPU<T> *gamma, GridGPU<T> *gammabar) = 0;
+  virtual void computeGreensAngle(const GridGPU<T> *const inGamma,
+                                  const GridGPU<T> *const inGammaTilde) = 0;
 
   // Gets called once for each angle, after all calls (per angle) to
   // computeGreensAngle() are finished. Adds the result from

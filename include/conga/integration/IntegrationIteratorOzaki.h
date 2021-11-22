@@ -358,8 +358,7 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
 
       for (int i = 0; i < numComputeObjects; ++i) {
         context->getComputeObject(i)->computeGreensAngle(
-            energyIterator, riccatiSolver->getGamma(),
-            riccatiSolver->getGammabar());
+            riccatiSolver->getGamma(), riccatiSolver->getGammabar());
       }
     }
 

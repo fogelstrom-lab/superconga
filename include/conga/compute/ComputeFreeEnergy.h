@@ -57,8 +57,8 @@ public:
   // Computes greens function for current angle. This may be called multiple
   // times as we integrate over many energies. Result is in local frame and will
   // be stored in _greensCurrentAngle.
-  void computeGreensAngle(ParameterIterator<int> *inParameterIterator,
-                          GridGPU<T> *inGamma, GridGPU<T> *inGammabar) override;
+  void computeGreensAngle(const GridGPU<T> *const inGamma,
+                          const GridGPU<T> *const inGammaTilde) override;
 
   // Add the result from computeGreensAngle() to total. Rotates
   // _greensCurrentAngle to global frame and adds momentum dependence.
@@ -88,16 +88,16 @@ private:
 ///
 /// \param inOrderParameter - Order parameter value
 /// \param inGamma - Riccati coherence function
-/// \param inGammabar - Tilde Riccati coherence function
+/// \param inGammaTilde - Tilde Riccati coherence function
 /// \param outFreeEnergy - The free energy
 template <typename T>
 __device__ thrust::complex<T>
 computeFreeEnergyKernelI(const thrust::complex<T> &inOrderParameter,
                          const thrust::complex<T> &inGamma,
-                         const thrust::complex<T> &inGammabar) {
+                         const thrust::complex<T> &inGammaTilde) {
 
   return thrust::conj(inOrderParameter) * inGamma -
-         inOrderParameter * inGammabar;
+         inOrderParameter * inGammaTilde;
 }
 
 // Parallelize calculation of free-energy kernel I over spatial coordinates
@@ -228,8 +228,7 @@ template <typename T> void ComputeFreeEnergy<T>::initializeGreensAngle() {
 // point (summed over energies).
 template <typename T>
 void ComputeFreeEnergy<T>::computeGreensAngle(
-    ParameterIterator<int> *inParameterIterator, GridGPU<T> *inGamma,
-    GridGPU<T> *inGammabar) {
+    const GridGPU<T> *const inGamma, const GridGPU<T> *const inGammaTilde) {
   typedef ContextModule<T> C;
 
   if (ComputeProperty<T>::doCompute()) {
@@ -242,8 +241,7 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
         integrationIter->getOrderParameterFieldCurrentAngle();
     const GridGPU<T> *ozakiResidues = integrationIter->getResidues();
 
-    const int numEnergies = inParameterIterator->getNumInterval();
-    const int energyIdxStart = inParameterIterator->getCurrentValue();
+    const int numEnergies = inGamma->numFields();
 
     dim3 blocksPerGrid, threadsPerBlock;
     freeEnergyKernelIntegrand->getKernelDimensions(blocksPerGrid,
@@ -255,11 +253,11 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
         freeEnergyKernelIntegrand->getDataPointer(0, Type::imag),
         inGamma->getDataPointer(0, Type::real),
         inGamma->getDataPointer(0, Type::imag),
-        inGammabar->getDataPointer(0, Type::real),
-        inGammabar->getDataPointer(0, Type::imag),
+        inGammaTilde->getDataPointer(0, Type::real),
+        inGammaTilde->getDataPointer(0, Type::imag),
         deltaRot->getDataPointer(0, Type::real),
         deltaRot->getDataPointer(0, Type::imag),
-        ozakiResidues->getDataPointer(0, Type::real) + energyIdxStart);
+        ozakiResidues->getDataPointer(0, Type::real));
   }
 }
 
