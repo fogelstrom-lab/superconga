@@ -46,6 +46,7 @@
 - Group source files in folders.
 - Cleanup Green function computation (Doxygen comments, remove unnecessary code, etc).
 - Reduce grid tests spatial dimensions.
+- Add test of magnic moment in an s-wave annulus using radial gauge.
 
 ---
 
