@@ -89,7 +89,8 @@ getWeightsAndAbscissas(const T inLow, const T inHigh) {
   return {weights, abscissas};
 }
 
-/// \brief Helper function for computing the expected free energy.
+/// \brief Helper function for computing the expected free energy and magnetic
+/// momentum.
 ///
 /// \param inTemperature The temperature [Tc].
 /// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
@@ -99,43 +100,61 @@ getWeightsAndAbscissas(const T inLow, const T inHigh) {
 /// \param inInnerRadius The inner radius of the annulus [xi0].
 /// \param inOuterRadius The outer radius of the annulus [xi0].
 ///
-/// \return The free energy.
+/// \return The pair {free energy, magnetic moment}.
 template <typename T>
-T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
-                            const T inPenetrationDepth, const T inNumFluxQuanta,
-                            const T inPhaseWinding, const T inInnerRadius,
-                            const T inOuterRadius) {
+std::pair<T, T>
+computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
+                       const T inPenetrationDepth, const T inNumFluxQuanta,
+                       const T inPhaseWinding, const T inInnerRadius,
+                       const T inOuterRadius) {
   // Compute bulk free energy.
   const T orderParameterBulk =
       conga::computeOrderParameterBulkSWave(inTemperature);
   const T freeEnergyBulk =
       conga::computeFreeEnergyBulkSWave(inTemperature, orderParameterBulk);
 
+  // Yoshida function.
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      inTemperature, orderParameterBulk, inEnergyCutoff);
+
   // For convenience.
   const T r = inInnerRadius;
   const T R = inOuterRadius;
+  const T k = inPenetrationDepth / std::sqrt(yoshida);
 
   // Relevant areas.
   const T grainArea = static_cast<T>(M_PI) * (R * R - r * r);
   const T holeArea = static_cast<T>(M_PI) * r * r;
 
-  // Make factors "a" and "b".
-  const T R_k = R / inPenetrationDepth;
-  const T r_k = r / inPenetrationDepth;
+  // For more convenience.
+  const T R_k = R / k;
+  const T r_k = r / k;
+
+  // Relevant Bessel function.
   const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
   const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
+  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
   const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
   const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
-  const T invD = static_cast<T>(1) / (I0_R * K2_r - I2_r * K0_R);
+  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
+
+  // Make factors "a" and "b". The factor of pi in invD is due to our choice of
+  // units, i.e. A_0 = \Phi_0 / (pi \xi_0).
+  const T invD = static_cast<T>(M_PI) / (I0_R * K2_r - I2_r * K0_R);
   const T a = invD * (inNumFluxQuanta * K2_r / grainArea -
                       inPhaseWinding * K0_R / holeArea);
   const T b = invD * (inNumFluxQuanta * I2_r / grainArea -
                       inPhaseWinding * I0_R / holeArea);
 
-  // Common factor for the magnetic and kinetic terms.
-  const T factor = static_cast<T>(M_PI) *
-                   std::pow(inPenetrationDepth * static_cast<T>(M_PI), 2) /
-                   grainArea;
+  // Common factor for the magnetic and kinetic terms of the free energy, as
+  // well as the magnetic moment.
+  const T angularFactor = static_cast<T>(2.0 * M_PI);
+  const T factor = angularFactor * yoshida * std::pow(k, 2) /
+                   (static_cast<T>(2) * grainArea);
+
+  // The magnetic moment.
+  const T magneticMoment =
+      -factor * (R * R * (a * I2_R - b * K2_R) - r * r * (a * I2_r - b * K2_r));
 
   // Get weights and abscissas for Gaussian quadrature.
   const auto [weights, abscissas] =
@@ -143,10 +162,9 @@ T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
 
   // The integrand of the magnetic term in the free energy.
   auto fnMagneticIntegrand = [&](T x) {
-    const T tmp =
-        a * std::cyl_bessel_i(static_cast<T>(0), x / inPenetrationDepth) -
-        b * std::cyl_bessel_k(static_cast<T>(0), x / inPenetrationDepth) -
-        inNumFluxQuanta / grainArea;
+    const T tmp = a * std::cyl_bessel_i(static_cast<T>(0), x / k) -
+                  b * std::cyl_bessel_k(static_cast<T>(0), x / k) -
+                  static_cast<T>(M_PI) * inNumFluxQuanta / grainArea;
     return x * tmp * tmp;
   };
 
@@ -163,9 +181,8 @@ T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
 
   // The integrand of the kinetic term in the free energy.
   auto fnKineticIntegrand = [&](T x) {
-    const T tmp =
-        a * std::cyl_bessel_i(static_cast<T>(1), x / inPenetrationDepth) +
-        b * std::cyl_bessel_k(static_cast<T>(1), x / inPenetrationDepth);
+    const T tmp = a * std::cyl_bessel_i(static_cast<T>(1), x / k) +
+                  b * std::cyl_bessel_k(static_cast<T>(1), x / k);
     return x * tmp * tmp;
   };
 
@@ -175,20 +192,22 @@ T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
                  fnKineticIntegrand);
 
   // Multiply with the weights, sum and scale.
-  const T yoshida = conga::computeYoshidaBulkSWave(
-      inTemperature, orderParameterBulk, inEnergyCutoff);
   const T freeEnergyKinetic =
-      factor * yoshida *
-      std::transform_reduce(kineticIntegrand.begin(), kineticIntegrand.end(),
-                            weights.begin(), static_cast<T>(0));
+      factor * std::transform_reduce(kineticIntegrand.begin(),
+                                     kineticIntegrand.end(), weights.begin(),
+                                     static_cast<T>(0));
 
-  return freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
+  // Total free energy.
+  const T freeEnergy = freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
+
+  return {freeEnergy, magneticMoment};
 }
 
-/// \brief Test that the free energy of an s-wave superconductor in an
-/// annulus, with radial gauge, behaves as expected. The integrands of the terms
-/// in the free energy can be computed exactly (assuming constant
-/// order-parameter magnitude), but the integrals must be done numerically.
+/// \brief Test that the free energy, and magnetic moment, of an s-wave
+/// superconductor in an annulus, with radial gauge, behaves as expected. The
+/// integrands of the terms in the free energy can be computed exactly (assuming
+/// constant order-parameter magnitude), but the integrals must be done
+/// numerically. The magnetic moment can be computed exactly.
 ///
 /// \return Void.
 template <typename T> void testSWaveAnnulusRadial() {
@@ -206,7 +225,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   // needed. This needs to be investigated!
   const T grainWidth = static_cast<T>(2) * R;
   const T pointsPerCoherenceLength = static_cast<T>(8);
-  const int numMomenta = 16;
+  const int numMomenta = 32;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
@@ -269,18 +288,25 @@ template <typename T> void testSWaveAnnulusRadial() {
   context.initialize();
   conga::run_utils::runSimulation(&context);
 
-  // Save the result.
+  // The results.
   const T freeEnergy =
       context.getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+  const T latticeElementSize = context.getParameters()->getGridElementSize();
+  const T magneticMoment =
+      context.getComputeCurrent()->getResult()->moment(latticeElementSize) /
+      context.getGeometry()->area();
 
   // =================== ASSERT ==================== //
-  const T freeEnergyExpected =
-      computeFreeEnergyAnalytic(temperature, energyCutoff, penetrationDepth,
-                                numFluxQuanta, phaseWinding, r, R);
+  const auto [freeEnergyExpected, magneticMomentExpected] =
+      computeResultsAnalytic(temperature, energyCutoff, penetrationDepth,
+                             numFluxQuanta, phaseWinding, r, R);
 
   // Compare results.
   CHECK(freeEnergy ==
         doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
+  CHECK(
+      magneticMoment ==
+      doctest::Approx(magneticMomentExpected).epsilon(tolerance).scale(scale));
 }
 } // namespace helper
 
