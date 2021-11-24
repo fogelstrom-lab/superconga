@@ -40,11 +40,12 @@ namespace conga {
 template <typename T>
 class IntegrationIteratorOzaki : public IntegrationIterator<T> {
 public:
-  IntegrationIteratorOzaki();
-  ~IntegrationIteratorOzaki();
-
+  IntegrationIteratorOzaki(const int inNumEnergiesPerBlock = -1,
+                           const int inNumBurnInIterations = 0);
   IntegrationIteratorOzaki(Context<T> *const inOutContext,
-                           const int inNumEnergiesPerBlock = -1);
+                           const int inNumEnergiesPerBlock = -1,
+                           const int inNumBurnInIterations = 0);
+  ~IntegrationIteratorOzaki();
 
   int initialize() override;
 
@@ -66,16 +67,25 @@ public:
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
   void compute() override;
+
+private:
+  // The very first iteration we need to initialize the coherence functions at
+  // the boundary. This is the number of dry runs just updating the boundary.
+  const int m_numBurnInIterations;
 };
 
 template <typename T>
-IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki()
-    : IntegrationIterator<T>() {}
+IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki(
+    const int inNumEnergiesPerBlock, const int inNumBurnInIterations)
+    : IntegrationIterator<T>(inNumEnergiesPerBlock),
+      m_numBurnInIterations(inNumBurnInIterations) {}
 
 template <typename T>
 IntegrationIteratorOzaki<T>::IntegrationIteratorOzaki(
-    Context<T> *const inOutContext, int inNumEnergiesPerBlock)
-    : IntegrationIterator<T>(inOutContext, inNumEnergiesPerBlock) {
+    Context<T> *const inOutContext, int inNumEnergiesPerBlock,
+    const int inNumBurnInIterations)
+    : IntegrationIterator<T>(inOutContext, inNumEnergiesPerBlock),
+      m_numBurnInIterations(inNumBurnInIterations) {
 #ifndef NDEBUG
   std::cout << "IntegrationIteratorOzaki<T>()\n";
 #endif
@@ -260,7 +270,6 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
   FermiSurface<T> *const fermiSurface = context->getFermiSurface();
 
   // Do angle loop (integrate over momentum angles)
-  //
   for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
     // Angle (in radians) of system in local frame.
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
@@ -277,6 +286,32 @@ void IntegrationIteratorOzaki<T>::setBoundaryInitialCondition() {
          energyIterator->next()) {
       riccatiSolver->computeInitialCondition(*energyIterator, energies,
                                              rotatedOrderParameter, angleIdx);
+    }
+  }
+
+  // Do a number of burn-in iterations to set the boundary.
+  for (int burnInIdx = 0; burnInIdx < m_numBurnInIterations; ++burnInIdx) {
+    // Apply boundary condition(s).
+    riccatiSolver->computeBoundaryConditions();
+
+    // Do angle loop (=momentum integral, and sum over energies).
+    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+      // Create discrete geometry data for current angle.
+      // Angle (in radians) of system in local frame.
+      const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
+      geometryGroup->create(-systemAngle);
+
+      // Rotate order parameter field to current angle.
+      // A negative index is equivalent to a negative angle.
+      const GridGPU<T> rotatedOrderParameter =
+          *(orderParameter->getRotatedGrid(-angleIdx));
+
+      // Iterate over (possibly) several blocks of energies.
+      for (energyIterator->begin(); !energyIterator->isDone();
+           energyIterator->next()) {
+        riccatiSolver->computeCoherenceFunctions(
+            *energyIterator, energies, &rotatedOrderParameter, angleIdx);
+      }
     }
   }
 

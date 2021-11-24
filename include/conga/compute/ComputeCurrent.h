@@ -14,7 +14,6 @@
 
 #include "../defines.h"
 #include "../grid.h"
-#include "../integration/IntegrationIteratorOzaki.h"
 #include "../utils.h"
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
@@ -31,9 +30,6 @@ public:
   GridGPU<T> *getResult() override { return _current_real; }
 
   int initialize() override;
-
-  IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1) override;
 
   // This should be called once for every iteration, before any integration
   // takes place.
@@ -105,13 +101,6 @@ template <typename T> int ComputeCurrent<T>::initialize() {
   ComputeProperty<T>::initGreensAngle(N1);
 
   return 0;
-}
-
-template <typename T>
-IntegrationIterator<T> *
-ComputeCurrent<T>::createIntegrationIterator(int numEnergiesPerBlock) {
-  return new IntegrationIteratorOzaki<T>(ContextModule<T>::getContext(),
-                                         numEnergiesPerBlock);
 }
 
 template <typename T>

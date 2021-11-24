@@ -227,6 +227,7 @@ runner_checks = {
             "convergence_criterion": {"type": float, "low": 0.0},
             "energy_cutoff": {"type": float, "low": 0.0},
             "num_fermi_momenta": {"type": int, "low": 0},
+            "num_iterations_burnin": {"type": int, "low_include": 0},
             "num_iterations_max": {"type": int, "low": 0},
             "num_iterations_min": {"type": int, "low_include": 0},
             "points_per_coherence_length": {"type": float, "low": 0.0},

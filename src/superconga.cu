@@ -27,6 +27,7 @@
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/io/read_utils.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
@@ -178,6 +179,16 @@ int main(int argc, char *argv[]) {
   // create compund geometry. Scale and translate to internal coordinate system.
   conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
                                           xOffset, yOffset, grainFraction);
+
+  //***************************************************
+  // SET UP INTEGRATOR
+  //***************************************************
+  // A negative number means doing all of them at once.
+  const int numEnergiesPerBlock = -1;
+  const int numBurnInIterations =
+      simParams["accuracy"]["num_iterations_burnin"].asInt();
+  new conga::IntegrationIteratorOzaki<T>(context, numEnergiesPerBlock,
+                                         numBurnInIterations);
 
   //***************************************************
   // SET UP ORDER PARAMETER

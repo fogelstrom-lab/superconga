@@ -10,6 +10,7 @@
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/wrappers/doctest.h"
 
@@ -160,6 +161,9 @@ template <typename T> void testArea(const bool inIsDisc) {
                            grainFracton, numVerticesSquare, sideLength),
                        conga::Type::add);
   }
+
+  // Integrator.
+  new conga::IntegrationIteratorOzaki<T>(&context);
 
   // Initialize the geometry group, i.e. compute domain labels.
   context.initialize();

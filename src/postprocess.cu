@@ -30,6 +30,7 @@
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorKeldysh.h"
 #include "conga/io/csv_writers.h"
 #include "conga/io/read_utils.h"
 #include "conga/order_parameter/OrderParameter.h"
@@ -158,8 +159,6 @@ int main(int argc, char *argv[]) {
   const T maxEnergy =
       static_cast<T>(postProcessConfig["energy_max"].asDouble());
   const int numEnergies = postProcessConfig["num_energies"].asInt();
-  const int numEnergiesPerBlock =
-      postProcessConfig["num_energies_per_block"].asInt();
   const T energySmearing =
       static_cast<T>(postProcessConfig["energy_smearing"].asDouble());
   parameters->setEnergyRange(minEnergy, maxEnergy, numEnergies, energySmearing);
@@ -209,6 +208,13 @@ int main(int argc, char *argv[]) {
   // create compund geometry. Scale and translate to internal coordinate system.
   conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
                                           xOffset, yOffset, grainFraction);
+
+  //***************************************************
+  // SET UP INTEGRATOR
+  //***************************************************
+  const int numEnergiesPerBlock =
+      postProcessConfig["num_energies_per_block"].asInt();
+  new conga::IntegrationIteratorKeldysh<T>(&context, numEnergiesPerBlock);
 
   //***************************************************
   // SET UP ORDER PARAMETER
@@ -339,7 +345,7 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // INITIALIZE SIMULATION
   //***************************************************
-  context.initialize(numEnergiesPerBlock);
+  context.initialize();
 
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA

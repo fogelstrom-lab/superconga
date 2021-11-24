@@ -11,6 +11,7 @@
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterBulk.h"
@@ -86,6 +87,9 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     const T holeFraction = r / R;
     geometry->add(new conga::DiscGeometry<T>(grainFraction, holeFraction),
                   conga::Type::remove);
+
+    // Integrator.
+    new conga::IntegrationIteratorOzaki<T>(&context);
 
     // Create solver with solenoid gauge.
     conga::RiccatiSolver<T> *riccatiSolver =

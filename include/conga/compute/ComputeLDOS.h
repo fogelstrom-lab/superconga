@@ -13,7 +13,6 @@
 #define CONGA_COMPUTE_LDOS_H_
 
 #include "../grid.h"
-#include "../integration/IntegrationIteratorKeldysh.h"
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
 
@@ -29,9 +28,6 @@ public:
   GridGPU<T> *getResult() override { return m_ldosAll; }
   GridGPU<T> *getResultInterval() { return m_ldosInterval; }
   GridCPU<T> *getDOS() { return m_dos; }
-
-  IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1) override;
 
   int initialize() override;
 
@@ -125,13 +121,6 @@ template <typename T> int ComputeLDOS<T>::initialize() {
 
   ComputeProperty<T>::initGreensAngle(N1, numEnergiesInterval);
   return 0;
-}
-
-template <typename T>
-IntegrationIterator<T> *
-ComputeLDOS<T>::createIntegrationIterator(int numEnergiesPerBlock) {
-  return new IntegrationIteratorKeldysh<T>(ContextModule<T>::getContext(),
-                                           numEnergiesPerBlock);
 }
 
 template <typename T> void ComputeLDOS<T>::initializeIteration(int numFields) {

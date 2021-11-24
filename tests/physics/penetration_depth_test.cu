@@ -11,6 +11,7 @@
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
@@ -106,6 +107,8 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
+
+  new conga::IntegrationIteratorOzaki<T>(&context);
 
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(

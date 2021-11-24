@@ -14,7 +14,7 @@
 
 #include "../green/LocalGreens.h"
 #include "../grid.h"
-#include "../integration/IntegrationIteratorOzaki.h"
+#include "../order_parameter/OrderParameter.h"
 #include "../order_parameter/OrderParameterBulk.h"
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
@@ -43,8 +43,6 @@ public:
   }
 
   int initialize() override;
-  IntegrationIterator<T> *
-  createIntegrationIterator(const int inNumEnergiesPerBlock = -1) override;
 
   // This should be called once for every iteration, before any integration
   // takes place.
@@ -196,13 +194,6 @@ template <typename T> int ComputeFreeEnergy<T>::initialize() {
   C::initGreensAngle(N1);
 
   return 0;
-}
-
-template <typename T>
-IntegrationIterator<T> *ComputeFreeEnergy<T>::createIntegrationIterator(
-    const int inNumEnergiesPerBlock) {
-  return new IntegrationIteratorOzaki<T>(ContextModule<T>::getContext(),
-                                         inNumEnergiesPerBlock);
 }
 
 template <typename T>
