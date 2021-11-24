@@ -22,10 +22,10 @@
 namespace conga {
 template <typename T> class IntegrationIterator : public ContextModule<T> {
 public:
-  IntegrationIterator();
+  IntegrationIterator(const int inNumEnergiesPerBlock = -1);
+  IntegrationIterator(Context<T> *const inOutContext,
+                      const int inNumEnergiesPerBlock = -1);
   virtual ~IntegrationIterator();
-
-  IntegrationIterator(Context<T> *ctx, int numEnergiesPerBlock = -1);
 
   // Virtual functions
   //
@@ -90,16 +90,7 @@ public:
     return _numIter;
   }
 
-  // Debug
-  void setDebug(int angleIdx) { _debug_store_angle = angleIdx; }
-  GridGPU<T> *getDebugGrid() const { return _debug_store_grid; }
-  // void			computeDebug();
-
 private:
-  // Debug
-  int _debug_store_angle;
-  GridGPU<T> *_debug_store_grid;
-
   // Energy iterators
   GridGPU<T> *_energies;
   ParameterIterator<int> *_energy_iter;
@@ -122,16 +113,17 @@ private:
 };
 
 template <typename T>
-IntegrationIterator<T>::IntegrationIterator()
-    : _energies(0), _energy_iter(0), _numIter(0), _debug_store_grid(0),
-      _residues(0) {}
+IntegrationIterator<T>::IntegrationIterator(const int inNumEnergiesPerBlock)
+    : _energies(nullptr), _energy_iter(nullptr), _residues(nullptr),
+      _numEnergiesPerBlock(inNumEnergiesPerBlock), _boundaryIdxOffset(0),
+      _numAngles(0), _numIter(0) {}
 
 template <typename T>
-IntegrationIterator<T>::IntegrationIterator(Context<T> *ctx,
-                                            int numEnergiesPerBlock)
-    : ContextModule<T>(ctx), _energies(0), _energy_iter(0),
-      _numEnergiesPerBlock(numEnergiesPerBlock), _numIter(0),
-      _debug_store_grid(0), _debug_store_angle(-1), _residues(0) {
+IntegrationIterator<T>::IntegrationIterator(Context<T> *const inOutContext,
+                                            const int inNumEnergiesPerBlock)
+    : ContextModule<T>(inOutContext), _energies(nullptr), _energy_iter(nullptr),
+      _residues(nullptr), _numEnergiesPerBlock(inNumEnergiesPerBlock),
+      _boundaryIdxOffset(0), _numAngles(0), _numIter(0) {
 #ifndef NDEBUG
   std::cout
       << "IntegrationIterator<T>::IntegrationIterator( Context<T>* context )\n";
@@ -143,8 +135,6 @@ template <typename T> IntegrationIterator<T>::~IntegrationIterator() {
   std::cout << "~IntegrationIterator()\n";
 #endif
 
-  if (_debug_store_grid)
-    delete _debug_store_grid;
   if (_energies)
     delete _energies;
   if (_energy_iter)

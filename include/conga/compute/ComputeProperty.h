@@ -20,7 +20,6 @@
 #include "../geometry/GeometryGroup.h"
 #include "../green/GreensFunctionStatic.h"
 #include "../grid.h"
-#include "../integration/IntegrationIterator.h"
 
 namespace conga {
 template <typename> class IntegrationIterator;
@@ -54,9 +53,6 @@ public:
                                       OrderParameter<T> *delta);
 
   // Virtual functions
-  //
-  virtual IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1) = 0;
 
   // Should return pointer to the computed field (order parameter, current,
   // etc.)

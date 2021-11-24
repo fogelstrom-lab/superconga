@@ -28,6 +28,7 @@
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorKeldysh.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
@@ -113,6 +114,10 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
                   conga::Type::add);
   }
 
+  // Iterator.
+  new conga::IntegrationIteratorKeldysh<T>(context,
+                                           simParams::NUM_ENERGIES_PER_BLOCK);
+
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
@@ -141,7 +146,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   new conga::ComputeLDOS<T>(context);
 
   // Initialize everything.
-  context->initialize(simParams::NUM_ENERGIES_PER_BLOCK);
+  context->initialize();
 
   // =================== ACT ==================== //
   const bool verbose = true;

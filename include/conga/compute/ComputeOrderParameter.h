@@ -13,7 +13,6 @@
 #define CONGA_COMPUTE_ORDER_PARAMETER_H_
 
 #include "../grid.h"
-#include "../integration/IntegrationIteratorOzaki.h"
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
 
@@ -27,8 +26,6 @@ public:
   ComputeOrderParameter(Context<T> *ctx);
 
   int initialize() override;
-  IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1) override;
 
   OrderParameter<T> *getOrderParameter() { return _delta; }
   void setOrderParameter(const OrderParameter<T> *delta_in);
@@ -126,13 +123,6 @@ template <typename T> int ComputeOrderParameter<T>::initialize() {
   }
 
   return 0;
-}
-
-template <typename T>
-IntegrationIterator<T> *
-ComputeOrderParameter<T>::createIntegrationIterator(int numEnergiesPerBlock) {
-  return new IntegrationIteratorOzaki<T>(ContextModule<T>::getContext(),
-                                         numEnergiesPerBlock);
 }
 
 template <typename T>

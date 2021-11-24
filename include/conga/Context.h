@@ -94,7 +94,7 @@ public:
   void deleteComputeObjects();
 
   // Functions
-  int initialize(int numEnergiesPerBlock = -1);
+  int initialize();
   void compute();
 
   // Getters of non-compute objects.
@@ -270,18 +270,7 @@ template <typename T> void Context<T>::add(ComputeLDOS<T> *inComputeLDOS) {
   add(static_cast<ComputeProperty<T> *>(inComputeLDOS));
 }
 
-template <typename T> int Context<T>::initialize(int numEnergiesPerBlock) {
-  if (getNumComputeObjects() > 0) {
-#ifndef NDEBUG
-    std::cout << "Context::initialize() --> Creating IntegrationIterator\n";
-#endif
-    // Note, this sets m_integrationIterator member.
-    m_integrationIterator =
-        m_computeObjectList[0]->createIntegrationIterator(numEnergiesPerBlock);
-    ContextModule<T>::checkCudaError(
-        "Context<T>::initialize(): createIntegrationIterator");
-  }
-
+template <typename T> int Context<T>::initialize() {
   if (m_geometry) {
 #ifndef NDEBUG
     std::cout << "Context::initialize() --> Initializing Geometry\n";

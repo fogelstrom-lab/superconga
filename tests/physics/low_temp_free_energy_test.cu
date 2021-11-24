@@ -10,6 +10,7 @@
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
@@ -115,6 +116,9 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
         new conga::PolygonGeometry<T>(grainFraction, numVerticesSquare),
         conga::Type::add);
   }
+
+  // Integrator.
+  new conga::IntegrationIteratorOzaki<T>(context);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   conga::RiccatiSolver<T> *riccatiSolver =

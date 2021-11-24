@@ -320,7 +320,16 @@ def add_runner_arguments(parser) -> None:
         "--num-fermi-momenta",
         type=int,
         default=None,
-        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 100.",
+        help="Number of momenta in Fermi-surface average. Recommended minimum: 100.",
+    )
+
+    # Num iterations burn-in.
+    accuracy.add_argument(
+        "-b",
+        "--num-iterations-burnin",
+        type=int,
+        default=None,
+        help="The number of iterations to run just converging the boundary. A finite number (~10) is recommended when using '--continue' or '--load-path'.",
     )
 
     # Num iterations max.
@@ -435,13 +444,13 @@ def add_runner_arguments(parser) -> None:
         "--load-path",
         type=str,
         default=None,
-        help="Directory containing data. The simulation will resume from this data.",
+        help="Directory containing data. The simulation will resume from this data. A finite number (~10) of burn-in iterations is recommended.",
     )
     group_load.add_argument(
         "--continue",
         dest="do_continue",
         action="store_true",
-        help="Resume the simulation from the data in the '--save-path' directory.",
+        help="Resume the simulation from the data in the '--save-path' directory. A finite number (~10) of burn-in iterations is recommended.",
     )
 
     # Save data.
@@ -1079,6 +1088,7 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "convergence_criterion", args.convergence_criterion, group)
     set_value(sim_params, "energy_cutoff", args.energy_cutoff, group)
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta, group)
+    set_value(sim_params, "num_iterations_burnin", args.num_iterations_burnin, group)
     set_value(sim_params, "num_iterations_max", args.num_iterations_max, group)
     set_value(sim_params, "num_iterations_min", args.num_iterations_min, group)
     set_value(

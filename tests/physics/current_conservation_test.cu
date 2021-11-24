@@ -11,6 +11,7 @@
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
 #include "conga/grid.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
@@ -150,6 +151,9 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
         new conga::PolygonGeometry<T>(grainFraction, inNumVertices, sideLength),
         conga::Type::add);
   }
+
+  // Integrator.
+  new conga::IntegrationIteratorOzaki<T>(context);
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =

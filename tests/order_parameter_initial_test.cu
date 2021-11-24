@@ -8,6 +8,7 @@
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
+#include "conga/integration/IntegrationIteratorOzaki.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
@@ -137,6 +138,9 @@ void testIntialConstant(const T inTolerance, const int inNumValues = 2) {
         break;
       }
       }
+
+      // Integrator.
+      new conga::IntegrationIteratorOzaki<T>(context);
 
       // Choose a Riccati solver for a confined geometry, no magnetic fields
       conga::RiccatiSolver<T> *riccatiSolver =

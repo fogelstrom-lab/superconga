@@ -13,7 +13,6 @@
 #define CONGA_COMPUTE_SPECTRAL_CURRENT_H_
 
 #include "../grid.h"
-#include "../integration/IntegrationIteratorKeldysh.h"
 #include "ComputeProperty.h"
 
 #include <cmath>
@@ -29,8 +28,6 @@ public:
   ComputeSpectralCurrent(Context<T> *ctx);
 
   GridGPU<T> *getResult() override { return _lcurrent_all; }
-  IntegrationIterator<T> *
-  createIntegrationIterator(int numEnergiesPerBlock = -1) override;
 
   // Context initialize function
   int initialize() override;
