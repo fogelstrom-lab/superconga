@@ -23,6 +23,7 @@
 - Add `compile.sh` to let CMake call the build system and compiler.
 - Only build/compile Debug if running `setup.sh`/`compile.sh` with `--debug` flag.
 - Add new argument `num_iterations_burnin` controlling the number of iterations to run just converging the boundary as a pre-processing step.
+- Print total time to termina, and include the visualization time.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
