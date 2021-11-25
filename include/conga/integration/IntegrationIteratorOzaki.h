@@ -366,19 +366,10 @@ template <typename T> void IntegrationIteratorOzaki<T>::compute() {
     const T systemAngle = fermiSurface->getSystemAngle(angleIdx);
     geometryGroup->create(-systemAngle);
 
-    // If we are computing free energy with Luttinger-Ward functional, the
-    // order parameter is multiplied by a constant (which is
-    // orderParameterMultFactor). In all other cases the constant is 1.
-
-    // This is != 1 when computing free energy according to Sauls et al.
-    const T orderParameterFactor = riccatiSolver->getOrderParameterMultFactor();
-
     // Rotate order parameter field to current angle.
     // A negative index is equivalent to a negative angle.
-    // TODO(niclas): Slight optimization. Don't do the multiplication with
-    // orderParameterFactor if the factor is 1.
     const GridGPU<T> rotatedOrderParameter =
-        *(orderParameter->getRotatedGrid(-angleIdx)) * orderParameterFactor;
+        *(orderParameter->getRotatedGrid(-angleIdx));
 
     // Solve Riccati equations for current angle and compute propagators.
     for (int i = 0; i < numComputeObjects; ++i) {

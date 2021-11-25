@@ -83,10 +83,6 @@ public:
                             const GridGPU<T> *energies,
                             const GridGPU<T> *deltaRot, const int angleIdx) = 0;
 
-  // For Computation of Free energy (as in ComputeFreeEnergy2 class)
-  T getOrderParameterMultFactor() const { return _orderParameterMult; }
-  void setOrderParameterMultFactor(const T mult) { _orderParameterMult = mult; }
-
   // Helper functions
   void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
                            const int numEnergies);
@@ -116,11 +112,6 @@ private:
 
   // Precomputed field for energy shift
   GridGPU<T> *_eShift;
-
-  // A flag to indicate that delta should be multiplied with a constant,
-  // as required by the free energy computation by J. Sauls et al.
-  // For all other computations, this is not used.
-  T _orderParameterMult;
 };
 
 // This function could not be put into RiccatiSolver class, because of template
@@ -172,13 +163,11 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver()
-    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _eShift(0),
-      _orderParameterMult(1.0) {}
+    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _eShift(0) {}
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver(Context<T> *ctx)
-    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _eShift(0),
-      _orderParameterMult(1.0) {}
+    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _eShift(0) {}
 
 template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
 #ifndef NDEBUG

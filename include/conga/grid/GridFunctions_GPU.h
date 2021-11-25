@@ -973,9 +973,6 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int nx_new,
   // Change affected class member variables
   grid->_dimX = nx_new;
   grid->_dimY = ny_new;
-
-  grid->_allocatedMemTotal -= nx * ny * numFields * (1 + isComplex) * sizeof(T);
-  grid->_allocatedMemTotal += numElements * sizeof(T);
 }
 
 template <typename T>

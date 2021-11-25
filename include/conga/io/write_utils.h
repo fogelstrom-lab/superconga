@@ -24,9 +24,6 @@ namespace conga {
 namespace io {
 inline std::string getFileExtension(Type::fileFormat format) {
   switch (format) {
-  case Type::binary: {
-    return ".grd";
-  }
   case Type::csv: {
     return ".csv";
   }

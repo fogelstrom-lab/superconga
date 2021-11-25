@@ -25,7 +25,7 @@
 namespace conga {
 template <typename T> class Parameters : public ContextModule<T> {
 public:
-  Parameters() : m_version(2) {}
+  Parameters() {}
   ~Parameters() {}
 
   Parameters(Context<T> *inOutContext);
@@ -70,8 +70,6 @@ public:
 
   T getPenetrationDepth() const { return m_penetrationDepth; }
 
-  int isValid() const { return m_isValid; }
-
   // Setters
   // TODO: (Patric) Change name from grid to grain when referring to the
   // superconducting grain.
@@ -113,17 +111,7 @@ public:
     m_penetrationDepth = inPenetrationDepth;
   }
 
-  void setValid() { m_isValid = 1; }
-  void setInvalid() { m_isValid = 0; }
-
-  // File I/O
-  int read(const std::string &inFileName);
-  int read(std::ifstream &inFile, const int inVersion);
-  int read(const std::string &inFileName, const int inVersion);
-  int write(const std::string &inFileName) const;
-
   // Helpers
-  int getVersion() const { return m_version; }
   void print() const;
 
 private:
@@ -178,10 +166,6 @@ private:
 
   // Numerical properties.
   T m_convergenceCriterion;
-
-  // Other
-  const int m_version;
-  int m_isValid;
 
   // A vector of the largest Ozaki pole with n+1 poles computed, where n is the
   // index of the vector.
@@ -278,7 +262,7 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
       m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
       m_smearingFactor(static_cast<T>(0.05)), m_numOzakiEnergies(1),
-      m_penetrationDepth(-static_cast<T>(1)), m_version(2), m_isValid(1) {
+      m_penetrationDepth(-static_cast<T>(1)) {
   ContextModule<T>::setContext(inOutContext);
   inOutContext->set(this);
   setLatticeResolution(m_grainWidth, m_pointsPerCoherenceLength);
@@ -309,13 +293,6 @@ Parameters<T>::operator Parameters<T2>() const {
 template <typename T>
 template <typename T2>
 Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
-#ifndef NDEBUG
-  if (m_version != inOther.getVersion()) {
-    std::cout << "Parameters<T>::operator=(): Warning, differing versions of "
-                 "Parameters class\n";
-  }
-#endif
-
   m_grainWidth = inOther.getGrainWidth();
   m_numAngles = inOther.getAngularResolution();
   m_energyCutoff = inOther.getEnergyCutoff();
@@ -326,7 +303,6 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
   m_energyMin = inOther.getEnergyMin();
   m_energyMax = inOther.getEnergyMax();
   m_smearingFactor = inOther.getSmearingFactor();
-  m_isValid = inOther.isValid();
 
   m_numOzakiEnergies = inOther.m_numOzakiEnergies;
   m_penetrationDepth = inOther.m_penetrationDepth;
@@ -446,55 +422,6 @@ void Parameters<T>::setLatticeResolution(const T inGrainWidth,
 
 template <typename T> T Parameters<T>::getAngleIncrement() const {
   return static_cast<T>(2.0 * M_PI) / static_cast<T>(m_numAngles);
-}
-
-template <typename T> int Parameters<T>::read(const std::string &inFileName) {
-  std::ifstream file(inFileName.c_str(), std::ios::in | std::ios::binary);
-  const int result = read(file, m_version);
-  file.close();
-  return result;
-}
-
-template <typename T>
-int Parameters<T>::read(const std::string &inFileName, const int inVersion) {
-  if (inVersion == m_version)
-    return read(inFileName);
-  else {
-    std::ifstream file(inFileName.c_str(), std::ios::in | std::ios::binary);
-    const int result = read(file, inVersion);
-    file.close();
-    return result;
-  }
-}
-
-template <typename T>
-int Parameters<T>::read(std::ifstream &inFile, const int inVersion) {
-  if (inFile.is_open() && (inVersion == m_version)) {
-    const int numBytes = sizeof(*this);
-    inFile.read((char *)this, numBytes);
-    return 0;
-
-  } else {
-    std::cout << "Could not load file, version: " << inVersion << "\n";
-    return 1;
-  }
-}
-
-template <typename T>
-int Parameters<T>::write(const std::string &inFileName) const {
-  const int numBytes = sizeof(*this);
-
-  std::ofstream file(inFileName.c_str(),
-                     std::ios::out | std::ios::binary | std::ios::trunc);
-
-  if (file.is_open()) {
-    file.write((char *)(this), numBytes);
-    file.close();
-    return 0;
-  } else {
-    std::cout << "Could not save file: " << inFileName << std::endl;
-    return 1;
-  }
 }
 
 template <typename T>

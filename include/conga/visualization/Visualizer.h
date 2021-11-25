@@ -799,7 +799,7 @@ void Visualizer<T>::printRangeToImage(int img_row, int img_col, T minVal,
 
 template <typename T>
 void Visualizer<T>::printParametersToImage(const Parameters<T> *param) {
-  if (param != 0 && param->isValid()) {
+  if (param != 0) {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
