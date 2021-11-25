@@ -689,7 +689,16 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
 
   // Get the computation time for this iteration.
   const T computeTime = inContext->getComputeTime();
-  const T iterationsPerSecond = static_cast<T>(1) / computeTime;
+  const T speed = static_cast<T>(numIterations) / computeTime;
+
+  // Convert to hours or minutes if more appropriate.
+  const T secondsPerHour = static_cast<T>(3600);
+  const T secondsPerMinute = static_cast<T>(60);
+  const int hours = static_cast<int>(computeTime / static_cast<T>(3600));
+  const int minutes = static_cast<int>(computeTime / secondsPerMinute) -
+                      hours * static_cast<T>(60);
+  const int seconds =
+      static_cast<int>(computeTime) - hours * 3600 - minutes * 60;
 
   // Get the free-energy computation object.
   const ComputeFreeEnergy<T> *const computeFreeEnergy =
@@ -700,14 +709,16 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
     const T freeEnergy = computeFreeEnergy->getFreeEnergyPerUnitArea();
 
     // Print values.
-    std::printf("Iteration = %d | Max Residual = %e | Free Energy = %e | "
-                "Iterations / Second = %f\n",
-                numIterations, maxResidual, freeEnergy, iterationsPerSecond);
+    std::printf(
+        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Speed: %0.2f [Hz] | Max "
+        "Residual: %e | Free Energy: %e\n",
+        numIterations, hours, minutes, seconds, speed, maxResidual, freeEnergy);
   } else {
     // Print values.
     std::printf(
-        "Iteration = %d | Max Residual = %e | Iterations / Second = %f\n",
-        numIterations, maxResidual, iterationsPerSecond);
+        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Speed: %0.2f [Hz] | Max "
+        "Residual: %e\n",
+        numIterations, hours, minutes, seconds, speed, maxResidual);
   }
 }
 

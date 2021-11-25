@@ -131,7 +131,11 @@ public:
 
   T getResidual() const;
 
-  T getComputeTime() const { return m_computeTime; }
+  /// \brief Get the time, in seconds, since the simlation started.
+  ///
+  /// \return The elapsed time.
+  T getComputeTime() const;
+
   int getNumIterations() const { return m_numIterations; }
   int getNumComputeObjects() const { return m_computeObjectList.size(); }
 
@@ -161,7 +165,9 @@ private:
 
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
-  T m_computeTime;
+  // For knowing when the simulation started.
+  std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
+
   int m_numIterations;
 
   // Helper pointers
@@ -180,7 +186,8 @@ Context<T>::Context()
       m_inducedVectorPotential(nullptr), m_computeCurrent(nullptr),
       m_ComputeSpectralCurrent(nullptr), m_computeFreeEnergy(nullptr),
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
-      m_computeVectorPotential(nullptr), m_computeTime(static_cast<T>(0.0)),
+      m_computeVectorPotential(nullptr),
+      m_startTime(std::chrono::high_resolution_clock::now()),
       m_numIterations(0), m_accelerator(std::make_unique<Accelerator<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
@@ -378,7 +385,9 @@ template <typename T> int Context<T>::initialize() {
 
 template <typename T> void Context<T>::compute() {
   // Start timer.
-  const auto startTime = std::chrono::high_resolution_clock::now();
+  if (m_numIterations == 0) {
+    m_startTime = std::chrono::high_resolution_clock::now();
+  }
 
   // Compute e.g. the order parameter.
   m_integrationIterator->compute();
@@ -426,19 +435,21 @@ template <typename T> void Context<T>::compute() {
     m_accelerator->update(*m_orderParameter, *m_inducedVectorPotential);
   }
 
+  // Increase iteration counter.
+  m_numIterations++;
+}
+
+template <typename T> T Context<T>::getComputeTime() const {
   // Stop timer.
   const auto stopTime = std::chrono::high_resolution_clock::now();
 
   // Count the number of microseconds.
   const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-                            stopTime - startTime)
+                            stopTime - m_startTime)
                             .count();
 
   // Convert to seconds.
-  m_computeTime = static_cast<T>(duration) * static_cast<T>(1e-6);
-
-  // Increase iteration counter.
-  m_numIterations++;
+  return static_cast<T>(duration) * static_cast<T>(1e-6);
 }
 
 template <typename T> T Context<T>::getResidual() const {
