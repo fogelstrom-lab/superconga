@@ -59,9 +59,6 @@ public:
 
   GridCPU<T> *getSpectralCurrent() const { return _current; }
 
-  int getMultFermiFunction() const { return _multFermiFunction; }
-  void setMultFermiFunction(const int mult) { _multFermiFunction = mult; }
-
 private:
   // Computed local spectral current will be stored here at end of
   // IntegrationIterator::compute() function.
@@ -76,20 +73,17 @@ private:
 
   // Temporary grid.
   GridGPU<T> *_tmp;
-
-  // Multiply with fermi function
-  int _multFermiFunction;
 };
 
 template <typename T>
 ComputeSpectralCurrent<T>::ComputeSpectralCurrent()
     : ComputeProperty<T>(), _lcurrent_x(0), _lcurrent_y(0), _lcurrent_all(0),
-      _current(0), _tmp(0), _multFermiFunction(0) {}
+      _current(0), _tmp(0) {}
 
 template <typename T>
 ComputeSpectralCurrent<T>::ComputeSpectralCurrent(Context<T> *ctx)
     : ComputeProperty<T>(ctx), _lcurrent_x(0), _lcurrent_y(0), _lcurrent_all(0),
-      _current(0), _tmp(0), _multFermiFunction(0) {
+      _current(0), _tmp(0) {
   ctx->add(this);
 }
 
@@ -207,22 +201,6 @@ void ComputeSpectralCurrent<T>::computePropertyFromGreens() {
     int energyIdx_offset = iter->getCurrentValue();
 
     GridGPU<T> *energies = C::getIntegrationIterator()->getEnergies();
-
-    // Add fermifunction
-    if (_multFermiFunction) {
-      dim3 bpg, tpb;
-      _lcurrent_x->getKernelDimensionsFields(bpg, tpb);
-
-      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
-          _lcurrent_x->getDataPointer(0, Type::real),
-          energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
-          numEnergiesCurrentBlock, _lcurrent_x->dimX());
-
-      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
-          _lcurrent_y->getDataPointer(0, Type::real),
-          energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
-          numEnergiesCurrentBlock, _lcurrent_y->dimX());
-    }
 
     // TODO(niclas): Is this correct for non-circular FS???
     *_lcurrent_x *= -1.0 / (2.0 * M_PI * (T)numAngles);

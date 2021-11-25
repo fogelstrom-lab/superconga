@@ -366,20 +366,6 @@ template <typename T> int Context<T>::initialize() {
 
   m_numIterations = 0;
 
-#ifndef NDEBUG
-  std::cout << "\n\nContext::initialize() --> Initialization complete!\n";
-
-  GridCPU<float>::printAllocatedMemTotal();
-  GridCPU<double>::printAllocatedMemTotal();
-  GridCPU<int>::printAllocatedMemTotal();
-  GridCPU<char>::printAllocatedMemTotal();
-
-  GridGPU<float>::printAllocatedMemTotal();
-  GridGPU<double>::printAllocatedMemTotal();
-  GridGPU<int>::printAllocatedMemTotal();
-  GridGPU<char>::printAllocatedMemTotal();
-#endif
-
   return 0;
 }
 

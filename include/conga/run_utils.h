@@ -530,9 +530,7 @@ void saveGridData(const Context<T> *const inContext,
 
   // Try to save to file. Exit program if fail.
   bool success = false;
-  if (inGridDataSaveFormat == Type::binary) {
-    success = orderParameterSave.write(orderParameterFile, parameters) == 0;
-  } else {
+  if (inGridDataSaveFormat == Type::csv) {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
@@ -541,6 +539,7 @@ void saveGridData(const Context<T> *const inContext,
                                   inContext->getOrderParameter()->getTypes(),
                                   orderParameterFile);
   }
+
   if (!success) {
     std::cout << "-- ERROR! Could not write: " << orderParameterFile
               << std::endl;
@@ -564,9 +563,7 @@ void saveGridData(const Context<T> *const inContext,
 
   // Try to save to file. Exit program if fail.
   success = false;
-  if (inGridDataSaveFormat == Type::binary) {
-    success = currentSave.write(currentDensityFile, parameters) == 0;
-  } else {
+  if (inGridDataSaveFormat == Type::csv) {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
@@ -574,6 +571,7 @@ void saveGridData(const Context<T> *const inContext,
         bool(textDataSaver) &&
         textDataSaver->save(currentSave, {"j_x", "j_y"}, currentDensityFile);
   }
+
   if (!success) {
     std::cout << "-- ERROR! Could not write: " << currentDensityFile
               << std::endl;
@@ -594,9 +592,7 @@ void saveGridData(const Context<T> *const inContext,
 
   // Try to save to file. Exit program if fail.
   success = false;
-  if (inGridDataSaveFormat == Type::binary) {
-    success = vectorPotentialSave.write(vectorPotentialFile, parameters) == 0;
-  } else {
+  if (inGridDataSaveFormat == Type::csv) {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 
@@ -604,6 +600,7 @@ void saveGridData(const Context<T> *const inContext,
               textDataSaver->save(vectorPotentialSave, {"a_x", "a_y"},
                                   vectorPotentialFile);
   }
+
   if (!success) {
     std::cout << "-- ERROR! Could not write: " << vectorPotentialFile
               << std::endl;
@@ -625,9 +622,7 @@ void saveGridData(const Context<T> *const inContext,
 
   // Try to save to file. Exit program if fail.
   success = false;
-  if (inGridDataSaveFormat == Type::binary) {
-    success = magneticFluxDensitySave.write(fluxDensityFile, parameters) == 0;
-  } else {
+  if (inGridDataSaveFormat == Type::csv) {
     std::unique_ptr<io::ITextGridDataSaveStrategy<T>> textDataSaver =
         io::getTextGridDataSaver<T>(inGridDataSaveFormat);
 

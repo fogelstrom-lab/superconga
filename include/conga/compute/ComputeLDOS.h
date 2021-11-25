@@ -53,10 +53,6 @@ public:
   // Compute physical property from greens function.
   void computePropertyFromGreens() override;
 
-  // Set whether to multiply result with Fermi function or not.
-  bool getMultFermiFunction() const { return m_multFermiFunction; }
-  void setMultFermiFunction(const bool mult) { m_multFermiFunction = mult; }
-
 private:
   // Computed LDOS will be stored here at end of IntegrationIterator::compute()
   // function.
@@ -67,19 +63,15 @@ private:
 
   // Integrated DOS for system, for each energy level.
   GridCPU<T> *m_dos;
-
-  bool m_multFermiFunction;
 };
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS()
-    : ComputeProperty<T>(), m_ldosInterval(0), m_ldosAll(0), m_dos(0),
-      m_multFermiFunction(false) {}
+    : ComputeProperty<T>(), m_ldosInterval(0), m_ldosAll(0), m_dos(0) {}
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), m_ldosInterval(0), m_ldosAll(0), m_dos(0),
-      m_multFermiFunction(false) {
+    : ComputeProperty<T>(ctx), m_ldosInterval(0), m_ldosAll(0), m_dos(0) {
   ctx->add(this);
 }
 
@@ -184,17 +176,6 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
 
     // Compute LDOS
     *m_ldosInterval *= -1.0;
-
-    // Add fermifunction
-    if (m_multFermiFunction) {
-      dim3 bpg, tpb;
-      m_ldosInterval->getKernelDimensionsFields(bpg, tpb);
-
-      compute_property_internal::addFermiFunction_kernel<<<bpg, tpb>>>(
-          m_ldosInterval->getDataPointer(0, Type::real),
-          energies->getDataPointer(0, Type::real) + energyIdx_offset, T_Tc,
-          numEnergiesCurrentBlock, m_ldosInterval->dimX());
-    }
 
     C::getGeometry()->zeroValuesOutsideDomainRef(m_ldosInterval);
 

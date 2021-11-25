@@ -49,6 +49,7 @@
 - Cleanup Green function computation (Doxygen comments, remove unnecessary code, etc).
 - Reduce grid tests spatial dimensions.
 - Add test of magnic moment in an s-wave annulus using radial gauge.
+- Remove more unused/broken code, e.g. read/write binary files.
 
 ---
 
