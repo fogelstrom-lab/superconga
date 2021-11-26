@@ -6,6 +6,7 @@
 - **MAJOR** Set energy cutoff instead of the number of energies.
 - **MAJOR** Change units so that the energy scale is `2*pi*kB*Tc`, `xi_0 = hbar*vF/(2*pi*kB*Tc)`, `A_0 = Phi_0/(pi*xi_0)`, `B_0 = Phi_0/(pi*xi^2_0)`, and `j_d = 2*pi*kB*Tc*|e|*v_F*N_F` both internally and externally.
 - **MAJOR** Group related parameters in the `config.json` file, and in `--help` message.
+- **MAJOR** Use ArrayFire-Forge for visualization, support building without visualization, and without tests.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.
@@ -23,7 +24,7 @@
 - Add `compile.sh` to let CMake call the build system and compiler.
 - Only build/compile Debug if running `setup.sh`/`compile.sh` with `--debug` flag.
 - Add new argument `num_iterations_burnin` controlling the number of iterations to run just converging the boundary as a pre-processing step.
-- Print total time to termina, and include the visualization time.
+- Print total time to terminal, and include the visualization time.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

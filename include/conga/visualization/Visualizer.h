@@ -1,873 +1,355 @@
-//===------------- Visualizer.h - OpenGL live visualization. -----------===//
-//
-// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
-// See LICENSE.txt for license information.
-//
-//===----------------------------------------------------------------------===//
-///
-/// \file
-/// Implementation of OpenGL live visualization.
-///
-//===----------------------------------------------------------------------===//
-#ifndef CONGA_VISUALIZER_H_
-#define CONGA_VISUALIZER_H_
+#ifndef VISUALIZER_H_
+#define VISUALIZER_H_
 
-#ifdef __linux__
-#include <GL/freeglut.h>
-#else
-#include <GLUT/glut.h>
-#endif
-
-#include "../Parameters.h"
-#include "../defines.h"
+#include "../Type.h"
 #include "../grid.h"
-#include "../utils.h"
-#include "Colormap.h"
-#include "IncludeGL.h"
+#include "colormaps.h"
 
-#ifdef __CUDACC__
-#include "../geometry/GeometryGroup.h"
-#endif
+#include <cuda.h>
+#include <thrust/device_vector.h>
 
-#include <cmath>
+#include <forge.h>
+#define USE_FORGE_CUDA_COPY_HELPERS
+#include <fg/compute_copy.h>
+
+#include <iomanip>
+#include <limits>
+#include <sstream>
+#include <string>
 
 namespace conga {
+/// \brief Colormap enum.
+enum class Colormap { HOT, RWB, TWILIGHT };
+
 template <typename T> class Visualizer {
-public:
-  Visualizer();
-  ~Visualizer();
-
-  template <typename GRID>
-  Visualizer(const GRID *grid, const int numImageX = 1,
-             const int numImageY = 1);
-  Visualizer(const int Nx, const int Ny, const int numImageX = 1,
-             const int numImageY = 1);
-
-  void setZoom(int zoom);
-  void setDisplayMult(const float displayMult) { _displayMult = displayMult; }
-  void setPrintParameters(Parameters<T> *param) { _param = param; }
-
-  // Initialize pixel buffer. num_img = 3 means allocate memory for 3 images -
-  // i.e. one each for real, imag, and abs parts.
-  void allocMemImageGrid(const int num_image_X, const int num_image_Y);
-
-  template <typename GRID>
-  void drawField(const GRID &grid, int field, int image_idx_x, int image_idx_y,
-                 Type::type representation, const bool inIsPositive);
-
-  template <typename GRID>
-  void plotImage(const GRID &grid, const int inColumnIdx,
-                 const bool erase = true);
-
-  void label(std::string info, int img_x, int img_y);
-
-  void plotGraph(GridCPU<T> *xdata, GridCPU<T> *ydata, float r, float g,
-                 float b, int image_idx_x, int image_idx_y, float y_mult = 1.0);
-  void plotVerticalMarker(GridCPU<T> *xdata, T x_coord, float r, float g,
-                          float b, int image_idx_x, int image_idx_y);
-
-  void eraseValuesOutsideDomain(const int image_idx_x,
-                                const int image_idx_y = 0);
-
-  // Drawing calls
-  void drawPixels();
-  void drawInfo();
-  void draw();
-  void clearImage(int img_x = -1, int img_y = -1);
-
-  // Getters
-  int getNumImagesX() const { return _num_image_X; }
-  int getNumImagesY() const { return _num_image_Y; }
-
-  int getBorderX() const { return _border_x; }
-  int getBorderY() const { return _border_y; }
-  int getBorderTop() const { return _border_top_y; }
-
-  // Resolution
-  int getNumPixelsImageX() const { return _Nx_img; }
-  int getNumPixelsImageY() const { return _Ny_img; }
-
-  int getNumPixelsImagesX() const {
-    return (_Nx_img * _displayZoom + 2 * _border_x) * _num_image_X;
-  }
-  int getNumPixelsImagesY() const {
-    return (_Ny_img * _displayZoom + 2 * _border_y) * _num_image_Y;
-  }
-
-  int getNumPixelsWindowX() const {
-    return (_Nx_img * _displayZoom + 2 * _border_x) * _num_image_X;
-  }
-  int getNumPixelsWindowY() const {
-    return (_Ny_img * _displayZoom + 2 * _border_y) * _num_image_Y +
-           _border_top_y;
-  }
-
-  // Image interaction
-  void getImageCoordinatesFromWindow(int x, int y, int &img_x, int &img_y,
-                                     int &grid_x, int &grid_y);
-
-  // Helpers
-  int getIndexToRow(const int row, const int image = 0) const;
-  int getImageIndexOffset(int image_idx_x, int image_idx_y) const;
-  int getRowIndexOffset() const;
-
-  void printRange(int img_row, int img_col, T minVal, T maxVal);
-  void printRangeToImage(int img_row, int img_col, T minVal, T maxVal);
-  void printParametersToImage(const Parameters<T> *param);
-  void printParametersToImage();
-
-#ifdef __CUDACC__
-  void setGeometry(GeometryGroup<T> *geom);
-#endif
-
 private:
-  void constructor();
+  // The window.
+  forge::Window m_window;
 
-  // Size of inpute grid
-  int _Nx_grid;
-  int _Ny_grid;
+  // The OpenGL handle.
+  GfxHandle *m_handle;
 
-  // Pixels per subimage
-  int _Nx_img;
-  int _Ny_img;
+  // The window title.
+  const std::string m_title;
 
-  // Entire displayed image
-  int _Nx_window;
-  int _Ny_window;
+  // The number of subplot columns and rows.
+  const int m_cols;
+  const int m_rows;
 
-  // Border pixel size
-  int _border_top_y;
-  int _border_x;
-  int _border_y;
+  // The domain labels.
+  const GridGPU<char> m_domain;
 
-  // Subimages that make up whole image
-  int _num_image;
-  int _num_image_X;
-  int _num_image_Y;
+  // The precision of printed floating-point numbers.
+  const int m_precision;
 
-  int _numPixelsAllocated;
-  float *_image;
+  /// \brief Draw raw (color) data to a subplot.
+  ///
+  /// \param inTitle The subplot title.
+  /// \param inCol The column index to plot it.
+  /// \param inRow The row index to plot it.
+  /// \param inData The raw pixel data.
+  /// \param inWidth The width of the data in pixels.
+  /// \param inHeight The height of the data in pixels.
+  ///
+  /// \return Void.
+  void draw(const std::string &inTitle, const int inCol, const int inRow,
+            const float *const inData, const int inWidth, const int inHeight);
 
-  int _currentDrawnField;
+public:
+  /// \brief Constructor of the visualizer class.
+  ///
+  /// \param inTitle The window title.
+  /// \param inColumns The number of subplot columns.
+  /// \param inRows The number of subplot rows.
+  /// \param inDomain The domain labels.
+  /// \param inPrecision The precision of printed floating-point numbers.
+  Visualizer(const std::string inTitle, const int inColumns, const int inRows,
+             const GridGPU<char> &inDomain, const int inPrecision = 2);
 
-  int _displayZoom;
-  float _displayMult;
+  /// \brief Destructor of the visualizer class.
+  ~Visualizer() { releaseGLBuffer(m_handle); };
 
-  // Print parameters and range
-  Parameters<T> *_param;
-  int _valImgUsed[64];
-  float _minValImg[64];
-  float _maxValImg[64];
+  /// \brief Draw a grid to a subplot column. If complex the magnitude and the
+  /// phase will be plotted along the column. If real and 2D the magnitude and
+  /// xy-components will be plotted. If real and 1D the grid itself will be
+  /// plotted.
+  ///
+  /// \param inTitle The title of the subplots (the range will be appended).
+  /// \param inCol The column index to plot it.
+  /// \param inGrid The grid to plot.
+  /// \param inErase Whether to erase the values outside of the domain.
+  ///
+  /// \return Void.
+  void draw(const std::string &inTitle, const int inCol,
+            const GridGPU<T> &inGrid, const bool inErase);
 
-  std::string _textImg[64];
+  /// \brief Draw a grid to a subplot.
+  ///
+  /// \param inTitle The title of the subplot (the range will be appended).
+  /// \param inCol The column index to plot it.
+  /// \param inRow The row index to plot it.
+  /// \param inGrid The grid to plot.
+  /// \param inField The field of the grid to plot.
+  /// \param inColormap Which colormap to use.
+  /// \param inErase Whether to erase the values outside of the domain.
+  ///
+  /// \return Void.
+  void draw(const std::string &inTitle, const int inCol, const int inRow,
+            const GridGPU<T> &inGrid, const int inField,
+            const Colormap inColormap, const bool inErase);
 
-  // Other
-  Colormap m_colormap;
+  /// \brief Set additional information that will be plotted in the window
+  /// title.
+  ///
+  /// \param inRunning Is the simulation still running?
+  ///
+  /// \return Void.
+  void setInfo(const bool inRunning);
 
-#ifdef __CUDACC__
-  GeometryGroup<T> *_geom;
-  GridCPU<char> *_geom_mask;
-#endif
+  /// \brief Swap buffers of the window, i.e. update the graphics.
+  ///
+  /// \return Void.
+  void swapBuffers() { m_window.swapBuffers(); };
+
+  /// \brief Check if the window is closed.
+  ///
+  /// \return True/false if the window is closed/open.
+  bool close() { return m_window.close(); }
 };
 
-template <typename T>
-Visualizer<T>::Visualizer()
-    : _image(0), _displayZoom(1), _num_image(0), _border_x(0), _border_y(0),
-      _border_top_y(0), _currentDrawnField(-1), _displayMult(1.0) {
-  for (int i = 0; i < 64; ++i) {
-    _valImgUsed[i] = 0;
-    _textImg[i] = "";
-  }
+namespace internal {
+/// \brief CUDA kernel for converting a grayscale image to color.
+///
+/// \param inDimX The width of the image.
+/// \param inDimY The height of the image.
+/// \param inScale Scaling factor to bring the image to [-1,+1] or [0,1].
+/// \param inErase Whether to erase values outside of the domain.
+/// \param inSrc The grayscale image pixels.
+/// \param inDomain The domain labels.
+/// \param outDst The resulting color image.
+///
+/// \return Void.
+template <typename T, typename Colormap>
+__global__ void convertToColor(const int inDimX, const int inDimY,
+                               const T inScale, const bool inErase,
+                               const T *const inSrc, const char *const inDomain,
+                               float *const outDst) {
+  // Indices of spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-#ifdef __CUDACC__
-  _geom = 0;
-  _geom_mask = 0;
-#endif
-}
+  if (x < inDimX && y < inDimY) {
+    // Source index.
+    const int idxSrc = y * inDimX + x;
 
-template <typename T> Visualizer<T>::~Visualizer() {
-  if (_image)
-    delete[] _image;
-#ifdef __CUDACC__
-  if (_geom_mask)
-    delete _geom_mask;
-#endif
-}
+    // Scale value.
+    const float val = static_cast<float>(inSrc[idxSrc] * inScale);
 
-template <typename T>
-template <typename GRID>
-Visualizer<T>::Visualizer(const GRID *grid, const int numImageX,
-                          const int numImageY)
-    : _image(0), _numPixelsAllocated(0), _param(0), _Nx_grid(grid->dimX()),
-      _Ny_grid(grid->dimY()), _num_image_X(numImageX), _num_image_Y(numImageY),
-      _num_image(numImageX * numImageY), _border_top_y(32), _border_x(16),
-      _border_y(16), _displayZoom(1), _displayMult(1.0),
-      _currentDrawnField(-1) {
-  constructor();
-}
+    // The destination index. Note that the y-axis is flipped. This is because
+    // Forge uses standard image coordinates with the y-axis being positive
+    // downward.
+    const int idxDst = 3 * ((inDimY - 1 - y) * inDimX + x);
 
-template <typename T>
-Visualizer<T>::Visualizer(const int Nx, const int Ny, const int numImageX,
-                          const int numImageY)
-    : _image(0), _numPixelsAllocated(0), _param(0), _Nx_grid(Nx), _Ny_grid(Ny),
-      _num_image_X(numImageX), _num_image_Y(numImageY),
-      _num_image(numImageX * numImageY), _border_top_y(32), _border_x(16),
-      _border_y(16), _displayZoom(1), _displayMult(1.0),
-      _currentDrawnField(-1) {
-  constructor();
-}
+    // Set colors.
+    float red;
+    float green;
+    float blue;
+    Colormap::compute(val, red, green, blue);
 
-template <typename T> void Visualizer<T>::constructor() {
-  allocMemImageGrid(_num_image_X, _num_image_Y);
+    // Erase values outside of the domain, i.e. set them to gray.
+    const bool outside = inDomain[idxSrc] == 0;
+    const bool erase = outside && inErase;
+    const float outsideVal = 0.2f;
+    red = erase ? outsideVal : red;
+    green = erase ? outsideVal : green;
+    blue = erase ? outsideVal : blue;
 
-  for (int i = 0; i < 64; ++i) {
-    _valImgUsed[i] = 0;
-    _textImg[i] = "";
-  }
+    // Color the border black.
+    const bool border =
+        (x == 0) || (x == inDimX - 1) || (y == 0) || (y == inDimY - 1);
+    const float borderVal = 0.0f;
+    red = border ? borderVal : red;
+    green = border ? borderVal : green;
+    blue = border ? borderVal : blue;
 
-#ifdef __CUDACC__
-  _geom = 0;
-  _geom_mask = 0;
-#endif
-}
-
-template <typename T>
-void Visualizer<T>::allocMemImageGrid(const int num_image_X,
-                                      const int num_image_Y) {
-  int Nx = _Nx_grid;
-  int Ny = _Ny_grid;
-
-  if ((Nx % 4) != 0)
-    Nx += 4 - (Nx % 4); // glDrawPixels want sizes to be evenly divisible by 4
-
-  if ((Ny % 4) != 0)
-    Ny += 4 - (Ny % 4);
-
-  _Nx_img = Nx;
-  _Ny_img = Ny;
-
-  _num_image_X = num_image_X;
-  _num_image_Y = num_image_Y;
-  _num_image = num_image_X * num_image_Y;
-
-  _Nx_window = getNumPixelsWindowX();
-  _Ny_window = getNumPixelsWindowY();
-
-  int numPixels = _Nx_window * _Ny_window;
-
-  if (numPixels != _numPixelsAllocated) {
-    if (_image)
-      delete[] _image;
-
-    _image = new float[numPixels * 3];
-    _numPixelsAllocated = numPixels;
+    // Write.
+    outDst[idxDst] = red;
+    outDst[idxDst + 1] = green;
+    outDst[idxDst + 2] = blue;
   }
 }
+} // namespace internal
 
 template <typename T>
-void Visualizer<T>::getImageCoordinatesFromWindow(int x, int y, int &img_x,
-                                                  int &img_y, int &grid_x,
-                                                  int &grid_y) {
-  // ADD ZOOM!
+Visualizer<T>::Visualizer(const std::string inTitle, const int inColumns,
+                          const int inRows, const GridGPU<char> &inDomain,
+                          const int inPrecision)
+    : m_title(inTitle), m_window(1366, 768, inTitle.c_str()), m_handle(nullptr),
+      m_domain(inDomain), m_cols(inColumns), m_rows(inRows),
+      m_precision(inPrecision) {
+  assert(m_cols > 0);
+  assert(m_rows > 0);
 
-  int bx = getBorderX();
-  int by = getBorderY();
-  int bt = getBorderTop();
+  // This is the main window.
+  m_window.makeCurrent();
 
-  img_x = x / (2 * bx + _Nx_img);
+  // Set font.
+  forge::Font font;
+  font.loadSystemFont("Helvetica Narrow");
+  m_window.setFont(&font);
+}
 
-  if (img_x > _num_image_X - 1)
-    img_x = _num_image_X - 1;
+template <typename T> void Visualizer<T>::setInfo(const bool inRunning) {
+  // Set status string.
+  const std::string status =
+      inRunning ? std::string("Running...") : std::string("Done!");
 
-  grid_x = x - img_x * (2 * bx + _Nx_img) - bx;
+  // Set delimiter string.
+  // TODO(niclas): Make member.
+  const std::string delimiter = std::string(" | ");
 
-  if (grid_x < 0)
-    grid_x = 0;
-  else if (grid_x > _Nx_img - 1)
-    grid_x = _Nx_img - 1;
+  // Set total title.
+  const std::string title = m_title + delimiter + status;
 
-  y -= bt;                                   // Remove top border
-  y = (_Ny_img + 2 * by) * _num_image_Y - y; // Flip coordinate system in y
-
-  img_y = y / (2 * by + _Ny_img);
-
-  if (img_y > _num_image_Y - 1)
-    img_y = _num_image_Y - 1;
-
-  grid_y = y - img_y * (2 * by + _Ny_img) - by;
-
-  if (grid_y < 0)
-    grid_y = 0;
-  else if (grid_y > _Ny_img - 1)
-    grid_y = _Ny_img - 1;
+  // Update window title.
+  m_window.setTitle(title.c_str());
 }
 
 template <typename T>
-template <typename GRID>
-void Visualizer<T>::plotImage(const GRID &grid, const int inColumnIdx,
-                              const bool erase) {
-  if (grid.dimX() > _Nx_img || grid.dimY() > _Ny_img) {
-#ifndef NDEBUG
-    std::cout << "-- ERROR! Visualizer<T>::plotImage(): dimensions of input "
-                 "grid does not match allocated image.\n";
-    std::cout << "--> _Nx_img = " << _Nx_img << ", gridDimX = " << grid.dimX()
-              << ", _Ny_img = " << _Ny_img << ", gridDimY = " << grid.dimY()
-              << "\n";
-#endif
-    return;
-  }
+void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
+                         const GridGPU<T> &inGrid, const bool inErase) {
+  const bool isComplex = inGrid.isComplex();
+  if (isComplex) {
+    assert(inGrid.numFields() == 1);
 
-  // Get the number of fields.
-  const int numFields = grid.numFields();
+    // Draw magnitude.
+    const std::string titleMagnitude =
+        std::string("|") + inTitle + std::string("|");
+    draw(titleMagnitude, inCol, 0, inGrid.abs(), 0, Colormap::HOT, inErase);
 
-  // Early exit if there is nothing to do.
-  if (numFields == 0) {
-    return;
-  }
+    // Draw phase.
+    const std::string titlePhase =
+        std::string("arg(") + inTitle + std::string(")");
+    draw(titlePhase, inCol, 1, inGrid.complexPhase(), 0, Colormap::TWILIGHT,
+         inErase);
+  } else if (inGrid.numFields() == 2) {
+    // Draw magnitude.
+    const std::string titleMagnitude =
+        std::string("|") + inTitle + std::string("|");
+    draw(titleMagnitude, inCol, 0, inGrid.fieldMagnitude(), 0, Colormap::HOT,
+         inErase);
 
-  // Check if this is a complex field.
-  const bool isComplex = grid.isComplex();
+    // Draw x-component.
+    const std::string titleX = inTitle + std::string("_x");
+    draw(titleX, inCol, 1, inGrid, 0, Colormap::RWB, inErase);
 
-  // Check if valid index.
-  if (inColumnIdx < _num_image_X) {
-    if (isComplex) {
-      // Only one field for complex grids are supported.
-      const int field = 0;
-
-      // Set the row index.
-      int rowIdx = _num_image_Y - 1;
-
-      // Check if valid index.
-      if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
-        // Plot the magnitude of the grid.
-        const bool isPositive = true;
-        drawField(grid.abs(), field, inColumnIdx, rowIdx, Type::real,
-                  isPositive);
-
-        // Erase values outside of the grain.
-        if (erase) {
-          eraseValuesOutsideDomain(inColumnIdx, rowIdx);
-        }
-      }
-
-      // Decrease the row index, i.e. jump down one row.
-      rowIdx--;
-
-      // Check if valid index.
-      if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
-        // Plot the phase of the grid.
-        const bool isPositive = false;
-        drawField(grid.complexPhase(), field, inColumnIdx, rowIdx, Type::real,
-                  isPositive);
-
-        // Erase values outside of the grain.
-        if (erase) {
-          eraseValuesOutsideDomain(inColumnIdx, rowIdx);
-        }
-      }
-    } else {
-      // Set the row index.
-      int rowIdx = _num_image_Y - 1;
-
-      if (numFields == 1) {
-        // Check if valid index.
-        if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
-          // If there is only one (real valued) field, just plot it.
-          const int field = 0;
-          const bool isPositive = false;
-          drawField(grid, field, inColumnIdx, rowIdx, Type::real, isPositive);
-
-          // Erase values outside of the grain.
-          if (erase) {
-            eraseValuesOutsideDomain(inColumnIdx, rowIdx);
-          }
-        }
-      } else if (numFields > 1) {
-        // Check if valid index.
-        if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
-          // Plot the magnitude of the grid.
-          const int field = 0;
-          const bool isPositive = true;
-          drawField(grid.fieldMagnitude(), field, inColumnIdx, rowIdx,
-                    Type::real, isPositive);
-
-          // Erase values outside of the grain.
-          if (erase) {
-            eraseValuesOutsideDomain(inColumnIdx, rowIdx);
-          }
-        }
-
-        // Plot all fields, untouched.
-        const bool isPositive = false;
-        for (int field = 0; field < 2; ++field) {
-          // Decrease the row index, i.e. jump down one row.
-          rowIdx--;
-
-          // Check if valid index.
-          if ((0 <= rowIdx) && (rowIdx < _num_image_Y)) {
-            // Plot this field.
-            drawField(grid, field, inColumnIdx, rowIdx, Type::real, isPositive);
-
-            // Erase values outside of the grain.
-            if (erase) {
-              eraseValuesOutsideDomain(inColumnIdx, rowIdx);
-            }
-          }
-        }
-      }
-    }
+    // Draw y-component.
+    const std::string titleY = inTitle + std::string("_y");
+    draw(titleY, inCol, 2, inGrid, 1, Colormap::RWB, inErase);
   } else {
-#ifndef NDEBUG
-    std::cout
-        << "-- ERROR! Visualizer<T>::plotImage(): field index or subimage "
-           "index out of range.\n";
-#endif
+    assert(inGrid.numFields() == 1);
+    draw(inTitle, inCol, 0, inGrid, 0, Colormap::RWB, inErase);
   }
 }
 
 template <typename T>
-void Visualizer<T>::label(std::string info, int img_x, int img_y) {
-  int imgIdx = _num_image_X * img_y + img_x;
-  _textImg[imgIdx] = info;
+void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
+                         const int inRow, const GridGPU<T> &inGrid,
+                         const int inField, const Colormap inColormap,
+                         const bool inErase) {
+  const int width = inGrid.dimX();
+  const int height = inGrid.dimY();
+
+  assert(m_domain.dimX() == width);
+  assert(m_domain.dimY() == height);
+  assert(inGrid.representation() == Type::real);
+
+  // Compute min/max values.
+  T minVal;
+  T maxVal;
+  inGrid.minmax(minVal, maxVal, inField, Type::real);
+
+  // Scaling factor in order to bring the values into [-1,+1] or [0,+1].
+  const T lim = std::max(std::abs(maxVal), std::abs(minVal));
+  const T epsilon = std::numeric_limits<T>::epsilon();
+  const T scale = static_cast<T>(1) / std::max(lim, epsilon);
+
+  // Image pixels. Must be float.
+  const int numChannels = 3;
+  const int numPixels = width * height * numChannels;
+  thrust::device_vector<float> image(numPixels);
+  float *const ptr = thrust::raw_pointer_cast(image.data());
+
+  // Kernel parameters.
+  dim3 numBlocks;
+  dim3 numThreadsPerBlock;
+  inGrid.getKernelDimensions(numBlocks, numThreadsPerBlock);
+
+  switch (inColormap) {
+  case Colormap::HOT: {
+    // Convert to hot and flip y-axis.
+    internal::convertToColor<T, colormaps::Hot>
+        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
+                                            inGrid.getDataPointer(inField),
+                                            m_domain.getDataPointer(), ptr);
+    break;
+  }
+  case Colormap::RWB: {
+    // Convert to red-white-blue and flip y-axis.
+    internal::convertToColor<T, colormaps::RedWhiteBlue>
+        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
+                                            inGrid.getDataPointer(inField),
+                                            m_domain.getDataPointer(), ptr);
+    break;
+  }
+  case Colormap::TWILIGHT: {
+    // Convert to twlight and flip y-axis.
+    internal::convertToColor<T, colormaps::Twilight>
+        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
+                                            inGrid.getDataPointer(inField),
+                                            m_domain.getDataPointer(), ptr);
+    break;
+  }
+  default: {
+    std::cerr << "-- ERROR! Colormap not supported." << std::endl;
+  }
+  }
+
+  // Add range to title.
+  std::stringstream stream;
+  stream << std::scientific << std::setprecision(m_precision) << "[" << minVal
+         << ", " << maxVal << "]";
+  const std::string range = stream.str();
+  const std::string title = inTitle + std::string(" : ") + range;
+
+  // Actually draw the image.
+  draw(title, inCol, inRow, ptr, width, height);
 }
 
 template <typename T>
-template <typename GRID>
-void Visualizer<T>::drawField(const GRID &grid, const int field,
-                              const int image_idx_x, const int image_idx_y,
-                              const Type::type representation,
-                              const bool inIsPositive) {
-  const int Nx = grid.dimX();
-  const int Ny = grid.dimY();
+void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
+                         const int inRow, const float *const inData,
+                         const int inWidth, const int inHeight) {
+  // Index of subplot.
+  const int index = inRow * m_cols + inCol;
 
-  GridCPU<T> grid_cpu = grid[field];
+  // Sanity checks.
+  assert(index >= 0);
+  assert(index < m_cols * m_rows);
 
-  T *data = grid_cpu.getDataPointer(0, representation);
+  // Create image.
+  const forge::Image image(inWidth, inHeight, FG_RGB, forge::f32);
 
-  // Get normalization parameters
-  int img_idx = image_idx_y * _num_image_X + image_idx_x;
-
-  T minVal, maxVal;
-  grid_cpu.minmax(minVal, maxVal, 0, representation);
-
-  // Save the min/max values so we can print them in the window.
-  _minValImg[img_idx] = static_cast<float>(minVal);
-  _maxValImg[img_idx] = static_cast<float>(maxVal);
-  _valImgUsed[img_idx] = 1;
-
-  // Set the limit, for normalizaing the pixel values. This is done so that the
-  // full range of colors is not used when the grid is essentially just zeros.
-  // Epsilon is the value where we stop using the full color range.
-  const T maxAbsVal = std::max(std::abs(minVal), std::abs(maxVal));
-  const T epsilon = static_cast<T>(1e-6);
-  const T limit = std::max(maxAbsVal, epsilon);
-
-  if (inIsPositive) {
-    minVal = static_cast<T>(0);
-    maxVal = limit;
-  } else {
-    minVal = -limit;
-    maxVal = limit;
+  // Without releasing the memory usage grows.
+  if (m_handle) {
+    releaseGLBuffer(m_handle);
   }
-
-  // Set the colormap type.
-  // TODO(niclas): Use a cyclic colormap for the phase.
-  const Colormap::Type colormapType =
-      inIsPositive ? Colormap::Type::HOT : Colormap::Type::RDBU;
-
-  // The normalization factor. Note that the denominator cannot be zero due to
-  // 'epsilon' above.
-  const T normalization = _displayMult / (maxVal - minVal);
-
-  // Image pointer and indexing
-  const int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
-  const int rowIndexOffset = getRowIndexOffset();
-
-  float *pixelPtr;
-
-  // Render image into buffer
-  for (int j = 0; j < Ny; j++) {
-    for (int i = 0; i < Nx; i++) {
-      const int idx = j * Nx + i;
-
-      // Normalized pixel value.
-      const float pixelValue =
-          static_cast<float>((data[idx] - minVal) * normalization);
-
-      for (int jj = 0; jj < _displayZoom; ++jj) {
-        for (int ii = 0; ii < _displayZoom; ++ii) {
-          const int row = _displayZoom * j + jj;
-          const int col = _displayZoom * i + ii;
-
-          // Find pointer to current pixel (3 values per pixel)
-          pixelPtr = _image + 3 * (imgIndexOffset + row * rowIndexOffset + col);
-
-          // Set the pixel.
-          m_colormap.getColor(pixelValue, colormapType, pixelPtr[0],
-                              pixelPtr[1], pixelPtr[2]);
-        }
-      }
-    }
-  }
-}
-
-template <typename T>
-void Visualizer<T>::plotGraph(GridCPU<T> *xdata, GridCPU<T> *ydata, float r,
-                              float g, float b, int image_idx_x,
-                              int image_idx_y, float y_mult) {
-  int N = xdata->dimX();
-
-  // Draw plot into buffer
-  int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
-  int rowIndexOffset = getRowIndexOffset();
-  int i, xi, yi;
-
-  float *pixelPtr, pixelVal;
-
-  T x, y, xf, yf, xd, yd, *xp, *yp;
-
-  xp = xdata->getDataPointer(0);
-  yp = ydata->getDataPointer(0);
-
-  const T x_min = xp[0], x_max = xp[N - 1];
-  const T y_min = -1.0 * y_mult, y_max = 1.0 * y_mult;
-
-  int img_idx = image_idx_y * _num_image_X + image_idx_x;
-  _minValImg[img_idx] = x_min;
-  _maxValImg[img_idx] = x_max;
-  _valImgUsed[img_idx] = 1;
-
-  float cropMult;
-
-  // Render plot into buffer
-  for (i = 0; i < N; ++i) {
-    x = xp[i];
-    y = yp[i];
-
-    xf = (x - x_min) / (x_max - x_min) * T(_Nx_img - 1);
-    yf = (y - y_min) / (y_max - y_min) * T(_Ny_img - 1);
-
-    xi = xf;
-    yi = yf;
-
-    xd = xf - int(xf);
-    yd = yf - int(yf);
-
-    int dir = 1;
-    if (yf > _Ny_img / 2)
-      dir = -1;
-
-    cropMult = 1.0f;
-
-    if (yf > _Ny_img - 2) {
-      yi = _Ny_img - 2;
-      cropMult = 0.5f;
-    } else if (yf < 0) {
-      yi = 0;
-      cropMult = 0.5f;
-    }
-
-    if (xi > -1 && xi < _Nx_img - 1 && yi > -1 && yi < _Ny_img - 1) {
-      while (yi != _Ny_img / 2) {
-        // Find pointer to current pixel (3 values per pixel)
-        for (int sy = 0; sy < 2; ++sy) {
-          for (int sx = 0; sx < 2; ++sx) {
-            pixelPtr = _image + 3 * (imgIndexOffset +
-                                     (yi + sy) * rowIndexOffset + (xi + sx));
-            pixelVal = (1.0f - xd + (sx * (2.0f * xd - 1.0f))) *
-                       (1.0f - yd + (sy * (2.0f * yd - 1.0f)));
-
-            pixelPtr[0] += r * pixelVal;
-            pixelPtr[1] += g * pixelVal * cropMult;
-            pixelPtr[2] += b * pixelVal * cropMult;
-          }
-        }
-
-        yi += dir;
-      }
-    }
-  }
-}
-
-template <typename T>
-void Visualizer<T>::plotVerticalMarker(GridCPU<T> *xdata, T x_coord, float r,
-                                       float g, float b, int image_idx_x,
-                                       int image_idx_y) {
-  int N = xdata->dimX();
-
-  // Draw plot into buffer
-  int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
-  int rowIndexOffset = getRowIndexOffset();
-  int i, xi;
-
-  float *pixelPtr;
-
-  T x, xf, *xp; //, xd;
-
-  xp = xdata->getDataPointer(0);
-
-  const T x_min = xp[0], x_max = xp[N - 1], x_delta = (x_max - x_min) / (N - 1);
-
-  // Render plot into buffer
-  for (i = 0; i < N; ++i) {
-    x = xp[i];
-
-    xf = (x - x_min) / (x_max - x_min) * T(_Nx_img - 1);
-    xi = xf;
-
-    if (xi > -1 && xi < _Nx_img - 1) {
-      // Zero energy
-      if (x < x_coord + x_delta * 0.5f && x > x_coord - x_delta * 0.5f) {
-        for (int yi = 0; yi < _Ny_img; ++yi) {
-          pixelPtr = _image + 3 * (imgIndexOffset + yi * rowIndexOffset + xi);
-
-          pixelPtr[0] += r;
-          pixelPtr[1] += g;
-          pixelPtr[2] += b;
-        }
-      }
-    }
-  }
-}
-
-template <typename T>
-void Visualizer<T>::eraseValuesOutsideDomain(const int image_idx_x,
-                                             const int image_idx_y) {
-#ifdef __CUDACC__
-  if (_geom_mask) {
-    char *data_dom = _geom_mask->getDataPointer(0, Type::real);
-
-    const int Nx_dom = _geom_mask->dimX();
-    const int Ny_dom = _geom_mask->dimY();
-
-    const int Nx_img = _Nx_grid;
-    const int Ny_img = _Ny_grid;
-
-    const int Nx_diff = (Nx_dom - Nx_img) / 2;
-    const int Ny_diff = (Ny_dom - Ny_img) / 2;
-
-    int i, j, ii, jj, row, col, idx_dom;
-
-    float *pixelPtr;
-
-    int imgIndexOffset = getImageIndexOffset(image_idx_x, image_idx_y);
-    int rowIndexOffset = getRowIndexOffset();
-
-    // Render image into buffer
-    for (j = 0; j < Ny_img; ++j) {
-      for (i = 0; i < Nx_img; ++i) {
-        idx_dom = (j + Ny_diff) * Nx_dom + (i + Nx_diff);
-
-        if (data_dom[idx_dom] == 0) {
-          for (jj = 0; jj < _displayZoom; ++jj) {
-            for (ii = 0; ii < _displayZoom; ++ii) {
-              row = _displayZoom * j + jj;
-              col = _displayZoom * i + ii;
-
-              pixelPtr =
-                  _image + 3 * (imgIndexOffset + row * rowIndexOffset + col);
-              pixelPtr[0] = 0.2f;
-              pixelPtr[1] = 0.2f;
-              pixelPtr[2] = 0.2f;
-            }
-          }
-        }
-      }
-    }
-  }
-#endif
-}
-
-template <typename T>
-int Visualizer<T>::getImageIndexOffset(int image_idx_x, int image_idx_y) const {
-  if (image_idx_x >= 0 && image_idx_x < _num_image_X && image_idx_y >= 0 &&
-      image_idx_y < _num_image_Y) {
-    int imgWidth = _Nx_img * _displayZoom + 2 * _border_x;
-    int imgHeight = _Ny_img * _displayZoom + 2 * _border_y;
-
-    int topBorderOffset = imgWidth * _num_image_X * _border_y;
-    int imgRowOffset = (imgWidth * imgHeight * _num_image_X) * image_idx_y;
-
-    return topBorderOffset + imgRowOffset + image_idx_x * imgWidth + _border_x;
-  } else {
-#ifndef NDEBUG
-    std::cout
-        << "-- ERROR! Visualizer<T>::getImageIndexOffset(): image indices "
-           "out of bounds\n";
-#endif
-    return 0;
-  }
-}
-
-template <typename T> int Visualizer<T>::getRowIndexOffset() const {
-  return (_Nx_img * _displayZoom + 2 * _border_x) * _num_image_X;
-}
-
-template <typename T>
-int Visualizer<T>::getIndexToRow(const int row, const int image) const {
-  const int pixelsPerRow =
-      (_Nx_img * _displayZoom + 2 * _border_x) * _num_image_X;
-  return (_border_y + row) * pixelsPerRow +
-         (_Nx_img * _displayZoom + 2 * _border_x) * image + _border_x;
-}
-
-template <typename T> void Visualizer<T>::setZoom(const int zoom) {
-  if (_displayZoom != zoom) {
-    _displayZoom = zoom;
-    allocMemImageGrid(_num_image_X, _num_image_Y);
-  }
-}
-
-#ifdef __CUDACC__
-template <typename T> void Visualizer<T>::setGeometry(GeometryGroup<T> *geom) {
-  _geom = geom;
-}
-#endif
-
-template <typename T> void Visualizer<T>::clearImage(int img_x, int img_y) {
-  if (img_x == -1 && img_y == -1) {
-    for (int i = 0; i < _numPixelsAllocated * 3; ++i)
-      _image[i] = 0.0f;
-  } else if (img_x > -1 && img_y > -1) {
-    int imgIndexOffset = getImageIndexOffset(img_x, img_y);
-    int rowIndexOffset = getRowIndexOffset();
-
-    float *pixelPtr;
-
-    for (int j = 0; j < _Ny_img; ++j) {
-      for (int i = 0; i < _Nx_img; ++i) {
-        pixelPtr = _image + 3 * (imgIndexOffset + j * rowIndexOffset + i);
-        pixelPtr[0] = 0.0f;
-        pixelPtr[1] = 0.0f;
-        pixelPtr[2] = 0.0f;
-      }
-    }
-  }
-
-#ifdef __CUDACC__
-  if (_geom_mask == 0 && _geom) {
-    _geom->create(0.0);
-    _geom_mask = new GridCPU<char>(*_geom->getDomainLabelsGrid());
-  }
-#endif
-}
-
-template <typename T>
-void Visualizer<T>::printRange(int img_row, int img_col, T minVal, T maxVal) {
-  std::cout << "Img(row,col) = (" << img_row << "," << img_col
-            << "):\tValue range = (\t" << minVal << ",\t" << maxVal << "\t)\n";
-}
-
-template <typename T>
-void Visualizer<T>::printRangeToImage(int img_row, int img_col, T minVal,
-                                      T maxVal) {
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-
-  float posX = (float)img_col / (float)_num_image_X * 2.0f - 1.0f;
-  float posY = (float)img_row / (float)_num_image_Y * 2.0f - 1.0f;
-
-  posX += (float)_border_x / (float)getNumPixelsImagesX() * 2.0f;
-  posY += (float)_border_y / (float)getNumPixelsImagesY() * 0.5f;
-
-  posX = (posX + 1.0f) * 0.5f * (float)getNumPixelsImagesX() /
-         (float)glutGet(GLUT_WINDOW_WIDTH);
-  posX = posX * 2.0f - 1.0f;
-
-  // Shift coordinates according to top border and window size
-  float b =
-      (float)getNumPixelsImagesY() / (float)getNumPixelsWindowY() * 2.0f - 1.0f;
-
-  posY = (posY + 1.0f) * 0.5f * (b + 1.0f) - 1.0f;
-
-  glColor3f(1.0f, 1.0f, 1.0f);
-  glRasterPos2f(posX, posY);
-  int i;
-
-  char txt[256];
-  int imgIdx = _num_image_X * img_row + img_col;
-
-  sprintf(txt, "%s : [%.4f, %.4f]", _textImg[imgIdx].c_str(), minVal, maxVal);
-
-  for (i = 0; txt[i]; i++) {
-    glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
-  }
-
-  glRasterPos2f(-1.0f, -1.0f);
-}
-
-template <typename T>
-void Visualizer<T>::printParametersToImage(const Parameters<T> *param) {
-  if (param != 0) {
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-
-    float posX = (float)_border_x / (float)getNumPixelsImagesX() * 2.0f - 1.0f;
-    float posY = 1.0f - (float)_border_top_y / (float)getNumPixelsWindowY();
-
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glRasterPos2f(posX, posY);
-    int i;
-
-    char txt[256];
-    sprintf(txt, "Discrete width = %d,   #Momenta = %d,   #Ozaki Poles = %d",
-            param->getGridResolutionBase() - 2 * constants::GRAIN_SIZE_MARGIN,
-            param->getAngularResolution(), param->getNumOzakiEnergies());
-
-    for (i = 0; txt[i]; i++) {
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
-    }
-
-    glRasterPos2f(posX, posY - 36.0f / getNumPixelsWindowY());
-    sprintf(txt,
-            "Physical width = %.3f xi_0,  \n#Ext. flux quanta = %.3f,   T/T_c "
-            "= %.3f",
-            param->getGrainWidth(), param->getNumFluxQuanta(),
-            param->getTemperature());
-
-    for (i = 0; txt[i]; i++) {
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, txt[i]);
-    }
-
-    glRasterPos2f(-1.0f, -1.0f);
-  }
-}
-
-template <typename T> void Visualizer<T>::printParametersToImage() {
-  printParametersToImage(_param);
-}
-
-template <typename T> void Visualizer<T>::drawPixels() {
-  // GL calls to draw image
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-
-  glDrawPixels(getNumPixelsWindowX(), getNumPixelsWindowY(), GL_RGB, GL_FLOAT,
-               _image);
-}
-
-template <typename T> void Visualizer<T>::drawInfo() {
-  for (int j = 0; j < _num_image_Y; ++j) {
-    for (int i = 0; i < _num_image_X; ++i) {
-      int img_idx = j * _num_image_X + i;
-      if (_valImgUsed[img_idx]) {
-        printRangeToImage(j, i, _minValImg[img_idx], _maxValImg[img_idx]);
-      }
-    }
-  }
-
-  if (_param)
-    printParametersToImage();
-}
-
-template <typename T> void Visualizer<T>::draw() {
-  drawPixels();
-  drawInfo();
-  glutSwapBuffers();
+  createGLBuffer(&m_handle, image.pixels(), FORGE_IMAGE_BUFFER);
+  copyToGLBuffer(m_handle, (ComputeResourceHandle)inData, image.size());
+
+  // Draw image.
+  m_window.draw(m_rows, m_cols, index, image, inTitle.c_str());
 }
 } // namespace conga
 
-#endif // CONGA_VISUALIZER_H_
+#endif // VISUALIZER_H_

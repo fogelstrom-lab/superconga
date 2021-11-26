@@ -14,13 +14,13 @@ cmake_cache_file_debug=$build_dir_debug/CMakeCache.txt
 if [[ -d "$build_dir_release" ]] && [[ -f "$cmake_cache_file_release" ]]
 then
     # Build release.
-    echo "Running build system: Release"
+    echo "-- Running build system: Release"
     cd $build_dir_release
     cmake --build .
 else
     # No build folder found.
-    echo "Could not find build/release/CMakeCache.txt. Make sure to run CMake"
-    echo "before attempting to compile (e.g. with setup.sh)."
+    echo "-- Could not find build/release/CMakeCache.txt. Make sure to run CMake"
+    echo "   before attempting to compile (e.g. with setup.sh)."
 fi
 
 # Debug is optional, check if user is running with --debug.
@@ -30,14 +30,14 @@ then
     if [[ -d "$build_dir_debug" ]] && [[ -f "$cmake_cache_file_debug" ]]
     then
         # Build release.
-        echo "Running build system: Debug"
+        echo "-- Running build system: Debug"
         cd $build_dir_debug
         cmake --build .
     else
         # No build folder found.
-        echo "Could not find build/debug/CMakeCache.txt. Make sure to run CMake"
-        echo "before attempting to compile (e.g. with 'setup.sh --debug')."
+        echo "-- Could not find build/debug/CMakeCache.txt. Make sure to run CMake"
+        echo "   before attempting to compile (e.g. with 'setup.sh --debug')."
     fi
 else
-    echo "Skipping Debug. To build Debug, run 'compile.sh --debug'"
+    echo "-- Skipping Debug. To build Debug, run 'compile.sh --debug'"
 fi

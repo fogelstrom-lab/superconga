@@ -35,7 +35,10 @@
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
 #include "conga/run_utils.h"
+
+#ifdef CONGA_VISUALIZE
 #include "conga/visualization/Visualizer.h"
+#endif // CONGA_VISUALIZE
 
 #include <json/json.h>
 
@@ -43,14 +46,10 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <json/json.h>
 #include <limits>
 #include <memory>
 #include <string>
-
-//*******************************************************
-// FORWARD DECLARATIONS
-//*******************************************************
-void display();
 
 //*******************************************************
 // PRECISION
@@ -60,17 +59,6 @@ typedef float T;
 #else
 typedef double T;
 #endif
-
-//*******************************************************
-// GLOBAL OBJECTS: glut does not accept arguments and relies on global/static
-// variables.
-//*******************************************************
-namespace {
-// Create context object.
-conga::Context<T> *context = new conga::Context<T>();
-// Create visualization object.
-conga::Visualizer<T> *visualizer;
-} // namespace
 
 //*******************************************************
 // MAIN
@@ -83,7 +71,6 @@ int main(int argc, char *argv[]) {
   {
     if (argc < 2) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
-      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
     const std::string filename = argv[1];
@@ -93,7 +80,6 @@ int main(int argc, char *argv[]) {
     if (!ifile.good()) {
       std::cerr << "-- ERROR! Could not find/open config file '" << filename
                 << "'." << std::endl;
-      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
 
@@ -113,10 +99,15 @@ int main(int argc, char *argv[]) {
   // TODO(niclas): Add sanity check of all parameters here!?
 
   //***************************************************
+  // CREATE CONTEXT
+  //***************************************************
+  conga::Context<T> context;
+
+  //***************************************************
   // APPLY PARAMETERS
   //***************************************************
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
 
   // Set temperature.
   const T temperature =
@@ -158,7 +149,7 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group.
-  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
 
   // Parse user-defined geometry. Compute factors to scale and translate
   // geometry to internal coordinate system.
@@ -187,7 +178,7 @@ int main(int argc, char *argv[]) {
   const int numEnergiesPerBlock = -1;
   const int numBurnInIterations =
       simParams["accuracy"]["num_iterations_burnin"].asInt();
-  new conga::IntegrationIteratorOzaki<T>(context, numEnergiesPerBlock,
+  new conga::IntegrationIteratorOzaki<T>(&context, numEnergiesPerBlock,
                                          numBurnInIterations);
 
   //***************************************************
@@ -196,7 +187,7 @@ int main(int argc, char *argv[]) {
   // Create order parameter (which might contain multiple components, i.e.
   // d+is).
   conga::OrderParameter<T> *orderParameter =
-      new conga::OrderParameter<T>(context);
+      new conga::OrderParameter<T>(&context);
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation = static_cast<T>(
@@ -268,7 +259,6 @@ int main(int argc, char *argv[]) {
 
   if (!orderParameterSuccess) {
     std::cerr << "-- ERROR! No order-parameter component set." << std::endl;
-    conga::run_utils::cleanup(context, visualizer);
     return EXIT_FAILURE;
   }
 
@@ -288,7 +278,6 @@ int main(int argc, char *argv[]) {
 
     // Abort if not successful.
     if (!success) {
-      conga::run_utils::cleanup(context, visualizer);
       return EXIT_FAILURE;
     }
   }
@@ -312,12 +301,11 @@ int main(int argc, char *argv[]) {
 
     // Abort if not successful.
     if (!success) {
-      conga::run_utils::cleanup(context, visualizer);
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Set the vector potential in context.
-    context->set(std::move(vectorPotential));
+    context.set(std::move(vectorPotential));
   }
 
   //***************************************************
@@ -341,17 +329,17 @@ int main(int argc, char *argv[]) {
   auto accelerator = std::make_unique<conga::Accelerator<T>>(
       stepSize, inertia, adaptive, rank, replaceOldest, andersonAlways,
       minMixing, maxMixing);
-  context->set(std::move(accelerator));
+  context.set(std::move(accelerator));
 
   //***************************************************
   // CHOOSE QUANTITIES TO CALCULATE
   //***************************************************
   // Order parameter compute object.
-  new conga::ComputeOrderParameter<T>(context);
+  new conga::ComputeOrderParameter<T>(&context);
   // Add current compute object.
-  new conga::ComputeCurrent<T>(context);
+  new conga::ComputeCurrent<T>(&context);
   // Add free energy compute object.
-  new conga::ComputeFreeEnergy<T>(context);
+  new conga::ComputeFreeEnergy<T>(&context);
 
   // Add vector-potential compute object.
   if (penetrationDepth > static_cast<T>(0)) {
@@ -359,7 +347,7 @@ int main(int argc, char *argv[]) {
         simParams["accuracy"]["vector_potential_error"].asDouble());
     auto computeVectorPotential =
         std::make_unique<conga::ComputeVectorPotential<T>>(maxError);
-    context->add(std::move(computeVectorPotential));
+    context.add(std::move(computeVectorPotential));
   }
 
   //***************************************************
@@ -375,11 +363,11 @@ int main(int argc, char *argv[]) {
   if (solenoidGuage) {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
-            context);
+            &context);
   } else {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
-            context);
+            &context);
   }
 
   // Add specular BC.
@@ -388,19 +376,7 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // INITIALIZE SIMULATION
   //***************************************************
-  context->initialize();
-
-  //***********************************************
-  // SET UP OPENGL VISUALIZATION
-  //***********************************************
-  const bool visualize = simParams["misc"]["visualize"].asBool();
-  if (visualize) {
-    visualizer = conga::run_utils::createVisualization(context);
-    conga::initGL(argc, argv, visualizer->getNumPixelsWindowX(),
-                  visualizer->getNumPixelsWindowY());
-    glutKeyboardFunc(conga::run_utils::myKeyboardFunc);
-    glutDisplayFunc(display);
-  }
+  context.initialize();
 
   //***********************************************
   // CREATE DIRECTORIES AND SAVE PARAMETERS
@@ -447,29 +423,49 @@ int main(int argc, char *argv[]) {
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
   const conga::Type::fileFormat dataFormat = conga::Type::csv;
-  conga::run_utils::runSimulation(
-      context, verbose, simParams["accuracy"]["num_iterations_min"].asInt(),
-      simParams["accuracy"]["num_iterations_max"].asInt(), visualize,
-      saveDataPath, saveData, saveFrequency, dataFormat);
+  const bool visualize = simParams["misc"]["visualize"].asBool();
+  const int numIterationsMin =
+      simParams["accuracy"]["num_iterations_min"].asInt();
+  const int numIterationsMax =
+      simParams["accuracy"]["num_iterations_max"].asInt();
+#ifdef CONGA_VISUALIZE
+  if (visualize) {
+    // Create visualizer.
+    const int numOrderParameterComponents =
+        context.getOrderParameter()->getNumComponents();
+    const conga::GridGPU<char> &domain =
+        *(context.getGeometry()->getDomainGrid());
+    // Magnitude and xy-components.
+    const int rows = 3;
+
+    // Extra columns: current density, vector potential, and flux density.
+    const int extraCols = (penetrationDepth > static_cast<T>(0)) ? 3 : 1;
+    const int cols = numOrderParameterComponents + extraCols;
+    conga::Visualizer<T> visualizer("SuperConga", cols, rows, domain);
+
+    conga::run_utils::runSimulation(&context, visualizer, verbose,
+                                    numIterationsMin, numIterationsMax,
+                                    saveDataPath, saveFrequency, dataFormat);
+  } else {
+    conga::run_utils::runSimulation(&context, verbose, numIterationsMin,
+                                    numIterationsMax, saveDataPath,
+                                    saveFrequency, dataFormat);
+  }
+#else
+  conga::run_utils::runSimulation(&context, verbose, numIterationsMin,
+                                  numIterationsMax, saveDataPath, saveFrequency,
+                                  dataFormat);
+#endif // CONGA_VISUALIZE
 
   //***********************************************
   // SAVE RESULTS
   //***********************************************
   // Save at the very end.
   if (saveData) {
-    conga::run_utils::saveDataWrapper(context, saveDataPath, verbose,
+    conga::run_utils::saveDataWrapper(&context, saveDataPath, verbose,
                                       dataFormat);
   }
 
-  // Cleanup dynamically allocated memory.
-  conga::run_utils::cleanup(context, visualizer);
+  // Yay!
   return EXIT_SUCCESS;
-}
-
-// Plot data in OpenGL GUI.
-void display() {
-  conga::run_utils::display(context, visualizer);
-
-  // Tell Glut to update window.
-  glutPostRedisplay();
 }

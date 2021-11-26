@@ -6,85 +6,55 @@ project(
 
 # Output build messages
 message(
-  STATUS "Building ${CMAKE_PROJECT_NAME} version ${CMAKE_PROJECT_VERSION}.")
+  STATUS "Building ${CMAKE_PROJECT_NAME} version ${CMAKE_PROJECT_VERSION}")
 
-# ##############################################################################
-# CTEST AND DOCTEST
-# ##############################################################################
-# Enable CTest.
-include(CTest)
-
-# ##############################################################################
-# INCLUDE DEPENDENCIES WITH FIND_PACKAGE()
-# ##############################################################################
-# Find BLAS and LAPACK
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-
-# ##############################################################################
-# FETCH EXTERNAL LIBRARIES WITH FETCHCONTENT(): JSON
-# ##############################################################################
 # So we can download libs at build time.
 include(FetchContent)
 
-# Declare the JSON lib.
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
-  GIT_TAG 1.9.5)
-
-# Fetch the JSON lib.
-FetchContent_GetProperties(json)
-if(NOT json_POPULATED)
-  FetchContent_Populate(json)
-  # Disable building the JsonCpp tests. If true it will try to run them as well
-  # as ours when running ctest.
-  set(JSONCPP_WITH_TESTS
-      OFF
-      CACHE BOOL "Do not build tests." FORCE)
-  add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif(NOT json_POPULATED)
+# Enable CTest.
+if(CONGA_BUILD_TESTS)
+  include(CTest)
+endif(CONGA_BUILD_TESTS)
 
 # ##############################################################################
-# FETCH EXTERNAL LIBRARIES WITH FETCHCONTENT(): ARMADILLO
+# FIND DEPENDENCIES
 # ##############################################################################
-# Download Armadillo, but don't build it: we want to use header-only version.
-# Note that we could let CMake check for Armadillo first, but this way we can
-# enforce a specific version we know works well with SuperConga.
-message(STATUS "Setting up Armadillo via FetchContent.")
-FetchContent_Declare(
-  armadillo
-  GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
-  GIT_TAG d9b38626f0cb6cadb828a8d836162df089ed668b # version 10.7.x
-  CMAKE_ARGS
-  ""
-  CONFIGURE_COMMAND
-  ""
-  BUILD_COMMAND
-  ""
-  INSTALL_COMMAND
-  ""
-  TEST_COMMAND
-  "")
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP jsoncpp)
 
-# Fetch properties for armadillo target: POPULATED, SOURCE_DIR, BINARY_DIR.
-FetchContent_GetProperties(armadillo)
-# Only populate if it is not already done.
-if(NOT armadillo_POPULATED)
-  FetchContent_Populate(armadillo)
-  # Note: We intentionally avoid add_subdirectory. Otherwise we indicate that
-  # CMake should include these to the build, and we want a header-only version
-  # of armadillo to include.
-endif(NOT armadillo_POPULATED)
+# If Armadillo is too old or not found it is fetched.
+# TODO(niclas): We should set the minimum compatible version here.
+find_package(Armadillo 10.7 QUIET)
+if(ARMADILLO_FOUND)
+  message(STATUS "Found Armadillo ${ARMADILLO_VERSION_STRING}")
+else()
+  # Download Armadillo, but don't build it: we want to use header-only version.
+  # Note that we could let CMake check for Armadillo first, but this way we can
+  # enforce a specific version we know works well with SuperConga.
+  message(STATUS "Fetching Armadillo")
+  # version 10.7.x
+  FetchContent_Declare(
+    armadillo
+    GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
+    GIT_TAG d9b38626f0cb6cadb828a8d836162df089ed668b)
 
-# Set variables with capital names, to conform with variables from find_package.
-set(ARMADILLO_SOURCE_DIR "${armadillo_SOURCE_DIR}")
-set(ARMADILLO_BINARY_DIR "${armadillo_BINARY_DIR}")
-set(ARMADILLO_INCLUDE_DIRS "${armadillo_SOURCE_DIR}/include")
+  # Fetch properties for armadillo target: POPULATED, SOURCE_DIR, BINARY_DIR.
+  FetchContent_GetProperties(armadillo)
+  # Only populate if it is not already done.
+  if(NOT armadillo_POPULATED)
+    FetchContent_Populate(armadillo)
+    # Note: We intentionally avoid add_subdirectory. Otherwise we indicate that
+    # CMake should include these to the build, and we want a header-only version
+    # of armadillo to include.
+  endif(NOT armadillo_POPULATED)
 
-message(STATUS "ARMADILLO_SOURCE_DIR: ${ARMADILLO_SOURCE_DIR}")
-message(STATUS "ARMADILLO_BINARY_DIR: ${ARMADILLO_BINARY_DIR}")
-message(STATUS "ARMADILLO_INCLUDE_DIRS: ${ARMADILLO_INCLUDE_DIRS}")
+  # Set variables with capital names, to conform with variables from
+  # find_package.
+  set(ARMADILLO_INCLUDE_DIRS "${armadillo_SOURCE_DIR}/include")
+  set(ARMADILLO_LIBRARIES "")
+endif(ARMADILLO_FOUND)
 
 # ##############################################################################
 # CUDA
@@ -160,9 +130,12 @@ endif(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
 # ##############################################################################
 # SUBDIRECTORIES
 # ##############################################################################
-# Add subdirectories
+# For some inexplicable reason the tests must be added first, otherwise the
+# fetching of doctest somehow interferes with Forge.
+if(CONGA_BUILD_TESTS)
+  add_subdirectory(tests)
+endif(CONGA_BUILD_TESTS)
 add_subdirectory(src)
-add_subdirectory(tests)
 
 # ##############################################################################
 # TEMPLATES

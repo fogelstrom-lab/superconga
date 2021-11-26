@@ -1,24 +1,29 @@
-# =========================================================== # EXTERNAL
-# LIBRARIES =========================================================== #
 message(
   STATUS
     "################### Building SuperConga test files ###################")
-# Declare the doctest lib.
-FetchContent_Declare(
-  doctest
-  GIT_REPOSITORY https://github.com/onqtam/doctest.git
-  GIT_TAG 2.4.6)
 
-# Fetch the doctest lib.
-FetchContent_GetProperties(doctest)
-if(NOT doctest_POPULATED)
-  FetchContent_Populate(doctest)
-  add_subdirectory(${doctest_SOURCE_DIR} ${doctest_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+# If doctest is too old or not found it is fetched.
+# TODO(niclas): We should set the minimum compatible version here.
+find_package(doctest 2.4.1 QUIET)
+if(doctest_FOUND)
+  message(STATUS "Found doctest ${doctest_VERSION}")
+else()
+  # Declare the doctest lib.
+  message(STATUS "Fetching doctest")
+  FetchContent_Declare(
+    doctest
+    GIT_REPOSITORY https://github.com/onqtam/doctest.git
+    GIT_TAG 2.4.6)
 
-# =========================================================== # SOURCE FILES
-# =========================================================== # Define the main
-# set of source files
+  # Fetch the doctest lib.
+  FetchContent_GetProperties(doctest)
+  if(NOT doctest_POPULATED)
+    FetchContent_Populate(doctest)
+  endif(NOT doctest_POPULATED)
+endif(doctest_FOUND)
+
+# ======= SOURCE FILES =======
+# Define the main set of source files
 set(SRC
     basis_function_normalization_test.cu
     bdg_utils_test.cu
@@ -51,7 +56,7 @@ set(SRC
 enable_testing()
 
 foreach(file ${SRC})
-  message(STATUS "# -- Setting up test executable: ${file}.")
+  message(STATUS "Setting up test executable: ${file}")
 
   get_filename_component(name ${file} NAME_WE)
 
@@ -63,20 +68,13 @@ foreach(file ${SRC})
 
   # Include directories: equivalent to -I.
   target_include_directories(
-    ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
-                    ${ARMADILLO_INCLUDE_DIRS})
+    ${name}
+    PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM ${ARMADILLO_INCLUDE_DIRS}
+            ${JSONCPP_INCLUDE_DIRS} ${DOCTEST_INCLUDE_DIRS})
 
   # External libraries: equivalent to -l.
-  target_link_libraries(
-    ${name}
-    PRIVATE glut
-            GL
-            GLU
-            gfortran
-            jsoncpp_lib
-            ${LAPACK_LIBRARIES}
-            ${BLAS_LIBRARIES}
-            doctest::doctest)
+  target_link_libraries(${name} PRIVATE gfortran jsoncpp ${ARMADILLO_LIBRARIES}
+                                        ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
 
   # Build test binaries into build/xxx/tests/ (where xxx is e.g. release).
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
@@ -97,7 +95,7 @@ foreach(file ${SRC})
 
   # Set RELEASE compile flags.
   target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
-endforeach()
+endforeach(file ${SRC})
 
 message(
   STATUS
