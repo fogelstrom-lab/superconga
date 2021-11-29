@@ -44,33 +44,36 @@ T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
   const T freeEnergyBulk =
       conga::computeFreeEnergyBulkSWave(inTemperature, orderParameterBulk);
 
+  // Yoshida function.
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      inTemperature, orderParameterBulk, inEnergyCutoff);
+
   // For convenience.
   const T R = inRadius;
+  const T k = inPenetrationDepth / std::sqrt(yoshida);
   const T area = static_cast<T>(M_PI) * R * R;
 
   // Common factor for the magnetic and kinetic terms.
   const T exteralFluxDensity = static_cast<T>(M_PI) * inNumFluxQuanta / area;
-  const T factor = static_cast<T>(M_PI) *
-                   std::pow(inPenetrationDepth * exteralFluxDensity, 2) / area;
+  const T angularFactor = static_cast<T>(2.0 * M_PI);
+  const T factor = angularFactor * yoshida *
+                   std::pow(k * exteralFluxDensity, 2) /
+                   (static_cast<T>(2) * area);
 
   // Relevant Bessel functions.
-  const T ratio = R / inPenetrationDepth;
-  const T I0 = std::cyl_bessel_i(static_cast<T>(0), ratio);
-  const T I1 = std::cyl_bessel_i(static_cast<T>(1), ratio);
+  const T R_k = R / k;
+  const T I0 = std::cyl_bessel_i(static_cast<T>(0), R_k);
+  const T I1 = std::cyl_bessel_i(static_cast<T>(1), R_k);
 
   // Magnetic term.
   const T tmp = R * I1 / I0;
-  const T freeEnergyMagnetic =
-      factor * (R * R - static_cast<T>(2) * inPenetrationDepth * tmp -
-                static_cast<T>(0.5) * tmp * tmp);
+  const T freeEnergyMagnetic = factor * (R * R - static_cast<T>(2) * k * tmp -
+                                         static_cast<T>(0.5) * tmp * tmp);
 
   // Kinetic term.
-  const T yoshida = conga::computeYoshidaBulkSWave(
-      inTemperature, orderParameterBulk, inEnergyCutoff);
-  const T freeEnergyKinetic =
-      factor * yoshida * static_cast<T>(0.5) * R *
-      (-R * I0 * I0 + 2 * inPenetrationDepth * I0 * I1 + R * I1 * I1) /
-      (I0 * I0);
+  const T freeEnergyKinetic = factor * static_cast<T>(0.5) * R *
+                              (-R * I0 * I0 + 2 * k * I0 * I1 + R * I1 * I1) /
+                              (I0 * I0);
 
   return freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
 }
