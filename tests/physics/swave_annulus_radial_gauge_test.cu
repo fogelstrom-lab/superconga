@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -103,7 +104,7 @@ getWeightsAndAbscissas(const T inLow, const T inHigh) {
 ///
 /// \return The pair {free energy, magnetic moment}.
 template <typename T>
-std::pair<T, T>
+std::tuple<T, T, T>
 computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
                        const T inPenetrationDepth, const T inNumFluxQuanta,
                        const T inPhaseWinding, const T inInnerRadius,
@@ -127,14 +128,20 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
   const T grainArea = static_cast<T>(M_PI) * (R * R - r * r);
   const T holeArea = static_cast<T>(M_PI) * r * r;
 
+  // The pi comes from our choice of units.
+  const T externalFluxDensity =
+      static_cast<T>(M_PI) * inNumFluxQuanta / grainArea;
+
   // For more convenience.
   const T R_k = R / k;
   const T r_k = r / k;
 
   // Relevant Bessel function.
+  const T I0_r = std::cyl_bessel_i(static_cast<T>(0), r_k);
   const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
   const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
   const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
+  const T K0_r = std::cyl_bessel_k(static_cast<T>(0), r_k);
   const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
   const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
   const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
@@ -165,7 +172,7 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
   auto fnMagneticIntegrand = [&](T x) {
     const T tmp = a * std::cyl_bessel_i(static_cast<T>(0), x / k) -
                   b * std::cyl_bessel_k(static_cast<T>(0), x / k) -
-                  static_cast<T>(M_PI) * inNumFluxQuanta / grainArea;
+                  externalFluxDensity;
     return x * tmp * tmp;
   };
 
@@ -175,10 +182,21 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
                  fnMagneticIntegrand);
 
   // Multiply with the weights, sum and scale.
-  const T freeEnergyMagnetic =
+  const T freeEnergyMagneticGrain =
       factor * std::transform_reduce(magneticIntegrand.begin(),
                                      magneticIntegrand.end(), weights.begin(),
                                      static_cast<T>(0));
+
+  // The free energy of the magnetic field in the hole.
+  const T holeFlux =
+      invD * (static_cast<T>(2 * M_PI) * k * k * inNumFluxQuanta / grainArea +
+              inPhaseWinding * (I0_R * K0_r - I0_r * K0_R));
+  const T inducedFluxDensity = holeFlux / holeArea - externalFluxDensity;
+  const T freeEnergyMagneticHole =
+      factor * static_cast<T>(0.5) * std::pow(inducedFluxDensity * r, 2);
+
+  // Total magnetic free energy.
+  const T freeEnergyMagnetic = freeEnergyMagneticGrain + freeEnergyMagneticHole;
 
   // The integrand of the kinetic term in the free energy.
   auto fnKineticIntegrand = [&](T x) {
@@ -201,7 +219,7 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
   // Total free energy.
   const T freeEnergy = freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
 
-  return {freeEnergy, magneticMoment};
+  return {freeEnergy, freeEnergyMagnetic, magneticMoment};
 }
 
 /// \brief Test that the free energy, and magnetic moment, of an s-wave
@@ -213,8 +231,11 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
 /// \return Void.
 template <typename T> void testSWaveAnnulusRadial() {
   // =================== ARRANGE ==================== //
-  // The accuracy of the test.
+  // The accuracy of the test. The accuracy of the contribution of the magnetic
+  // field in the hole is way worse than in the grain hence the large tolerance.
+  // TODO(niclas): Is this due to the boundary bug with holes?
   const T tolerance = static_cast<T>(1e-3);
+  const T toleranceMagnetic = static_cast<T>(0.02);
   const T scale = static_cast<T>(0);
 
   // The outer (R) and inner (r) radii of the annulus.
@@ -295,19 +316,25 @@ template <typename T> void testSWaveAnnulusRadial() {
   // The results.
   const T freeEnergy =
       context.getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
+  const T freeEnergyMagnetic =
+      context.getComputeFreeEnergy()->getMagneticFreeEnergyPerUnitArea();
   const T latticeElementSize = context.getParameters()->getGridElementSize();
   const T magneticMoment =
       context.getComputeCurrent()->getResult()->moment(latticeElementSize) /
       context.getGeometry()->area();
 
   // =================== ASSERT ==================== //
-  const auto [freeEnergyExpected, magneticMomentExpected] =
+  const auto [freeEnergyExpected, freeEnergyMagneticExpected,
+              magneticMomentExpected] =
       computeResultsAnalytic(temperature, energyCutoff, penetrationDepth,
                              numFluxQuanta, phaseWinding, r, R);
 
   // Compare results.
   CHECK(freeEnergy ==
         doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
+  CHECK(freeEnergyMagnetic == doctest::Approx(freeEnergyMagneticExpected)
+                                  .epsilon(toleranceMagnetic)
+                                  .scale(scale));
   CHECK(
       magneticMoment ==
       doctest::Approx(magneticMomentExpected).epsilon(tolerance).scale(scale));

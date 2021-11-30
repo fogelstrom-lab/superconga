@@ -25,6 +25,7 @@
 - Only build/compile Debug if running `setup.sh`/`compile.sh` with `--debug` flag.
 - Add new argument `num_iterations_burnin` controlling the number of iterations to run just converging the boundary as a pre-processing step.
 - Print total time to terminal, and include the visualization time.
+- Compute the magnetic contribution to the free energy in the whole simulation space, not just in the grain.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
