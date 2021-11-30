@@ -347,13 +347,8 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
           C::getContext()->getInducedVectorPotential();
 
       // Compute the magnetic field.
-      GridGPU<T> magneticField =
+      const GridGPU<T> magneticField =
           inducedVectorPotential->curl(latticeElementSize);
-
-      // By setting values outside of the grain to zero, we are only
-      // including the contribution of the induced magnetic field within the
-      // grain to the free energy.
-      C::getGeometry()->zeroValuesOutsideDomainRef(&magneticField);
 
       // Note that the prefactor depend on our choice of unit definitions.
       const T magneticFactor =
