@@ -52,6 +52,7 @@
 - Reduce grid tests spatial dimensions.
 - Add test of magnic moment in an s-wave annulus using radial gauge.
 - Remove more unused/broken code, e.g. read/write binary files.
+- Update linear-response current test using the Yoshida function.
 
 ---
 

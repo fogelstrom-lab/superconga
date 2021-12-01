@@ -85,30 +85,12 @@ conga::vector2d<T> computeCurrentDensity(const T inTemperature,
   // The bulk orderparameter at this temperature.
   const T orderParameter = conga::computeOrderParameterBulkSWave(inTemperature);
 
-  // Comes from: cutoff =  T * (n + 0.5).
-  // But the n is the largest n we need to include, so the number of energies is
-  // one more, hence the plus one.
-  const int numEnergies =
-      static_cast<int>(static_cast<T>(ENERGY_CUTOFF) / inTemperature -
-                       static_cast<T>(0.5)) +
-      1;
+  // Yoshida function.
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      inTemperature, orderParameter, static_cast<T>(ENERGY_CUTOFF));
 
-  // Compute the factor involving the order parameter and the energy.
-  T factorEnergy = static_cast<T>(0);
-  for (int n = numEnergies - 1; n >= 0; --n) {
-    const T matsubaraEnergy =
-        inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
-    const T Omega = std::hypot(orderParameter, matsubaraEnergy);
-    factorEnergy += std::pow(Omega, -3);
-  }
-  factorEnergy *= orderParameter * orderParameter;
-
-  // Factor due to choice of units.
-  const T factorUnits =
-      static_cast<T>(2.0 * conga::constants::SIGN_E) * inTemperature;
-
-  // The total factor. The half comes from 1/(2*pi) * int cos^2(x) dx.
-  const T factor = -factorEnergy * factorUnits * static_cast<T>(0.5);
+  // The total factor.
+  const T factor = -static_cast<T>(conga::constants::SIGN_E) * yoshida;
 
   return {inVectorPotentialX * factor, inVectorPotentialY * factor};
 }
@@ -122,10 +104,10 @@ conga::vector2d<T> computeCurrentDensity(const T inTemperature,
 template <typename T> void testCurrentDensity(const T inTemperature) {
   // =================== ARRANGE ==================== //
   // Create context.
-  conga::Context<T> *context = new conga::Context<T>();
+  conga::Context<T> context;
 
   // Set parameters.
-  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   parameters->setGrainWidth(static_cast<T>(GRAIN_SIDE_LENGTH));
   parameters->setPointsPerCoherenceLength(
       static_cast<T>(POINTS_PER_COHERENCE_LENGTH));
@@ -135,7 +117,7 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   parameters->setPenetrationDepth(static_cast<T>(PENETRATION_DEPTH));
 
   // Set geometry.
-  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   const int numVertices = 4;
   const T grainWidth = parameters->getGrainWidth();
@@ -144,17 +126,17 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
       conga::Type::add);
 
   // Integrator.
-  new conga::IntegrationIteratorOzaki<T>(context);
+  new conga::IntegrationIteratorOzaki<T>(&context);
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-          context);
+          &context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set order parameter.
   conga::OrderParameter<T> *orderParameter =
-      new conga::OrderParameter<T>(context);
+      new conga::OrderParameter<T>(&context);
   conga::OrderParameterComponent<T> *orderParameterComponent =
       new conga::OrderParameterComponent<T>(conga::BasisFunctionSymmetry::SWAVE,
                                             parameters);
@@ -162,31 +144,32 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   orderParameter->add(orderParameterComponent);
 
   // Set vector potential.
-  const int gridResolution = parameters->getGridResolutionBase();
-  auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
-      gridResolution, gridResolution, 2, conga::Type::real);
   const T vectorPotentialX = static_cast<T>(VECTOR_POTENTIAL_X);
   const T vectorPotentialY = static_cast<T>(VECTOR_POTENTIAL_Y);
-  vectorPotential->setValue(vectorPotentialX, conga::Type::real, 0);
-  vectorPotential->setValue(vectorPotentialY, conga::Type::real, 1);
-  context->set(std::move(vectorPotential));
+  {
+    const int gridResolution = parameters->getGridResolutionBase();
+    auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
+        gridResolution, gridResolution, 2, conga::Type::real);
+    vectorPotential->setValue(vectorPotentialX, conga::Type::real, 0);
+    vectorPotential->setValue(vectorPotentialY, conga::Type::real, 1);
+    context.set(std::move(vectorPotential));
+  }
 
   // Create compute objects.
-  new conga::ComputeCurrent<T>(context);
-  context->add(std::make_unique<conga::ComputeVectorPotential<T>>());
+  new conga::ComputeCurrent<T>(&context);
 
   // Set accelerator.
-  context->set(std::make_unique<conga::Accelerator<T>>());
+  context.set(std::make_unique<conga::Accelerator<T>>());
 
   // =================== ACT ==================== //
   // Initialize and run simulation.
-  context->initialize();
-  conga::run_utils::runSimulation(context, PRINT_ITERATION_STATUS,
+  context.initialize();
+  conga::run_utils::runSimulation(&context, PRINT_ITERATION_STATUS,
                                   NUM_ITERATIONS_MIN, NUM_ITERATIONS_MAX);
 
   // Fetch the grain-summed current-density magnitude
   const conga::GridGPU<T> currentDensity =
-      *(context->getComputeCurrent()->getResult());
+      *(context.getComputeCurrent()->getResult());
 
   // Fetch the number of elements in the grain
   const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
@@ -196,9 +179,6 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
     currentDensityMean[i] =
         currentDensity.sumField(i) / static_cast<T>(numGrainLatticeSites);
   }
-
-  // Clean up context.
-  conga::run_utils::cleanup(context);
 
   // =================== ASSERT ==================== //
   const conga::vector2d<T> currentDensityExpected =
