@@ -52,7 +52,7 @@ const double TEMPERATURE = 0.5;
 // Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc).
 const double GRAIN_SIDE_LENGTH = 5.0;
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 16.0 / GRAIN_SIDE_LENGTH;
+const double POINTS_PER_COHERENCE_LENGTH = 2.0;
 // Number of trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 160;
 // Number of energies in total.

@@ -246,7 +246,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   // TODO(niclas): For large phase windings a very high spatial resolution is
   // needed. This needs to be investigated!
   const T grainWidth = static_cast<T>(2) * R;
-  const T pointsPerCoherenceLength = static_cast<T>(8);
+  const T pointsPerCoherenceLength = static_cast<T>(6.2);
   const int numMomenta = 32;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);
