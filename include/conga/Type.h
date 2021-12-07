@@ -25,7 +25,6 @@ struct Type {
     remove = 7
   };
   enum location { start = 1, begin = 1, end = 2 };
-  enum fileFormat { csv = 0 };
 };
 } // namespace conga
 

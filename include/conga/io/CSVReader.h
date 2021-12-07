@@ -107,9 +107,7 @@ bool CSVReader<T>::read(const std::filesystem::path &inFileName) {
   std::ifstream ifile(inFileName);
 
   // Abort early if not good.
-  if (ifile.good()) {
-    std::cout << "-- Reading file " << inFileName << "." << std::endl;
-  } else {
+  if (!ifile.good()) {
     std::cerr << "-- ERROR! Could not open file " << inFileName << "."
               << std::endl;
     return m_success;

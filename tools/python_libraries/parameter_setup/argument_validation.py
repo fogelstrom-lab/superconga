@@ -250,6 +250,7 @@ runner_checks = {
     "misc": {
         "type": dict,
         "fields": {
+            "data_format": {"type": str, "one_of": ["h5", "csv"]},
             "load_path": {"type": str},
             "save_frequency": {"type": int},
             "save_path": {"type": str},
@@ -505,91 +506,6 @@ def validate_plotter_arguments(
             f"-- ERROR! No quantity was chosen for plotting. Please specify at least one quantity, using e.g. '--plot-current'. See '--help' for all options."
         )
         success = False
-        return success
-
-    # Check that parameter file exists.
-    config_file = data_path / configuration.filenames["config"]
-    if not utils.check_file(config_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid config file found in specified data path: '{config_file}'."
-        )
-        success = False
-        return success
-
-    # Check that internal parameter file exists.
-    internal_param_file = data_path / configuration.filenames["internal_parameters"]
-    if not utils.check_file(internal_param_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
-        )
-        success = False
-        return success
-
-    # Check that results file exists.
-    results_file = data_path / configuration.filenames["results"]
-    if not utils.check_file(results_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid 'scalar results' file found in specified data path: '{results_file}'."
-        )
-        success = False
-        return success
-
-    # Check that convergence file exists.
-    convergence_file = data_path / configuration.filenames["convergence"]
-    if not utils.check_file(convergence_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid convergence file found in specified data path: '{convergence_file}'."
-        )
-        success = False
-        return success
-
-    # Check that chosen observables exist. Note that the superflow is calculated from the order parameter and external vector potential!
-    if plot_current:
-        current_file = data_path / configuration.filenames["current_density"]
-        if not utils.check_file(current_file, verbose=False, exit_on_failure=False):
-            print(
-                f"-- ERROR! No valid current density file found in specified data path: '{current_file}'."
-            )
-            success = False
-            return success
-    if plot_mfield:
-        magnetic_field_file = (
-            data_path / configuration.filenames["magnetic_flux_density"]
-        )
-        if not utils.check_file(
-            magnetic_field_file, verbose=False, exit_on_failure=False
-        ):
-            print(
-                f"-- ERROR! No valid magnetic field file found in specified data path: '{magnetic_field_file}'."
-            )
-            success = False
-            return success
-    if plot_op:
-        op_file = data_path / configuration.filenames["order_parameter"]
-        if not utils.check_file(op_file, verbose=False, exit_on_failure=False):
-            print(
-                f"-- ERROR! No valid order parameter file found in specified data path: '{op_file}'."
-            )
-            success = False
-            return success
-    if plot_superflow:
-        superflow_file = data_path / configuration.filenames["superflow"]
-        if not utils.check_file(superflow_file, verbose=False, exit_on_failure=False):
-            print(
-                f"-- ERROR! No valid superflow file found in specified data path: '{superflow_file}'."
-            )
-            success = False
-            return success
-    if plot_vector_potential:
-        vector_potential_file = data_path / configuration.filenames["vector_potential"]
-        if not utils.check_file(
-            vector_potential_file, verbose=False, exit_on_failure=False
-        ):
-            print(
-                f"-- ERROR! No valid vector potential file found in specified data path: '{vector_potential_file}'."
-            )
-            success = False
-            return success
 
     return success
 
@@ -605,69 +521,6 @@ def validate_ldos_plotter_arguments(
 
     if not utils.check_dir(data_path, verbose=False, exit_on_failure=False):
         print(f"-- ERROR! Invalid data path: '{data_path}'")
-        success = False
-        return success
-
-    # Check that parameter file exists.
-    config_file = data_path / configuration.filenames["config"]
-    if not utils.check_file(config_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid config file found in specified data path: '{config_file}'."
-        )
-        success = False
-        return success
-
-    # Check that internal parameter file exists.
-    internal_param_file = data_path / configuration.filenames["internal_parameters"]
-    if not utils.check_file(internal_param_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid 'internal parameters' file found in specified data path: '{internal_param_file}'."
-        )
-        success = False
-        return success
-
-    # Check that results file exists.
-    results_file = data_path / configuration.filenames["results"]
-    if not utils.check_file(results_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid 'scalar results' file found in specified data path: '{results_file}'."
-        )
-        success = False
-        return success
-
-    # Check that convergence file exists.
-    convergence_file = data_path / configuration.filenames["convergence"]
-    if not utils.check_file(convergence_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid convergence file found in specified data path: '{convergence_file}'."
-        )
-        success = False
-        return success
-
-    # Check that post-processing file exists.
-    post_processing_file = data_path / configuration.filenames["post_processing"]
-    if not utils.check_file(post_processing_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid post-processing file found in specified data path: '{post_processing_file}'."
-        )
-        success = False
-        return success
-
-    # Check that LDOS file exists.
-    ldos_file = data_path / configuration.filenames["ldos"]
-    if not utils.check_file(ldos_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid LDOS file found in specified data path: '{ldos_file}'."
-        )
-        success = False
-        return success
-
-    # Check that DOS file exists.
-    dos_file = data_path / configuration.filenames["dos"]
-    if not utils.check_file(dos_file, verbose=False, exit_on_failure=False):
-        print(
-            f"-- ERROR! No valid DOS file found in specified data path: '{dos_file}'."
-        )
         success = False
         return success
 

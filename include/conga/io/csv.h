@@ -6,16 +6,17 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Utility functions for reading data from files.
+/// Functions for reading/writing CSV files.
 ///
 //===----------------------------------------------------------------------===//
-#ifndef CONGA_READ_UTILS_H_
-#define CONGA_READ_UTILS_H_
+#ifndef CONGA_IO_CSV_H_
+#define CONGA_IO_CSV_H_
 
 #include "../Type.h"
-#include "../grid.h"
 #include "../order_parameter/OrderParameter.h"
-#include "csv_reader.h"
+#include "CSVGridWriter.h"
+#include "CSVIterationWriter.h"
+#include "CSVReader.h"
 
 #include <thrust/device_vector.h>
 
@@ -27,6 +28,26 @@
 
 namespace conga {
 namespace io {
+// ========================== WRITE ========================== //
+
+/// \brief Write a grid to a CSV file.
+///
+/// \param inGrid The grid to be written.
+/// \param inFieldTitles Titles of the "fields".
+/// \param inFileName Path to CSV file.
+///
+/// \return Success.
+template <typename T, class Device>
+bool write(const GridData<T, Device> &inGrid,
+           const std::vector<std::string> &inFieldTitles,
+           const std::filesystem::path &inFileName) {
+  CSVGridWriter<T> writer;
+  const bool success = writer.write(inGrid, inFieldTitles, inFileName);
+  return success;
+}
+
+// ========================== READ ========================== //
+
 namespace internal {
 /// \brief CUDA kernel for copying two arrays, to two other arrays.
 ///
@@ -97,13 +118,12 @@ void copy(const std::vector<T> inSrc1, const std::vector<T> inSrc2,
 } // namespace internal
 
 template <typename T>
-inline bool readVectorPotential(const std::filesystem::path &inFileName,
-                                GridGPU<T> &inOutVectorPotential) {
+bool read(const std::filesystem::path &inFileName, GridGPU<T> &inOutGrid) {
   // Get the dimensions of the grid.
-  const int dimX = inOutVectorPotential.dimX();
-  const int dimY = inOutVectorPotential.dimY();
-  const int numFields = inOutVectorPotential.numFields();
-  const Type::type representation = inOutVectorPotential.representation();
+  const int dimX = inOutGrid.dimX();
+  const int dimY = inOutGrid.dimY();
+  const int numFields = inOutGrid.numFields();
+  const Type::type representation = inOutGrid.representation();
 
   // Sanity check the number of components (fields).
   if (numFields != 2) {
@@ -163,26 +183,26 @@ inline bool readVectorPotential(const std::filesystem::path &inFileName,
     }
 
     // Resize the vector potential.
-    inOutVectorPotential = GridGPU<T>(N, N, numFields, representation);
+    inOutGrid = GridGPU<T>(N, N, numFields, representation);
 
     // Copy data.
-    internal::copy(cpuX, cpuY, inOutVectorPotential);
+    internal::copy(cpuX, cpuY, inOutGrid);
 
     // Resize (via interpolation), to the desired size.
     // TODO(niclas): There is an undesired effect of zeros outside of the grain
     // leaking in.
-    inOutVectorPotential.resample(dimX, dimY);
+    inOutGrid.resample(dimX, dimY);
   } else {
     // Copy data.
-    internal::copy(cpuX, cpuY, inOutVectorPotential);
+    internal::copy(cpuX, cpuY, inOutGrid);
   }
 
   return true;
 }
 
 template <typename T>
-inline bool readOrderParameter(const std::filesystem::path &inFileName,
-                               OrderParameter<T> &inOutOrderParameter) {
+bool read(const std::filesystem::path &inFileName,
+          OrderParameter<T> &inOutOrderParameter) {
   // Read the CSV-file to a map.
   const CSVReader<T> csvReader(inFileName);
 
@@ -266,4 +286,4 @@ inline bool readOrderParameter(const std::filesystem::path &inFileName,
 } // namespace io
 } // namespace conga
 
-#endif // CONGA_READ_UTILS_H_
+#endif // CONGA_IO_CSV_H_

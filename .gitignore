@@ -13,8 +13,15 @@ build/
 # The examples are saved here.
 data/
 
+# Data files.
+*.csv
+*.h5
+
+# Figures.
+*.pdf
+
 # Virtual environment.
 venv/
 
-# For saving some temporary files, e.g. run scripts.
+# For saving some temporary files, e.g. run scripts, images, etc.
 tmp/

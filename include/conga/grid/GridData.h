@@ -131,6 +131,11 @@ public:
   const DEV &getVector() const { return m_vector; }
   DEV &getVector() { return m_vector; }
 
+  void setVector(const DEV &inVector) {
+    assert(inVector.size() == m_vector.size());
+    m_vector = inVector;
+  }
+
   const T *getDataPointer(const int field = 0,
                           Type::type representation = Type::real) const {
     return thrust::raw_pointer_cast(m_vector.data()) +

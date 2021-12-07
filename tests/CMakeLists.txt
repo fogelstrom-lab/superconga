@@ -1,7 +1,6 @@
 message(
-  STATUS
-    "################### Building SuperConga test files ###################")
-
+  STATUS "####################### SuperConga Test Files #######################"
+)
 # If doctest is too old or not found it is fetched.
 # TODO(niclas): We should set the minimum compatible version here.
 find_package(doctest 2.4.1 QUIET)
@@ -56,7 +55,7 @@ set(SRC
 enable_testing()
 
 foreach(file ${SRC})
-  message(STATUS "Setting up test executable: ${file}")
+  message(STATUS "File: ${file}")
 
   get_filename_component(name ${file} NAME_WE)
 
@@ -98,5 +97,5 @@ foreach(file ${SRC})
 endforeach(file ${SRC})
 
 message(
-  STATUS
-    "######################################################################")
+  STATUS "#####################################################################"
+)

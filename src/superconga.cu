@@ -24,17 +24,16 @@
 #include "conga/compute/ComputeOrderParameter.h"
 #include "conga/compute/ComputeVectorPotential.h"
 #include "conga/configure.h"
-#include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
-#include "conga/geometry/PolygonGeometry.h"
+#include "conga/geometry/geometry_utils.h"
 #include "conga/integration/IntegrationIteratorOzaki.h"
-#include "conga/io/read_utils.h"
+#include "conga/io.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_simulation.h"
 
 #ifdef CONGA_VISUALIZE
 #include "conga/visualization/Visualizer.h"
@@ -46,7 +45,6 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
-#include <json/json.h>
 #include <limits>
 #include <memory>
 #include <string>
@@ -73,21 +71,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
       return EXIT_FAILURE;
     }
-    const std::string filename = argv[1];
-
-    // Check that provided config file actually exists and can be opened.
-    std::ifstream ifile(filename);
-    if (!ifile.good()) {
-      std::cerr << "-- ERROR! Could not find/open config file '" << filename
+    const std::filesystem::path configPath = argv[1];
+    const bool success = conga::io::read(configPath, simParams);
+    if (!success) {
+      std::cerr << "-- ERROR! Could not find/open config file '" << configPath
                 << "'." << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    // Parse JSON.
-    Json::CharReaderBuilder builder;
-    JSONCPP_STRING errs;
-    if (!parseFromStream(builder, ifile, &simParams, &errs)) {
-      std::cout << errs << std::endl;
       return EXIT_FAILURE;
     }
 #ifndef NDEBUG
@@ -97,6 +85,9 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO(niclas): Add sanity check of all parameters here!?
+
+  // Fetch the verbosity so we know whether to print stuff or not.
+  const bool verbose = simParams["misc"]["verbose"].asBool();
 
   //***************************************************
   // CREATE CONTEXT
@@ -156,8 +147,8 @@ int main(int argc, char *argv[]) {
   T scalingFactor;
   T xOffset;
   T yOffset;
-  conga::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
-                                           yOffset);
+  conga::geometry_utils::computeGeometryScaling(simParams, scalingFactor,
+                                                xOffset, yOffset);
 
   // Set grain sidelength in coherence length.
   parameters->setGrainWidth(scalingFactor);
@@ -168,8 +159,8 @@ int main(int argc, char *argv[]) {
 
   // Parse user-defined geometry, loop through geometry component list and
   // create compund geometry. Scale and translate to internal coordinate system.
-  conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
-                                          xOffset, yOffset, grainFraction);
+  conga::geometry_utils::addGeometryComponents(
+      geometry, simParams, scalingFactor, xOffset, yOffset, grainFraction);
 
   //***************************************************
   // SET UP INTEGRATOR
@@ -262,45 +253,75 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  //***************************************************
+  // READ ORDER PARAMETER AND VECTOR POTENTIAL FROM FILE
+  //***************************************************
   // Path to directory containing data to load from.
   const std::filesystem::path loadDataPath(
       simParams["misc"]["load_path"].asString());
 
-  // Read the order parameter from file, if the path is not empty.
-  // TODO(niclas): This is a bit ugly perhaps. If the file contains data for a
-  // component, it is overwritten. If it does not, it is left untouched.
   if (!loadDataPath.empty()) {
-    const std::string orderParameterFile = loadDataPath / "order_parameter.csv";
-
-    // Read the values from file.
-    const bool success =
-        conga::io::readOrderParameter(orderParameterFile, *orderParameter);
-
-    // Abort if not successful.
-    if (!success) {
-      return EXIT_FAILURE;
-    }
-  }
-
-  //***************************************************
-  // SET INDUCED VECTOR-POTENTIAL
-  //***************************************************
-  // Read the vector potential from file, if the path is not empty.
-  if (!loadDataPath.empty()) {
-    const std::string vectorPotentialFile =
-        loadDataPath / "vector_potential.csv";
-
-    // Create the placeholder grid.
+    // Create the placeholder grid for vector potential.
     const int gridResolution = parameters->getGridResolutionBase();
     auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
         gridResolution, gridResolution, 2, conga::Type::real);
 
-    // Read the values from file.
-    const bool success = conga::io::readVectorPotential(
-        vectorPotentialFile, *(vectorPotential.get()));
+    // Check if the simulation file exists.
+    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
+
+    bool successOrderParameter = false;
+    bool successVectorPotential = false;
+    if (std::filesystem::exists(simulationPath)) {
+      // Open file.
+      const auto file = conga::io::fileReadOnly(simulationPath);
+
+      // Read order parameter.
+      successOrderParameter =
+          conga::io::read(file, "order_parameter", *orderParameter);
+      conga::io::printRead(verbose, successOrderParameter, "order parameter",
+                           simulationPath);
+
+      // Read vector potential.
+      successVectorPotential =
+          conga::io::read(file, "vector_potential", *(vectorPotential.get()));
+      conga::io::printRead(verbose, successVectorPotential, "vector potential",
+                           simulationPath);
+    } else {
+      if (verbose) {
+        std::cout << "-- WARNING! File " << simulationPath
+                  << " does not exist. "
+                     "Trying to read CSV files instead..."
+                  << std::endl;
+      }
+
+      // Read order parameter.
+      const std::filesystem::path orderParameterPath =
+          loadDataPath / "order_parameter.csv";
+      successOrderParameter =
+          conga::io::read(orderParameterPath, *orderParameter);
+      conga::io::printRead(verbose, successOrderParameter, "order parameter",
+                           orderParameterPath);
+
+      // Read vector potential.
+      const std::filesystem::path vectorPotentialPath =
+          loadDataPath / "vector_potential.csv";
+      successVectorPotential =
+          conga::io::read(vectorPotentialPath, *(vectorPotential.get()));
+      conga::io::printRead(verbose, successVectorPotential, "vector potential",
+                           vectorPotentialPath);
+    }
 
     // Abort if not successful.
-    if (!success) {
+    if (!successOrderParameter) {
+      std::cerr << "-- ERROR! Could not find order parameter in "
+                << loadDataPath << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    // Abort if not successful.
+    if (!successVectorPotential) {
+      std::cerr << "-- ERROR! Could not find vector potential in "
+                << loadDataPath << std::endl;
       return EXIT_FAILURE;
     }
 
@@ -392,42 +413,29 @@ int main(int argc, char *argv[]) {
                                 : saveFrequencyArg;
 
   const bool saveData = !saveDataPath.empty() && (saveFrequency > 0);
-  const bool verbose = simParams["misc"]["verbose"].asBool();
   if (saveData) {
     // Create directories.
     std::filesystem::create_directories(saveDataPath);
 
     // Save config parameters to JSON file.
-    const std::filesystem::path configFileName = saveDataPath / "config.json";
-    conga::io::writeJSON(simParams, configFileName, verbose);
+    const std::filesystem::path configPath = saveDataPath / "config.json";
+    conga::io::write(configPath, simParams);
+    conga::io::printWrite(verbose, true, "configuration", configPath);
 
     // TODO(niclas): Write internal parameters here as well? They do not change
     // during the simulation.
-
-    // Save domain.
-    const std::filesystem::path domainFileName = saveDataPath / "domain.csv";
-    const conga::GridGPU<char> &domain = *(geometry->getDomainGrid());
-    const conga::io::CSVGridDataSaveStrategy<char> writer;
-    const bool success = writer.save(domain, {"domain"}, domainFileName);
-    if (verbose) {
-      if (!success) {
-        std::cout << "-- ERROR! Could not write: " << domainFileName
-                  << std::endl;
-      } else {
-        std::cout << "-- Wrote: " << domainFileName << std::endl;
-      }
-    }
   }
 
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  const conga::Type::fileFormat dataFormat = conga::Type::csv;
   const bool visualize = simParams["misc"]["visualize"].asBool();
   const int numIterationsMin =
       simParams["accuracy"]["num_iterations_min"].asInt();
   const int numIterationsMax =
       simParams["accuracy"]["num_iterations_max"].asInt();
+  const conga::io::DataFormat dataFormat =
+      conga::io::getDataFormat(simParams["misc"]["data_format"].asString());
 #ifdef CONGA_VISUALIZE
   if (visualize) {
     // Create visualizer.
@@ -443,18 +451,16 @@ int main(int argc, char *argv[]) {
     const int cols = numOrderParameterComponents + extraCols;
     conga::Visualizer<T> visualizer("SuperConga", cols, rows, domain);
 
-    conga::run_utils::runSimulation(&context, visualizer, verbose,
-                                    numIterationsMin, numIterationsMax,
-                                    saveDataPath, saveFrequency, dataFormat);
+    conga::runSimulation(&context, visualizer, verbose, numIterationsMin,
+                         numIterationsMax, saveDataPath, saveFrequency,
+                         dataFormat);
   } else {
-    conga::run_utils::runSimulation(&context, verbose, numIterationsMin,
-                                    numIterationsMax, saveDataPath,
-                                    saveFrequency, dataFormat);
+    conga::runSimulation(&context, verbose, numIterationsMin, numIterationsMax,
+                         saveDataPath, saveFrequency, dataFormat);
   }
 #else
-  conga::run_utils::runSimulation(&context, verbose, numIterationsMin,
-                                  numIterationsMax, saveDataPath, saveFrequency,
-                                  dataFormat);
+  conga::runSimulation(&context, verbose, numIterationsMin, numIterationsMax,
+                       saveDataPath, saveFrequency, dataFormat);
 #endif // CONGA_VISUALIZE
 
   //***********************************************
@@ -462,8 +468,7 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // Save at the very end.
   if (saveData) {
-    conga::run_utils::saveDataWrapper(&context, saveDataPath, verbose,
-                                      dataFormat);
+    conga::saveDataWrapper(&context, saveDataPath, dataFormat, verbose);
   }
 
   // Yay!

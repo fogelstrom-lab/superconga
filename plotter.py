@@ -123,7 +123,7 @@ def main() -> None:
     # To get an order-parameter slice/cut at fixed y, use:
     # op_slice = data['order_parameter']['magnitude'][y_idx,:]
     data = parse_grid_quantity.parse_all_fields(
-        base_path=plot_config_parameters["general"]["data_path"], as_numpy=True
+        base_path=plot_config_parameters["general"]["data_path"]
     )
 
     # ======================================================================#

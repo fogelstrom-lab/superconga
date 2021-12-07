@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 project(
   superconga
   VERSION 0.7.0
-  LANGUAGES CUDA CXX)
+  LANGUAGES CUDA CXX C)
 
 # Output build messages
 message(
@@ -31,8 +31,6 @@ if(ARMADILLO_FOUND)
   message(STATUS "Found Armadillo ${ARMADILLO_VERSION_STRING}")
 else()
   # Download Armadillo, but don't build it: we want to use header-only version.
-  # Note that we could let CMake check for Armadillo first, but this way we can
-  # enforce a specific version we know works well with SuperConga.
   message(STATUS "Fetching Armadillo")
   # version 10.7.x
   FetchContent_Declare(
@@ -40,14 +38,14 @@ else()
     GIT_REPOSITORY https://gitlab.com/conradsnicta/armadillo-code.git
     GIT_TAG d9b38626f0cb6cadb828a8d836162df089ed668b)
 
-  # Fetch properties for armadillo target: POPULATED, SOURCE_DIR, BINARY_DIR.
+  # Fetch properties for target: POPULATED, SOURCE_DIR, BINARY_DIR.
   FetchContent_GetProperties(armadillo)
   # Only populate if it is not already done.
   if(NOT armadillo_POPULATED)
     FetchContent_Populate(armadillo)
     # Note: We intentionally avoid add_subdirectory. Otherwise we indicate that
     # CMake should include these to the build, and we want a header-only version
-    # of armadillo to include.
+    # to include.
   endif(NOT armadillo_POPULATED)
 
   # Set variables with capital names, to conform with variables from
