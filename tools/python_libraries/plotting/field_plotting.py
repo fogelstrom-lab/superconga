@@ -693,7 +693,7 @@ def plot_ldos(
             fill=False,
             color="red",
         )
-        ax_LDOS.patches = []
+        ax_LDOS.patches.pop()
         ax_LDOS.add_patch(LDOS_circle)
 
         fig.canvas.draw()
