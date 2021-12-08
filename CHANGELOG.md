@@ -30,6 +30,7 @@
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
 - Pick the intersection with the smallest difference in y-coordinate when applying boundary condition.
+- Fix MatPlotLib > 3.5 bug in LDOS plotter.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
@@ -53,6 +54,7 @@
 - Add test of magnic moment in an s-wave annulus using radial gauge.
 - Remove more unused/broken code, e.g. read/write binary files.
 - Update linear-response current test using the Yoshida function.
+- Update Python requirements.
 
 ---
 
