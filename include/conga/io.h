@@ -1,0 +1,21 @@
+//===-------- io.h - Utility functions for reading/writing data. ----------===//
+//
+// Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
+// See LICENSE.txt for license information.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Utility functions for reading/writing data.
+///
+//===----------------------------------------------------------------------===//
+#ifndef CONGA_IO_H_
+#define CONGA_IO_H_
+
+#include "io/DataFormat.h"
+#include "io/csv.h"
+#include "io/h5.h"
+#include "io/json.h"
+#include "io/print.h"
+
+#endif // CONGA_IO_H_

@@ -8,6 +8,7 @@
 
 # Built-in modules and third-party libraries.
 import os
+import h5py
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -23,35 +24,52 @@ from python_libraries.settings import configuration
 
 
 # -----------------------------------------------------------------------------
-# FILE PARSING: PANDAS
+# FILE PARSING: H5
 # -----------------------------------------------------------------------------
-# Parse 2D grid observable/quantity from csv to pandas DataFrame object.
-def parse_field_pandas(base_path: str, field_name: str) -> pd.DataFrame:
-    # Construct full file path.
-    data_path = Path(base_path) / configuration.filenames[field_name]
+# Get data for certain key from h5 file.
+def get_data_h5(h5file, key):
+    # Fetch dimensions.
+    dim_x = h5file[key].attrs["dim_x"]
+    dim_y = h5file[key].attrs["dim_y"]
 
-    return utils.parse_general_csv(data_path)
+    # Convert to NumPy.
+    data = np.array(h5file[key])
+    return np.reshape(data, [-1, dim_y, dim_x])
+
+
+# -----------------------------------------------------------------------------
+# FILE PARSING: PANDAS (CSV)
+# -----------------------------------------------------------------------------
+# Get data for certain key from Pandas dataframe.
+def get_data_csv(df, key):
+    # Fetch dimensions.
+    dim_x = df["x_idx"].max() + 1
+    dim_y = df["y_idx"].max() + 1
+
+    # Convert to NumPy.
+    data = df[key].to_numpy()
+    return np.reshape(data, [-1, dim_y, dim_x])
 
 
 # Parse 2D grid of geometry mask from csv to dict of numpy arrays, with a
 # structure which is appropriate for i.e. matplotlib.pyplot.imshow().
 def parse_geometry_numpy(base_path: str) -> dict:
-    field_name = "geometry"
-
-    # Parse CSV with pandas.
-    data_pandas = parse_field_pandas(base_path=base_path, field_name=field_name)
-
-    # Convert to numpy data.
-    data_numpy = data_pandas.to_numpy()
-
-    # Get number of points per side in grid. Assuming uniform grid.
-    x_coordinate_grid = data_numpy[:, 0]
-    points_per_side = int(np.sqrt(len(x_coordinate_grid)))
+    # Try opening H5 file.
+    path = os.path.join(base_path, configuration.filenames["simulation"])
+    key = "domain"
+    if os.path.exists(path):
+        h5file = h5py.File(path, "r")
+        data = get_data_h5(h5file=h5file, key=key)
+    else:
+        # Try reading CSV file instead.
+        path = os.path.join(base_path, "domain.csv")
+        df = pd.read_csv(path)
+        data = get_data_csv(df=df, key=key)
 
     # Storage for return data.
     out_data_dict = {}
 
-    out_data_dict["mask"] = data_numpy[:, 2].reshape(points_per_side, points_per_side)
+    out_data_dict["mask"] = np.squeeze(data)
 
     return out_data_dict
 
@@ -59,132 +77,131 @@ def parse_geometry_numpy(base_path: str) -> dict:
 # Parse 2D grid observable/quantity from csv to dict of numpy arrays, with a
 # structure which is appropriate for i.e. matplotlib.pyplot.imshow().
 def parse_field_numpy(base_path: str, field_name: str) -> dict:
-    # Parse CSV with pandas.
-    data_pandas = parse_field_pandas(base_path=base_path, field_name=field_name)
-
-    # Convert to numpy data.
-    data_numpy = data_pandas.to_numpy()
-
-    # Get number of points per side in grid. Assuming uniform grid.
-    x_coordinate_grid = data_numpy[:, 0]
-    points_per_side = int(np.sqrt(len(x_coordinate_grid)))
-
     # Get the field type: vector-, scalar- or complex- field.
     field_type = configuration.grid_field_types[field_name]
 
     # Storage for return data.
     out_data_dict = {}
 
-    # Fetch data depending on field type.
-    if field_type == "vector":
-        # Get x- and y-component of vector field.
-        out_data_dict["x"] = data_numpy[:, 2].reshape(points_per_side, points_per_side)
-        out_data_dict["y"] = data_numpy[:, 3].reshape(points_per_side, points_per_side)
-        # Compute the magnitude.
-        out_data_dict["magnitude"] = np.sqrt(
-            out_data_dict["x"] ** 2 + out_data_dict["y"] ** 2
-        )
-    elif field_type == "scalar":
-        out_data_dict["magnitude"] = data_numpy[:, 2].reshape(
-            points_per_side, points_per_side
-        )
-    elif field_type == "complex":
-        # Check if multiple components exist (i.e. d+is for order parameter):
-        # subtract two for x- and y-coordinates, divide by two for real and
-        # imaginary part for each component.
-        num_components = int((len(data_pandas.columns) - 2) / 2)
+    # Path to default H5 file.
+    path = os.path.join(base_path, configuration.filenames["simulation"])
 
+    # Fetch data depending on field type.
+    if field_type == "complex":
         # Storage for magnitudes and phases.
         magnitudes = []
         phases = []
 
-        # Loop over components.
-        for component_idx in range(0, num_components):
-            # GET real and imaginary parts.
-            re_offset = 2 + 2 * component_idx
-            real_part = data_numpy[:, re_offset].reshape(
-                points_per_side, points_per_side
-            )
-            imaginary_offset = 3 + 2 * component_idx
-            imaginary_part = data_numpy[:, imaginary_offset].reshape(
-                points_per_side, points_per_side
-            )
+        if os.path.exists(path):
+            h5file = h5py.File(path, "r")
 
-            # Compute absolute square.
-            magnitudes.append(np.sqrt(real_part ** 2 + imaginary_part ** 2))
+            # An H5 key for the order parameter is e.g. "order_parameter_s". So we can fetch the keys which has "order_parameter" in them.
+            for key in h5file.keys():
+                if not field_name in key:
+                    continue
+                data = get_data_h5(h5file=h5file, key=key)
+                magnitudes.append(np.hypot(data[0, :, :], data[1, :, :]))
+                phases.append(np.arctan2(data[1, :, :], data[0, :, :]))
+        else:
+            # Try reading CSV file instead.
+            path = os.path.join(base_path, field_name + ".csv")
+            df = pd.read_csv(path)
+            for symmetry in configuration.valid_symmetries:
+                key_real = symmetry + "_re"
+                key_imag = symmetry + "_im"
+                if (key_real in df.keys()) and (key_imag in df.keys()):
+                    data_real = get_data_csv(df=df, key=key_real)
+                    data_imag = get_data_csv(df=df, key=key_imag)
+                    magnitudes.append(np.squeeze(np.hypot(data_real, data_imag)))
+                    phases.append(np.squeeze(np.arctan2(data_imag, data_real)))
 
-            # Compute phase using atan2 (see e.g. wikipedia).
-            phases.append(np.arctan2(imaginary_part, real_part))
+        assert len(magnitudes) == len(phases)
 
-        if num_components == 1:
+        if len(magnitudes) == 1:
             magnitudes = magnitudes[0]
             phases = phases[0]
 
         out_data_dict["magnitude"] = magnitudes
         out_data_dict["phase"] = phases
     else:
-        print(
-            f"-- ERROR! parse_grid_quantity.py: Unimplemented field type: {field_type}."
-        )
-        status_code = 1
-        sys.exit(status_code)
+        if os.path.exists(path):
+            h5file = h5py.File(path, "r")
+            data = get_data_h5(h5file=h5file, key=field_name)
+        else:
+            # Try reading CSV file instead.
+            path = os.path.join(base_path, field_name + ".csv")
+            df = pd.read_csv(path)
+            if field_name == "current_density":
+                data_x = get_data_csv(df=df, key="j_x")
+                data_y = get_data_csv(df=df, key="j_y")
+                data = np.concatenate((data_x, data_y), axis=0)
+            elif field_name == "vector_potential":
+                data_x = get_data_csv(df=df, key="a_x")
+                data_y = get_data_csv(df=df, key="a_y")
+                data = np.concatenate((data_x, data_y), axis=0)
+            elif field_name == "magnetic_flux_density":
+                data = get_data_csv(df=df, key="b_z")
+
+        if field_type == "vector":
+            # Get x- and y-component of vector field.
+            out_data_dict["x"] = np.squeeze(data[0, :, :])
+            out_data_dict["y"] = np.squeeze(data[1, :, :])
+            # Compute the magnitude.
+            out_data_dict["magnitude"] = np.hypot(data[0, :, :], data[1, :, :])
+        elif field_type == "scalar":
+            out_data_dict["magnitude"] = np.squeeze(data)
+        else:
+            print(
+                f"-- ERROR! parse_grid_quantity.py: Unimplemented field type: {field_type}."
+            )
+            status_code = 1
+            sys.exit(status_code)
 
     return out_data_dict
 
 
 # Wrapper to parse all observables/quantities indicated by plot_parameters.
-def parse_all_fields(base_path: str, as_numpy: bool = True):
+def parse_all_fields(base_path: str):
     # Data storage as dictionary.
     data_dict = {}
 
     # Loop over all data fields.
     for field_name in sorted(configuration.grid_field_types.keys()):
         # Check if field is to be plotted.
-        if as_numpy:
-            data_dict[field_name] = parse_field_numpy(
-                base_path=base_path,
-                field_name=field_name,
-            )
-        else:
-            data_dict[field_name] = parse_field_pandas(
-                base_path=base_path,
-                field_name=field_name,
-            )
+        data_dict[field_name] = parse_field_numpy(
+            base_path=base_path,
+            field_name=field_name,
+        )
 
     # Return all data in easily parseable dictionary.
     return data_dict
 
 
 # Parse LDOS data.
-def parse_ldos(base_path: str, internal_parameters: dict) -> dict:
+def parse_ldos(base_path: str) -> dict:
     # Data storage as dictionary.
     data_dict = {}
 
-    field_name = "ldos"
+    # Try opening H5 file.
+    path = os.path.join(base_path, configuration.filenames["spectroscopy"])
+    key = "ldos"
+    if os.path.exists(path):
+        h5file = h5py.File(path, "r")
+        data = get_data_h5(h5file=h5file, key=key)
+    else:
+        # Try reading CSV file instead.
+        path = os.path.join(base_path, "ldos.csv")
+        df = pd.read_csv(path)
+        data = get_data_csv(df=df, key=key)
+    data_dict["ldos"] = data
 
-    # Parse CSV with pandas.
-    data_pandas = parse_field_pandas(base_path=base_path, field_name=field_name)
-
-    # Get the lattice side length.
-    num_lattice_points = internal_parameters["num_lattice_points"]
-    points_per_side = int(np.sqrt(num_lattice_points))
-
-    assert points_per_side ** 2 == num_lattice_points
-
-    # Convert to NumPy arrays.
-    x = np.reshape(
-        data_pandas["x_idx"].tolist(), [-1, points_per_side, points_per_side]
-    )
-    y = np.reshape(
-        data_pandas["y_idx"].tolist(), [-1, points_per_side, points_per_side]
-    )
-    data_dict["ldos"] = np.reshape(
-        data_pandas["ldos"].tolist(), [-1, points_per_side, points_per_side]
-    )
-
-    # The x/y-coordinates are the same for every energy. So we can extract them for a single energy.
-    data_dict["x"] = x[0, :, :]
-    data_dict["y"] = y[0, :, :]
+    # Make indices.
+    dim_y, dim_x = data.shape[1:]
+    vx = np.array(list(range(dim_x)))
+    vy = np.array(list(range(dim_x)))
+    x, y = np.meshgrid(vx, vy)
+    data_dict["x"] = x
+    data_dict["y"] = y
 
     # Return all data in easily parseable dictionary.
     return data_dict

@@ -18,7 +18,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
 
 #include <iostream>
@@ -164,8 +164,12 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   // =================== ACT ==================== //
   // Initialize and run simulation.
   context.initialize();
-  conga::run_utils::runSimulation(&context, PRINT_ITERATION_STATUS,
-                                  NUM_ITERATIONS_MIN, NUM_ITERATIONS_MAX);
+
+  conga::Status status = conga::Status::kContinue;
+  while (status != conga::Status::kQuit) {
+    status = conga::runIteration(&context, PRINT_ITERATION_STATUS,
+                                 NUM_ITERATIONS_MIN, NUM_ITERATIONS_MAX);
+  }
 
   // Fetch the grain-summed current-density magnitude
   const conga::GridGPU<T> currentDensity =

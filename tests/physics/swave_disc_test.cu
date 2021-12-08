@@ -18,7 +18,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/utils.h"
 #include "conga/wrappers/doctest.h"
 
@@ -153,7 +153,10 @@ template <typename T> void testSWaveDisc() {
 
   // Run the simulation.
   context.initialize();
-  conga::run_utils::runSimulation(&context);
+  conga::Status status = conga::Status::kContinue;
+  while (status != conga::Status::kQuit) {
+    status = conga::runIteration(&context, true, 0, 100);
+  }
 
   // Save the result.
   const T freeEnergy =

@@ -26,19 +26,17 @@
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeLDOS.h"
 #include "conga/configure.h"
-#include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
-#include "conga/geometry/PolygonGeometry.h"
+#include "conga/geometry/geometry_utils.h"
 #include "conga/grid.h"
 #include "conga/integration/IntegrationIteratorKeldysh.h"
-#include "conga/io/csv_writers.h"
-#include "conga/io/read_utils.h"
+#include "conga/io.h"
 #include "conga/order_parameter/OrderParameter.h"
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_simulation.h"
 
 #include <json/json.h>
 
@@ -72,23 +70,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
       return EXIT_FAILURE;
     }
-
-    // Path to post-process config.
-    const std::filesystem::path postProcessFile(argv[1]);
-
-    // Check that provided config file actually exists and can be opened.
-    std::ifstream ifile(postProcessFile);
-    if (!ifile.good()) {
+    const std::filesystem::path postProcessConfigPath = argv[1];
+    const bool success =
+        conga::io::read(postProcessConfigPath, postProcessConfig);
+    if (!success) {
       std::cerr << "-- ERROR! Could not find/open config file '"
-                << postProcessFile << "'." << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    // Parse JSON.
-    Json::CharReaderBuilder builder;
-    JSONCPP_STRING errs;
-    if (!parseFromStream(builder, ifile, &postProcessConfig, &errs)) {
-      std::cout << errs << std::endl;
+                << postProcessConfigPath << "'." << std::endl;
       return EXIT_FAILURE;
     }
 #ifndef NDEBUG
@@ -107,21 +94,11 @@ int main(int argc, char *argv[]) {
   Json::Value simParams;
   {
     // Path to simulation config.
-    const std::filesystem::path simulationFile = loadDataPath / "config.json";
-
-    // Check that provided config file actually exists and can be opened.
-    std::ifstream ifile(simulationFile);
-    if (!ifile.good()) {
-      std::cerr << "-- ERROR! Could not find/open config file '"
-                << simulationFile << "'." << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    // Parse JSON.
-    Json::CharReaderBuilder builder;
-    JSONCPP_STRING errs;
-    if (!parseFromStream(builder, ifile, &simParams, &errs)) {
-      std::cout << errs << std::endl;
+    const std::filesystem::path configPath = loadDataPath / "config.json";
+    const bool success = conga::io::read(configPath, simParams);
+    if (!success) {
+      std::cerr << "-- ERROR! Could not find/open config file '" << configPath
+                << "'." << std::endl;
       return EXIT_FAILURE;
     }
 #ifndef NDEBUG
@@ -131,6 +108,9 @@ int main(int argc, char *argv[]) {
   }
 
   // TODO(niclas): Add sanity check of all parameters here!?
+
+  // Fetch the verbosity so we know whether to print stuff or not.
+  const bool verbose = postProcessConfig["verbose"].asBool();
 
   //***************************************************
   // CREATE CONTEXT
@@ -194,8 +174,8 @@ int main(int argc, char *argv[]) {
   T scalingFactor;
   T xOffset;
   T yOffset;
-  conga::run_utils::computeGeometryScaling(simParams, scalingFactor, xOffset,
-                                           yOffset);
+  conga::geometry_utils::computeGeometryScaling(simParams, scalingFactor,
+                                                xOffset, yOffset);
 
   // Set grain sidelength in coherence length.
   parameters->setGrainWidth(scalingFactor);
@@ -206,8 +186,8 @@ int main(int argc, char *argv[]) {
 
   // Parse user-defined geometry, loop through geometry component list and
   // create compund geometry. Scale and translate to internal coordinate system.
-  conga::run_utils::addGeometryComponents(geometry, simParams, scalingFactor,
-                                          xOffset, yOffset, grainFraction);
+  conga::geometry_utils::addGeometryComponents(
+      geometry, simParams, scalingFactor, xOffset, yOffset, grainFraction);
 
   //***************************************************
   // SET UP INTEGRATOR
@@ -275,36 +255,71 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  // Read the order parameter from file.
-  {
-    const std::string orderParameterFile = loadDataPath / "order_parameter.csv";
-    // Read the values from file.
-    const bool success =
-        conga::io::readOrderParameter(orderParameterFile, *orderParameter);
-
-    // Abort if not successful.
-    if (!success) {
-      return EXIT_FAILURE;
-    }
-  }
-
   //***************************************************
-  // SET INDUCED VECTOR-POTENTIAL
+  // READ ORDER PARAMETER AND VECTOR POTENTIAL FROM FILE
   //***************************************************
-  // Read the vector potential from file.
-  const std::string vectorPotentialFile = loadDataPath / "vector_potential.csv";
   {
-    // Create the placeholder grid.
+    // Create the placeholder grid for vector potential.
     const int gridResolution = parameters->getGridResolutionBase();
     auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
         gridResolution, gridResolution, 2, conga::Type::real);
 
-    // Read the values from file.
-    const bool success = conga::io::readVectorPotential(
-        vectorPotentialFile, *(vectorPotential.get()));
+    // Check if the simulation file exists.
+    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
+
+    bool successOrderParameter = false;
+    bool successVectorPotential = false;
+    if (std::filesystem::exists(simulationPath)) {
+      // Open file.
+      const auto file = conga::io::fileReadOnly(simulationPath);
+
+      // Read order parameter.
+      successOrderParameter =
+          conga::io::read(file, "order_parameter", *orderParameter);
+      conga::io::printRead(verbose, successOrderParameter, "order parameter",
+                           simulationPath);
+
+      // Read vector potential.
+      successVectorPotential =
+          conga::io::read(file, "vector_potential", *(vectorPotential.get()));
+      conga::io::printRead(verbose, successVectorPotential, "vector potential",
+                           simulationPath);
+    } else {
+      if (verbose) {
+        std::cout << "-- WARNING! File " << simulationPath
+                  << " does not exist. "
+                     "Trying to read CSV files instead..."
+                  << std::endl;
+      }
+
+      // Read order parameter.
+      const std::filesystem::path orderParameterPath =
+          loadDataPath / "order_parameter.csv";
+      successOrderParameter =
+          conga::io::read(orderParameterPath, *orderParameter);
+      conga::io::printRead(verbose, successOrderParameter, "order parameter",
+                           orderParameterPath);
+
+      // Read vector potential.
+      const std::filesystem::path vectorPotentialPath =
+          loadDataPath / "vector_potential.csv";
+      successVectorPotential =
+          conga::io::read(vectorPotentialPath, *(vectorPotential.get()));
+      conga::io::printRead(verbose, successVectorPotential, "vector potential",
+                           vectorPotentialPath);
+    }
 
     // Abort if not successful.
-    if (!success) {
+    if (!successOrderParameter) {
+      std::cerr << "-- ERROR! Could not find order parameter in "
+                << loadDataPath << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    // Abort if not successful.
+    if (!successVectorPotential) {
+      std::cerr << "-- ERROR! Could not find vector potential in "
+                << loadDataPath << std::endl;
       return EXIT_FAILURE;
     }
 
@@ -322,8 +337,8 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS
   //***************************************************
-  // RiccatiSolverConfined: provides analytic solutions to the Riccati equations
-  // for a piecewise constant order parameter.
+  // RiccatiSolverConfined: provides analytic solutions to the Riccati
+  // equations for a piecewise constant order parameter.
   conga::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice: VectorPotential::Solenoid calculates the vector potential
@@ -350,17 +365,13 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  conga::run_utils::runSimulation(
-      &context, postProcessConfig["verbose"].asBool(),
-      postProcessConfig["num_iterations_min"].asInt(),
-      postProcessConfig["num_iterations_max"].asInt());
+  conga::runSimulation(&context, verbose,
+                       postProcessConfig["num_iterations_min"].asInt(),
+                       postProcessConfig["num_iterations_max"].asInt());
 
   //***********************************************
   // SAVE DATA
   //***********************************************
-  // TODO(niclas): Perhaps move this to io/write_utils.h, e.g.
-  // saveDensityOfStates? And do the same thing for saving other grids in
-  // run_utils.h.
 
   // Path to directory containing data to save to.
   const std::filesystem::path saveDataPath(
@@ -371,59 +382,33 @@ int main(int argc, char *argv[]) {
     std::filesystem::create_directories(saveDataPath);
 
     // Save post-process config.
-    const std::filesystem::path configFileName =
+    const std::filesystem::path postProcessConfigPath =
         saveDataPath / "postprocess.json";
-    conga::io::writeJSON(postProcessConfig, configFileName,
-                         postProcessConfig["verbose"].asBool());
+    conga::io::write(postProcessConfigPath, postProcessConfig);
+    conga::io::printWrite(verbose, true, "postprocess configuration",
+                          postProcessConfigPath);
 
-    // Get file extension.
-    const conga::Type::fileFormat dataFormat = conga::Type::csv;
-    const std::string extension = conga::io::getFileExtension(dataFormat);
-
-    // Save the DOS.
-    {
-      // Create CSV writer.
-      const bool writeIndices = false;
-      const conga::io::CSVGridDataSaveStrategy<T> writer(writeIndices);
-
-      // Create filename.
-      const std::filesystem::path dosFileName =
-          saveDataPath / ("dos" + extension);
-
-      // Get the DOS.
-      const conga::GridCPU<T> &dos = *(context.getComputeLDOS()->getDOS());
-
-      // Write data.
-      const bool success = writer.save(dos, {"energy", "dos"}, dosFileName);
-
-      if (!success) {
-        std::cout << "-- ERROR! Could not write: " << dosFileName << std::endl;
-      } else {
-        std::cout << "-- Wrote: " << dosFileName << std::endl;
-      }
-    }
+    // Get data format.
+    const conga::io::DataFormat dataFormat =
+        conga::io::getDataFormat(simParams["misc"]["data_format"].asString());
 
     // Save the LDOS.
-    {
-      // Create CSV writer.
-      const conga::io::CSVGridDataSaveStrategy<T> writer;
-
-      // Create filename.
-      const std::filesystem::path ldosFileName =
-          saveDataPath / ("ldos" + extension);
-
-      // Get the LDOS.
-      const conga::GridGPU<T> &ldos =
-          (*(context.getComputeLDOS()->getResult()));
-
-      // Write data.
-      const bool success = writer.save(ldos, {"ldos"}, ldosFileName);
-
-      if (!success) {
-        std::cout << "-- ERROR! Could not write: " << ldosFileName << std::endl;
-      } else {
-        std::cout << "-- Wrote: " << ldosFileName << std::endl;
-      }
+    const conga::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
+    switch (dataFormat) {
+    case conga::io::DataFormat::CSV: {
+      const std::filesystem::path ldosPath = saveDataPath / "ldos.csv";
+      const bool success = conga::io::write(ldos, {"ldos"}, ldosPath);
+      conga::io::printWrite(verbose, success, "LDOS", ldosPath);
+      break;
+    }
+    default: {
+      // Write H5 file if not told otherwise.
+      const std::filesystem::path spectroscopyPath =
+          saveDataPath / "spectroscopy.h5";
+      auto file = conga::io::fileOverWrite(spectroscopyPath);
+      conga::io::write(ldos, "ldos", file);
+      conga::io::printWrite(verbose, true, "LDOS", spectroscopyPath);
+    }
     }
   }
 

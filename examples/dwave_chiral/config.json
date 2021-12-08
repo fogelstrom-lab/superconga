@@ -51,6 +51,7 @@
 		"step_size": 1.0
 	},
 	"misc": {
+		"data_format": "h5",
 		"load_path": "",
 		"save_frequency": -1,
 		"save_path": "data/examples/dwave_chiral",

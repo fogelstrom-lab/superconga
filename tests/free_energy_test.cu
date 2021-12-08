@@ -17,7 +17,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
 
 #include <iostream>
@@ -74,10 +74,10 @@ namespace helper {
 
 template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   // Create context.
-  conga::Context<T> *context = new conga::Context<T>();
+  conga::Context<T> context;
 
   // Set parameters.
-  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   parameters->setGrainWidth(static_cast<T>(TEST_PARAMS::GRAIN_SIDE_LENGTH));
   parameters->setPointsPerCoherenceLength(
       static_cast<T>(TEST_PARAMS::POINTS_PER_COHERENCE_LENGTH));
@@ -88,22 +88,22 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   parameters->setEnergyCutoff(static_cast<T>(TEST_PARAMS::ENERGY_CUTOFF));
 
   // Set up a disc.
-  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
 
   // Integrator.
-  new conga::IntegrationIteratorOzaki<T>(context);
+  new conga::IntegrationIteratorOzaki<T>(&context);
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
-          context);
+          &context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter.
   conga::OrderParameter<T> *orderParameter =
-      new conga::OrderParameter<T>(context);
+      new conga::OrderParameter<T>(&context);
   const conga::vector2d<int> indices = {static_cast<int>(inSwapOrder),
                                         static_cast<int>(!inSwapOrder)};
   for (const int i : indices) {
@@ -116,24 +116,24 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   }
 
   // Create compute objects.
-  new conga::ComputeOrderParameter<T>(context);
-  new conga::ComputeFreeEnergy<T>(context);
+  new conga::ComputeOrderParameter<T>(&context);
+  new conga::ComputeFreeEnergy<T>(&context);
 
   // Set accelerator.
-  context->set(std::make_unique<conga::Accelerator<T>>());
+  context.set(std::make_unique<conga::Accelerator<T>>());
 
   // Initialize and run simulation.
-  context->initialize();
-  conga::run_utils::runSimulation(context, TEST_PARAMS::PRINT_ITERATION_STATUS,
-                                  TEST_PARAMS::NUM_ITERATIONS_MIN,
-                                  TEST_PARAMS::NUM_ITERATIONS_MAX);
+  context.initialize();
+  conga::Status status = conga::Status::kContinue;
+  while (status != conga::Status::kQuit) {
+    status = conga::runIteration(&context, TEST_PARAMS::PRINT_ITERATION_STATUS,
+                                 TEST_PARAMS::NUM_ITERATIONS_MIN,
+                                 TEST_PARAMS::NUM_ITERATIONS_MAX);
+  }
 
   // Get the free energy, our result.
   const T freeEnergy =
-      context->getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
-
-  // Clean up context.
-  conga::run_utils::cleanup(context);
+      context.getComputeFreeEnergy()->getFreeEnergyPerUnitArea();
 
   return freeEnergy;
 }

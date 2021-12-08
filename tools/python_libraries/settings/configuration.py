@@ -36,17 +36,11 @@ symmetry_latex_format = {
 filenames = {
     "config": "config.json",
     "convergence": "convergence.csv",
-    "current_density": "current_density.csv",
-    "dos": "dos.csv",
-    "geometry": "domain.csv",
     "internal_parameters": "internal_parameters.json",
-    "ldos": "ldos.csv",
-    "magnetic_flux_density": "magnetic_flux_density.csv",
-    "order_parameter": "order_parameter.csv",
     "post_processing": "postprocess.json",
     "results": "results.json",
-    "superflow": "superflow.csv",
-    "vector_potential": "vector_potential.csv",
+    "simulation": "simulation.h5",
+    "spectroscopy": "spectroscopy.h5",
 }
 
 # Components for each field type. Note that this is hardcoded in
@@ -68,7 +62,6 @@ grid_field_types = {
     "current_density": "vector",
     "vector_potential": "vector",
 }
-#    "superflow": "vector",
 
 # Name of temporary json file sent to C++/CUDA binary.
 temp_config_file_name = ".tmp_config.json"

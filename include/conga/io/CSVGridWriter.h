@@ -9,8 +9,8 @@
 /// Functionality and classes for writing CSV files.
 ///
 //===----------------------------------------------------------------------===//
-#ifndef CONGA_CSV_WRITERS_H_
-#define CONGA_CSV_WRITERS_H_
+#ifndef CONGA_CSV_GRID_WRITER_H_
+#define CONGA_CSV_GRID_WRITER_H_
 
 #include "../Context.h"
 #include "../Type.h"
@@ -27,145 +27,24 @@
 
 namespace conga {
 namespace io {
-//===------------------------------ Classes------------------------------===//
-/// \brief Interface for saving per-iteration data
-///
-/// Interface for a class which encapsulates data saving on a per-iteration
-/// basis. Should be implemented for each save strategy (e.g. new save format,
-/// or different type of info to be stored).
-template <typename T> class IIterationDataSaveStrategy {
+template <typename T> class CSVGridWriter {
 public:
-  virtual bool save(const Context<T> *const inContext,
-                    const std::filesystem::path &inFilePath) const = 0;
-
-  virtual ~IIterationDataSaveStrategy() = default;
-};
-
-template <typename T>
-class CSVIterationDataSaveStrategy : public IIterationDataSaveStrategy<T> {
-public:
-  CSVIterationDataSaveStrategy(const std::string &inDelimiter = ",",
-                               const int inFloatPrecision = 8)
-      : m_floatPrecision(inFloatPrecision), m_delimiter(inDelimiter) {}
-
-  bool save(const Context<T> *const inContext,
-            const std::filesystem::path &inFilePath) const override {
-    // Note, this class always appends data to the file. It never removes the
-    // file.
-    if (!std::filesystem::exists(inFilePath)) {
-      if (!appendHeader(inFilePath)) {
-        return false;
-      };
-    }
-    return appendRow(inContext, inFilePath);
-  }
-
-private:
-  const int m_floatPrecision;
-  const std::string m_delimiter;
-
-  bool appendHeader(const std::filesystem::path &inFilePath) const {
-    std::ostringstream oss;
-    oss << "iteration" << m_delimiter << "order_parameter_residual"
-        << m_delimiter << "free_energy_residual" << m_delimiter
-        << "current_density_residual" << m_delimiter
-        << "vector_potential_residual" << m_delimiter
-        << "free_energy_per_unit_area";
-    return appendToFile(oss.str(), inFilePath);
-  };
-
-  bool appendRow(const Context<T> *const inContext,
-                 const std::filesystem::path &inFilePath) const {
-    // The number of iterations so far.
-    const int numIterations = inContext->getNumIterations();
-
-    // Order-parameter residual.
-    const bool orderParameterExist = inContext->getComputeOrderParameter();
-    const T orderParameterResidual =
-        orderParameterExist
-            ? inContext->getComputeOrderParameter()->getResidual()
-            : static_cast<T>(0);
-
-    // Free-energy residual.
-    const bool freeEnergyExist = inContext->getComputeFreeEnergy();
-    const T freeEnergyResidual =
-        freeEnergyExist ? inContext->getComputeFreeEnergy()->getResidual()
-                        : static_cast<T>(0);
-    const T freeEnergyPerUnitArea =
-        freeEnergyExist
-            ? inContext->getComputeFreeEnergy()->getFreeEnergyPerUnitArea()
-            : static_cast<T>(0);
-
-    // Current-density residual.
-    const bool currentDensityExist = inContext->getComputeCurrent();
-    const T currentDensityResidual =
-        currentDensityExist ? inContext->getComputeCurrent()->getResidual()
-                            : static_cast<T>(0);
-
-    // Vector-potential residual.
-    const bool vectorPotentialExist = inContext->getComputeVectorPotential();
-    const T vectorPotentialResidual =
-        vectorPotentialExist
-            ? inContext->getComputeVectorPotential()->getResidual()
-            : static_cast<T>(0);
-
-    std::ostringstream oss;
-    oss << std::scientific << std::setprecision(m_floatPrecision);
-    oss << numIterations << m_delimiter << orderParameterResidual << m_delimiter
-        << freeEnergyResidual << m_delimiter << currentDensityResidual
-        << m_delimiter << vectorPotentialResidual << m_delimiter
-        << freeEnergyPerUnitArea;
-    return appendToFile(oss.str(), inFilePath);
-  };
-
-  bool appendToFile(const std::string &inLine,
-                    std::filesystem::path inFilePath) const {
-    std::ofstream outFile(inFilePath, std::ios_base::app);
-    if (!outFile.good()) {
-      return false;
-    }
-    outFile << inLine << std::endl;
-    return true;
-  }
-};
-
-/// \brief Interface for saving GridGPU data type in textual format
-///
-/// Interface for a class which encapsulates saving GridGPU instances.
-/// Should be implemented for each save strategy (e.g. new save format,
-/// or different type of info to be stored).
-template <typename T> class ITextGridDataSaveStrategy {
-public:
-  virtual bool save(const GridGPU<T> &inGrid,
-                    const std::vector<std::string> &inFieldTitles,
-                    const std::filesystem::path &inFilePath) const = 0;
-
-  virtual bool save(const GridCPU<T> &inGrid,
-                    const std::vector<std::string> &inFieldTitles,
-                    const std::filesystem::path &inFilePath) const = 0;
-
-  virtual ~ITextGridDataSaveStrategy() = default;
-};
-
-template <typename T>
-class CSVGridDataSaveStrategy : public ITextGridDataSaveStrategy<T> {
-public:
-  CSVGridDataSaveStrategy(const bool inWriteIndices = true,
-                          const std::string &inDelimiter = ",",
-                          const int inFloatPrecision = 8)
+  CSVGridWriter(const bool inWriteIndices = true,
+                const std::string &inDelimiter = ",",
+                const int inFloatPrecision = 8)
       : m_writeIndices(inWriteIndices), m_delimiter(inDelimiter),
         m_floatPrecision(inFloatPrecision) {}
 
-  bool save(const GridGPU<T> &inGrid,
-            const std::vector<std::string> &inFieldTitles,
-            const std::filesystem::path &inFilePath) const override {
+  bool write(const GridGPU<T> &inGrid,
+             const std::vector<std::string> &inFieldTitles,
+             const std::filesystem::path &inFilePath) const {
     const bool success = saveInternal(inGrid, inFieldTitles, inFilePath);
     return success;
   }
 
-  bool save(const GridCPU<T> &inGrid,
-            const std::vector<std::string> &inFieldTitles,
-            const std::filesystem::path &inFilePath) const override {
+  bool write(const GridCPU<T> &inGrid,
+             const std::vector<std::string> &inFieldTitles,
+             const std::filesystem::path &inFilePath) const {
     const bool success = saveInternal(inGrid, inFieldTitles, inFilePath);
     return success;
   }
@@ -360,4 +239,4 @@ private:
 } // namespace io
 } // namespace conga
 
-#endif // CONGA_CSV_WRITERS_H_
+#endif // CONGA_CSV_GRID_WRITER_H_

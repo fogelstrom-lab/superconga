@@ -16,7 +16,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
 
 #include <iostream>
@@ -83,35 +83,35 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
                            const T inStartImaginaryPart) {
   // Loop over s-wave and d-wave. This is an outer for loop that will create and
   // destroy a whole context. The inner loops only loop over values and call
-  // context->intialize().
+  // context.intialize().
   for (const bool useSwave : {true, false}) {
     // =================== ARRANGE ==================== //
     // Create Context
-    conga::Context<T> *context = new conga::Context<T>();
+    conga::Context<T> context;
 
     // Set parameters to the values specified in simParams struct
-    conga::Parameters<T> *parameters = applySimParams<T>(context);
+    conga::Parameters<T> *parameters = applySimParams<T>(&context);
 
     // Create geometry group: add/remove geometry objects (e.g. discs,
     // polygons) from the geometry group
-    conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+    conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
     const T grainFracton = parameters->getGrainFraction();
     geometry->add(
         new conga::PolygonGeometry<T>(grainFracton, NUM_VERTICES_SQUARE),
         conga::Type::add);
 
     // Integrator.
-    new conga::IntegrationIteratorOzaki<T>(context);
+    new conga::IntegrationIteratorOzaki<T>(&context);
 
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields
     conga::RiccatiSolver<T> *riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-            context);
+            &context);
 
     // Set up order parameter
     conga::OrderParameter<T> *orderParameter =
-        new conga::OrderParameter<T>(context);
+        new conga::OrderParameter<T>(&context);
 
     // Add a d-wave or an s-wave order-parameter component.
     const conga::BasisFunctionSymmetry symmetry =
@@ -127,14 +127,14 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
 
     // Create compute objects
     conga::ComputeOrderParameter<T> *computeOrderParameter =
-        new conga::ComputeOrderParameter<T>(context);
+        new conga::ComputeOrderParameter<T>(&context);
 
     // =================== ACT ==================== //
     // Initialize simulation
-    context->initialize();
+    context.initialize();
 
     // Remove all spurious values outside actual grain
-    context->getGeometry()->zeroValuesOutsideDomainRef(
+    context.getGeometry()->zeroValuesOutsideDomainRef(
         orderParameterComponent->getGrid());
 
     // Fetch the grain-summed order-parameter magnitude
@@ -150,9 +150,6 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
 
     CHECK(testSumOrderParameter ==
           doctest::Approx(expectedSumOrderParameter).epsilon(inTolerance));
-
-    // Clean up context
-    conga::run_utils::cleanup(context);
   }
 }
 } // namespace helper

@@ -34,6 +34,7 @@
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
+- **MAJOR** Add option to save data as `.h5` files.
 - Change sign of the elementary charge in order to conform with Graf et al.
 - Make minmax a non-static member method.
 - Add unit test of the current density comparing it with the linear-response expression.

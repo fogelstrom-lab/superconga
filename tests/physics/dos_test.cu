@@ -33,7 +33,7 @@
 #include "conga/order_parameter/OrderParameterBasis.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
 
 #include <thrust/complex.h>
@@ -77,10 +77,10 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
                          const T inConvergenceCriterion) {
   // =================== ARRANGE ==================== //
   // Create Context
-  conga::Context<T> *context = new conga::Context<T>();
+  conga::Context<T> context;
 
   // Storage for system simulation parameters (e.g. temperature, lattice size).
-  conga::Parameters<T> *parameters = new conga::Parameters<T>(context);
+  conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
   // Set grain sidelength in coherence lengths: hbar*<vF>/(kB*Tc).
   parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
   // Set the number of lattice points per coherence length.
@@ -100,7 +100,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   if (inUseSwave) {
     // Add a disc to the simulation geometry.
@@ -115,19 +115,19 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   }
 
   // Iterator.
-  new conga::IntegrationIteratorKeldysh<T>(context,
+  new conga::IntegrationIteratorKeldysh<T>(&context,
                                            simParams::NUM_ENERGIES_PER_BLOCK);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-          context);
+          &context);
   // Add specular BC
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
   conga::OrderParameter<T> *orderParameter =
-      new conga::OrderParameter<T>(context);
+      new conga::OrderParameter<T>(&context);
 
   // Use s-wave or d-wave.
   const conga::BasisFunctionSymmetry symmetry =
@@ -143,18 +143,20 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   orderParameter->add(orderParameterComponent);
 
   // Add LDOS compute object.
-  new conga::ComputeLDOS<T>(context);
+  new conga::ComputeLDOS<T>(&context);
 
   // Initialize everything.
-  context->initialize();
+  context.initialize();
 
   // =================== ACT ==================== //
-  const bool verbose = true;
-  conga::run_utils::runSimulation(context, verbose, 0,
-                                  simParams::NUM_ITERATIONS_MAX);
+  conga::Status status = conga::Status::kContinue;
+  while (status != conga::Status::kQuit) {
+    status =
+        conga::runIteration(&context, true, 0, simParams::NUM_ITERATIONS_MAX);
+  }
 
   // Get results.
-  conga::GridCPU<T> *dosObject = context->getComputeLDOS()->getDOS();
+  conga::GridCPU<T> *dosObject = context.getComputeLDOS()->getDOS();
   const T *const energies = dosObject->getDataPointer(0);
   const T *const dos = dosObject->getDataPointer(1);
 
@@ -201,9 +203,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
     const T testDOS = dos[energyIdx];
     CHECK(testDOS == doctest::Approx(expectedDOS).epsilon(inTolerance));
   }
-  CHECK(context->isConverged());
-
-  delete context;
+  CHECK(context.isConverged());
 }
 } // namespace helper
 

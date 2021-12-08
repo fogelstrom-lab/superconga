@@ -16,7 +16,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_utils.h"
+#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
 
 #include <iostream>
@@ -99,14 +99,14 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
                            const bool inUseSwave, const bool inIsDisc) {
   // =================== ARRANGE ==================== //
   // Create Context
-  conga::Context<T> *context = new conga::Context<T>();
+  conga::Context<T> context;
 
   // Set parameters to the values specified in simParams struct
-  conga::Parameters<T> *parameters = applySimParams<T>(inUseSwave, context);
+  conga::Parameters<T> *parameters = applySimParams<T>(inUseSwave, &context);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group
-  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(context);
+  conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   if (inIsDisc) {
     geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
@@ -118,18 +118,18 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   }
 
   // Integrator.
-  new conga::IntegrationIteratorOzaki<T>(context);
+  new conga::IntegrationIteratorOzaki<T>(&context);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-          context);
+          &context);
   // Add specular BC
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter
   conga::OrderParameter<T> *orderParameter =
-      new conga::OrderParameter<T>(context);
+      new conga::OrderParameter<T>(&context);
 
   // Add a d-wave or an s-wave order-parameter component.
   const conga::BasisFunctionSymmetry symmetry =
@@ -149,22 +149,25 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
 
   // Create compute objects
   conga::ComputeOrderParameter<T> *computeOrderParameter =
-      new conga::ComputeOrderParameter<T>(context);
+      new conga::ComputeOrderParameter<T>(&context);
   conga::ComputeFreeEnergy<T> *computeFreeEnergy =
-      new conga::ComputeFreeEnergy<T>(context);
+      new conga::ComputeFreeEnergy<T>(&context);
   conga::ComputeCurrent<T> *computeCurrent =
-      new conga::ComputeCurrent<T>(context);
+      new conga::ComputeCurrent<T>(&context);
 
   // =================== ACT ==================== //
   // Initialize simulation
-  context->initialize();
+  context.initialize();
 
-  conga::run_utils::runSimulation(context, simParams::PRINT_ITERATION_STATUS,
-                                  simParams::NUM_ITERATIONS_MIN,
-                                  simParams::NUM_ITERATIONS_MAX);
+  conga::Status status = conga::Status::kContinue;
+  while (status != conga::Status::kQuit) {
+    status = conga::runIteration(&context, simParams::PRINT_ITERATION_STATUS,
+                                 simParams::NUM_ITERATIONS_MIN,
+                                 simParams::NUM_ITERATIONS_MAX);
+  }
 
   // Remove all spurious values outside actual grain
-  context->getGeometry()->zeroValuesOutsideDomainRef(
+  context.getGeometry()->zeroValuesOutsideDomainRef(
       computeOrderParameter->getResult());
 
   // Fetch the grain-averaged free energy
@@ -208,10 +211,7 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
       doctest::Approx(expectedAverageCurrent).epsilon(currentDensityTolerance));
   CHECK(testAverageFreeEnergy == doctest::Approx(expectedAverageFreeEnergy)
                                      .epsilon(inToleranceFreeEnergy));
-  CHECK(context->isConverged());
-
-  // Clean up context
-  conga::run_utils::cleanup(context);
+  CHECK(context.isConverged());
 }
 } // namespace helper
 

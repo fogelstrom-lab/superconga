@@ -437,6 +437,16 @@ def add_runner_arguments(parser) -> None:
     # =============== MISC =============== #
     misc = parser.add_argument_group(title="Misc")
 
+    # Data format.
+    misc.add_argument(
+        "-D",
+        "--data-format",
+        type=str,
+        choices=["h5", "csv"],
+        default=None,
+        help="What format use when saving data. H5 files are much smaller and faster to read and write.",
+    )
+
     # Load data.
     group_load = misc.add_mutually_exclusive_group()
     group_load.add_argument(
@@ -1130,6 +1140,7 @@ def set_runner_arguments_from_cli(
 
     # ================== MISC ================== #
     group = "misc"
+    set_value(sim_params, "data_format", args.data_format, group)
     set_value(sim_params, "save_path", args.save_path, group)
     set_value(sim_params, "save_frequency", args.save_frequency, group)
     if args.do_continue:

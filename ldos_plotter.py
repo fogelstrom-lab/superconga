@@ -73,20 +73,9 @@ def main() -> None:
         base_path=plot_config_parameters["general"]["data_path"]
     )
 
-    # Parse "internal parameters" from json, get result as dictionary.
-    internal_parameters = parse_json_files.parse_internal_parameters(
-        base_path=plot_config_parameters["general"]["data_path"]
-    )
-
     # Parse "post-processing" parameters (LDOS info) from json, get result as
     # dictionary.
     post_processing_parameters = parse_json_files.parse_post_processing(
-        base_path=plot_config_parameters["general"]["data_path"]
-    )
-
-    # Parse DOS data as a dictionary: dos_data["energy"], dos_data["dos"] gives
-    # the energy and DOS respectively.
-    dos_data = parse_convergence.parse_dos(
         base_path=plot_config_parameters["general"]["data_path"]
     )
 
@@ -101,8 +90,7 @@ def main() -> None:
     # To get LDOS at specific coordinate, use e.g.
     # LDOS = ldos_data[:,y_idx,x_idx].
     ldos_data = parse_grid_quantity.parse_ldos(
-        base_path=plot_config_parameters["general"]["data_path"],
-        internal_parameters=internal_parameters,
+        base_path=plot_config_parameters["general"]["data_path"]
     )
 
     # Mask region outside grain with a false color, to more easily
@@ -110,6 +98,17 @@ def main() -> None:
     (num_energies, num_y, num_x) = np.shape(ldos_data["ldos"])
     for energy_idx in range(0, num_energies):
         ldos_data["ldos"][energy_idx, geometry["mask"] == 0] = np.nan
+
+    # Parse DOS data as a dictionary: dos_data["energy"], dos_data["dos"] gives
+    # the energy and DOS respectively.
+    dos_data = {
+        "energy": np.linspace(
+            post_processing_parameters["energy_min"],
+            post_processing_parameters["energy_max"],
+            post_processing_parameters["num_energies"],
+        ),
+        "dos": np.nanmean(ldos_data["ldos"], axis=(1, 2)),
+    }
 
     # ========================================================================#
     #                                PLOT DATA                                #
