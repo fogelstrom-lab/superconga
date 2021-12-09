@@ -8,6 +8,7 @@
 - **MAJOR** Group related parameters in the `config.json` file, and in `--help` message.
 - **MAJOR** Use ArrayFire-Forge for visualization, support building without visualization, and without tests.
 - **MAJOR** Include the residual of the boundary coherence functions in the total residual. Print residual during burn-in. Allow for burn-in until convergence by setting negative number. Allow burn-in in postprocessing.
+- **MAJOR** Unified frontend via `superconga.py`. Rewritten plotters and runners.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.

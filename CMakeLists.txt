@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(
-  superconga
+  SuperConga
   VERSION 0.7.0
   LANGUAGES CUDA CXX C)
 

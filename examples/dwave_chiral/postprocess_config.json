@@ -1,0 +1,23 @@
+{
+	"spectroscopy": {
+		"energy_max": 0.5,
+		"energy_min": 0.0,
+		"energy_broadening": 0.008,
+		"num_energies": 128
+	},
+	"numerics": {
+		"convergence_criterion": 1e-4,
+		"norm": "L2",
+		"num_energies_per_block": 32,
+		"num_fermi_momenta": 720,
+		"num_iterations_burnin": -1,
+		"num_iterations_max": 1000,
+		"num_iterations_min": 0
+	},
+	"misc": {
+		"data_format": "h5",
+		"load_path": "data/examples/dwave_chiral",
+		"save_path": "",
+		"verbose": true
+	}
+}

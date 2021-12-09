@@ -71,7 +71,7 @@ public:
   T getEnergyMin() const { return m_energyMin; }
   T getEnergyMax() const { return m_energyMax; }
   int getNumEnergies() const { return m_numEnergies; }
-  T getSmearingFactor() const { return m_smearingFactor; }
+  T getEnergyBroadening() const { return m_energyBroadening; }
 
   T getPenetrationDepth() const { return m_penetrationDepth; }
 
@@ -111,7 +111,7 @@ public:
 
   void setEnergyRange(const T inEnergyMin, const T inEnergyMax,
                       const int inNumEnergies,
-                      const T inSmearingFactor = static_cast<T>(0.01));
+                      const T inEnergyBroadening = static_cast<T>(0.01));
   void setNumEnergies(const int inNumEnergies) {
     m_numEnergies = inNumEnergies;
   }
@@ -180,8 +180,8 @@ private:
   // Highest energy to compute LDOS for.
   T m_energyMax;
 
-  // Energy smearing factor (for e.g. retarded properties).
-  T m_smearingFactor;
+  // Energy broadening (for e.g. retarded properties).
+  T m_energyBroadening;
 
   // Numerical properties.
   T m_convergenceCriterion;
@@ -280,7 +280,7 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
       m_numFluxQuanta(static_cast<T>(0)), m_chargeSign(-1),
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
       m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
-      m_smearingFactor(static_cast<T>(0.05)), m_numOzakiEnergies(1),
+      m_energyBroadening(static_cast<T>(0.05)), m_numOzakiEnergies(1),
       m_penetrationDepth(-static_cast<T>(1)),
       m_residualNormType(ResidualNorm::L2) {
   ContextModule<T>::setContext(inOutContext);
@@ -322,7 +322,7 @@ Parameters<T> &Parameters<T>::operatorEq(const Parameters<T2> &inOther) {
   m_numEnergies = inOther.getNumEnergies();
   m_energyMin = inOther.getEnergyMin();
   m_energyMax = inOther.getEnergyMax();
-  m_smearingFactor = inOther.getSmearingFactor();
+  m_energyBroadening = inOther.getEnergyBroadening();
 
   m_numOzakiEnergies = inOther.m_numOzakiEnergies;
   m_penetrationDepth = inOther.m_penetrationDepth;
@@ -344,10 +344,10 @@ template <typename T> int Parameters<T>::getNumOzakiEnergies() const {
 template <typename T>
 void Parameters<T>::setEnergyRange(const T inEnergyMin, const T inEnergyMax,
                                    const int inNumEnergies,
-                                   const T inSmearingFactor) {
+                                   const T inEnergyBroadening) {
   m_energyMin = inEnergyMin;
   m_energyMax = inEnergyMax;
-  m_smearingFactor = inSmearingFactor;
+  m_energyBroadening = inEnergyBroadening;
 
   // Do the limits make sense?
   // TODO(niclas): Shouldn't we check that min < max? And why set the number of

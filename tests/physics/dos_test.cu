@@ -61,7 +61,7 @@ const int NUM_ENERGIES = 32;
 const double ENERGY_MIN = 0.0;
 const double ENERGY_MAX = 0.5;
 // The value of the imaginary part added to the energies.
-const double ENERGY_SMEARING = 0.008;
+const double ENERGY_BROADENING = 0.008;
 // Maximum number of iterations.
 const int NUM_ITERATIONS_MAX = 42;
 } // namespace simParams
@@ -93,7 +93,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   parameters->setEnergyRange(static_cast<T>(simParams::ENERGY_MIN),
                              static_cast<T>(simParams::ENERGY_MAX),
                              simParams::NUM_ENERGIES,
-                             static_cast<T>(simParams::ENERGY_SMEARING));
+                             static_cast<T>(simParams::ENERGY_BROADENING));
   parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
@@ -188,7 +188,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
       // Compute the angle resolved DOS.
       // See page 108 in P. Holmvall PhD Thesis.
       const std::complex<T> energy(energiesPtr[energyIdx],
-                                   simParams::ENERGY_SMEARING);
+                                   simParams::ENERGY_BROADENING);
       const std::complex<T> Omega =
           std::sqrt(std::norm(orderParameter) - energy * energy);
       const T dosAngle = (energy / Omega).imag();

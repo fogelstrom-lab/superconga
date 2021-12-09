@@ -220,64 +220,64 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
 }
 } // namespace helper
 
-// === Test magnetostatics - analytical, non-zero max-error === //
+// === Test simulation - analytical, non-zero max-error === //
 
-TEST_CASE("Test magnetostatics - analytical, non-zero max-error (float)") {
+TEST_CASE("Test simulation - analytical, non-zero max-error (float)") {
   const bool analytical = true;
   helper::testMagnetoStaticsDisc(
       analytical, static_cast<float>(helper::MAX_ERROR),
       helper::FLOAT_TOLERANCE, helper::FLOAT_SYMMETRY_TOLERANCE);
 }
 
-TEST_CASE("Test magnetostatics - analytical, non-zero max-error (double)") {
+TEST_CASE("Test simulation - analytical, non-zero max-error (double)") {
   const bool analytical = true;
   helper::testMagnetoStaticsDisc(analytical, helper::MAX_ERROR,
                                  helper::DOUBLE_TOLERANCE,
                                  helper::DOUBLE_SYMMETRY_TOLERANCE);
 }
 
-// === Test magnetostatics - non-analytical, non-zero max-error === //
+// === Test simulation - non-analytical, non-zero max-error === //
 
-TEST_CASE("Test magnetostatics - non-analytical, non-zero max-error (float)") {
+TEST_CASE("Test simulation - non-analytical, non-zero max-error (float)") {
   const bool analytical = false;
   helper::testMagnetoStaticsDisc(
       analytical, static_cast<float>(helper::MAX_ERROR),
       helper::FLOAT_TOLERANCE, helper::FLOAT_SYMMETRY_TOLERANCE);
 }
 
-TEST_CASE("Test magnetostatics - non-analytical, non-zero max-error (double)") {
+TEST_CASE("Test simulation - non-analytical, non-zero max-error (double)") {
   const bool analytical = false;
   helper::testMagnetoStaticsDisc(analytical, helper::MAX_ERROR,
                                  helper::DOUBLE_TOLERANCE,
                                  helper::DOUBLE_SYMMETRY_TOLERANCE);
 }
 
-// === Test magnetostatics - analytical, zero max-error === //
+// === Test simulation - analytical, zero max-error === //
 
-TEST_CASE("Test magnetostatics - analytical, zero max-error (float)") {
+TEST_CASE("Test simulation - analytical, zero max-error (float)") {
   const bool analytical = true;
   const float maxError = 0.0f;
   helper::testMagnetoStaticsDisc(analytical, maxError, helper::FLOAT_TOLERANCE,
                                  helper::FLOAT_SYMMETRY_TOLERANCE);
 }
 
-TEST_CASE("Test magnetostatics - analytical, zero max-error (double)") {
+TEST_CASE("Test simulation - analytical, zero max-error (double)") {
   const bool analytical = true;
   const double maxError = 0.0;
   helper::testMagnetoStaticsDisc(analytical, maxError, helper::DOUBLE_TOLERANCE,
                                  helper::DOUBLE_SYMMETRY_TOLERANCE);
 }
 
-// === Test magnetostatics - non-analytical, zero max-error === //
+// === Test simulation - non-analytical, zero max-error === //
 
-TEST_CASE("Test magnetostatics - non-analytical, zero max-error (float)") {
+TEST_CASE("Test simulation - non-analytical, zero max-error (float)") {
   const bool analytical = false;
   const float maxError = 0.0f;
   helper::testMagnetoStaticsDisc(analytical, maxError, helper::FLOAT_TOLERANCE,
                                  helper::FLOAT_SYMMETRY_TOLERANCE);
 }
 
-TEST_CASE("Test magnetostatics - non-analytical, zero max-error (double)") {
+TEST_CASE("Test simulation - non-analytical, zero max-error (double)") {
   const bool analytical = false;
   const double maxError = 0.0;
   helper::testMagnetoStaticsDisc(analytical, maxError, helper::DOUBLE_TOLERANCE,

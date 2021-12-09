@@ -106,7 +106,8 @@ private:
         vectorPotential.sumMagnitude() / static_cast<T>(numGrainLatticeSites);
 
     // Save various results to JSON file.
-    const std::filesystem::path resultsPath = m_dataPath / "results.json";
+    const std::filesystem::path resultsPath =
+        m_dataPath / "simulation_results.json";
     io::write(resultsPath, resultsJSON);
     printWrite(m_verbose, true, "scalar results", resultsPath);
 
@@ -114,8 +115,6 @@ private:
     Json::Value internalParamJSON;
     internalParamJSON["area_compute"] = inContext.getGeometry()->area();
     internalParamJSON["internal_lattice_points"] = numGrainLatticeSites;
-    internalParamJSON["gauge"] =
-        inContext.getRiccatiSolver()->getVectorPotentialType();
     internalParamJSON["grain_margin"] = constants::GRAIN_SIZE_MARGIN;
     const int numLatticeSitesPerSide =
         inContext.getParameters()->getGridResolutionBase();

@@ -62,55 +62,59 @@ typedef double T;
 //*******************************************************
 int main(int argc, char *argv[]) {
   //*******************************************************
-  // PARSE POST-PROCESS CONFIG FILE
+  // PARSE SPECTROSCOPY CONFIG FILE
   //*******************************************************
-  Json::Value postProcessConfig;
+  Json::Value postprocessConfig;
   {
     if (argc < 2) {
       std::cerr << "-- ERROR! Please provide a config file." << std::endl;
       return EXIT_FAILURE;
     }
-    const std::filesystem::path postProcessConfigPath = argv[1];
+    const std::filesystem::path postprocessConfigPath = argv[1];
     const bool success =
-        conga::io::read(postProcessConfigPath, postProcessConfig);
+        conga::io::read(postprocessConfigPath, postprocessConfig);
     if (!success) {
       std::cerr << "-- ERROR! Could not find/open config file '"
-                << postProcessConfigPath << "'." << std::endl;
+                << postprocessConfigPath << "'." << std::endl;
       return EXIT_FAILURE;
     }
 #ifndef NDEBUG
     std::cout << "-- Post-process configuration parameters:" << std::endl;
-    std::cout << postProcessConfig << std::endl;
+    std::cout << postprocessConfig << std::endl;
 #endif
   }
 
   // Path to directory containing data to load from.
   const std::filesystem::path loadDataPath(
-      postProcessConfig["load_path"].asString());
+      postprocessConfig["misc"]["load_path"].asString());
 
   //*******************************************************
-  // PARSE SIMULATION CONFIG FILE
+  // PARSE MAGNETOSTATICS CONFIG FILE
   //*******************************************************
-  Json::Value simParams;
+  Json::Value simulationConfig;
   {
+    // TODO(Niclas): Support old filename.
+
     // Path to simulation config.
-    const std::filesystem::path configPath = loadDataPath / "config.json";
-    const bool success = conga::io::read(configPath, simParams);
+    const std::filesystem::path simulationConfigPath =
+        loadDataPath / "simulation_config.json";
+    const bool success =
+        conga::io::read(simulationConfigPath, simulationConfig);
     if (!success) {
-      std::cerr << "-- ERROR! Could not find/open config file '" << configPath
-                << "'." << std::endl;
+      std::cerr << "-- ERROR! Could not find/open config file '"
+                << simulationConfigPath << "'." << std::endl;
       return EXIT_FAILURE;
     }
 #ifndef NDEBUG
     std::cout << "-- Simulation configuration parameters:" << std::endl;
-    std::cout << simParams << std::endl;
+    std::cout << simulationConfig << std::endl;
 #endif
   }
 
   // TODO(niclas): Add sanity check of all parameters here!?
 
   // Fetch the verbosity so we know whether to print stuff or not.
-  const bool verbose = postProcessConfig["verbose"].asBool();
+  const bool verbose = postprocessConfig["misc"]["verbose"].asBool();
 
   //***************************************************
   // CREATE CONTEXT
@@ -125,49 +129,53 @@ int main(int argc, char *argv[]) {
 
   // Set temperature.
   const T temperature =
-      static_cast<T>(simParams["physics"]["temperature"].asDouble());
+      static_cast<T>(simulationConfig["physics"]["temperature"].asDouble());
   parameters->setTemperature(temperature);
 
   // Set the number of lattice points per coherence length.
   const T pointsPerCoherenceLength = static_cast<T>(
-      simParams["accuracy"]["points_per_coherence_length"].asDouble());
+      simulationConfig["numerics"]["points_per_coherence_length"].asDouble());
   parameters->setPointsPerCoherenceLength(pointsPerCoherenceLength);
 
   // Set parameters relevant for real-axis energies.
-  const T minEnergy =
-      static_cast<T>(postProcessConfig["energy_min"].asDouble());
-  const T maxEnergy =
-      static_cast<T>(postProcessConfig["energy_max"].asDouble());
-  const int numEnergies = postProcessConfig["num_energies"].asInt();
-  const T energySmearing =
-      static_cast<T>(postProcessConfig["energy_smearing"].asDouble());
-  parameters->setEnergyRange(minEnergy, maxEnergy, numEnergies, energySmearing);
+  const T minEnergy = static_cast<T>(
+      postprocessConfig["spectroscopy"]["energy_min"].asDouble());
+  const T maxEnergy = static_cast<T>(
+      postprocessConfig["spectroscopy"]["energy_max"].asDouble());
+  const int numEnergies =
+      postprocessConfig["spectroscopy"]["num_energies"].asInt();
+  const T energyBroadening = static_cast<T>(
+      postprocessConfig["spectroscopy"]["energy_broadening"].asDouble());
+  parameters->setEnergyRange(minEnergy, maxEnergy, numEnergies,
+                             energyBroadening);
 
   // Number of discrete steps in momentum angle.
-  const int numFermiMomenta = postProcessConfig["num_fermi_momenta"].asInt();
+  const int numFermiMomenta =
+      postprocessConfig["numerics"]["num_fermi_momenta"].asInt();
   parameters->setAngularResolution(numFermiMomenta);
 
   // Set convergence criterion.
-  const T convergenceCriterion =
-      static_cast<T>(postProcessConfig["convergence_criterion"].asDouble());
+  const T convergenceCriterion = static_cast<T>(
+      postprocessConfig["numerics"]["convergence_criterion"].asDouble());
   parameters->setConvergenceCriterion(convergenceCriterion);
 
   // Set penetration depth.
-  const T penetrationDepth =
-      static_cast<T>(simParams["physics"]["penetration_depth"].asDouble());
+  const T penetrationDepth = static_cast<T>(
+      simulationConfig["physics"]["penetration_depth"].asDouble());
   parameters->setPenetrationDepth(penetrationDepth);
 
   // Set external magnetic field strength.
-  const T externalFluxQuanta =
-      static_cast<T>(simParams["physics"]["external_flux_quanta"].asDouble());
+  const T externalFluxQuanta = static_cast<T>(
+      simulationConfig["physics"]["external_flux_quanta"].asDouble());
   parameters->setNumFluxQuanta(externalFluxQuanta);
 
   // Set sign of charge.
-  const int chargeSign = simParams["physics"]["charge_sign"].asInt();
+  const int chargeSign = simulationConfig["physics"]["charge_sign"].asInt();
   parameters->setChargeSign(chargeSign);
 
   // Set which norm to use when computing residuals.
-  const std::string residualNorm(postProcessConfig["norm"].asString());
+  const std::string residualNorm(
+      postprocessConfig["numerics"]["norm"].asString());
   if (residualNorm == "L1") {
     parameters->setResidualNormType(conga::ResidualNorm::L1);
   } else if (residualNorm == "L2") {
@@ -192,7 +200,7 @@ int main(int argc, char *argv[]) {
   T scalingFactor;
   T xOffset;
   T yOffset;
-  conga::geometry_utils::computeGeometryScaling(simParams, scalingFactor,
+  conga::geometry_utils::computeGeometryScaling(simulationConfig, scalingFactor,
                                                 xOffset, yOffset);
 
   // Set grain sidelength in coherence length.
@@ -204,14 +212,15 @@ int main(int argc, char *argv[]) {
 
   // Parse user-defined geometry, loop through geometry component list and
   // create compund geometry. Scale and translate to internal coordinate system.
-  conga::geometry_utils::addGeometryComponents(
-      geometry, simParams, scalingFactor, xOffset, yOffset, grainFraction);
+  conga::geometry_utils::addGeometryComponents(geometry, simulationConfig,
+                                               scalingFactor, xOffset, yOffset,
+                                               grainFraction);
 
   //***************************************************
   // SET UP INTEGRATOR
   //***************************************************
   const int numEnergiesPerBlock =
-      postProcessConfig["num_energies_per_block"].asInt();
+      postprocessConfig["numerics"]["num_energies_per_block"].asInt();
   new conga::IntegrationIteratorKeldysh<T>(&context, numEnergiesPerBlock);
 
   //***************************************************
@@ -224,11 +233,12 @@ int main(int argc, char *argv[]) {
 
   // Set rotation of crystal axes with respect to the grain geometry.
   const T crystalAxesRotation = static_cast<T>(
-      2.0 * M_PI * simParams["physics"]["crystal_axes_rotation"].asDouble());
+      2.0 * M_PI *
+      simulationConfig["physics"]["crystal_axes_rotation"].asDouble());
   orderParameter->setCrystalAxesRotation(crystalAxesRotation);
 
   // For convenience.
-  const Json::Value opParams = simParams["physics"]["order_parameter"];
+  const Json::Value opParams = simulationConfig["physics"]["order_parameter"];
 
   // An array of all supported symmetries.
   // TODO(niclas): Move to OrderParameterBasis.h?
@@ -287,23 +297,24 @@ int main(int argc, char *argv[]) {
 
 #ifdef CONGA_USE_HDF5
     // Check if the simulation file exists.
-    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
-    const bool simulationExists = std::filesystem::exists(simulationPath);
+    const std::filesystem::path simulationDataPath =
+        loadDataPath / "simulation.h5";
+    const bool simulationExists = std::filesystem::exists(simulationDataPath);
     if (simulationExists) {
       // Open file.
-      const auto file = conga::io::fileReadOnly(simulationPath);
+      const auto file = conga::io::fileReadOnly(simulationDataPath);
 
       // Read order parameter.
       successOrderParameter =
           conga::io::read(file, "order_parameter", *orderParameter);
       conga::io::printRead(verbose, successOrderParameter, "order parameter",
-                           simulationPath);
+                           simulationDataPath);
 
       // Read vector potential.
       successVectorPotential =
           conga::io::read(file, "vector_potential", *(vectorPotential.get()));
       conga::io::printRead(verbose, successVectorPotential, "vector potential",
-                           simulationPath);
+                           simulationDataPath);
     } else
 #endif // CONGA_USE_HDF5
     {
@@ -364,7 +375,7 @@ int main(int argc, char *argv[]) {
   conga::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice.
-  const std::string gauge(simParams["physics"]["gauge"].asString());
+  const std::string gauge(simulationConfig["physics"]["gauge"].asString());
   if (gauge == "radial") {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
@@ -382,16 +393,16 @@ int main(int argc, char *argv[]) {
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   //***************************************************
-  // INITIALIZE SIMULATION
+  // INITIALIZE SPECTROSCOPY
   //***************************************************
   context.initialize();
 
   //***********************************************
-  // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
+  // RUN SPECTROSCOPY UNTIL END CRITERIA
   //***********************************************
   // Path to directory containing data to save to.
   const std::filesystem::path saveDataPath(
-      postProcessConfig["save_path"].asString());
+      postprocessConfig["misc"]["save_path"].asString());
   const bool saveData = !saveDataPath.empty();
 
   // Make iteration writer.
@@ -405,9 +416,13 @@ int main(int argc, char *argv[]) {
   }
 
   // Run everything.
-  conga::runPostprocess(postProcessConfig["num_iterations_burnin"].asInt(),
-                        postProcessConfig["num_iterations_min"].asInt(),
-                        postProcessConfig["num_iterations_max"].asInt(),
+  const int numIterationsBurnIn =
+      postprocessConfig["numerics"]["num_iterations_burnin"].asInt();
+  const int numIterationsMin =
+      postprocessConfig["numerics"]["num_iterations_min"].asInt();
+  const int numIterationsMax =
+      postprocessConfig["numerics"]["num_iterations_max"].asInt();
+  conga::runPostprocess(numIterationsBurnIn, numIterationsMin, numIterationsMax,
                         verbose, iterationWriter, context);
 
   //***********************************************
@@ -419,15 +434,15 @@ int main(int argc, char *argv[]) {
     std::filesystem::create_directories(saveDataPath);
 
     // Save post-process config.
-    const std::filesystem::path postProcessConfigPath =
-        saveDataPath / "postprocess.json";
-    conga::io::write(postProcessConfigPath, postProcessConfig);
+    const std::filesystem::path postprocessConfigPath =
+        saveDataPath / "postprocess_config.json";
+    conga::io::write(postprocessConfigPath, postprocessConfig);
     conga::io::printWrite(verbose, true, "postprocess configuration",
-                          postProcessConfigPath);
+                          postprocessConfigPath);
 
     // Get data format.
-    const conga::io::DataFormat dataFormat =
-        conga::io::getDataFormat(simParams["misc"]["data_format"].asString());
+    const conga::io::DataFormat dataFormat = conga::io::getDataFormat(
+        postprocessConfig["misc"]["data_format"].asString());
 
     // Save the LDOS.
     const conga::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
@@ -435,7 +450,7 @@ int main(int argc, char *argv[]) {
 #ifdef CONGA_USE_HDF5
     case conga::io::DataFormat::H5: {
       const std::filesystem::path spectroscopyPath =
-          saveDataPath / "spectroscopy.h5";
+          saveDataPath / "postprocess.h5";
       auto file = conga::io::fileOverWrite(spectroscopyPath);
       conga::io::write(ldos, "ldos", file);
       conga::io::printWrite(verbose, true, "LDOS", spectroscopyPath);
