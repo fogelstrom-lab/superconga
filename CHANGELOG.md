@@ -31,6 +31,7 @@
 - Fix `runIteration` doing one more iteration than required.
 - Pick the intersection with the smallest difference in y-coordinate when applying boundary condition.
 - Fix MatPlotLib > 3.5 bug in LDOS plotter.
+- Fix different residual for the same data depending on single/double precision.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
