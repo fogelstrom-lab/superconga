@@ -16,13 +16,12 @@
 #include "../grid.h"
 
 #include <cmath>
-#include <limits>
 
 namespace conga {
 namespace compute_residual_internal {
 template <typename T> T getGoodEpsilon(const int inNumElements) {
-  const T epsilon = std::sqrt(std::numeric_limits<T>::epsilon()) *
-                    static_cast<T>(inNumElements);
+  // This is taken from a hat... we need something though.
+  const T epsilon = static_cast<T>(1e-4) * static_cast<T>(inNumElements);
   return epsilon;
 }
 } // namespace compute_residual_internal
