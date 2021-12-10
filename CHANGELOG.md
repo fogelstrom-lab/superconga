@@ -32,6 +32,7 @@
 - Pick the intersection with the smallest difference in y-coordinate when applying boundary condition.
 - Fix MatPlotLib > 3.5 bug in LDOS plotter.
 - Fix different residual for the same data depending on single/double precision.
+- Fix conceptual bug linear-response current test.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
@@ -55,8 +56,8 @@
 - Reduce grid tests spatial dimensions.
 - Add test of magnic moment in an s-wave annulus using radial gauge.
 - Remove more unused/broken code, e.g. read/write binary files.
-- Update linear-response current test using the Yoshida function.
 - Update Python requirements.
+- Use the vector potential when initializing boundary.
 
 ---
 
