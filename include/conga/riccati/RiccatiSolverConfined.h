@@ -385,11 +385,8 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
 
   // Compute energy shift from magnetic field
   GridGPU<T> *eShift = R::getEnergyShift();
-
-  // Fetch the vector potential.
   GridGPU<T> *inducedVectorPotential =
       C::getContext()->getInducedVectorPotential();
-
   computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
                                    current_angle_idx);
 
@@ -543,8 +540,12 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
   R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
                               numEnergiesCurrentBlock, current_angle_idx);
 
-  // Get energy shift from magnetic field
+  // Compute energy shift from magnetic field
   GridGPU<T> *eShift = R::getEnergyShift();
+  GridGPU<T> *inducedVectorPotential =
+      C::getContext()->getInducedVectorPotential();
+  computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
+                                   current_angle_idx);
 
   // 	Solve gamma by propagating riccati trajectories along positive y
   internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 2, 3, 1>

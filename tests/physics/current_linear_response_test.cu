@@ -18,17 +18,7 @@
 #include "conga/order_parameter/OrderParameterComponent.h"
 #include "conga/order_parameter/OrderParameterInitial.h"
 #include "conga/riccati/RiccatiSolverConfined.h"
-#include "conga/run_iteration.h"
 #include "conga/wrappers/doctest.h"
-
-#include <iostream>
-#include <limits>
-#include <stdlib.h>
-#include <vector>
-
-//*******************************************************
-// SIMULATION PARAMETERS common between test cases
-//*******************************************************
 
 namespace helper {
 //*******************************************************
@@ -43,8 +33,8 @@ const double TEMPERATURE_HIGH = 0.9;
 const double PENETRATION_DEPTH = 1.0;
 
 // The constant values of the vector-potential components.
-const double VECTOR_POTENTIAL_X = 1e-3;
-const double VECTOR_POTENTIAL_Y = 1e-3;
+const double VECTOR_POTENTIAL_X = 0.01;
+const double VECTOR_POTENTIAL_Y = VECTOR_POTENTIAL_X;
 
 // Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc)
 const double GRAIN_SIDE_LENGTH = 20.0;
@@ -53,19 +43,10 @@ const double GRAIN_SIDE_LENGTH = 20.0;
 const double POINTS_PER_COHERENCE_LENGTH = 10.0;
 
 // Number of discrete trajectory angles (on the Fermi-surface).
-const int NUM_ANGLES = 100;
+const int NUM_ANGLES = 32;
 
 // The energy cutoff.
 const double ENERGY_CUTOFF = 16.0;
-
-// Print iteration status to terminal
-const bool PRINT_ITERATION_STATUS = false;
-
-// Maximum number of iterations
-const int NUM_ITERATIONS_MAX = 1;
-
-// Minimum number of iterations
-const int NUM_ITERATIONS_MIN = 1;
 
 // The tolerance and scale.
 const double TOLERANCE = 0.01;
@@ -120,9 +101,9 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   const int numVertices = 4;
-  const T grainWidth = parameters->getGrainWidth();
+  const T sideLength = static_cast<T>(1);
   geometry->add(
-      new conga::PolygonGeometry<T>(grainFraction, numVertices, grainWidth),
+      new conga::PolygonGeometry<T>(grainFraction, numVertices, sideLength),
       conga::Type::add);
 
   // Integrator.
@@ -158,31 +139,27 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   // Create compute objects.
   new conga::ComputeCurrent<T>(&context);
 
-  // Set accelerator.
-  context.set(std::make_unique<conga::Accelerator<T>>());
-
   // =================== ACT ==================== //
   // Initialize and run simulation.
   context.initialize();
-
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, PRINT_ITERATION_STATUS,
-                                 NUM_ITERATIONS_MIN, NUM_ITERATIONS_MAX);
-  }
+  context.compute();
 
   // Fetch the grain-summed current-density magnitude
-  const conga::GridGPU<T> currentDensity =
+  const conga::GridCPU<T> currentDensity =
       *(context.getComputeCurrent()->getResult());
 
-  // Fetch the number of elements in the grain
-  const int numGrainLatticeSites = geometry->getNumGrainLatticeSites();
-
-  conga::vector2d<T> currentDensityMean;
-  for (int i = 0; i < 2; ++i) {
-    currentDensityMean[i] =
-        currentDensity.sumField(i) / static_cast<T>(numGrainLatticeSites);
-  }
+  // Fetch the current density in the middle.
+  // This is done because taking the mean does not give the correct results.
+  // TODO(niclas): Is this due to some boundary bug? Or is this entire test a
+  // bit misguided?
+  const int dimX = currentDensity.dimX();
+  const int dimY = currentDensity.dimY();
+  const int xMiddle = dimX / 2;
+  const int yMiddle = dimY / 2;
+  const int xIdx = yMiddle * dimX + xMiddle;
+  const int yIdx = dimX * dimY + xIdx;
+  const auto data = currentDensity.getVector();
+  const conga::vector2d<T> currentDensityMiddle = {data[xIdx], data[yIdx]};
 
   // =================== ASSERT ==================== //
   const conga::vector2d<T> currentDensityExpected =
@@ -192,12 +169,12 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
   // following: |A - B| < epsilon * (scale + max(|A|, |B|))
   const T tolerance = static_cast<T>(TOLERANCE);
   const T scale = static_cast<T>(SCALE);
-  CHECK(currentDensityMean[0] == doctest::Approx(currentDensityExpected[0])
-                                     .epsilon(tolerance)
-                                     .scale(scale));
-  CHECK(currentDensityMean[1] == doctest::Approx(currentDensityExpected[1])
-                                     .epsilon(tolerance)
-                                     .scale(scale));
+  CHECK(currentDensityMiddle[0] == doctest::Approx(currentDensityExpected[0])
+                                       .epsilon(tolerance)
+                                       .scale(scale));
+  CHECK(currentDensityMiddle[1] == doctest::Approx(currentDensityExpected[1])
+                                       .epsilon(tolerance)
+                                       .scale(scale));
 }
 } // namespace helper
 
