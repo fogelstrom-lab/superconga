@@ -59,6 +59,7 @@
 - Remove more unused/broken code, e.g. read/write binary files.
 - Update Python requirements.
 - Use the vector potential when initializing boundary.
+- Make LDOS residual more strict by computing residual of LDOS instead of DOS. Remove DOS computation.
 
 ---
 

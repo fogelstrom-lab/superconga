@@ -12,6 +12,7 @@
 #ifndef CONGA_COMPUTE_LDOS_H_
 #define CONGA_COMPUTE_LDOS_H_
 
+#include "../Type.h"
 #include "../grid.h"
 #include "ComputeProperty.h"
 #include "ComputeResidual.h"
@@ -27,7 +28,6 @@ public:
 
   GridGPU<T> *getResult() override { return m_ldosAll; }
   GridGPU<T> *getResultInterval() { return m_ldosInterval; }
-  GridCPU<T> *getDOS() { return m_dos; }
 
   int initialize() override;
 
@@ -60,18 +60,15 @@ private:
 
   // The result when every energy level has converged.
   GridGPU<T> *m_ldosAll;
-
-  // Integrated DOS for system, for each energy level.
-  GridCPU<T> *m_dos;
 };
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS()
-    : ComputeProperty<T>(), m_ldosInterval(0), m_ldosAll(0), m_dos(0) {}
+    : ComputeProperty<T>(), m_ldosInterval(0), m_ldosAll(0) {}
 
 template <typename T>
 ComputeLDOS<T>::ComputeLDOS(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), m_ldosInterval(0), m_ldosAll(0), m_dos(0) {
+    : ComputeProperty<T>(ctx), m_ldosInterval(0), m_ldosAll(0) {
   ctx->add(this);
 }
 
@@ -81,9 +78,6 @@ template <typename T> ComputeLDOS<T>::~ComputeLDOS() {
   }
   if (m_ldosAll) {
     delete m_ldosAll;
-  }
-  if (m_dos) {
-    delete m_dos;
   }
 }
 
@@ -100,9 +94,6 @@ template <typename T> int ComputeLDOS<T>::initialize() {
   GridGPU<T>::initializeGrid(m_ldosInterval, N0, N0, numEnergiesInterval,
                              Type::real);
   GridGPU<T>::initializeGrid(m_ldosAll, N0, N0, numEnergies, Type::real);
-  // Field 0 of m_dos contains E, field 1 contains DOS.
-  GridCPU<T>::initializeGrid(m_dos, numEnergies, 1, 2, Type::real);
-  m_dos->setZero();
 
 #ifndef NDEBUG
   const int memoryLDOS =
@@ -169,53 +160,30 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     const int numEnergiesCurrentBlock = iter->getNumInterval();
     const int energyIdx_offset = iter->getCurrentValue();
 
-    const int numAngles = C::getParameters()->getAngularResolution();
-    const T T_Tc = C::getParameters()->getTemperature();
-
-    GridGPU<T> *energies = C::getIntegrationIterator()->getEnergies();
-
     // Compute LDOS
     *m_ldosInterval *= -1.0;
 
     C::getGeometry()->zeroValuesOutsideDomainRef(m_ldosInterval);
 
+    const int dimX = m_ldosInterval->dimX();
+    const int dimY = m_ldosInterval->dimY();
+    const Type::type representation = m_ldosInterval->representation();
+    GridGPU<T> ldosIntervalOld(dimX, dimY, numEnergiesCurrentBlock,
+                               representation);
+
     // Copy temp LDOS to full grid.
     for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
+      m_ldosAll->copyFieldTo(&ldosIntervalOld, i + energyIdx_offset, i);
       m_ldosInterval->copyFieldTo(m_ldosAll, i, i + energyIdx_offset);
     }
 
-    // Compute DOS
-    T *E_ptr = m_dos->getDataPointer(0) + energyIdx_offset;
-    T *DOS_ptr = m_dos->getDataPointer(1) + energyIdx_offset;
+    // Compute residual.
+    const T residual = computeResidual(ldosIntervalOld, *m_ldosInterval);
+    ComputeProperty<T>::setResidual(residual);
 
-    GridCPU<T> energies_cpu = *energies;
-    T *energies_ptr =
-        energies_cpu.getDataPointer(0, Type::real) + energyIdx_offset;
-
-    const int numGrainLatticeSites =
-        C::getGeometry()->getNumGrainLatticeSites();
-    const T invNumGrainLatticeSites =
-        static_cast<T>(1.0) / numGrainLatticeSites;
-
-    T maxResidual = static_cast<T>(0.0);
-    const T epsilon = std::numeric_limits<T>::epsilon();
-    for (int i = 0; i < numEnergiesCurrentBlock; ++i) {
-      const T sumLDOS = m_ldosInterval->sumField(i);
-      const T newDOS = sumLDOS * invNumGrainLatticeSites;
-      const T oldDOS = DOS_ptr[i];
-
-      const T residual = std::abs(newDOS - oldDOS) / std::max(oldDOS, epsilon);
-      maxResidual = residual > maxResidual ? residual : maxResidual;
-
-      // Store energy and DOS values.
-      E_ptr[i] = energies_ptr[i];
-      DOS_ptr[i] = newDOS;
-    }
-
-    ComputeProperty<T>::setResidual(maxResidual);
-
+    // Check convergence.
     const bool isPartiallyConverged =
-        maxResidual < C::getParameters()->getConvergenceCriterion();
+        residual < C::getParameters()->getConvergenceCriterion();
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
   }
 }
