@@ -23,10 +23,10 @@ from typing import Optional, Union
 # -----------------------------------------------------------------------------
 # FUNCTIONS
 # -----------------------------------------------------------------------------
-# Transform a complex two-component field to the linear combination
-# representation. For example, for a chiral superconductor
-# Delta = Delta_1 + i*Delta_2, the transformation is to
-# Delta_+/- = (Delta_1 +/- i*Delta_2)/sqrt(2), where now Delta_+/- can be
+# Transform a complex two-component field to the eigenbasis of the Lz-operator,
+# via a linear transformation. For example, for a superconductor
+# Delta = Delta_1 + Delta_2, the transformation is to
+# Delta_+/- = (Delta_1 -/+ i*Delta_2)/sqrt(2), where now Delta_+/- can be
 # analyzed (plotted) instead of Delta_1/2.
 def chiral_transformation(data_fields_in: dict, component_index: int) -> dict:
     # Extract magnitude and phase for the two components.
@@ -42,10 +42,11 @@ def chiral_transformation(data_fields_in: dict, component_index: int) -> dict:
     else:
         chirality = -1
 
-    # Compute the linear combination.
+    # Compute the linear combination. Note the minus sign in front of the
+    # chirality, which has to be there.
     complex_field = (
         magnitude_1 * np.exp(1.0j * phase_1)
-        + chirality * magnitude_2 * 1.0j * np.exp(1.0j * phase_2)
+        - chirality * magnitude_2 * 1.0j * np.exp(1.0j * phase_2)
     ) / np.sqrt(2)
 
     # Return the new magnitude and phase.
