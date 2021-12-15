@@ -460,33 +460,52 @@ crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
 
   if (x < inGridResolution && y < inGridResolution && d < inDimension) {
     // Index offsets for the filter and the source.
-    // Note that the filter offset depends on the spatial coordinate x, whereas
-    // the source offset depends on the spatial coordinate y.
-    const int offsetFilter = inGridResolution - 1 - x;
-    const int offsetSrc = inGridResolution * (d * inGridResolution + y);
+    // Note that the filter offset depends on the spatial coordinate y, whereas
+    // the source offset depends on the spatial coordinate x.
+    const int offsetFilter = inGridResolution - 1 - y;
+    const int offsetSrc = d * inGridResolution * inGridResolution + x;
 
     // Compute the dot product between each spatial column of the source and the
-    // filter.
-    // TODO(niclas): Note that T precision is used for accumulating the
-    // sum. Using float we still pass our tests, but investigate using Kahan
-    // summation.
-    T sum = static_cast<T>(0);
-    for (int i = 0; i < inGridResolution; ++i) {
+    // filter. Unrolling with stride 2.
+    const int stride = 2;
+    const int remainder = inGridResolution % stride;
+    const int nAligned = inGridResolution - remainder;
+    T partialSum0 = static_cast<T>(0);
+    T partialSum1 = static_cast<T>(0);
+    for (int i = 0; i < nAligned; i += stride) {
+      // Indices.
       const int idxFilter = i + offsetFilter;
-      const T filterVal = inFilter[idxFilter];
+      const int idxSrc = i * inGridResolution + offsetSrc;
 
-      const int idxSrc = i + offsetSrc;
-      const T srcVal = inSrc[idxSrc];
+      // Fetch first values.
+      const T filterVal0 = inFilter[idxFilter];
+      const T srcVal0 = inSrc[idxSrc];
 
-      sum += srcVal * filterVal;
+      // Fetch second values.
+      const T filterVal1 = inFilter[idxFilter + 1];
+      const T srcVal1 = inSrc[idxSrc + inGridResolution];
+
+      // Accumulate.
+      partialSum0 += filterVal0 * srcVal0;
+      partialSum1 += filterVal1 * srcVal1;
     }
 
-    // Destination index. Note the we write the transposed result, i.e. swapped
-    // x- and y-index.
+    // Handle the tail.
+    T tailSum = static_cast<T>(0);
+    for (int i = nAligned; i < inGridResolution; ++i) {
+      const T filterVal = inFilter[i + offsetFilter];
+      const T srcVal = inSrc[i * inGridResolution + offsetSrc];
+      tailSum += srcVal * filterVal;
+    }
+
+    // Destination index. Note the we write the transposed result, i.e.
+    // swapped x- and y-index.
+    // TODO(niclas): This is probably very suboptimal. Perhaps do transpose in
+    // separate, optimized, kernel?
     const int idxDst = inGridResolution * (d * inGridResolution + x) + y;
 
     // Write result.
-    outDst[idxDst] = sum;
+    outDst[idxDst] = tailSum + partialSum0 + partialSum1;
   }
 }
 
@@ -526,7 +545,7 @@ __global__ void crossCorrelate2D(const int inGridResolution,
     const int offsetSrc = d * inGridResolution * inGridResolution;
 
     // TODO(niclas): Note that double precision is used for accumulating the
-    // sum. Using float leads to an unaccaptable loss of precision. Investigate
+    // sum. Using float leads to an unacceptable loss of precision. Investigate
     // using Kahan summation.
     double sum = 0.0;
     for (int j = 0; j < inGridResolution; ++j) {
