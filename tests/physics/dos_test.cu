@@ -156,9 +156,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   }
 
   // Get results.
-  conga::GridCPU<T> *dosObject = context.getComputeLDOS()->getDOS();
-  const T *const energies = dosObject->getDataPointer(0);
-  const T *const dos = dosObject->getDataPointer(1);
+  const conga::GridGPU<T> &LDOS = *(context.getComputeLDOS()->getResult());
 
   // =================== ASSERT ==================== //
   // Make circular Fermi surface.
@@ -171,6 +169,11 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   const T orderParameterBulk = orderParameterComponent->deltaBulk();
   conga::BasisFunction<T> basisFunction(symmetry);
   basisFunction.normalize(&fermiSurface);
+
+  // Get energies.
+  const conga::GridCPU<T> energies =
+      *(context.getIntegrationIterator()->getEnergies());
+  const T *const energiesPtr = energies.getDataPointer(0);
 
   // Loop over energies and check the DOS for each.
   for (int energyIdx = 0; energyIdx < simParams::NUM_ENERGIES; ++energyIdx) {
@@ -190,7 +193,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
 
       // Compute the angle resolved DOS.
       // See page 108 in P. Holmvall PhD Thesis.
-      const std::complex<T> energy(energies[energyIdx],
+      const std::complex<T> energy(energiesPtr[energyIdx],
                                    simParams::ENERGY_SMEARING);
       const std::complex<T> Omega =
           std::sqrt(std::norm(orderParameter) - energy * energy);
@@ -200,7 +203,10 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
       const T integrandFactor = fermiSurface.getIntegrandFactor(angleIdx);
       expectedDOS += integrandFactor * dosAngle;
     }
-    const T testDOS = dos[energyIdx];
+    const int numGrainLatticeSites =
+        context.getGeometry()->getNumGrainLatticeSites();
+    const T testDOS =
+        LDOS.sumField(energyIdx) / static_cast<T>(numGrainLatticeSites);
     CHECK(testDOS == doctest::Approx(expectedDOS).epsilon(inTolerance));
   }
   CHECK(context.isConverged());
