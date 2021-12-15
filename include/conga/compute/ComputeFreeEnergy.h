@@ -350,9 +350,13 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
       const GridGPU<T> magneticField =
           inducedVectorPotential->curl(latticeElementSize);
 
-      // Note that the prefactor depend on our choice of unit definitions.
+      // Note that the prefactor depends on our choice of unit definitions.
+      // The division with the squared penetration depth comes from the induced
+      // vector potential being scaled by the squared penetration depth in order
+      // to simplify Ampere's law and the accelerators. The scaling is undone
+      // here.
       const T magneticFactor =
-          static_cast<T>(0.5) * penetrationDepth * penetrationDepth;
+          static_cast<T>(0.5) / (penetrationDepth * penetrationDepth);
 
       // Update the magnetic sum.
       magneticSum += magneticFactor * magneticField.sumSquare();

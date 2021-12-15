@@ -14,10 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "conga/Accelerator.h"
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
+#include "conga/accelerators.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -374,30 +374,52 @@ int main(int argc, char *argv[]) {
     }
 
     // Set the vector potential in context.
+    if (penetrationDepth > static_cast<T>(0)) {
+      // Internally the induced vector potential is scaled by the squared
+      // penetration depth.
+      *vectorPotential *= (penetrationDepth * penetrationDepth);
+    } else {
+      vectorPotential->setZero();
+    }
     context.set(std::move(vectorPotential));
   }
 
   //***************************************************
   // ACCELERATOR
   //***************************************************
-  const T stepSize =
-      static_cast<T>(simParams["accelerator"]["step_size"].asDouble());
-  const T inertia =
-      static_cast<T>(simParams["accelerator"]["inertia"].asDouble());
-  const T adaptive = simParams["accelerator"]["adaptive"].asBool();
-  const std::size_t rank =
-      static_cast<std::size_t>(simParams["accelerator"]["rank"].asInt());
-  const bool replaceOldest =
-      simParams["accelerator"]["replace_oldest"].asBool();
-  const bool andersonAlways =
-      simParams["accelerator"]["anderson_always"].asBool();
-  const T minMixing =
-      static_cast<T>(simParams["accelerator"]["min_mixing"].asDouble());
-  const T maxMixing =
-      static_cast<T>(simParams["accelerator"]["max_mixing"].asDouble());
-  auto accelerator = std::make_unique<conga::Accelerator<T>>(
-      stepSize, inertia, adaptive, rank, replaceOldest, andersonAlways,
-      minMixing, maxMixing);
+  // Get the name.
+  const std::string acceleratorName(
+      simParams["accelerator"]["name"].asString());
+
+  // Make accelerator.
+  std::unique_ptr<conga::accelerators::Accelerator<T>> accelerator;
+  if (acceleratorName == "Adaptive-Ball" || acceleratorName == "AB") {
+    // Create Adaptive-Ball accelerator.
+    accelerator = std::make_unique<conga::accelerators::AdaptiveBall<T>>(
+        simParams["accelerator"]);
+  } else if (acceleratorName == "Anderson") {
+    // Create Anderson accelerator.
+    accelerator = std::make_unique<conga::accelerators::Anderson<T>>(
+        simParams["accelerator"]);
+  } else if (acceleratorName == "Barzilai-Borwein" || acceleratorName == "BB") {
+    // Create Barzilai-Borwein accelerator.
+    accelerator = std::make_unique<conga::accelerators::BarzilaiBorwein<T>>(
+        simParams["accelerator"]);
+  } else if (acceleratorName == "Picard") {
+    // Create Picard accelerator.
+    accelerator = std::make_unique<conga::accelerators::Picard<T>>(
+        simParams["accelerator"]);
+  } else if (acceleratorName == "Polyak") {
+    // Create Polyak accelerator.
+    accelerator = std::make_unique<conga::accelerators::Polyak<T>>(
+        simParams["accelerator"]);
+  } else {
+    std::cerr << "-- ERROR! Accelerator name, " << acceleratorName
+              << ", not understod" << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  // Move to context.
   context.set(std::move(accelerator));
 
   //***************************************************

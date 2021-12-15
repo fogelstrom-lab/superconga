@@ -136,11 +136,9 @@ private:
   ///
   /// \param inCurrentDensity The current density, in units of J_d = 4 pi |e|
   /// <v_F> N_F k_B T_c.
-  /// \param inKappa The Ginzburg-Landau parameter, kappa = lambda_L / xi_0,
-  /// where lambda_L = (mu_0 e^2 <v_F>^2 N_F)^(- 1 / 2)
   ///
   /// \return void.
-  void solveInternal(const GridGPU<T> &inCurrentDensity, const T inKappa);
+  void solveInternal(const GridGPU<T> &inCurrentDensity);
 
 public:
   /// \brief Constructor.
@@ -170,11 +168,9 @@ public:
   ///
   /// \param inCurrentDensity The current density, in units of J_d = 4 pi |e|
   /// <v_F> N_F k_B T_c.
-  /// \param inKappa The Ginzburg-Landau parameter, kappa = lambda_L / xi_0,
-  /// where lambda_L = (mu_0 e^2 <v_F>^2 N_F)^(- 1 / 2)
   ///
   /// \return void.
-  void solve(const GridGPU<T> &inCurrentDensity, const T inKappa);
+  void solve(const GridGPU<T> &inCurrentDensity);
 
   /// \brief Compute the residual.
   ///
@@ -649,7 +645,7 @@ void ComputeVectorPotential<T>::initialize(const int inGridResolution,
 
 template <typename T>
 void ComputeVectorPotential<T>::solveInternal(
-    const GridGPU<T> &inCurrentDensity, const T inKappa) {
+    const GridGPU<T> &inCurrentDensity) {
   // Check that the sizes of the grids, as well as representation (i.e. real or
   // complex), are equal.
   assert(inCurrentDensity == *m_vectorPotential);
@@ -718,7 +714,7 @@ void ComputeVectorPotential<T>::solveInternal(
   }
 
   // Factor from the equation itself.
-  const T equationFactor = -static_cast<T>(1.0) / (inKappa * inKappa);
+  const T equationFactor = -static_cast<T>(1.0);
 
   // Scale the final result.
   *m_vectorPotential *=
@@ -726,8 +722,7 @@ void ComputeVectorPotential<T>::solveInternal(
 }
 
 template <typename T>
-void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
-                                      const T inKappa) {
+void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity) {
   if (m_enforceCurrentConservation) {
     // Initialize a grid for the zero-mean current-density.
     GridGPU<T> currentDensityZeroMean = GridGPU<T>(
@@ -738,10 +733,10 @@ void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity,
     subtractMean(inCurrentDensity, currentDensityZeroMean);
 
     // Solve Poisson's equation.
-    solveInternal(currentDensityZeroMean, inKappa);
+    solveInternal(currentDensityZeroMean);
   } else {
     // Solve Poisson's equation.
-    solveInternal(inCurrentDensity, inKappa);
+    solveInternal(inCurrentDensity);
   }
 
   // TODO(niclas): Subtracting the mean of the current density makes the

@@ -119,9 +119,6 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeFreeEnergy<T>(&context);
 
-  // Set accelerator.
-  context.set(std::make_unique<conga::Accelerator<T>>());
-
   // Initialize and run simulation.
   context.initialize();
   conga::Status status = conga::Status::kContinue;

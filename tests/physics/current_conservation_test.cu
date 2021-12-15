@@ -2,6 +2,7 @@
 
 #include "conga/Context.h"
 #include "conga/Parameters.h"
+#include "conga/accelerators/AdaptiveBall.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -161,7 +162,9 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
   new conga::ComputeFreeEnergy<T>(&context);
 
   // Set accelerator.
-  context.set(std::make_unique<conga::Accelerator<T>>());
+  auto accelerator =
+      std::make_unique<conga::accelerators::AdaptiveBall<T>>(static_cast<T>(2));
+  context.set(std::move(accelerator));
 
   // =================== ACT ==================== //
   context.initialize();

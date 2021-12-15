@@ -42,14 +42,7 @@
 		"vector_potential_error": 1e-06
 	},
 	"accelerator": {
-		"adaptive": false,
-		"anderson_always": false,
-		"inertia": 0.0,
-		"max_mixing": 1e3,
-		"min_mixing": 1e-3,
-		"rank": 5,
-		"replace_oldest": false,
-		"step_size": 1.0
+		"name": "Adaptive-Ball"
 	},
 	"misc": {
 		"data_format": "h5",

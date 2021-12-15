@@ -409,6 +409,14 @@ def add_runner_arguments(parser) -> None:
     accelerator = parser.add_argument_group(title="Accelerator")
 
     accelerator.add_argument(
+        "-A",
+        "--accelerator",
+        type=str,
+        choices=configuration.valid_accelerators,
+        default=None,
+        help="Which accelerator to use. Note that AB = Adaptive-Ball and BB = Barzilai-Borwein.",
+    )
+    accelerator.add_argument(
         "--step-size",
         type=float,
         default=None,
@@ -418,58 +426,25 @@ def add_runner_arguments(parser) -> None:
         "--inertia",
         type=float,
         default=None,
-        help="The inertia of the accelerator.",
+        help="The inertia of the Polyak accelerator.",
     )
-    group_optimiser_adaptive = accelerator.add_mutually_exclusive_group()
-    group_optimiser_adaptive.add_argument(
-        "--adaptive",
-        action="store_true",
-        help="Change the step size and inertia adaptively each iteration.",
+    accelerator.add_argument(
+        "--step-size-increase",
+        type=float,
+        default=None,
+        help="The maximum step-size increase in the Adaptive-Ball accelerator.",
     )
-    group_optimiser_adaptive.add_argument(
-        "--no-adaptive",
-        action="store_true",
-        help="Do not change the step size and inertia adaptively each iteration.",
+    accelerator.add_argument(
+        "--step-size-decrease",
+        type=float,
+        default=None,
+        help="The maximum step-size decrease in the Adaptive-Ball accelerator.",
     )
     accelerator.add_argument(
         "--rank",
         type=int,
         default=None,
-        help="The maximal rank of the system of equations in the Anderson step, i.e. the maximum number of stored steps.",
-    )
-    accelerator.add_argument(
-        "--min-mixing",
-        type=float,
-        default=None,
-        help="The minimal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
-    )
-    accelerator.add_argument(
-        "--max-mixing",
-        type=float,
-        default=None,
-        help="The maximal value of the mixing parameter used in Anderson steps. Only applicable if rank > 1.",
-    )
-    group_optimiser_replace = accelerator.add_mutually_exclusive_group()
-    group_optimiser_replace.add_argument(
-        "--replace-worst",
-        action="store_true",
-        help="Replace the worst stored step in the accelerator, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
-    )
-    group_optimiser_replace.add_argument(
-        "--replace-oldest",
-        action="store_true",
-        help="Replace the oldest stored step in the accelerator, when the number of stored steps is equal to the rank. Only applicable if rank > 1.",
-    )
-    group_optimiser_anderson = accelerator.add_mutually_exclusive_group()
-    group_optimiser_anderson.add_argument(
-        "--anderson-always",
-        action="store_true",
-        help="Take Anderson steps all the time. Only applicable if rank > 1.",
-    )
-    group_optimiser_anderson.add_argument(
-        "--anderson-full",
-        action="store_true",
-        help="Take Anderson steps only when the storage is full. Only applicable if rank > 1.",
+        help="The maximum rank of the system of equations in the Anderson accelerator, i.e. the maximum number of stored steps.",
     )
 
     # =============== MISC =============== #
@@ -1162,32 +1137,12 @@ def set_runner_arguments_from_cli(
 
     # ================== ACCELERATOR ================== #
     group = "accelerator"
+    set_value(sim_params, "name", args.accelerator, group)
     set_value(sim_params, "step_size", args.step_size, group)
     set_value(sim_params, "inertia", args.inertia, group)
-    set_flag(
-        sim_params,
-        "adaptive",
-        args.adaptive,
-        args.no_adaptive,
-        group,
-    )
+    set_value(sim_params, "step_size_increase", args.step_size_increase, group)
+    set_value(sim_params, "step_size_decrease", args.step_size_decrease, group)
     set_value(sim_params, "rank", args.rank, group)
-    set_value(sim_params, "min_mixing", args.min_mixing, group)
-    set_value(sim_params, "max_mixing", args.max_mixing, group)
-    set_flag(
-        sim_params,
-        "replace_oldest",
-        args.replace_oldest,
-        args.replace_worst,
-        group,
-    )
-    set_flag(
-        sim_params,
-        "anderson_always",
-        args.anderson_always,
-        args.anderson_full,
-        group,
-    )
 
     # ================== MISC ================== #
     group = "misc"

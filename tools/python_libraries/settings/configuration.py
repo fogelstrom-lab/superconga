@@ -25,6 +25,16 @@ from typing import Optional, Union
 # -----------------------------------------------------------------------------
 # Valid order parameter symmetries.
 valid_symmetries = ["s", "dx2-y2", "dxy", "g"]
+valid_accelerators = [
+    "Adaptive-Ball",
+    "AB",
+    "Anderson",
+    "Barzilai-Borwein",
+    "BB",
+    "Picard",
+    "Polyak",
+]
+valid_data_formats = ["h5", "csv"]
 symmetry_latex_format = {
     "s": r"s",
     "dx2-y2": r"d_{x^2-y^2}",

@@ -130,7 +130,7 @@ template <typename T>
 void computeVectorPotential(conga::GridGPU<T> &inOutVectorPotential,
                             const conga::GridGPU<T> &inCurrentDensity,
                             const conga::GridGPU<char> &inDomainLabels,
-                            const T inLatticeSpacing, const T inKappa) {
+                            const T inLatticeSpacing) {
   // Set to zero because we'll add stuff to it.
   inOutVectorPotential.setZero();
 
@@ -158,7 +158,7 @@ void computeVectorPotential(conga::GridGPU<T> &inOutVectorPotential,
   }
 
   // Factor from the equation itself.
-  const T equationFactor = -static_cast<T>(1.0) / (inKappa * inKappa);
+  const T equationFactor = -static_cast<T>(1.0);
 
   // Factor from the Green function.
   const T greenFactor = static_cast<T>(1) / static_cast<T>(2.0 * M_PI);
@@ -229,9 +229,6 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   // Physical side length of a lattice cell.
   const T latticeSpacing = static_cast<T>(0.1);
 
-  // The London penetration depth.
-  const T penetrationDepth = static_cast<T>(1);
-
   // The number of "fields" for the domain labels and the current density.
   const int domainDimension = 1;
   const int currentDimension = 2;
@@ -249,7 +246,7 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   conga::GridGPU<T> vectorPotential(N, N, currentDimension, conga::Type::real);
 
   legacy::computeVectorPotential(vectorPotential, currenDensity, domainLabels,
-                                 latticeSpacing, penetrationDepth);
+                                 latticeSpacing);
 
   // =================== ASSERT ==================== //
   // The maximum error, in terms of relative Frobenius norm, of the
@@ -269,7 +266,7 @@ template <typename T> void testComputeVectorPotential(const T inTolerance) {
   conga::ComputeVectorPotential<T> computeVectorPotential(
       maxError, analytical, enforceCurrentConservation);
   computeVectorPotential.initialize(N, latticeSpacing, numGrainLatticeSites);
-  computeVectorPotential.solve(currenDensity, penetrationDepth);
+  computeVectorPotential.solve(currenDensity);
 
   conga::GridGPU<T> expVectorPotential = *(computeVectorPotential.getResult());
 
