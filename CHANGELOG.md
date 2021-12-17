@@ -35,6 +35,7 @@
 - Fix different residual for the same data depending on single/double precision.
 - Fix conceptual bug linear-response current test.
 - Fix sign error in "chiral transformation" in Python frontend.
+- Fix plotter for multi-component order parameters.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.

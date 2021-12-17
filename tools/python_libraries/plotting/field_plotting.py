@@ -217,9 +217,7 @@ def plot_all(
             # Loop over multi-component structure (e.g. Delta_1, Delta_2),
             # which each can have field components (e.g. |Delta_1|, Chi_1,
             # Delta_2, Chi_2, ...).
-            for multi_component_idx, pairing_symmetry in enumerate(
-                simulation_parameters["physics"]["order_parameter"].keys()
-            ):
+            for multi_component_idx in range(num_multi_components):
                 # Reset row number: plot one field component per row.
                 row_idx = 0
 
@@ -322,6 +320,9 @@ def plot_all(
                         # TODO(patric): fetch this from the column names instead, since
                         # the following code breaks if the ordering differs between the
                         # config file and the columns in the data file.
+                        pairing_symmetry = list(
+                            simulation_parameters["physics"]["order_parameter"].keys()
+                        )[multi_component_idx]
                         pairing_symmetry_latex_format = (
                             configuration.symmetry_latex_format[pairing_symmetry]
                         )
