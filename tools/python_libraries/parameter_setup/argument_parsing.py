@@ -150,7 +150,36 @@ def add_runner_arguments(parser) -> None:
         help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
     )
 
-    # =============== ORDER PARAMETER =============== #
+    # =============== PHYSICS: VORTEX LATTICE =============== #
+
+    # x-coordinate for phase winding centers.
+    physics.add_argument(
+        "--vortices-centers-x",
+        type=float,
+        default=None,
+        nargs="+",
+        help="Start guess for phase-winding centers (x-coordinate, in coherence lengths). Must be set together with --vortices-centers-y and --vortices-winding-numbers. NOTE: Overrides the phase winding of the order-parameter component.",
+    )
+
+    # y-coordinate for phase winding centers.
+    physics.add_argument(
+        "--vortices-centers-y",
+        type=float,
+        default=None,
+        nargs="+",
+        help="Start guess for phase-winding centers (y-coordinate, in coherence lengths). Must be set together with --vortices-centers-x and --vortices-winding-numbers. NOTE: Overrides the phase winding of the order-parameter component.",
+    )
+
+    # Winding numbers for the phase-winding centers.
+    physics.add_argument(
+        "--vortices-winding-numbers",
+        type=float,
+        default=None,
+        nargs="+",
+        help="Winding numbers for the phase-winding centers. Must be set together with --vortices-centers-x and --vortices-centers-y. NOTE: Overrides the phase winding of the order-parameter component.",
+    )
+
+    # =============== PHYSICS: ORDER PARAMETER =============== #
 
     # D_{x^2-y^2}-wave.
     dx2_y2_wave = physics.add_mutually_exclusive_group()
@@ -966,6 +995,18 @@ def set_runner_arguments_from_cli(
     set_flag(
         sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial, group
     )
+
+    # ================== PHYSICS: VORTEX LATTICE ================== #
+    if (
+        (args.vortices_centers_x is not None)
+        or (args.vortices_centers_y is not None)
+        or (args.vortices_winding_numbers is not None)
+    ):
+        sim_params["physics"]["vortex_lattice"] = {
+            "vortices_centers_x": args.vortices_centers_x,
+            "vortices_centers_y": args.vortices_centers_y,
+            "vortices_winding_numbers": args.vortices_winding_numbers,
+        }
 
     # ================== PHYSICS: ORDER PARAMETER ================== #
     component = "dx2-y2"

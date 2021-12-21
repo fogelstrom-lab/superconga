@@ -93,6 +93,7 @@ def parse_field_numpy(base_path: str, field_name: str) -> dict:
         phases = []
 
         if os.path.exists(path):
+            # TODO(patric): h5file is never closed!?
             h5file = h5py.File(path, "r")
 
             # An H5 key for the order parameter is e.g. "order_parameter_s". So we can fetch the keys which has "order_parameter" in them.

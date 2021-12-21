@@ -180,6 +180,15 @@ runner_checks = {
                     },
                 },
             },
+            "vortex_lattice": {
+                "type": dict,
+                "optional": True,
+                "fields": {
+                    "vortices_centers_x": {"type": list, "sub": {"type": float}},
+                    "vortices_centers_y": {"type": list, "sub": {"type": float}},
+                    "vortices_winding_numbers": {"type": list, "sub": {"type": float}},
+                },
+            },
         },
     },
     "geometry": {
@@ -423,13 +432,26 @@ def validate_runner_arguments(
         )
         success = False
 
-    # Check that minimum value of the accelerator parameter 'p' is smallar than the maximum.
+    # Check that minimum value of the accelerator parameter 'p' is smaller than the maximum.
     if (
         not sim_params["accelerator"]["max_mixing"]
         >= sim_params["accelerator"]["min_mixing"]
     ):
         print("-- ERROR! 'max_mixing' must be larger than, or equal to, 'min_mixing'.")
         success = False
+
+    # Check if vortex lattice is supplied.
+    if "vortex_lattice" in sim_params["physics"]:
+        # Check that lengths are equal.
+        if not (
+            len(sim_params["physics"]["vortex_lattice"]["vortices_centers_x"])
+            == len(sim_params["physics"]["vortex_lattice"]["vortices_centers_y"])
+            == len(sim_params["physics"]["vortex_lattice"]["vortices_winding_numbers"])
+        ):
+            print(
+                "-- ERROR! The following lists must all be of equal length: 'vortices_centers_x', 'vortices_centers_y' and 'vortices_winding_numbers'."
+            )
+            success = False
 
     return success
 

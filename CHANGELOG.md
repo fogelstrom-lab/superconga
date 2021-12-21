@@ -30,6 +30,7 @@
 - Speed up vector potential computation by using `__restrict__` keyword in kernels.
 - Support building without HDF5. CSV files will be saved instead.
 - Speed up the coherence function computation, and increase the accuracy, by using the mid-point method when stepping.
+- Allow multiple vortices as start guess, at user-specified locations, via command-line (`--vortices-...`) or config file (`["physics"]["vortex_lattice"]["..."]`).
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
