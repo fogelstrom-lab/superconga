@@ -23,16 +23,16 @@
 #include <array>
 #include <cstddef>
 #include <limits>
+#include <memory>
 
 namespace conga {
 /// \brief Class for computing the vector potential.
 template <typename T> class ComputeVectorPotential {
 private:
   // The vector potential.
-  // TODO(niclas): Use unique_ptr.
-  GridGPU<T> *m_vectorPotential;
+  std::unique_ptr<GridGPU<T>> m_vectorPotential;
 
-  // The full 2D filter. It is only non-empty is the maximum tolerated error is
+  // The full 2D filter. It is only non-empty if the maximum tolerated error is
   // zero.
   thrust::device_vector<T> m_filter2D;
 
@@ -155,14 +155,6 @@ public:
       const T inMaxError = static_cast<T>(1e-6), const bool inAnalytical = true,
       const bool inEnforceCurrentConservation = true);
 
-  /// \brief Destructor.
-  ~ComputeVectorPotential() {
-#ifndef NDEBUG
-    std::cout << "~ComputeVectorPotential<T>\n";
-#endif
-    delete m_vectorPotential;
-  }
-
   /// \brief Initialize.
   ///
   /// \param inGridResolution The number of lattice sites per side.
@@ -203,7 +195,7 @@ public:
   ///
   /// \return The vector potential, in units of A_0 = Phi_0 /
   /// xi_0, where Phi_0 = pi hbar / |e|.
-  GridGPU<T> *getResult() const { return m_vectorPotential; }
+  GridGPU<T> *getResult() const { return m_vectorPotential.get(); }
 
   /// \brief Get the residual.
   ///
@@ -215,8 +207,7 @@ template <typename T>
 ComputeVectorPotential<T>::ComputeVectorPotential(
     const T inMaxError, const bool inAnalytical,
     const bool inEnforceCurrentConservation)
-    : m_vectorPotential(nullptr), m_maxError(static_cast<double>(inMaxError)),
-      m_analytical(inAnalytical),
+    : m_maxError(static_cast<double>(inMaxError)), m_analytical(inAnalytical),
       m_enforceCurrentConservation(inEnforceCurrentConservation),
       m_residual(static_cast<T>(0)), m_isInitialized(false), m_scale(1.0),
       m_latticeSiteArea(static_cast<T>(0.0)) {}
@@ -447,10 +438,11 @@ namespace cvp_internal {
 ///
 /// \return void.
 template <typename T>
-__global__ void
-crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
-                          const T *const inSrc, const T *const inFilter,
-                          T *const outDst) {
+__global__ void crossCorrelate1DTranspose(const int inGridResolution,
+                                          const int inDimension,
+                                          const T *const __restrict__ inSrc,
+                                          const T *const __restrict__ inFilter,
+                                          T *const __restrict__ outDst) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -529,8 +521,10 @@ crossCorrelate1DTranspose(const int inGridResolution, const int inDimension,
 /// \return void.
 template <typename T>
 __global__ void crossCorrelate2D(const int inGridResolution,
-                                 const int inDimension, const T *const inSrc,
-                                 const T *const inFilter, T *const outDst) {
+                                 const int inDimension,
+                                 const T *const __restrict__ inSrc,
+                                 const T *const __restrict__ inFilter,
+                                 T *const __restrict__ outDst) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -583,8 +577,9 @@ __global__ void crossCorrelate2D(const int inGridResolution,
 /// \return void.
 template <typename T>
 __global__ void subtractMean(const int inGridResolution, const int inDimension,
-                             const T *const inMean, const T *const inSrc,
-                             T *const outDst) {
+                             const T *const __restrict__ inMean,
+                             const T *const __restrict__ inSrc,
+                             T *const __restrict__ outDst) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -637,8 +632,8 @@ void ComputeVectorPotential<T>::initialize(const int inGridResolution,
                                            const int inNumGrainLatticeSites) {
   // Initialize the vector potential.
   const int dimension = 2;
-  GridGPU<T>::initializeGrid(m_vectorPotential, inGridResolution,
-                             inGridResolution, dimension, Type::real);
+  m_vectorPotential = std::make_unique<GridGPU<T>>(
+      inGridResolution, inGridResolution, dimension, Type::real);
   m_vectorPotential->setZero();
 
   // Initialize the filters.
