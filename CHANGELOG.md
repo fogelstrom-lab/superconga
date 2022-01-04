@@ -62,6 +62,7 @@
 - Update Python requirements.
 - Use the vector potential when initializing boundary.
 - Make LDOS residual more strict by computing residual of LDOS instead of DOS. Remove DOS computation.
+- Use more advanced integration rules (Boole and Simpson) in the Fermi-surface averages.
 
 ---
 

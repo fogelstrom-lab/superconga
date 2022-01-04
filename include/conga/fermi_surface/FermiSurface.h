@@ -57,6 +57,10 @@ public:
   // The wrapped angle index, i.e. in [0, numAngles).
   int getWrappedAngleIndex(const int inAngleIdx) const;
 
+  // Weight from either Boole's rule, Simpson's rules, or the trapezoidal
+  // method, depending on the divisibilty of the number of angles.
+  T getAngleWeight(const int inAngleIdx) const;
+
   // Get the Fermi momentum.
   virtual vector2d<T> getFermiMomentum(const int inAngleIdx) const = 0;
   virtual void getFermiMomentum(const int inAngleIdx, T &outMomentumX,
@@ -209,6 +213,39 @@ T FermiSurface<T>::getSystemAngle(const T inFermiVelocityAngle) const {
 template <typename T>
 int FermiSurface<T>::getWrappedAngleIndex(const int inAngleIdx) const {
   return utils::wrapToRange(inAngleIdx, 0, m_numAngles);
+}
+
+template <typename T>
+T FermiSurface<T>::getAngleWeight(const int inAngleIdx) const {
+  const int wrappedIdx = utils::wrapToRange(inAngleIdx, 0, m_numAngles);
+
+  if (m_numAngles % 4 == 0) {
+    // Boole's rule.
+    if (wrappedIdx % 4 == 0) {
+      return static_cast<T>(28) / static_cast<T>(45);
+    } else if (wrappedIdx % 2 == 0) {
+      return static_cast<T>(24) / static_cast<T>(45);
+    } else {
+      return static_cast<T>(64) / static_cast<T>(45);
+    }
+  } else if (m_numAngles % 3 == 0) {
+    // Simpson's 3/8 rule.
+    if (wrappedIdx % 3 == 0) {
+      return static_cast<T>(6) / static_cast<T>(8);
+    } else {
+      return static_cast<T>(9) / static_cast<T>(8);
+    }
+  } else if (m_numAngles % 2 == 0) {
+    // Simpson's 1/3 rule.
+    if (wrappedIdx % 2 == 0) {
+      return static_cast<T>(2) / static_cast<T>(3);
+    } else {
+      return static_cast<T>(4) / static_cast<T>(3);
+    }
+  } else {
+    // Trapezoidal method.
+    return static_cast<T>(1);
+  }
 }
 
 template <typename T>

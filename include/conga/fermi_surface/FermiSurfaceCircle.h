@@ -157,13 +157,9 @@ T FermiSurfaceCircle<T>::getFermiSpeed(const int inAngleIdx) const {
 
 template <typename T>
 T FermiSurfaceCircle<T>::getIntegrandFactor(const int inAngleIdx) const {
-  // Unused.
-  (void)inAngleIdx;
-
-  // Because this is a circle, and we are taking equidistant angular steps, the
-  // only thing left to do is dividing by the number of angles.
+  const T weightFactor = FermiSurface<T>::getAngleWeight(inAngleIdx);
   const int numAngles = FermiSurface<T>::getNumAngles();
-  return static_cast<T>(1.0) / static_cast<T>(numAngles);
+  return weightFactor / static_cast<T>(numAngles);
 }
 
 template <typename T>

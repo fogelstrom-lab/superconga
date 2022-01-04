@@ -224,6 +224,9 @@ void testGetIntegrandFactor(const T inTolerance, const int inNumAngles = 9) {
     // =================== ACT ==================== //
     const T integrandFactor = fermiSurface.getIntegrandFactor(angleIdx);
     integrandFactorSum += integrandFactor;
+
+    // =================== ASSERT ==================== //
+    CHECK(integrandFactor > static_cast<T>(0));
   }
 
   // =================== ASSERT ==================== //

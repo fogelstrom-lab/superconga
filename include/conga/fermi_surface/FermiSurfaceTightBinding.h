@@ -416,8 +416,10 @@ void FermiSurfaceTightBinding<T>::initialize(const int inNumAngles) {
     m_systemAngles.push_back(systemAngle);
 
     // Compute integrand factor.
-    const T factor = tightbinding_internal::computeIntegrandFactor(
+    const T jacobianFactor = tightbinding_internal::computeIntegrandFactor(
         fermiMomentum, fermiVelocity, m_originOffset);
+    const T weightFactor = FermiSurface<T>::getAngleWeight(angleIdx);
+    const T factor = jacobianFactor * weightFactor;
     m_integrandFactor.push_back(factor);
 
     // For normalizing the integrand factor.
