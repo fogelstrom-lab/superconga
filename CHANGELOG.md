@@ -27,6 +27,7 @@
 - Print total time to terminal, and include the visualization time.
 - Compute the magnetic contribution to the free energy in the whole simulation space, not just in the grain.
 - Speed up vector potential computation by switching axis of cross-correlation and unrolling for loop.
+- Speed up vector potential computation by using `__restrict__` keyword in kernels.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
@@ -57,7 +58,7 @@
 - Group source files in folders.
 - Cleanup Green function computation (Doxygen comments, remove unnecessary code, etc).
 - Reduce grid tests spatial dimensions.
-- Add test of magnic moment in an s-wave annulus using radial gauge.
+- Add test of magnetic moment in an s-wave annulus using radial gauge.
 - Remove more unused/broken code, e.g. read/write binary files.
 - Update Python requirements.
 - Use the vector potential when initializing boundary.
