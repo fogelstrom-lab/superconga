@@ -320,7 +320,7 @@ def add_runner_arguments(parser) -> None:
         "--num-fermi-momenta",
         type=int,
         default=None,
-        help="Number of momenta in Fermi-surface average. Recommended minimum: 100.",
+        help="Number of momenta in Fermi-surface average. If divisible by 4 Boole's method is used. If divisible by 3 Simpson's 3/8 rule is used. If divisible by 2 Simpson's 1/3 rule is used. Otherwise the trapezoidal method is used. Recommended minimum: 100.",
     )
 
     # Num iterations burn-in.
@@ -637,7 +637,7 @@ def add_postprocess_arguments(parser) -> None:
         "--num-fermi-momenta",
         type=int,
         default=None,
-        help="Number of discrete angles in Fermi-surface average. Recommended minimum: 700.",
+        help="Number of momenta in Fermi-surface average. If divisible by 4 Boole's method is used. If divisible by 3 Simpson's 3/8 rule is used. If divisible by 2 Simpson's 1/3 rule is used. Otherwise the trapezoidal method is used. Recommended minimum: 700.",
     )
 
     # Verbose.

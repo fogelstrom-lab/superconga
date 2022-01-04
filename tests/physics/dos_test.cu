@@ -54,8 +54,7 @@ const double GRAIN_SIDE_LENGTH = 5.0;
 // Number of lattice points per coherence length
 const double POINTS_PER_COHERENCE_LENGTH = 16.0 / GRAIN_SIDE_LENGTH;
 // Number of trajectory angles (on the Fermi-surface).
-// TODO(niclas): Even numbers are better than odd. Why exactly?
-const int NUM_ANGLES = 720;
+const int NUM_ANGLES = 160;
 // Number of energies in total.
 const int NUM_ENERGIES = 32;
 // How many energies to compute the LDOS for in parallel.
@@ -66,7 +65,7 @@ const double ENERGY_MAX = 0.5;
 // The value of the imaginary part added to the energies.
 const double ENERGY_SMEARING = 0.008;
 // Maximum number of iterations.
-const int NUM_ITERATIONS_MAX = 1000;
+const int NUM_ITERATIONS_MAX = 42;
 } // namespace simParams
 
 namespace helper {
