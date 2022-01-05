@@ -444,7 +444,7 @@ def add_runner_arguments(parser) -> None:
         type=str,
         choices=["h5", "csv"],
         default=None,
-        help="What format use when saving data. H5 files are much smaller and faster to read and write.",
+        help="What format use when saving data. H5 files are much smaller and faster to read and write. If SuperConga is built without HDF5 support, CSV files will be saved.",
     )
 
     # Load data.

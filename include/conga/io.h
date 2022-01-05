@@ -14,7 +14,9 @@
 
 #include "io/DataFormat.h"
 #include "io/csv.h"
+#ifdef CONGA_USE_HDF5
 #include "io/h5.h"
+#endif // CONGA_USE_HDF5
 #include "io/json.h"
 #include "io/print.h"
 

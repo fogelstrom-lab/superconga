@@ -266,12 +266,14 @@ int main(int argc, char *argv[]) {
     auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
         gridResolution, gridResolution, 2, conga::Type::real);
 
-    // Check if the simulation file exists.
-    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
-
     bool successOrderParameter = false;
     bool successVectorPotential = false;
-    if (std::filesystem::exists(simulationPath)) {
+
+#ifdef CONGA_USE_HDF5
+    // Check if the simulation file exists.
+    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
+    const bool simulationExists = std::filesystem::exists(simulationPath);
+    if (simulationExists) {
       // Open file.
       const auto file = conga::io::fileReadOnly(simulationPath);
 
@@ -286,14 +288,10 @@ int main(int argc, char *argv[]) {
           conga::io::read(file, "vector_potential", *(vectorPotential.get()));
       conga::io::printRead(verbose, successVectorPotential, "vector potential",
                            simulationPath);
-    } else {
-      if (verbose) {
-        std::cout << "-- WARNING! File " << simulationPath
-                  << " does not exist. "
-                     "Trying to read CSV files instead..."
-                  << std::endl;
-      }
 
+    } else
+#endif // CONGA_USE_HDF5
+    {
       // Read order parameter.
       const std::filesystem::path orderParameterPath =
           loadDataPath / "order_parameter.csv";

@@ -264,12 +264,14 @@ int main(int argc, char *argv[]) {
     auto vectorPotential = std::make_unique<conga::GridGPU<T>>(
         gridResolution, gridResolution, 2, conga::Type::real);
 
-    // Check if the simulation file exists.
-    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
-
     bool successOrderParameter = false;
     bool successVectorPotential = false;
-    if (std::filesystem::exists(simulationPath)) {
+
+#ifdef CONGA_USE_HDF5
+    // Check if the simulation file exists.
+    const std::filesystem::path simulationPath = loadDataPath / "simulation.h5";
+    const bool simulationExists = std::filesystem::exists(simulationPath);
+    if (simulationExists) {
       // Open file.
       const auto file = conga::io::fileReadOnly(simulationPath);
 
@@ -284,14 +286,9 @@ int main(int argc, char *argv[]) {
           conga::io::read(file, "vector_potential", *(vectorPotential.get()));
       conga::io::printRead(verbose, successVectorPotential, "vector potential",
                            simulationPath);
-    } else {
-      if (verbose) {
-        std::cout << "-- WARNING! File " << simulationPath
-                  << " does not exist. "
-                     "Trying to read CSV files instead..."
-                  << std::endl;
-      }
-
+    } else
+#endif // CONGA_USE_HDF5
+    {
       // Read order parameter.
       const std::filesystem::path orderParameterPath =
           loadDataPath / "order_parameter.csv";
@@ -395,19 +392,23 @@ int main(int argc, char *argv[]) {
     // Save the LDOS.
     const conga::GridGPU<T> &ldos = (*(context.getComputeLDOS()->getResult()));
     switch (dataFormat) {
-    case conga::io::DataFormat::CSV: {
-      const std::filesystem::path ldosPath = saveDataPath / "ldos.csv";
-      const bool success = conga::io::write(ldos, {"ldos"}, ldosPath);
-      conga::io::printWrite(verbose, success, "LDOS", ldosPath);
-      break;
-    }
-    default: {
-      // Write H5 file if not told otherwise.
+#ifdef CONGA_USE_HDF5
+    case conga::io::DataFormat::H5: {
       const std::filesystem::path spectroscopyPath =
           saveDataPath / "spectroscopy.h5";
       auto file = conga::io::fileOverWrite(spectroscopyPath);
       conga::io::write(ldos, "ldos", file);
       conga::io::printWrite(verbose, true, "LDOS", spectroscopyPath);
+      break;
+    }
+#endif // CONGA_USE_HDF5
+    case conga::io::DataFormat::CSV: {
+      // The default is CSV.
+    }
+    default: {
+      const std::filesystem::path ldosPath = saveDataPath / "ldos.csv";
+      const bool success = conga::io::write(ldos, {"ldos"}, ldosPath);
+      conga::io::printWrite(verbose, success, "LDOS", ldosPath);
     }
     }
   }

@@ -179,7 +179,29 @@ void saveGridData(const Context<T> *const inContext,
   const GridGPU<T> fluxDensity = vectorPotential.curl(latticeSpacing);
 
   switch (inDataFormat) {
+#ifdef CONGA_USE_HDF5
+  case io::DataFormat::H5: {
+    const std::filesystem::path fileName =
+        inDataPath / std::string("simulation.h5");
+    auto file = io::fileOverWrite(fileName);
+
+    // Write.
+    io::write(domain, "domain", file);
+    io::write(orderParameter, "order_parameter", file);
+    io::write(currentDensity, "current_density", file);
+    io::write(vectorPotential, "vector_potential", file);
+    io::write(fluxDensity, "magnetic_flux_density", file);
+
+    // Can it never fail?
+    const bool success = true;
+    io::printWrite(inVerbose, success, "all simulation data", fileName);
+    break;
+  }
+#endif // CONGA_USE_HDF5
   case io::DataFormat::CSV: {
+    // CSV is the default.
+  }
+  default: {
     // Write domain.
     {
       const std::filesystem::path fileName = inDataPath / "domain.csv";
@@ -222,23 +244,6 @@ void saveGridData(const Context<T> *const inContext,
       io::printWrite(inVerbose, success, "magnetic flux density", fileName);
     }
     break;
-  }
-  default: {
-    // Write H5 file if not told otherwise.
-    const std::filesystem::path fileName =
-        inDataPath / std::string("simulation.h5");
-    auto file = io::fileOverWrite(fileName);
-
-    // Write.
-    io::write(domain, "domain", file);
-    io::write(orderParameter, "order_parameter", file);
-    io::write(currentDensity, "current_density", file);
-    io::write(vectorPotential, "vector_potential", file);
-    io::write(fluxDensity, "magnetic_flux_density", file);
-
-    // Can it never fail?
-    const bool success = true;
-    io::printWrite(inVerbose, success, "all simulation data", fileName);
   }
   }
 }
