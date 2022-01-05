@@ -67,14 +67,8 @@ def main() -> None:
             os.path.dirname(__file__),
             "build/release/bin/superconga_f" + str(cpp_precision),
         )
-    binary_caller.run_cpp_binary(cpp_path, simulation_parameters)
-
-    # ======================================================================#
-    #                            POST-PROCESSING                            #
-    # ======================================================================#
-    # Remove temporary config file.
-    if Path(configuration.temp_config_file_name).is_file():
-        os.remove(configuration.temp_config_file_name)
+    tmp_path = os.path.join(os.path.dirname(__file__), "tmp")
+    binary_caller.run_cpp_binary(cpp_path, tmp_path, simulation_parameters)
 
     # Quit the program.
     sys.exit(status_code)

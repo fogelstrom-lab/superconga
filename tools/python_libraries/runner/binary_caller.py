@@ -12,6 +12,7 @@ import os
 import argparse
 import json
 import subprocess
+import datetime
 from pathlib import Path
 
 # Custom libraries.
@@ -21,9 +22,12 @@ from python_libraries.settings import configuration
 # ------------------------------------------------------------------------------
 # Run C++ program as a subprocess.
 # ------------------------------------------------------------------------------
-def run_cpp_binary(cpp_binary_str: str, sim_params: dict) -> int:
+def run_cpp_binary(cpp_binary_str: str, tmp_str: str, sim_params: dict) -> int:
     # Write temporary config file.
-    with open(configuration.temp_config_file_name, "w") as file:
+    os.makedirs(tmp_str, exist_ok=True)
+    dt_date = datetime.datetime.now()
+    tmp_file = os.path.join(tmp_str, dt_date.isoformat() + ".json")
+    with open(tmp_file, "w") as file:
         json.dump(sim_params, file, indent="\t", ensure_ascii=False)
 
     # Construct Path object.
@@ -31,9 +35,7 @@ def run_cpp_binary(cpp_binary_str: str, sim_params: dict) -> int:
 
     # Run the C++ program as a subprocess.
     if cpp_binary_path.is_file() and os.access(cpp_binary_path, os.X_OK):
-        status_code = subprocess.call(
-            [str(cpp_binary_path), configuration.temp_config_file_name]
-        )
+        status_code = subprocess.call([str(cpp_binary_path), tmp_file])
     else:
         status_code = 1
         print(
@@ -41,7 +43,7 @@ def run_cpp_binary(cpp_binary_str: str, sim_params: dict) -> int:
         )
 
     # Remove temporary config file.
-    if Path(configuration.temp_config_file_name).is_file():
-        os.remove(configuration.temp_config_file_name)
+    if Path(tmp_file).is_file():
+        os.remove(tmp_file)
 
     return status_code

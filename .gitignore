@@ -7,8 +7,8 @@ build/
 # Python compiled code.
 *.pyc
 
-# The temporary JSON config file created by the Python wrapper.
-.tmp_config.json
+# Temporary files.
+tmp/
 
 # The examples are saved here.
 data/
@@ -23,5 +23,5 @@ data/
 # Virtual environment.
 venv/
 
-# For saving some temporary files, e.g. run scripts, images, etc.
-tmp/
+# For keeping files not meant for version control, e.g. run scripts, images, etc.
+private/

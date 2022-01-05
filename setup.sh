@@ -42,6 +42,9 @@ else
   TESTS="-DCONGA_BUILD_TESTS=ON"
 fi
 
+# Create folder for temporary files, e.g. config for running SuperConga.
+mkdir -p $pwd/tmp
+
 # Remove build folder.
 rm -rf build/
 
