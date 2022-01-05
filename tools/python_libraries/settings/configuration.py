@@ -63,9 +63,6 @@ grid_field_types = {
     "vector_potential": "vector",
 }
 
-# Name of temporary json file sent to C++/CUDA binary.
-temp_config_file_name = ".tmp_config.json"
-
 # Default config file for plot parameters.
 default_plot_config = os.path.join(
     os.path.dirname(__file__), "../plotting/plot_default.json"
