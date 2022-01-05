@@ -11,43 +11,46 @@ set(SRC superconga.cu postprocess.cu)
 # Define precisions.
 set(CONGA_SINGLE_PRECISION OFF ON)
 
-# If HighFive is too old or not found it is fetched.
-# TODO(niclas): We should set the minimum compatible version here.
-find_package(HighFive 2.3.1 QUIET)
-if(HighFive_FOUND)
-  message(STATUS "Found HighFive ${HighFive_VERSION}")
-else()
-  # Download HighFive.
-  message(STATUS "Fetching HighFive")
-  FetchContent_Declare(
-    highfive
-    GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
-    GIT_TAG v2.3.1)
+# If building without HDF5 HighFive is not fetched.
+if(CONGA_USE_HDF5)
+  # If HighFive is too old or not found it is fetched.
+  # TODO(niclas): We should set the minimum compatible version here.
+  find_package(HighFive 2.3.1 QUIET)
+  if(HighFive_FOUND)
+    message(STATUS "Found HighFive ${HighFive_VERSION}")
+  else()
+    # Download HighFive.
+    message(STATUS "Fetching HighFive")
+    FetchContent_Declare(
+      highfive
+      GIT_REPOSITORY https://github.com/BlueBrain/HighFive.git
+      GIT_TAG v2.3.1)
 
-  # Fetch properties for target: POPULATED, SOURCE_DIR, BINARY_DIR.
-  FetchContent_GetProperties(highfive)
-  # Only populate if it is not already done.
-  if(NOT highfive_POPULATED)
-    FetchContent_Populate(highfive)
-    set(HIGHFIVE_USE_BOOST
-        OFF
-        CACHE BOOL "Do not use boost." FORCE)
-    # Disable building the tests.
-    set(HIGHFIVE_UNIT_TESTS
-        OFF
-        CACHE BOOL "Do not build tests." FORCE)
-    # Disable building the examples.
-    set(HIGHFIVE_EXAMPLES
-        OFF
-        CACHE BOOL "Do not build examples." FORCE)
-    # Disable building the documentation.
-    set(HIGHFIVE_BUILD_DOCS
-        OFF
-        CACHE BOOL "Do not build documentation." FORCE)
-    add_subdirectory(${highfive_SOURCE_DIR} ${highfive_BINARY_DIR}
-                     EXCLUDE_FROM_ALL)
-  endif(NOT highfive_POPULATED)
-endif(HighFive_FOUND)
+    # Fetch properties for target: POPULATED, SOURCE_DIR, BINARY_DIR.
+    FetchContent_GetProperties(highfive)
+    # Only populate if it is not already done.
+    if(NOT highfive_POPULATED)
+      FetchContent_Populate(highfive)
+      set(HIGHFIVE_USE_BOOST
+          OFF
+          CACHE BOOL "Do not use boost." FORCE)
+      # Disable building the tests.
+      set(HIGHFIVE_UNIT_TESTS
+          OFF
+          CACHE BOOL "Do not build tests." FORCE)
+      # Disable building the examples.
+      set(HIGHFIVE_EXAMPLES
+          OFF
+          CACHE BOOL "Do not build examples." FORCE)
+      # Disable building the documentation.
+      set(HIGHFIVE_BUILD_DOCS
+          OFF
+          CACHE BOOL "Do not build documentation." FORCE)
+      add_subdirectory(${highfive_SOURCE_DIR} ${highfive_BINARY_DIR}
+                       EXCLUDE_FROM_ALL)
+    endif(NOT highfive_POPULATED)
+  endif(HighFive_FOUND)
+endif(CONGA_USE_HDF5)
 
 # If building without visualization Forge is not fetched. Note that Forge must
 # be fetched last for some reason.
@@ -101,21 +104,20 @@ foreach(file ${SRC})
                       ${ARMADILLO_INCLUDE_DIRS} ${JSONCPP_INCLUDE_DIRS})
 
     # External libraries: equivalent to -l.
+    target_link_libraries(
+      ${name} PRIVATE gfortran jsoncpp ${ARMADILLO_LIBRARIES}
+                      ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+
+    # Use HDF5.
+    if(CONGA_USE_HDF5)
+      target_compile_definitions(${name} PUBLIC CONGA_USE_HDF5)
+      target_link_libraries(${name} PRIVATE HighFive)
+    endif(CONGA_USE_HDF5)
+
+    # Build with visualization.
     if(CONGA_VISUALIZE)
       target_compile_definitions(${name} PUBLIC CONGA_VISUALIZE)
-      target_link_libraries(
-        ${name}
-        PRIVATE gfortran
-                forge
-                jsoncpp
-                HighFive
-                ${ARMADILLO_LIBRARIES}
-                ${LAPACK_LIBRARIES}
-                ${BLAS_LIBRARIES})
-    else()
-      target_link_libraries(
-        ${name} PRIVATE gfortran jsoncpp HighFive ${ARMADILLO_LIBRARIES}
-                        ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+      target_link_libraries(${name} PRIVATE forge)
     endif(CONGA_VISUALIZE)
 
     # Use C++17 since it is the latest standard CUDA supports.

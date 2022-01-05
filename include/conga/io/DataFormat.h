@@ -14,8 +14,8 @@
 
 namespace conga {
 namespace io {
-/// \brief Enum controlling data format, {H5, CSV}.
-enum class DataFormat { H5, CSV };
+/// \brief Enum controlling data format,  { CSV, H5 }.
+enum class DataFormat { CSV, H5 };
 
 /// \brief Convert string to enum.
 ///
@@ -25,12 +25,16 @@ enum class DataFormat { H5, CSV };
 DataFormat getDataFormat(const std::string &inDataFormat) {
   if (inDataFormat == "csv") {
     return DataFormat::CSV;
-  } else if (inDataFormat == "h5") {
+  }
+#ifdef CONGA_USE_HDF5
+  else if (inDataFormat == "h5") {
     return DataFormat::H5;
-  } else {
-    // If not understood use H5.
+  }
+#endif // CONGA_USE_HDF5
+  else {
+    // If not understood use CSV.
     // TODO(niclas): Print warning?
-    return DataFormat::H5;
+    return DataFormat::CSV;
   }
 }
 } // namespace io

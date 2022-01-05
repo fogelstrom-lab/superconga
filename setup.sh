@@ -6,30 +6,40 @@ pwd=$PWD
 if echo $* | grep -e "--no-ninja" -q
 then
   echo "-- Using build system: automatic via CMake."
-  generator_flag=""
+  GENERATOR=""
 else
   echo "-- Using build system: Ninja. Run 'setup.sh --no-ninja' to let CMake decide instead."
-  generator_flag="-G Ninja"
+  GENERATOR="-G Ninja"
 fi
 
 # Allow building without visualization.
 if echo $* | grep -e "--no-visualize" -q
 then
   echo "-- Building without visualization support."
-  visualize_flag="-DCONGA_VISUALIZE=OFF"
+  VISUALIZE="-DCONGA_VISUALIZE=OFF"
 else
   echo "-- Building with visualization support."
-  visualize_flag="-DCONGA_VISUALIZE=ON"
+  VISUALIZE="-DCONGA_VISUALIZE=ON"
+fi
+
+# Allow building without HDF5 support.
+if echo $* | grep -e "--no-hdf5" -q
+then
+  echo "-- Building without HDF5 support."
+  HDF5="-DCONGA_USE_HDF5=OFF"
+else
+  echo "-- Building with HDF5 support."
+  HDF5="-DCONGA_USE_HDF5=ON"
 fi
 
 # Allow skip building tests.
 if echo $* | grep -e "--no-tests" -q
 then
   echo "-- Not building tests."
-  tests_flag="-DCONGA_BUILD_TESTS=OFF"
+  TESTS="-DCONGA_BUILD_TESTS=OFF"
 else
   echo "-- Building tests."
-  tests_flag="-DCONGA_BUILD_TESTS=ON"
+  TESTS="-DCONGA_BUILD_TESTS=ON"
 fi
 
 # Remove build folder.
@@ -39,7 +49,7 @@ rm -rf build/
 echo "================================ Setup Release ================================"
 mkdir -p $pwd/build/release
 cd $pwd/build/release
-cmake $generator_flag $visualize_flag $tests_flag -DCMAKE_BUILD_TYPE=Release $pwd
+cmake $GENERATOR $VISUALIZE $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Release $pwd
 
 # Build debug, if specified by the user.
 if echo $* | grep -e "--debug" -q
@@ -47,7 +57,7 @@ then
   echo "================================= Setup Debug ================================="
   mkdir -p $pwd/build/debug
   cd $pwd/build/debug
-  cmake $generator_flag $visualize_flag $tests_flag -DCMAKE_BUILD_TYPE=Debug $pwd
+  cmake $GENERATOR $VISUALIZE $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Debug $pwd
 else
   echo "================================= Setup Debug ================================="
   echo "-- Skipping debug. Run 'setup.sh --debug' to build in debug mode."
