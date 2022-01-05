@@ -40,7 +40,7 @@ const double VECTOR_POTENTIAL_Y = VECTOR_POTENTIAL_X;
 const double GRAIN_SIDE_LENGTH = 20.0;
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 10.0;
+const double POINTS_PER_COHERENCE_LENGTH = 1.0;
 
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 32;

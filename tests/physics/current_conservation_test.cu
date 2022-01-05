@@ -37,7 +37,7 @@ const double TEMPERATURE = 0.5;
 const double GRAIN_SIDE_LENGTH = 10.0;
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 5.0;
+const double POINTS_PER_COHERENCE_LENGTH = 1.0;
 
 // Number of discrete trajectory angles (on the Fermi-surface).
 const int NUM_ANGLES = 32;

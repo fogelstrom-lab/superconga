@@ -28,7 +28,8 @@
 - Compute the magnetic contribution to the free energy in the whole simulation space, not just in the grain.
 - Speed up vector potential computation by switching axis of cross-correlation and unrolling for loop.
 - Speed up vector potential computation by using `__restrict__` keyword in kernels.
-- Support building with HDF5. CSV files will be saved instead.
+- Support building without HDF5. CSV files will be saved instead.
+- Speed up the coherence function computation, and increase the accuracy, by using the mid-point method when stepping.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

@@ -35,7 +35,7 @@ const double TEMPERATURE = 0.001;
 const double GRAIN_SIDE_LENGTH = 10.0;
 
 // Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 32.0 / GRAIN_SIDE_LENGTH;
+const double POINTS_PER_COHERENCE_LENGTH = 1.0;
 
 // Number of discrete trajectory angles (on the Fermi-surface). S-wave behaves
 // much nicer.

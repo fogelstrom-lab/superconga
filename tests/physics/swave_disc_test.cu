@@ -94,7 +94,7 @@ template <typename T> void testSWaveDisc() {
 
   // General parameters.
   const T grainWidth = static_cast<T>(2) * R;
-  const T pointsPerCoherenceLength = static_cast<T>(4);
+  const T pointsPerCoherenceLength = static_cast<T>(2.7);
   const int numMomenta = 16;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);

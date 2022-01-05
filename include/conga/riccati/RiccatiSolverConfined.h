@@ -50,10 +50,58 @@ public:
 };
 
 namespace internal {
+/// \brief Make order parameter from real/imag parts. The stepping formulas are
+/// identical for gamma and gammaTilde except gammaTilde has -\Delta^* instead
+/// of \Delta. So by applying the negative conjugate during construction we only
+/// need to implement one general stepping function.
+///
+/// \param inReal The real part of the order parameter.
+/// \param inImag The imaginary part of the order parameter.
+/// \param inIsGamma Whether the order parameter will be used for computing
+/// gamma or gammaTilde.
+///
+/// \return The order parameter (if for gamma) or the negative conjugate of the
+/// order parameter (if for gammaTilde).
+template <typename T>
+inline __device__ thrust::complex<T>
+makeOrderParameter(const T inReal, const T inImag, const bool inIsGamma) {
+  return inIsGamma ? thrust::complex<T>(inReal, inImag)
+                   : thrust::complex<T>(-inReal, inImag);
+}
+
+/// \brief Interpolate linearly between two values.
+///
+/// \param inVal0 The value at zero step.
+/// \param inVal1 The value at unit step.
+/// \param inWeight The interpolation weight.
+///
+/// \return The interpolated value.
+template <typename T>
+inline __device__ thrust::complex<T>
+interpolateLinear(const thrust::complex<T> &inVal0,
+                  const thrust::complex<T> &inVal1, const T inWeight) {
+  return inVal0 + (inVal1 - inVal0) * inWeight;
+}
+
+/// \brief Interpolate using a quadratic polynomial taking a half unit step.
+///
+/// \param inVal0 The value at zero step.
+/// \param inVal1 The value at unit step.
+/// \param inVal2 The value at two unit steps.
+///
+/// \return The interpolated value.
+template <typename T>
+inline __device__ thrust::complex<T>
+interpolateQuadHalf(const thrust::complex<T> &inVal0,
+                    const thrust::complex<T> &inVal1,
+                    const thrust::complex<T> &inVal2) {
+  return (static_cast<T>(3) * inVal0 + static_cast<T>(6) * inVal1 - inVal2) *
+         static_cast<T>(0.125);
+}
+
 // TODO(niclas): Put parameters in order (in, inout, out).
-template <typename T, typename Coherence, int DOMAIN_ENTRY, int DOMAIN_EXIT,
-          int DIRECTION>
-__global__ void computeGammaFunctionTemplate_new_kernel(
+template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT, int DIRECTION>
+__global__ void computeCoherenceFunction(
     const T inStep, const int N, const int Ne, const int energyIdx_offset,
     const int idx_x_min, const int idx_x_max, const int idx_y_min,
     const int idx_y_max, const int angleIdx, const T *const energies_re,
@@ -82,17 +130,27 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
     int boundary_entry_count = 0;
     int boundary_exit_count = 0;
 
+    const bool isGamma = DIRECTION > 0;
+
     // Which y-coordinate to start from is determined by whether we are solving
     // for gamma or gammatilde (which is codified by DIRECTION.
-    const int y_start =
-        idx_y_min * (int)(DIRECTION == 1) + idx_y_max * (int)(DIRECTION == -1);
+    const int y_start = isGamma ? idx_y_min : idx_y_max;
 
-    // The value of the coherence function at the entry edge of the current
+    // The current energy and order parameter. They are updated as we traverse
+    // the trajectory.
+    const int idxStart = y_start * N + x;
+    thrust::complex<T> delta =
+        makeOrderParameter(delta_real[idxStart], delta_imag[idxStart], isGamma);
+    thrust::complex<T> energy = energyZeroPotential + energy_shift[idxStart];
+
+    // The previous energy and order parameter. They are updated as we traverse
+    // the trajectory.
+    thrust::complex<T> energyPrev(static_cast<T>(0), static_cast<T>(0));
+    thrust::complex<T> deltaPrev(static_cast<T>(0), static_cast<T>(0));
+
+    // The value of the coherence function at the center of the current
     // lattice site. It is updated as we traverse the trajectory.
-    thrust::complex<T> gEntry(static_cast<T>(0), static_cast<T>(0));
-
-    // The step from the center to and edge (entry or exit) of the lattice site.
-    const T halfStep = static_cast<T>(0.5) * inStep;
+    thrust::complex<T> gCenter(static_cast<T>(0), static_cast<T>(0));
 
     // OPTIMIZATION: PRECOMPUTE Y_MIN AND Y_MAX FOR EACH ROTATIONAL FRAME
     // Compute gamma along trajectory
@@ -102,40 +160,31 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
       // Index to 2d-grids (Delta)
       const int idx = y * N + x;
 
-      // Add energy shift from vector potential
-      const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
-
-      // Index to gamma grid (for all energies)
-      const int gamma_idx = e_idx * 2 * N * N + y * N + x;
+      // The next energy and order parameter. They are used for interpolation.
+      const int idxNext = idx + DIRECTION * N;
+      const thrust::complex<T> energyNext =
+          energyZeroPotential + energy_shift[idxNext];
+      const thrust::complex<T> deltaNext =
+          makeOrderParameter(delta_real[idxNext], delta_imag[idxNext], isGamma);
 
       // What type of node are we on?
       const char nodeType = domainLabel[idx];
 
-      // Read order parameter
-      const thrust::complex<T> delta(delta_real[idx], delta_imag[idx]);
-
-      // Read homogeneous solution.
-      const thrust::complex<T> gHomo(gamma_real[gamma_idx],
-                                     gamma_imag[gamma_idx]);
-
-      if (nodeType == 1) {
-        // Inside domain:
-
-        // Take a step from the entry edge to the center of the lattice site,
-        // and from the center to the exit edge of the lattice site.
-        thrust::complex<T> gCenter;
-        thrust::complex<T> gExit;
-        Coherence::computeHalfSteps(gHomo, delta, energy, gEntry, inStep,
-                                    gCenter, gExit);
-
-        // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.real();
-        gamma_imag[gamma_idx] = gCenter.imag();
-
-        // For the next lattice site, the current exit value is the entry.
-        gEntry = gExit;
-      } else if (nodeType == DOMAIN_ENTRY) {
-        // Domain boundary entry:
+      switch (nodeType) {
+      case 1: {
+        // =========== Inside domain =========== //
+        // Using a second degree polynomial to interpolate between points.
+        const thrust::complex<T> deltaMiddle =
+            interpolateQuadHalf(deltaPrev, delta, deltaNext);
+        const thrust::complex<T> energyMiddle =
+            interpolateQuadHalf(energyPrev, energy, energyNext);
+        // Take a step to the center of the lattice site.
+        gCenter =
+            riccati::computeStep(deltaMiddle, energyMiddle, gCenter, inStep);
+        break;
+      }
+      case DOMAIN_ENTRY: {
+        // =========== Boundary entry =========== //
 
         // Read boundary coherence function value.
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
@@ -151,46 +200,46 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
         // Take a step from the grain boundary to the center of the lattice
         // site.
-        const thrust::complex<T> gCenter = Coherence::computeStep(
-            gHomo, delta, energy, gBoundary, boundaryToCenterStep);
-
-        // Take a step from the center to the exit edge of the lattice site.
-        const thrust::complex<T> gExit =
-            Coherence::computeStep(gHomo, delta, energy, gCenter, halfStep);
-
-        // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.real();
-        gamma_imag[gamma_idx] = gCenter.imag();
-
-        // For the next lattice site, the current exit value is the entry.
-        gEntry = gExit;
+        const T weight = -static_cast<T>(0.5) * distance;
+        const thrust::complex<T> energyMiddle =
+            interpolateLinear(energy, energyNext, weight);
+        const thrust::complex<T> deltaMiddle =
+            interpolateLinear(delta, deltaNext, weight);
+        gCenter = riccati::computeStep(deltaMiddle, energyMiddle, gBoundary,
+                                       boundaryToCenterStep);
 
         // Increase entry counter.
         boundary_entry_count++;
-      } else if (nodeType == DOMAIN_EXIT) {
-        // Domain boundary exit:
+        break;
+      }
+      case DOMAIN_EXIT: {
+        // =========== Boundary exit =========== //
+
+        // Take a step to the center of the lattice site.
+        {
+          const T weight = static_cast<T>(0.5);
+          const thrust::complex<T> energyMiddle =
+              interpolateLinear(energyPrev, energy, weight);
+          const thrust::complex<T> deltaMiddle =
+              interpolateLinear(deltaPrev, delta, weight);
+          gCenter =
+              riccati::computeStep(deltaMiddle, energyMiddle, gCenter, inStep);
+        }
 
         // Distance to exact boundary location from the center of the lattice
         // site.
         const T distance = abs(boundaryDistance[idx]);
         const T centerToBoundaryStep = distance * inStep;
 
-        // Take a step from the entry edge to the center of the lattice site.
-        const thrust::complex<T> gCenter =
-            Coherence::computeStep(gHomo, delta, energy, gEntry, halfStep);
-
         // Take a step from the center of the lattice site to the grain
         // boundary.
-        const thrust::complex<T> gBoundary = Coherence::computeStep(
-            gHomo, delta, energy, gCenter, centerToBoundaryStep);
-
-        // Store coherence function.
-        gamma_real[gamma_idx] = gCenter.real();
-        gamma_imag[gamma_idx] = gCenter.imag();
-
-        // There is no exit edge value to set it to, because we hit a
-        // boundary. So the next lattice site is outside of the domain.
-        gEntry = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
+        const T weight = static_cast<T>(1) + static_cast<T>(0.5) * distance;
+        const thrust::complex<T> energyMiddle =
+            interpolateLinear(energyPrev, energy, weight);
+        const thrust::complex<T> deltaMiddle =
+            interpolateLinear(deltaPrev, delta, weight);
+        const thrust::complex<T> gBoundary = riccati::computeStep(
+            deltaMiddle, energyMiddle, gCenter, centerToBoundaryStep);
 
         // Store boundary gamma.
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
@@ -201,68 +250,28 @@ __global__ void computeGammaFunctionTemplate_new_kernel(
 
         // Increase exit counter.
         boundary_exit_count++;
-      } else {
-        // Outside the domain.
-        gamma_real[gamma_idx] = static_cast<T>(0);
-        gamma_imag[gamma_idx] = static_cast<T>(0);
+        break;
       }
+      default: {
+        // =========== Outside domain =========== //
+        gCenter = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
+      }
+      }
+
+      // Store coherence function.
+      // Index to gamma grid (for all energies)
+      const int gamma_idx = e_idx * 2 * N * N + y * N + x;
+      gamma_real[gamma_idx] = gCenter.real();
+      gamma_imag[gamma_idx] = gCenter.imag();
+
+      // Update previous energy and order parameter.
+      energyPrev = energy;
+      deltaPrev = delta;
+
+      // Update current energy and order parameter.
+      energy = energyNext;
+      delta = deltaNext;
     }
-  }
-}
-
-/// \brief Compute the homogenous solutions to the Riccati equations.
-///
-/// \param inDimX The number of lattice sites along the x-axis.
-/// \param inDimY The number of lattice sites along the y-axis.
-/// \param inNumEnergies The number of energies.
-/// \param inEnergyReal The real part of the energies.
-/// \param inEnergyImag The imag part of the energies.
-/// \param inEnergyShift The spatial energy shift due to the vector potential.
-/// \param inOrderParameterReal The real part of the order parameter.
-/// \param inOrderParameterImag The imag part of the order parameter.
-/// \param outGammaReal The real part of the coherence function gamma.
-/// \param outGammaImag The imag part of the coherence function gamma.
-/// \param outGammaTildeReal The real part of the coherence function gammaTilde.
-/// \param outGammaTildeImag The imag part of the coherence function gammaTilde.
-template <typename T>
-__global__ void
-computeHomogeneous(const int inDimX, const int inDimY, const int inNumEnergies,
-                   const T *const inEnergyReal, const T *const inEnergyImag,
-                   const T *const inEnergyShift,
-                   const T *const inOrderParameterReal,
-                   const T *const inOrderParameterImag, T *const outGammaReal,
-                   T *const outGammaImag, T *const outGammaTildeReal,
-                   T *const outGammaTildeImag) {
-  // Spatial coordinates.
-  const int x = blockDim.x * blockIdx.x + threadIdx.x;
-  const int y = blockDim.y * blockIdx.y + threadIdx.y;
-
-  // Energy coordinate.
-  const int z = blockDim.z * blockIdx.z + threadIdx.z;
-
-  // Check if within range.
-  if (x < inDimX && y < inDimY && z < inNumEnergies) {
-    // Indices.
-    const int gamma_idx = z * 2 * inDimX * inDimY + y * inDimX + x;
-    const int idx = y * inDimX + x;
-
-    // Construct complex energy and order parameter.
-    const thrust::complex<T> energy(inEnergyReal[z] + inEnergyShift[idx],
-                                    inEnergyImag[z]);
-    const thrust::complex<T> orderParameter(inOrderParameterReal[idx],
-                                            inOrderParameterImag[idx]);
-
-    // Construct the homogeneous solutions.
-    thrust::complex<T> gammaHomogeneous;
-    thrust::complex<T> gammaTildeHomogeneous;
-    riccati::computeHomogeneous(orderParameter, energy, gammaHomogeneous,
-                                gammaTildeHomogeneous);
-
-    // Write.
-    outGammaReal[gamma_idx] = gammaHomogeneous.real();
-    outGammaImag[gamma_idx] = gammaHomogeneous.imag();
-    outGammaTildeReal[gamma_idx] = gammaTildeHomogeneous.real();
-    outGammaTildeImag[gamma_idx] = gammaTildeHomogeneous.imag();
   }
 }
 
@@ -394,27 +403,6 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
   GridGPU<T> *gamma = R::getGamma();
   GridGPU<T> *gammabar = R::getGammabar();
 
-  // Set the coherence functions to the homogeneous solutions.
-  {
-    const int dimX = gamma->dimX();
-    const int dimY = gamma->dimY();
-
-    dim3 numBlocks;
-    dim3 numThreadsPerBlock;
-    gamma->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
-
-    internal::computeHomogeneous<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, numEnergies_storage,
-        energies->getDataPointer(0, Type::real) + energyIdxOffset,
-        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-        eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
-        deltaRot->getDataPointer(0, Type::imag),
-        gamma->getDataPointer(0, Type::real),
-        gamma->getDataPointer(0, Type::imag),
-        gammabar->getDataPointer(0, Type::real),
-        gammabar->getDataPointer(0, Type::imag));
-  }
-
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
 
@@ -443,8 +431,7 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
   // via a templated function object.
 
   // 	Solve gamma by propagating riccati trajectories along positive y
-  internal::computeGammaFunctionTemplate_new_kernel<
-      T, typename riccati::Gamma<T>, 2, 3, 1>
+  internal::computeCoherenceFunction<T, 2, 3, 1>
       <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
           // Model parameters and energy values
           stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
@@ -471,8 +458,7 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
           storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
-  internal::computeGammaFunctionTemplate_new_kernel<
-      T, typename riccati::GammaTilde<T>, 3, 2, -1>
+  internal::computeCoherenceFunction<T, 3, 2, -1>
       <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
           // Model parameters and energy values
           stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
