@@ -21,6 +21,7 @@
 #include <cuda.h>
 #include <curand.h>
 #include <curand_kernel.h>
+#include <thrust/device_vector.h>
 
 #include <cmath>
 #include <iostream>
@@ -137,6 +138,31 @@ public:
                         const T inCenterX = static_cast<T>(0.0),
                         const T inCenterY = static_cast<T>(0.0));
 
+  /// \brief Initialize OP: bulk w. multiple phase windings + random phase.
+  ///
+  /// Set the order parameter to bulk value with multiple phase windings,
+  /// possibly at different locations, good for e.g. multiple Abrikosov vortices
+  /// in a particular configuration. Each vortex can carry one more flux quanta:
+  /// n flux quanta = n*2pi phase winding. Note that negative phase winding is
+  /// reasonable, and leads to e.g. opposite current circulation in a solenoid
+  /// or around an Abrikosov vortex.
+  ///
+  /// \param inOutDeltaComponent Pointer to order parameter.
+  /// \param inNumWindings List of phase windings for each vortex center.
+  /// \param inCentersX Center of each phase winding: x-coordinate in [-1,1].
+  /// \param inCentersY Center of each phase winding: y-coordinate in [-1,1].
+  /// \param inPhaseShift Arbitrary shift to phase.
+  /// \param inNoiseStdDev Standard deviation of the additive Gaussian noise.
+  ///
+  /// \return void.
+  static void
+  perturbedPhaseWindings(OrderParameterComponent<T> *const inOutDeltaComponent,
+                         const std::vector<T> &inNumWindings,
+                         const std::vector<T> &inCentersX,
+                         const std::vector<T> &inCentersY,
+                         const T inNoiseStdDev = static_cast<T>(0.01),
+                         const T inPhaseShift = static_cast<T>(0.0));
+
   /// \brief Initialize order parameter from existing one via file.
   ///
   /// \param inOutDeltaComponent Pointer to order parameter.
@@ -158,30 +184,50 @@ public:
 };
 
 namespace internal {
+/// \brief Kernel for perturbedPhaseWinding.
+///
+/// \tparam T Floating point precision (single or double).
+/// \param outReal Pointer to real part of order parameter.
+/// \param outImag Pointer to imaginary part of order parameter.
+/// \param inNumX Number of x lattice-points in geometry.
+/// \param inNumY Number of y lattice-points in geometry.
+/// \param inDeltaBulk Overall amplitude of order.
+/// \param inNumVortices Number of vortices.
+/// \param inNumWindings List with the phase winding around each vortex.
+/// \param inCentersX Center x-coordinate for each vortex: [-1,1].
+/// \param inCentersY Center y-coordinate for each vortex: [-1,1].
+/// \param inNoiseStdDev Standard deviation of the additive Gaussian noise.
+/// \param inPhaseShift Arbitrary shift to phase.
 template <typename T>
 __global__ void perturbedPhaseWindingKernel(
     T *const outReal, T *const outImag, const int inNumX, const int inNumY,
-    const T inNumWinding, const T inNoiseStdDev, const T inPhaseShift,
-    const T inCenterX, const T inCenterY, const T inDeltaBulk) {
+    const T inDeltaBulk, const int inNumVortices, const T *const inNumWindings,
+    const T *const inCentersX, const T *const inCentersY, const T inNoiseStdDev,
+    const T inPhaseShift) {
   // Discrete coordinates in discretized order parameter lattice.
   const int i = blockIdx.x * blockDim.x + threadIdx.x;
   const int j = blockIdx.y * blockDim.y + threadIdx.y;
 
   // Check that coordinates lie within geometry.
   if (i < inNumX && j < inNumY) {
-    // Normalize coordinates to [-1, 1], and offset with center.
-    const T x = static_cast<T>(2 * i) / static_cast<T>(inNumX - 1) -
-                static_cast<T>(1.0) - inCenterX;
-    const T y = static_cast<T>(2 * j) / static_cast<T>(inNumY - 1) -
-                static_cast<T>(1.0) - inCenterY;
-    const T radius = hypot(x, y);
 
-    // Avoid x=y=0.
-    const T angle =
-        radius > static_cast<T>(0) ? atan2(y, x) : static_cast<T>(0.0);
+    T phase = inPhaseShift;
 
-    // Compute the total phase.
-    const T phase = angle * inNumWinding + inPhaseShift;
+    for (int vortexIdx = 0; vortexIdx < inNumVortices; ++vortexIdx) {
+      // Normalize coordinates to [-1, 1], and offset with center.
+      const T x = static_cast<T>(2 * i) / static_cast<T>(inNumX - 1) -
+                  static_cast<T>(1.0) - inCentersX[vortexIdx];
+      const T y = static_cast<T>(2 * j) / static_cast<T>(inNumY - 1) -
+                  static_cast<T>(1.0) - inCentersY[vortexIdx];
+      const T radius = hypot(x, y);
+
+      // Avoid x=y=0.
+      const T angle =
+          radius > static_cast<T>(0) ? atan2(y, x) : static_cast<T>(0.0);
+
+      // Compute the total phase.
+      phase += angle * inNumWindings[vortexIdx];
+    }
 
     // Compute unique coordinate index (for storage and seed).
     const int idx = j * inNumX + i;
@@ -286,10 +332,11 @@ void Initial<T>::grid(OrderParameterComponent<T> *inOutDeltaComponent,
 }
 
 template <typename T>
-void Initial<T>::perturbedPhaseWinding(
-    OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
-    const T inNoiseStdDev, const T inPhaseShift, const T inCenterX,
-    const T inCenterY) {
+void Initial<T>::perturbedPhaseWindings(
+    OrderParameterComponent<T> *const inOutDeltaComponent,
+    const std::vector<T> &inNumWindings, const std::vector<T> &inCentersX,
+    const std::vector<T> &inCentersY, const T inNoiseStdDev,
+    const T inPhaseShift) {
   // Get pointer to order parameter data.
   GridGPU<T> *deltaGrid = inOutDeltaComponent->getGrid();
 
@@ -303,15 +350,40 @@ void Initial<T>::perturbedPhaseWinding(
   dim3 blocksPerGrid, threadsPerBlock;
   deltaGrid->getKernelDimensions(blocksPerGrid, threadsPerBlock);
 
+  // Copy to the GPU.
+  const thrust::device_vector<T> numWindingsGPU(inNumWindings);
+  const thrust::device_vector<T> centersXGPU(inCentersX);
+  const thrust::device_vector<T> centersYGPU(inCentersY);
+
+  // Number of winding centers.
+  const int numVortices = static_cast<int>(inNumWindings.size());
+
   // Initialize all order parameter components.
   for (int c = 0; c < deltaGrid->numFields(); ++c) {
     // Apply phase winding via GPU kernel.
     internal::perturbedPhaseWindingKernel<<<blocksPerGrid, threadsPerBlock>>>(
         deltaGrid->getDataPointer(c, Type::real),
         deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
-        numLatticePoints, inNumWinding, inNoiseStdDev, inPhaseShift, inCenterX,
-        inCenterY, deltaBulk);
+        numLatticePoints, deltaBulk, numVortices,
+        thrust::raw_pointer_cast(numWindingsGPU.data()),
+        thrust::raw_pointer_cast(centersXGPU.data()),
+        thrust::raw_pointer_cast(centersYGPU.data()), inNoiseStdDev,
+        inPhaseShift);
   }
+}
+
+template <typename T>
+void Initial<T>::perturbedPhaseWinding(
+    OrderParameterComponent<T> *const inOutDeltaComponent, const T inNumWinding,
+    const T inNoiseStdDev, const T inPhaseShift, const T inCenterX,
+    const T inCenterY) {
+  const size_t vectorSize = 1;
+  const std::vector numWindings(vectorSize, inNumWinding);
+  const std::vector centersX(vectorSize, inCenterX);
+  const std::vector centersY(vectorSize, inCenterY);
+
+  perturbedPhaseWindings(inOutDeltaComponent, numWindings, centersX, centersY,
+                         inNoiseStdDev, inPhaseShift);
 }
 
 template <typename T>
