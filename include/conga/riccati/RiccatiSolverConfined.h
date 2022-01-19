@@ -69,34 +69,17 @@ makeOrderParameter(const T inReal, const T inImag, const bool inIsGamma) {
                    : thrust::complex<T>(-inReal, inImag);
 }
 
-/// \brief Interpolate linearly between two values.
+/// \brief Interpolate linearly taking a half unit step.
 ///
 /// \param inVal0 The value at zero step.
 /// \param inVal1 The value at unit step.
-/// \param inWeight The interpolation weight.
 ///
 /// \return The interpolated value.
 template <typename T>
 inline __device__ thrust::complex<T>
 interpolateLinear(const thrust::complex<T> &inVal0,
-                  const thrust::complex<T> &inVal1, const T inWeight) {
-  return inVal0 + (inVal1 - inVal0) * inWeight;
-}
-
-/// \brief Interpolate using a quadratic polynomial taking a half unit step.
-///
-/// \param inVal0 The value at zero step.
-/// \param inVal1 The value at unit step.
-/// \param inVal2 The value at two unit steps.
-///
-/// \return The interpolated value.
-template <typename T>
-inline __device__ thrust::complex<T>
-interpolateQuadHalf(const thrust::complex<T> &inVal0,
-                    const thrust::complex<T> &inVal1,
-                    const thrust::complex<T> &inVal2) {
-  return (static_cast<T>(3) * inVal0 + static_cast<T>(6) * inVal1 - inVal2) *
-         static_cast<T>(0.125);
+                  const thrust::complex<T> &inVal1) {
+  return (inVal1 + inVal0) * static_cast<T>(0.5);
 }
 
 // TODO(niclas): Put parameters in order (in, inout, out).
@@ -136,13 +119,6 @@ __global__ void computeCoherenceFunction(
     // for gamma or gammatilde (which is codified by DIRECTION.
     const int y_start = isGamma ? idx_y_min : idx_y_max;
 
-    // The current energy and order parameter. They are updated as we traverse
-    // the trajectory.
-    const int idxStart = y_start * N + x;
-    thrust::complex<T> delta =
-        makeOrderParameter(delta_real[idxStart], delta_imag[idxStart], isGamma);
-    thrust::complex<T> energy = energyZeroPotential + energy_shift[idxStart];
-
     // The previous energy and order parameter. They are updated as we traverse
     // the trajectory.
     thrust::complex<T> energyPrev(static_cast<T>(0), static_cast<T>(0));
@@ -150,7 +126,7 @@ __global__ void computeCoherenceFunction(
 
     // The value of the coherence function at the center of the current
     // lattice site. It is updated as we traverse the trajectory.
-    thrust::complex<T> gCenter(static_cast<T>(0), static_cast<T>(0));
+    thrust::complex<T> coherence(static_cast<T>(0), static_cast<T>(0));
 
     // OPTIMIZATION: PRECOMPUTE Y_MIN AND Y_MAX FOR EACH ROTATIONAL FRAME
     // Compute gamma along trajectory
@@ -160,12 +136,10 @@ __global__ void computeCoherenceFunction(
       // Index to 2d-grids (Delta)
       const int idx = y * N + x;
 
-      // The next energy and order parameter. They are used for interpolation.
-      const int idxNext = idx + DIRECTION * N;
-      const thrust::complex<T> energyNext =
-          energyZeroPotential + energy_shift[idxNext];
-      const thrust::complex<T> deltaNext =
-          makeOrderParameter(delta_real[idxNext], delta_imag[idxNext], isGamma);
+      // The energy and order parameter.
+      const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
+      const thrust::complex<T> delta =
+          makeOrderParameter(delta_real[idx], delta_imag[idx], isGamma);
 
       // What type of node are we on?
       const char nodeType = domainLabel[idx];
@@ -173,14 +147,13 @@ __global__ void computeCoherenceFunction(
       switch (nodeType) {
       case 1: {
         // =========== Inside domain =========== //
-        // Using a second degree polynomial to interpolate between points.
-        const thrust::complex<T> deltaMiddle =
-            interpolateQuadHalf(deltaPrev, delta, deltaNext);
         const thrust::complex<T> energyMiddle =
-            interpolateQuadHalf(energyPrev, energy, energyNext);
+            interpolateLinear(energyPrev, energy);
+        const thrust::complex<T> deltaMiddle =
+            interpolateLinear(deltaPrev, delta);
         // Take a step to the center of the lattice site.
-        gCenter =
-            riccati::computeStep(deltaMiddle, energyMiddle, gCenter, inStep);
+        coherence =
+            riccati::computeStep(deltaMiddle, energyMiddle, coherence, inStep);
         break;
       }
       case DOMAIN_ENTRY: {
@@ -200,13 +173,8 @@ __global__ void computeCoherenceFunction(
 
         // Take a step from the grain boundary to the center of the lattice
         // site.
-        const T weight = -static_cast<T>(0.5) * distance;
-        const thrust::complex<T> energyMiddle =
-            interpolateLinear(energy, energyNext, weight);
-        const thrust::complex<T> deltaMiddle =
-            interpolateLinear(delta, deltaNext, weight);
-        gCenter = riccati::computeStep(deltaMiddle, energyMiddle, gBoundary,
-                                       boundaryToCenterStep);
+        coherence = riccati::computeStep(delta, energy, gBoundary,
+                                         boundaryToCenterStep);
 
         // Increase entry counter.
         boundary_entry_count++;
@@ -216,15 +184,12 @@ __global__ void computeCoherenceFunction(
         // =========== Boundary exit =========== //
 
         // Take a step to the center of the lattice site.
-        {
-          const T weight = static_cast<T>(0.5);
-          const thrust::complex<T> energyMiddle =
-              interpolateLinear(energyPrev, energy, weight);
-          const thrust::complex<T> deltaMiddle =
-              interpolateLinear(deltaPrev, delta, weight);
-          gCenter =
-              riccati::computeStep(deltaMiddle, energyMiddle, gCenter, inStep);
-        }
+        const thrust::complex<T> energyMiddle =
+            interpolateLinear(energyPrev, energy);
+        const thrust::complex<T> deltaMiddle =
+            interpolateLinear(deltaPrev, delta);
+        coherence =
+            riccati::computeStep(deltaMiddle, energyMiddle, coherence, inStep);
 
         // Distance to exact boundary location from the center of the lattice
         // site.
@@ -233,13 +198,8 @@ __global__ void computeCoherenceFunction(
 
         // Take a step from the center of the lattice site to the grain
         // boundary.
-        const T weight = static_cast<T>(1) + static_cast<T>(0.5) * distance;
-        const thrust::complex<T> energyMiddle =
-            interpolateLinear(energyPrev, energy, weight);
-        const thrust::complex<T> deltaMiddle =
-            interpolateLinear(deltaPrev, delta, weight);
         const thrust::complex<T> gBoundary = riccati::computeStep(
-            deltaMiddle, energyMiddle, gCenter, centerToBoundaryStep);
+            delta, energy, coherence, centerToBoundaryStep);
 
         // Store boundary gamma.
         const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
@@ -254,23 +214,19 @@ __global__ void computeCoherenceFunction(
       }
       default: {
         // =========== Outside domain =========== //
-        gCenter = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
+        coherence = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
       }
       }
 
       // Store coherence function.
       // Index to gamma grid (for all energies)
       const int gamma_idx = e_idx * 2 * N * N + y * N + x;
-      gamma_real[gamma_idx] = gCenter.real();
-      gamma_imag[gamma_idx] = gCenter.imag();
+      gamma_real[gamma_idx] = coherence.real();
+      gamma_imag[gamma_idx] = coherence.imag();
 
       // Update previous energy and order parameter.
       energyPrev = energy;
       deltaPrev = delta;
-
-      // Update current energy and order parameter.
-      energy = energyNext;
-      delta = deltaNext;
     }
   }
 }
