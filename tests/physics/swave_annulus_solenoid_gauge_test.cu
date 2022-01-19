@@ -48,7 +48,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   // needed. This needs to be investigated! Here a small phase winding and low
   // resolution is used in order for the test to not take forever.
   const T grainWidth = static_cast<T>(2) * R;
-  const T pointsPerCoherenceLength = static_cast<T>(3.3);
+  const T pointsPerCoherenceLength = static_cast<T>(3.4);
   const int numMomenta = 16;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);
