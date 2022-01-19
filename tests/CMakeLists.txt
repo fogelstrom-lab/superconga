@@ -19,6 +19,11 @@ else()
   if(NOT doctest_POPULATED)
     FetchContent_Populate(doctest)
   endif(NOT doctest_POPULATED)
+
+  # Set include directory. Not that this is NOT src/include because then we
+  # cannot include it in C++ as <doctest/doctest.h> (which is the way it is
+  # included if the package is found).
+  set(DOCTEST_INCLUDE_DIRS "${doctest_SOURCE_DIR}")
 endif(doctest_FOUND)
 
 # ======= SOURCE FILES =======
@@ -66,6 +71,7 @@ foreach(file ${SRC})
   add_test(NAME ${name} COMMAND ${name})
 
   # Include directories: equivalent to -I.
+  # TODO(Niclas): The ${JSONCPP_INCLUDE_DIRS} seems unnecessary.
   target_include_directories(
     ${name}
     PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM ${ARMADILLO_INCLUDE_DIRS}
@@ -74,6 +80,11 @@ foreach(file ${SRC})
   # External libraries: equivalent to -l.
   target_link_libraries(${name} PRIVATE gfortran jsoncpp ${ARMADILLO_LIBRARIES}
                                         ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+  if(doctest_FOUND)
+    # This does not seem to be completely necessary, but this is how it is done
+    # in their tutorial when using find_package.
+    target_link_libraries(${name} PRIVATE doctest::doctest)
+  endif(doctest_FOUND)
 
   # Build test binaries into build/xxx/tests/ (where xxx is e.g. release).
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
