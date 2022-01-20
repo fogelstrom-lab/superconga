@@ -23,6 +23,9 @@
 #include <cuda.h>
 #include <thrust/complex.h>
 
+#include <cassert>
+#include <utility>
+
 namespace conga {
 template <typename T> class GeometryGroup : public ContextModule<T> {
 public:
@@ -89,8 +92,8 @@ public:
   /// simulation domain. These do not belong to the solution, and can be removed
   /// with the zeroValuesOutsideDomainRef() function.
   ///
-  /// \param target The grid to be zeroed.
-  void zeroValuesOutsideDomainRef(GridGPU<T> *target) const;
+  /// \param inOutTarget The grid to be zeroed.
+  void zeroValuesOutsideDomainRef(GridGPU<T> *const inOutTarget) const;
 
   int getNumGrainLatticeSites() const;
   // Computes the physical area of the geometry.
@@ -100,8 +103,11 @@ public:
   // the values inside the actual geometry definition.
   thrust::complex<T> fieldAverage(GridGPU<T> *data, const int field = 0);
 
-  // Getters
-  void getGridDimensions(int &Nx, int &Ny) const;
+  /// \brief Convenience function to get discrete dimensions of geometry.
+  ///
+  /// \return The pair {Nx, Ny}.
+  std::pair<int, int> getGridDimensions() const;
+
   int getNumAngles() const;
   T getCurrentAngle() const { return _currentAngle; }
 
@@ -328,29 +334,22 @@ __global__ void geomOpRemove_kernel(char *dom0, char *dom1, const int Nx) {
 }
 
 template <typename T>
-__global__ void zeroValuesOutsideDomain_kernel(
-    char *dom_ptr, T *target_ptr, int Nx_geom, int Ny_geom, int Nx_target,
-    int Ny_target, int Nx_geom_offset, int Ny_geom_offset, int isComplex) {
+__global__ void zeroValuesOutsideDomain_kernel(const int inDimX,
+                                               const int inDimY,
+                                               const int inDimZ,
+                                               const char *const inDomainLabels,
+                                               T *const inOutTarget) {
+  // Thread indices.
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  const int tf = blockIdx.z;
+  const int tz = blockIdx.z * blockDim.z + threadIdx.z;
 
-  if (tx < Nx_target && ty < Ny_target) {
-    const int idx =
-        tf * (Nx_target * Ny_target * (1 + isComplex)) + ty * Nx_target + tx;
-
-    const int domainX = tx + Nx_geom_offset;
-    const int domainY = ty + Ny_geom_offset;
-
-    if ((0 <= domainX) && (domainX < Nx_geom) && (0 <= domainY) &&
-        (domainY < Ny_geom)) {
-      const int domainIdx = domainY * Nx_geom + domainX;
-      const char domainLabel = dom_ptr[domainIdx];
-      if (domainLabel == 0) {
-        target_ptr[idx] = static_cast<T>(0.0);
-      }
-    } else {
-      target_ptr[idx] = static_cast<T>(0.0);
+  if (tx < inDimX && ty < inDimY && tz < inDimZ) {
+    const int domainIdx = ty * inDimX + tx;
+    const char domainLabel = inDomainLabels[domainIdx];
+    if (domainLabel == 0) {
+      const int targetIdx = tz * inDimX * inDimY + domainIdx;
+      inOutTarget[targetIdx] = static_cast<T>(0.0);
     }
   }
 }
@@ -591,11 +590,8 @@ GeometryGroup<T>::getGeometryComponent(const int comp) const {
 template <typename T>
 void GeometryGroup<T>::geomOp(GeometryComponent<T> *newGeom,
                               GridGPU<char> *geomOpMatrix) {
-  int Nx, Ny;
-  getGridDimensions(Nx, Ny);
-
-  dim3 bpg, tpb;
-  _domainLabels->getKernelDimensions(bpg, tpb);
+  const auto [Nx, Ny] = getGridDimensions();
+  const auto [bpg, tpb] = _domainLabels->getKernelDimensions();
 
   internal::geomOp_kernel<T><<<bpg, tpb>>>(
       getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
@@ -611,11 +607,8 @@ void GeometryGroup<T>::geomOpAdd(GeometryComponent<T> *newGeom) {
 
 template <typename T>
 void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
-  int Nx, Ny;
-  getGridDimensions(Nx, Ny);
-
-  dim3 bpg, tpb;
-  _domainLabels->getKernelDimensions(bpg, tpb);
+  const auto [Nx, Ny] = getGridDimensions();
+  const auto [bpg, tpb] = _domainLabels->getKernelDimensions();
 
   GridGPU<char> *domResult = _domainLabels;
 
@@ -638,8 +631,7 @@ void GeometryGroup<T>::geomOpAdd(GridGPU<char> *dom,
                                  GridGPU<char> *dom_local) const {
   int N = dom->dimX();
 
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, N, N);
+  const auto [bpg, tpb] = GridGPU<T>::getKernelDimensions(N, N);
 
   internal::geomOpAdd_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
@@ -650,8 +642,7 @@ void GeometryGroup<T>::geomOpRemove(GridGPU<char> *dom,
                                     GridGPU<char> *dom_local) const {
   int N = dom->dimX();
 
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, N, N);
+  const auto [bpg, tpb] = GridGPU<T>::getKernelDimensions(N, N);
 
   internal::geomOpRemove_kernel<T>
       <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
@@ -912,37 +903,31 @@ void GeometryGroup<T>::extendValuesAtBoundaryRef(GridGPU<T> *grid) const {
 }
 
 template <typename T>
-void GeometryGroup<T>::zeroValuesOutsideDomainRef(GridGPU<T> *target) const {
-  const int Nx_dom = _domain_ref->dimX();
-  const int Ny_dom = _domain_ref->dimY();
+void GeometryGroup<T>::zeroValuesOutsideDomainRef(
+    GridGPU<T> *const inOutTarget) const {
+  // Sanity check.
+  assert(inOutTarget->dimX() == _domain_ref->dimX());
+  assert(inOutTarget->dimY() == _domain_ref->dimY());
 
-  const int Nx_img = target->dimX();
-  const int Ny_img = target->dimY();
+  const int dimX = inOutTarget->dimX();
+  const int dimY = inOutTarget->dimY();
+  const int numFields = inOutTarget->numFields();
+  const bool isComplex = inOutTarget->isComplex();
+  const int dimZ = numFields * (isComplex ? 2 : 1);
 
-  const int Nx_diff = (Nx_dom - Nx_img) / 2;
-  const int Ny_diff = (Ny_dom - Ny_img) / 2;
-
-  dim3 blocksPerGrid, threadsPerBlock;
-  target->getKernelDimensionsFields(blocksPerGrid, threadsPerBlock);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      inOutTarget->getKernelDimensions(dimX, dimY, dimZ);
 
   internal::zeroValuesOutsideDomain_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-      _domain_ref->getDataPointer(0, Type::real),
-      target->getDataPointer(0, Type::real), Nx_dom, Ny_dom, Nx_img, Ny_img,
-      Nx_diff, Ny_diff, int(target->isComplex()));
-
-  if (target->isComplex()) {
-    internal::
-        zeroValuesOutsideDomain_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-            _domain_ref->getDataPointer(0, Type::real),
-            target->getDataPointer(0, Type::imag), Nx_dom, Ny_dom, Nx_img,
-            Ny_img, Nx_diff, Ny_diff, int(target->isComplex()));
-  }
+      dimX, dimY, dimZ, _domain_ref->getDataPointer(),
+      inOutTarget->getDataPointer());
 }
 
 template <typename T>
-void GeometryGroup<T>::getGridDimensions(int &Nx, int &Ny) const {
-  Nx = _domainLabels->dimX();
-  Ny = _domainLabels->dimY();
+std::pair<int, int> GeometryGroup<T>::getGridDimensions() const {
+  const int Nx = _domainLabels->dimX();
+  const int Ny = _domainLabels->dimY();
+  return {Nx, Ny};
 }
 
 template <typename T> int GeometryGroup<T>::getNumAngles() const {

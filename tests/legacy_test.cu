@@ -135,8 +135,7 @@ void computeVectorPotential(conga::GridGPU<T> &inOutVectorPotential,
   inOutVectorPotential.setZero();
 
   // Get the required kernel dimensions.
-  dim3 bpg, tpb;
-  inOutVectorPotential.getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = inOutVectorPotential.getKernelDimensions();
 
   const int N = inOutVectorPotential.dimX();
 

@@ -238,9 +238,8 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
 
     const int numEnergies = inGamma->numFields();
 
-    dim3 blocksPerGrid, threadsPerBlock;
-    freeEnergyKernelIntegrand->getKernelDimensions(blocksPerGrid,
-                                                   threadsPerBlock);
+    const auto [blocksPerGrid, threadsPerBlock] =
+        freeEnergyKernelIntegrand->getKernelDimensions();
 
     computeFreeEnergy_Kernel<T><<<blocksPerGrid, threadsPerBlock>>>(
         freeEnergyKernelIntegrand->dimX(), numEnergies,

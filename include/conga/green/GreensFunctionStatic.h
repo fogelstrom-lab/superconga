@@ -176,9 +176,8 @@ void GreensFunctionStatic<T, GREENS>::computeGreens(
   assert(outResult->isComplex());
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  outResult->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] =
+      outResult->getKernelDimensionsFields();
 
   // Dimensions.
   const int dimX = inGamma->dimX();
@@ -211,9 +210,7 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   assert(outResult->isComplex());
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  outResult->getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = outResult->getKernelDimensions();
 
   // Dimensions.
   const int dimX = inGamma->dimX();
@@ -248,9 +245,7 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   assert(outResult->isComplex());
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  outResult->getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = outResult->getKernelDimensions();
 
   // Dimensions.
   const int dimX = inGamma->dimX();

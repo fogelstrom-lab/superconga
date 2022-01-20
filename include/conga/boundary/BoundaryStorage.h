@@ -424,8 +424,7 @@ void BoundaryStorage<T>::computeSparseIndices(const int numEnergies,
   int *idx_in_p, *idx_out_p, *numBndIsect_p;
   char *dom_p;
 
-  int Nx, Ny;
-  _geom->getGridDimensions(Nx, Ny);
+  const auto [Nx, Ny] = _geom->getGridDimensions();
 
   int X = _index_sparse_in_gamma->dimX();
   int Y = _index_sparse_in_gamma->dimY();

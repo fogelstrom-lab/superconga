@@ -416,9 +416,8 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
   const thrust::device_vector<T> inertiaGPU(m_inertia);
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] =
+      inOutX.getKernelDimensionsFields();
 
   // Take a step.
   adaptive_ball_internal::computeInternal<<<numBlocks, numThreadsPerBlock>>>(

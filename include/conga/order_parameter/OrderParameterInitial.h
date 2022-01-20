@@ -328,8 +328,8 @@ void Initial<T>::perturbedPhaseWindings(
   const int numLatticePoints = deltaGrid->dimX();
 
   // Calculate GPU thread blocks.
-  dim3 blocksPerGrid, threadsPerBlock;
-  deltaGrid->getKernelDimensions(blocksPerGrid, threadsPerBlock);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      deltaGrid->getKernelDimensions();
 
   // Copy to the GPU.
   const thrust::device_vector<T> numWindingsGPU(inNumWindings);
@@ -398,8 +398,8 @@ void Initial<T>::edgePhaseCrystal(
   const T waveNumber = static_cast<T>(2.0 * M_PI) / inPeriod;
 
   // Thread dimensions
-  dim3 blocksPerGrid, threadsPerBlock;
-  deltaGrid->getKernelDimensions(blocksPerGrid, threadsPerBlock);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      deltaGrid->getKernelDimensions();
 
   // Initialize all order parameter components.
   for (int c = 0; c < deltaGrid->numFields(); ++c) {

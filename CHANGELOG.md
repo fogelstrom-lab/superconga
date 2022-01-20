@@ -100,6 +100,7 @@
 - Improve the Adaptive-Ball acccelerator. Optimize the inertia and change default parameters.
 - Use nearest-neighbour extrapolation when extending values at the boundary.
 - Increase step-size limits in Adaptive-Ball accelerator.
+- Add range checks for all dimensions in all CUDA kernels. Tune the number of GPU threads to be faster on larger simulations.
 
 ---
 

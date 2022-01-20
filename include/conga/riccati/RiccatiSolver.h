@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 
 /////////////////////////////////////////////////////////
 // MAYBE PUT POINTER TO ENERGIES AND ENERGYITERATOR HERE
@@ -91,11 +92,8 @@ public:
       const GridGPU<T> *deltaRot, const int angleIdx) = 0;
 
   // Helper functions
-  void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
-                           const int numEnergies);
-
-  void getKernelDimensionsOptim(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
-                                const int numEnergies, const int angleIdx);
+  std::pair<dim3, dim3> getKernelDimensionsOptim(const int inNumEnergies,
+                                                 const int inAngleIdx);
 
   virtual std::string getVectorPotentialType() const = 0;
 
@@ -148,8 +146,7 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   inContextModule->getFermiSurface()->getFermiVelocity(angleIdx, fermiVelocityX,
                                                        fermiVelocityY);
 
-  dim3 bpg, tpb;
-  inEnergyShift->getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = inEnergyShift->getKernelDimensions();
 
   const T penetrationDepth = parameters->getPenetrationDepth();
 
@@ -278,63 +275,12 @@ template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
 }
 
 template <typename T>
-void RiccatiSolver<T>::getKernelDimensions(dim3 &blocksPerGrid,
-                                           dim3 &threadsPerBlock,
-                                           const int numEnergies) {
-  const int N0 = ContextModule<T>::getParameters()->getGridResolutionBase();
-  const int N1 =
-      ContextModule<T>::getParameters()->getGridResolutionCoherence();
-
-  int tpb_x, tpb_y, bpg_x, bpg_y;
-
-  tpb_x = N1;
-  tpb_y = 1;
-
-  bpg_x = 1;
-
-  if (N0 <= 151)
-    tpb_y = 2; // This is somewhat faster for small grid sizes
-
-  if (tpb_x > 512) {
-    tpb_x = N1 / 2 + 1;
-    bpg_x = 2;
-  }
-
-  bpg_y = numEnergies / tpb_y;
-
-  if (bpg_y * tpb_y != numEnergies)
-    bpg_y++;
-
-  threadsPerBlock = dim3(tpb_x, tpb_y);
-  blocksPerGrid = dim3(bpg_x, bpg_y);
-}
-
-template <typename T>
-void RiccatiSolver<T>::getKernelDimensionsOptim(dim3 &blocksPerGrid,
-                                                dim3 &threadsPerBlock,
-                                                const int numEnergies,
-                                                const int angleIdx) {
-  int numTrajectories = _storage->getNumIntersectingTrajectoriesAngle(angleIdx);
-
-  int tpb_x, tpb_y, bpg_x, bpg_y;
-
-  tpb_x = numTrajectories;
-  tpb_y = 1;
-
-  bpg_x = 1;
-
-  if (tpb_x > 512) {
-    tpb_x = tpb_x / 2 + 1;
-    bpg_x = 2;
-  }
-
-  bpg_y = numEnergies / tpb_y;
-
-  if (bpg_y * tpb_y != numEnergies)
-    bpg_y++;
-
-  threadsPerBlock = dim3(tpb_x, tpb_y);
-  blocksPerGrid = dim3(bpg_x, bpg_y);
+std::pair<dim3, dim3>
+RiccatiSolver<T>::getKernelDimensionsOptim(const int inNumEnergies,
+                                           const int inAngleIdx) {
+  const int numTrajectories =
+      _storage->getNumIntersectingTrajectoriesAngle(inAngleIdx);
+  return GridGPU<T>::getKernelDimensions(numTrajectories, inNumEnergies);
 }
 } // namespace conga
 

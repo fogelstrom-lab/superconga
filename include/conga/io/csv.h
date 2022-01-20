@@ -96,9 +96,7 @@ void copy(const std::vector<T> inSrc1, const std::vector<T> inSrc2,
   const thrust::device_vector<T> src2 = inSrc2;
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutDst.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inOutDst.getKernelDimensions();
 
   const int dimX = inOutDst.dimX();
   const int dimY = inOutDst.dimY();

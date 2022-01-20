@@ -89,10 +89,8 @@ void extendValuesAtBoundary(const GridGPU<char> &inDomainLabels,
   const int numExtend = 2;
 
   // Kernel parameters.
-  dim3 blocksPerGrid;
-  dim3 threadsPerBlock;
-  inOutTarget.getKernelDimensions(blocksPerGrid, threadsPerBlock, dimX, dimY,
-                                  dimZ);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      inOutTarget.getKernelDimensions(dimX, dimY, dimZ);
 
   // Launch kernel.
   internal::extendValuesAtBoundary_kernel<T>

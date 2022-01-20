@@ -270,7 +270,7 @@ __global__ void boundaryConditionSpecularKernel(
   // Get the system angle.
   const T systemAngle = systemAngles[angleIdx];
 
-  if (xIdx <= xIdxMax) {
+  if (xIdx <= xIdxMax && eIdx < numEnergies) {
     int numBoundaryEntry = 0;
 
     // The number of y-coordinates.
@@ -369,8 +369,7 @@ T BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   const int numAngles = ctx->getParameters()->getAngularResolution();
   const int numEnergies = iterator->getNumEnergiesInterval();
 
-  int numX, numY;
-  geom->getGridDimensions(numX, numY);
+  const auto [numX, numY] = geom->getGridDimensions();
 
   // Copy previous so we can compute the residual.
   const GridGPU<T> gammaPrevious = *(bnd->getBoundaryIn_gamma());
@@ -405,8 +404,8 @@ T BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
 
     const int numTrajectories = xIdxMax - xIdxMin + 1;
 
-    dim3 bpg, tpb;
-    GridGPU<T>::getKernelDimensions(bpg, tpb, numTrajectories, numEnergies);
+    const auto [bpg, tpb] =
+        GridGPU<T>::getKernelDimensions(numTrajectories, numEnergies);
 
     // Create geometry for current angle
     geom->create(-systemAngle);

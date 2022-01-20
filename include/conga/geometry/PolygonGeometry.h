@@ -354,11 +354,8 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
 
   G::allocateMem();
 
-  int Nx, Ny;
-  dim3 bpg, tpb;
-
-  G::getGridDimensions(Nx, Ny);
-  G::getKernelDimensions(bpg, tpb);
+  const auto [Nx, Ny] = G::getGridDimensions();
+  const auto [bpg, tpb] = G::getKernelDimensions();
 
   // We the size of the unrotated simulation domain, so that the size of the
   // polygon, measured in pixels, is the same.
@@ -387,9 +384,8 @@ PolygonGeometry<T>::createDomain(const int inLatticeSideLength) const {
       inLatticeSideLength, inLatticeSideLength, numFields, Type::real);
   dom_component->setZero();
 
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, inLatticeSideLength,
-                                  inLatticeSideLength);
+  const auto [bpg, tpb] =
+      GridGPU<T>::getKernelDimensions(inLatticeSideLength, inLatticeSideLength);
 
   // Calc inside/outside.
   internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
