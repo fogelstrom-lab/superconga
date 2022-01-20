@@ -232,11 +232,7 @@ TEST_CASE("Test DOS - s-wave (double)") {
 // ================= Test DOS d-wave ================= //
 
 TEST_CASE("Test DOS - d-wave (float)") {
-  // D-wave float is the odd man out. It is the only test here that does not
-  // converge more or less immediately. So the tolerance is higher because there
-  // is something fishy going on.
-  // TODO(niclas): Find out why!
-  const float tolerance = 1e-2f;
+  const float tolerance = 1e-5f;
   const float convergenceCriterion = 1e-6f;
   const bool useSwave = false;
   helper::testDensityOfStates<float>(tolerance, useSwave, convergenceCriterion);
