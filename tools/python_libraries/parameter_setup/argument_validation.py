@@ -135,6 +135,7 @@ runner_checks = {
             "penetration_depth": {"type": float},
             "crystal_axes_rotation": {"type": float},
             "gauge_solenoid": {"type": bool},
+            "charge_sign": {"type": int, "one_of": [-1, +1]},
             "order_parameter": {
                 "type": dict,
                 "fields": {

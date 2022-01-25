@@ -44,13 +44,6 @@ const double S_WAVE_BULK = 0.5 * std::exp(-EULER_MASCHERONI);
 // expression. See page 104 of P. Holmvall PhD Thesis.
 // Note that we are using 2*pi*kB*Tc as our energy scale.
 const double D_WAVE_BULK = std::exp(-EULER_MASCHERONI - 0.5) / std::sqrt(2.0);
-
-// The value of the Riemann zeto function evaluated at 3, i.e. Apery's constant
-// = zeta(3).
-const double APERY = std::riemann_zeta(3);
-
-// The sign of the elementary charge 'e', i.e. SIGN_E = e / |e|.
-const double SIGN_E = 1.0;
 } // namespace constants
 } // namespace conga
 

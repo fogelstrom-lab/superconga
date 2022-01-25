@@ -150,6 +150,15 @@ def add_runner_arguments(parser) -> None:
         help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
     )
 
+    # Charge sign.
+    physics.add_argument(
+        "--charge-sign",
+        type=int,
+        choices=[-1, 1],
+        default=None,
+        help="Set sign of the charge. Use -1 (+1) for electrons (holes).",
+    )
+
     # =============== PHYSICS: VORTEX LATTICE =============== #
 
     # x-coordinate for phase winding centers.
@@ -995,6 +1004,7 @@ def set_runner_arguments_from_cli(
     set_flag(
         sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial, group
     )
+    set_value(sim_params, "charge_sign", args.charge_sign, group)
 
     # ================== PHYSICS: VORTEX LATTICE ================== #
     if (

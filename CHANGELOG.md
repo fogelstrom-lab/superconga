@@ -31,6 +31,7 @@
 - Support building without HDF5. CSV files will be saved instead.
 - Speed up the coherence function computation, and increase the accuracy, by using the mid-point method when stepping.
 - Allow multiple vortices as start guess, at user-specified locations, via command-line (`--vortices-...`) or config file (`["physics"]["vortex_lattice"]["..."]`).
+- Expose the sign of the charge carrier to the user via `--charge-sign`.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
@@ -45,7 +46,6 @@
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
 - **MAJOR** Add option to save data as `.h5` files.
-- Change sign of the elementary charge in order to conform with Graf et al.
 - Make minmax a non-static member method.
 - Add unit test of the current density comparing it with the linear-response expression.
 - Use scientific notation in CSV files.

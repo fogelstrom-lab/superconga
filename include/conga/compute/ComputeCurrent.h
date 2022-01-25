@@ -12,7 +12,6 @@
 #ifndef CONGA_COMPUTE_CURRENT_H_
 #define CONGA_COMPUTE_CURRENT_H_
 
-#include "../defines.h"
 #include "../grid.h"
 #include "../utils.h"
 #include "ComputeProperty.h"
@@ -176,8 +175,9 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     _current_real->insertGrid(_current);
 
     const T T_Tc = C::getParameters()->getTemperature();
+    const int chargeSign = C::getParameters()->getChargeSign();
     // The factor of 2 comes from defining j_d = 2*pi*kB*Tc*|e|*vF*NF.
-    const T factor = static_cast<T>(2.0 * constants::SIGN_E) * T_Tc;
+    const T factor = static_cast<T>(2 * chargeSign) * T_Tc;
     *_current_real *= factor;
 
     // Set the current to zero outside of the grain.

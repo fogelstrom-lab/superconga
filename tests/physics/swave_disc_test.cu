@@ -126,7 +126,7 @@ template <typename T> void testSWaveDisc() {
   // Integrator.
   new conga::IntegrationIteratorOzaki<T>(&context);
 
-  // Create solver with solenoid gauge.
+  // Create solver with radial gauge.
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
           &context);

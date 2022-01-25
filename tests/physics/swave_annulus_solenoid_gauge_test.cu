@@ -54,12 +54,16 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
   const T phaseWinding = static_cast<T>(1);
+  const int chargeSign = -1;
   const T stepSize = static_cast<T>(1);
 
+  // For convenience.
+  const T chargePhaseWinding = static_cast<T>(chargeSign) * phaseWinding;
+
   // Flux quantas to loop over.
-  const std::vector<T> numFluxQuantas = {phaseWinding - static_cast<T>(0.5),
-                                         phaseWinding,
-                                         phaseWinding + static_cast<T>(0.5)};
+  const std::vector<T> numFluxQuantas = {
+      chargePhaseWinding - static_cast<T>(0.5), chargePhaseWinding,
+      chargePhaseWinding + static_cast<T>(0.5)};
 
   // =================== ACT ==================== //
   // For storing the results.
@@ -79,6 +83,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     parameters->setTemperature(temperature);
     parameters->setEnergyCutoff(energyCutoff);
     parameters->setNumFluxQuanta(numFluxQuanta);
+    parameters->setChargeSign(chargeSign);
 
     // Create annulus geometry.
     conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
@@ -144,7 +149,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     // Form the kinetic free energy.
     const T numFluxQuanta = numFluxQuantas[i];
     const T freeEnergyKinetic =
-        factor * std::pow(numFluxQuanta - phaseWinding, 2);
+        factor * std::pow(numFluxQuanta - chargePhaseWinding, 2);
     const T freeEnergyExpected = freeEnergyBulk + freeEnergyKinetic;
 
     // Compare results.

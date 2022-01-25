@@ -46,6 +46,7 @@ set(SRC
     parameters_test.cu
     physics/current_conservation_test.cu
     physics/current_linear_response_test.cu
+    physics/current_phase_gradient_test.cu
     physics/dos_test.cu
     physics/low_temp_free_energy_test.cu
     physics/penetration_depth_test.cu

@@ -91,24 +91,160 @@ getWeightsAndAbscissas(const T inLow, const T inHigh) {
   return {weights, abscissas};
 }
 
-/// \brief Helper function for computing the expected free energy and magnetic
-/// momentum.
+/// \brief Get the grain and hole area of the annulus.
 ///
-/// \param inTemperature The temperature [Tc].
-/// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
-/// \param inPenetrationDepth The penetration depth [xi0].
+/// \param inOuterRadius The outer radius of the annulus.
+/// \param inInnerRadius The inner radius of the annulus.
+///
+/// \return The pair {grain area, hole area}.
+template <typename T>
+std::pair<T, T> getAreas(const T inOuterRadius, const T inInnerRadius) {
+  const T holeArea = static_cast<T>(M_PI) * inInnerRadius * inInnerRadius;
+  const T grainArea =
+      static_cast<T>(M_PI) * inOuterRadius * inOuterRadius - holeArea;
+  return {grainArea, holeArea};
+}
+
+/// \brief Get (a,b,c) factors.
+///
+/// \param inOuterRadius The outer radius of the annulus.
+/// \param inInnerRadius The inner radius of the annulus.
+/// \param inScaledPenetrationDepth The penetration depth divided by
+/// sqrt(Yoshida).
 /// \param inNumFluxQuanta The number of external flux quanta.
 /// \param inPhaseWinding The phase winding of the order parameter.
-/// \param inInnerRadius The inner radius of the annulus [xi0].
-/// \param inOuterRadius The outer radius of the annulus [xi0].
+/// \param inChargeSign The sign of the carrier charge.
 ///
-/// \return The pair {free energy, magnetic moment}.
+/// \return The tuple {a, b, c}.
 template <typename T>
 std::tuple<T, T, T>
-computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
-                       const T inPenetrationDepth, const T inNumFluxQuanta,
-                       const T inPhaseWinding, const T inInnerRadius,
-                       const T inOuterRadius) {
+getFactorsABC(const T inOuterRadius, const T inInnerRadius,
+              const T inScaledPenetrationDepth, const T inNumFluxQuanta,
+              const T inPhaseWinding, const int inChargeSign) {
+  // The grain and hole area.
+  const auto [grainArea, holeArea] = getAreas(inOuterRadius, inInnerRadius);
+
+  // For convenience.
+  const T R_k = inOuterRadius / inScaledPenetrationDepth;
+  const T r_k = inInnerRadius / inScaledPenetrationDepth;
+
+  // Relevant Bessel function.
+  const T I0_r = std::cyl_bessel_i(static_cast<T>(0), r_k);
+  const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
+  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
+  const T K0_r = std::cyl_bessel_k(static_cast<T>(0), r_k);
+  const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
+  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
+
+  // For even more convenience.
+  const T chargePhaseWinding = static_cast<T>(inChargeSign) * inPhaseWinding;
+
+  // Make factors "a" and "b". The factor of pi in invM is due to our choice
+  // of units, i.e. A_0 = \Phi_0 / (pi \xi_0).
+  const T invM = static_cast<T>(M_PI) / (I0_R * K2_r - I2_r * K0_R);
+  const T a = invM * (inNumFluxQuanta * K2_r / grainArea -
+                      chargePhaseWinding * K0_R / holeArea);
+  const T b = invM * (inNumFluxQuanta * I2_r / grainArea -
+                      chargePhaseWinding * I0_R / holeArea);
+
+  // Called beta in the paper.
+  const T c =
+      invM * (static_cast<T>(2 * M_PI) * inScaledPenetrationDepth *
+                  inScaledPenetrationDepth * inNumFluxQuanta / grainArea +
+              chargePhaseWinding * (I0_R * K0_r - I0_r * K0_R));
+
+  return {a, b, c};
+}
+
+/// \brief Get the scaling factor for the kinetic and magnetic free energies,
+/// and the magnetic moment.
+///
+/// \param inOuterRadius The outer radius of the annulus.
+/// \param inInnerRadius The inner radius of the annulus.
+/// \param inPenetrationDepth The penetration depth.
+template <typename T>
+T getScalingFactor(const T inOuterRadius, const T inInnerRadius,
+                   const T inPenetrationDepth) {
+  // The grain and hole area.
+  const auto [grainArea, holeArea] = getAreas(inOuterRadius, inInnerRadius);
+  const T angularFactor = static_cast<T>(2.0 * M_PI);
+  return angularFactor * std::pow(inPenetrationDepth, 2) /
+         (static_cast<T>(2) * grainArea);
+}
+
+/// \brief Evaluate the magnetic moment expression.
+///
+/// \param inOuterRadius The outer radius of the annulus [xi0].
+/// \param inInnerRadius The inner radius of the annulus [xi0].
+/// \param inScaledPenetrationDepth The penetration depth divided by
+/// sqrt(Yoshida) [xi0].
+/// \param inNumFluxQuanta The number of external flux quanta.
+/// \param inPhaseWinding The phase winding of the order parameter.
+/// \param inChargeSign The sign of the carrier charge.
+/// \param inTemperature The temperature [Tc].
+/// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
+///
+/// \return The magnetic moment [j_0*xi_0*Area].
+template <typename T>
+T evalMagneticMoment(const T inOuterRadius, const T inInnerRadius,
+                     const T inPenetrationDepth, const T inNumFluxQuanta,
+                     const T inPhaseWinding, const int inChargeSign,
+                     const T inTemperature, const T inEnergyCutoff) {
+  // Compute bulk order parameter.
+  const T orderParameterBulk =
+      conga::computeOrderParameterBulkSWave(inTemperature);
+
+  // Yoshida function.
+  const T yoshida = conga::computeYoshidaBulkSWave(
+      inTemperature, orderParameterBulk, inEnergyCutoff);
+
+  // The penetration depth in the expressions is temperature dependent.
+  const T scaledPenetrationDepth = inPenetrationDepth / std::sqrt(yoshida);
+
+  // For convenience.
+  const T R_k = inOuterRadius / scaledPenetrationDepth;
+  const T r_k = inInnerRadius / scaledPenetrationDepth;
+
+  // Relevant Bessel function.
+  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
+  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
+  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
+  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
+
+  // The (a,b,c) factors.
+  const auto [a, b, c] =
+      getFactorsABC(inOuterRadius, inInnerRadius, scaledPenetrationDepth,
+                    inNumFluxQuanta, inPhaseWinding, inChargeSign);
+
+  // Overall scaling factor.
+  const T factor =
+      getScalingFactor(inOuterRadius, inInnerRadius, inPenetrationDepth);
+
+  // The magnetic moment.
+  return -factor * (inOuterRadius * inOuterRadius * (a * I2_R - b * K2_R) -
+                    inInnerRadius * inInnerRadius * (a * I2_r - b * K2_r));
+}
+
+/// \brief Evaluate the free energy expressions.
+///
+/// \param inOuterRadius The outer radius of the annulus [xi0].
+/// \param inInnerRadius The inner radius of the annulus [xi0].
+/// \param inScaledPenetrationDepth The penetration depth divided by
+/// sqrt(Yoshida) [xi0].
+/// \param inNumFluxQuanta The number of external flux quanta.
+/// \param inPhaseWinding The phase winding of the order parameter.
+/// \param inChargeSign The sign of the carrier charge.
+/// \param inTemperature The temperature [Tc].
+/// \param inEnergyCutoff The energy cutoff [2*pi*kB*Tc].
+///
+/// \return The pair {total free energy, magnetic free energy}
+/// [(2*pi*kB*Tc)^2*NF*Area].
+template <typename T>
+std::pair<T, T> evalFreeEnergy(const T inOuterRadius, const T inInnerRadius,
+                               const T inPenetrationDepth,
+                               const T inNumFluxQuanta, const T inPhaseWinding,
+                               const int inChargeSign, const T inTemperature,
+                               const T inEnergyCutoff) {
   // Compute bulk free energy.
   const T orderParameterBulk =
       conga::computeOrderParameterBulkSWave(inTemperature);
@@ -119,50 +255,27 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
   const T yoshida = conga::computeYoshidaBulkSWave(
       inTemperature, orderParameterBulk, inEnergyCutoff);
 
-  // For convenience.
-  const T r = inInnerRadius;
-  const T R = inOuterRadius;
-  const T k = inPenetrationDepth / std::sqrt(yoshida);
+  // The penetration depth in the expressions is temperature dependent.
+  const T scaledPenetrationDepth = inPenetrationDepth / std::sqrt(yoshida);
 
-  // Relevant areas.
-  const T grainArea = static_cast<T>(M_PI) * (R * R - r * r);
-  const T holeArea = static_cast<T>(M_PI) * r * r;
+  // The grain and hole area.
+  const auto [grainArea, holeArea] = getAreas(inOuterRadius, inInnerRadius);
 
   // The pi comes from our choice of units.
   const T externalFluxDensity =
       static_cast<T>(M_PI) * inNumFluxQuanta / grainArea;
 
-  // For more convenience.
-  const T R_k = R / k;
-  const T r_k = r / k;
+  // The (a,b,c) factors.
+  T a;
+  T b;
+  T c;
+  std::tie(a, b, c) =
+      getFactorsABC(inOuterRadius, inInnerRadius, scaledPenetrationDepth,
+                    inNumFluxQuanta, inPhaseWinding, inChargeSign);
 
-  // Relevant Bessel function.
-  const T I0_r = std::cyl_bessel_i(static_cast<T>(0), r_k);
-  const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
-  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
-  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
-  const T K0_r = std::cyl_bessel_k(static_cast<T>(0), r_k);
-  const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
-  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
-  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
-
-  // Make factors "a" and "b". The factor of pi in invD is due to our choice of
-  // units, i.e. A_0 = \Phi_0 / (pi \xi_0).
-  const T invD = static_cast<T>(M_PI) / (I0_R * K2_r - I2_r * K0_R);
-  const T a = invD * (inNumFluxQuanta * K2_r / grainArea -
-                      inPhaseWinding * K0_R / holeArea);
-  const T b = invD * (inNumFluxQuanta * I2_r / grainArea -
-                      inPhaseWinding * I0_R / holeArea);
-
-  // Common factor for the magnetic and kinetic terms of the free energy, as
-  // well as the magnetic moment.
-  const T angularFactor = static_cast<T>(2.0 * M_PI);
-  const T factor = angularFactor * yoshida * std::pow(k, 2) /
-                   (static_cast<T>(2) * grainArea);
-
-  // The magnetic moment.
-  const T magneticMoment =
-      -factor * (R * R * (a * I2_R - b * K2_R) - r * r * (a * I2_r - b * K2_r));
+  // Overall scaling factor.
+  const T factor =
+      getScalingFactor(inOuterRadius, inInnerRadius, inPenetrationDepth);
 
   // Get weights and abscissas for Gaussian quadrature.
   const auto [weights, abscissas] =
@@ -170,9 +283,10 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
 
   // The integrand of the magnetic term in the free energy.
   auto fnMagneticIntegrand = [&](T x) {
-    const T tmp = a * std::cyl_bessel_i(static_cast<T>(0), x / k) -
-                  b * std::cyl_bessel_k(static_cast<T>(0), x / k) -
-                  externalFluxDensity;
+    const T tmp =
+        a * std::cyl_bessel_i(static_cast<T>(0), x / scaledPenetrationDepth) -
+        b * std::cyl_bessel_k(static_cast<T>(0), x / scaledPenetrationDepth) -
+        externalFluxDensity;
     return x * tmp * tmp;
   };
 
@@ -188,20 +302,19 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
                                      static_cast<T>(0));
 
   // The free energy of the magnetic field in the hole.
-  const T holeFlux =
-      invD * (static_cast<T>(2 * M_PI) * k * k * inNumFluxQuanta / grainArea +
-              inPhaseWinding * (I0_R * K0_r - I0_r * K0_R));
-  const T inducedFluxDensity = holeFlux / holeArea - externalFluxDensity;
+  const T inducedFluxDensity = c / holeArea - externalFluxDensity;
   const T freeEnergyMagneticHole =
-      factor * static_cast<T>(0.5) * std::pow(inducedFluxDensity * r, 2);
+      factor * static_cast<T>(0.5) *
+      std::pow(inducedFluxDensity * inInnerRadius, 2);
 
   // Total magnetic free energy.
   const T freeEnergyMagnetic = freeEnergyMagneticGrain + freeEnergyMagneticHole;
 
   // The integrand of the kinetic term in the free energy.
   auto fnKineticIntegrand = [&](T x) {
-    const T tmp = a * std::cyl_bessel_i(static_cast<T>(1), x / k) +
-                  b * std::cyl_bessel_k(static_cast<T>(1), x / k);
+    const T tmp =
+        a * std::cyl_bessel_i(static_cast<T>(1), x / scaledPenetrationDepth) +
+        b * std::cyl_bessel_k(static_cast<T>(1), x / scaledPenetrationDepth);
     return x * tmp * tmp;
   };
 
@@ -219,7 +332,7 @@ computeResultsAnalytic(const T inTemperature, const T inEnergyCutoff,
   // Total free energy.
   const T freeEnergy = freeEnergyBulk + freeEnergyKinetic + freeEnergyMagnetic;
 
-  return {freeEnergy, freeEnergyMagnetic, magneticMoment};
+  return {freeEnergy, freeEnergyMagnetic};
 }
 
 /// \brief Test that the free energy, and magnetic moment, of an s-wave
@@ -238,26 +351,27 @@ template <typename T> void testSWaveAnnulusRadial() {
   const T toleranceMagnetic = static_cast<T>(0.02);
   const T scale = static_cast<T>(0);
 
-  // The outer (R) and inner (r) radii of the annulus.
+  // The outer (R) and inner (r) radii of the annulus, and the penetration
+  // depth. I.e. the relevant lengts.
   const T R = static_cast<T>(20);
   const T r = static_cast<T>(10);
+  const T penetrationDepth = static_cast<T>(30);
 
-  // General parameters.
-  // TODO(niclas): For large phase windings a very high spatial resolution is
-  // needed. This needs to be investigated!
+  const int chargeSign = -1;
+  const T numFluxQuanta = static_cast<T>(1);
+  // Note, the charge is here just to make the test do the same thing when using
+  // positive carriers.
+  const T phaseWinding = static_cast<T>(2 * chargeSign);
+
   const T grainWidth = static_cast<T>(2) * R;
   const T pointsPerCoherenceLength = static_cast<T>(6.2);
   const int numMomenta = 32;
   const T convergenceCriterion = static_cast<T>(1e-5);
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
-  const T phaseWinding = static_cast<T>(2);
-  const T numFluxQuanta = static_cast<T>(1);
-  const T penetrationDepth = static_cast<T>(20);
   const T stepSize = static_cast<T>(1);
   const T vectorPotentialError = static_cast<T>(1e-3);
 
-  // =================== ACT ==================== //
   // Create context.
   conga::Context<T> context;
 
@@ -271,6 +385,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   parameters->setEnergyCutoff(energyCutoff);
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
+  parameters->setChargeSign(chargeSign);
 
   // Create annulus geometry.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
@@ -283,7 +398,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   // Integrator.
   new conga::IntegrationIteratorOzaki<T>(&context);
 
-  // Create solver with solenoid gauge.
+  // Create solver with radial gauge.
   conga::RiccatiSolver<T> *riccatiSolver =
       new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
           &context);
@@ -309,6 +424,8 @@ template <typename T> void testSWaveAnnulusRadial() {
   context.add(
       std::make_unique<conga::ComputeVectorPotential<T>>(vectorPotentialError));
 
+  // =================== ACT ==================== //
+
   // Run the simulation.
   context.initialize();
   conga::Status status = conga::Status::kContinue;
@@ -327,10 +444,12 @@ template <typename T> void testSWaveAnnulusRadial() {
       context.getGeometry()->area();
 
   // =================== ASSERT ==================== //
-  const auto [freeEnergyExpected, freeEnergyMagneticExpected,
-              magneticMomentExpected] =
-      computeResultsAnalytic(temperature, energyCutoff, penetrationDepth,
-                             numFluxQuanta, phaseWinding, r, R);
+  const auto [freeEnergyExpected, freeEnergyMagneticExpected] =
+      evalFreeEnergy(R, r, penetrationDepth, numFluxQuanta, phaseWinding,
+                     chargeSign, temperature, energyCutoff);
+  const T magneticMomentExpected =
+      evalMagneticMoment(R, r, penetrationDepth, numFluxQuanta, phaseWinding,
+                         chargeSign, temperature, energyCutoff);
 
   // Compare results.
   CHECK(freeEnergy ==
@@ -342,7 +461,97 @@ template <typename T> void testSWaveAnnulusRadial() {
       magneticMoment ==
       doctest::Approx(magneticMomentExpected).epsilon(tolerance).scale(scale));
 }
+
+/// \brief Compare the expression of the magnetic moment using (a,b) factors to
+/// the expression with the dependency on the external flux, and the phase
+/// winding, disentangled.
+///
+/// \return Void.
+template <typename T> void testMagneticMomentExpression() {
+  // =================== ARRANGE ==================== //
+  // The accuracy of the test.
+  const T tolerance = static_cast<T>(100) * std::numeric_limits<T>::epsilon();
+  const T scale = static_cast<T>(0);
+
+  // The outer (R) and inner (r) radii of the annulus, and the penetration
+  // depth. Do not change! The expected results where computed in Mathematica
+  // using them.
+  const T R = static_cast<T>(20);
+  const T r = static_cast<T>(10);
+  const T penetrationDepth = static_cast<T>(30);
+
+  // General parameters.
+  const int chargeSign = -1;
+  const T numFluxQuanta = static_cast<T>(1);
+  const T phaseWinding = static_cast<T>(2);
+
+  // For convenience. Note that we here assume that T=0.
+  const T R_k = R / penetrationDepth;
+  const T r_k = r / penetrationDepth;
+
+  // Relevant Bessel function.
+  const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
+  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
+  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
+  const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
+  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
+  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
+
+  // The grain and hole area.
+  const auto [grainArea, holeArea] = getAreas(R, r);
+
+  // Overall scaling factor.
+  const T factor = getScalingFactor(R, r, penetrationDepth);
+
+  // M factor in the paper.
+  const T M = I0_R * K2_r - I2_r * K0_R;
+
+  // =================== ACT ==================== //
+  // The magnetic moment per external flux quanta.
+  const T magneticMomentFluxQuanta = factor * (holeArea + grainArea) *
+                                     (I2_r * K2_R - I2_R * K2_r) /
+                                     (M * grainArea);
+
+  // The magnetic moment per phase winding.
+  const T magneticMomentPhaseWinding =
+      factor * (static_cast<T>(2.0 * M_PI) * penetrationDepth *
+                    penetrationDepth / (M * holeArea) -
+                static_cast<T>(1));
+
+  // The total magnetic moment.
+  const T magneticMoment =
+      magneticMomentFluxQuanta * numFluxQuanta -
+      magneticMomentPhaseWinding * phaseWinding * static_cast<T>(chargeSign);
+
+  // =================== ASSERT ==================== //
+  // Do not change! Zero temperature so that the Yoshida function is 1.
+  const T temperature = static_cast<T>(0);
+  const T energyCutoff = static_cast<T>(100);
+  const T magneticMomentExpected =
+      evalMagneticMoment(R, r, penetrationDepth, numFluxQuanta, phaseWinding,
+                         chargeSign, temperature, energyCutoff);
+
+  // Computed in Mathematica.
+  const T magneticMomentFluxQuantaExpected =
+      static_cast<T>(-0.1953280762339516);
+  const T magneticMomentPhaseWindingExpected =
+      static_cast<T>(-0.2336266542359196);
+
+  CHECK(
+      magneticMoment ==
+      doctest::Approx(magneticMomentExpected).epsilon(tolerance).scale(scale));
+  CHECK(magneticMomentFluxQuanta ==
+        doctest::Approx(magneticMomentFluxQuantaExpected)
+            .epsilon(tolerance)
+            .scale(scale));
+  CHECK(magneticMomentPhaseWinding ==
+        doctest::Approx(magneticMomentPhaseWindingExpected)
+            .epsilon(tolerance)
+            .scale(scale));
+}
 } // namespace helper
+
+// Test free energy and magnetic moment for an s-wave annulus.
 
 TEST_CASE("Test s-wave annulus (radial gauge) - <float>") {
   helper::testSWaveAnnulusRadial<float>();
@@ -350,4 +559,14 @@ TEST_CASE("Test s-wave annulus (radial gauge) - <float>") {
 
 TEST_CASE("Test s-wave annulus (radial gauge) - <double>") {
   helper::testSWaveAnnulusRadial<double>();
+}
+
+// Test the magnetic moment expression.
+
+TEST_CASE("Test magnetic moment expression - <float>") {
+  helper::testMagneticMomentExpression<float>();
+}
+
+TEST_CASE("Test magnetic moment expression - <double>") {
+  helper::testMagneticMomentExpression<double>();
 }

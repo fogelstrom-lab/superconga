@@ -162,6 +162,10 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["physics"]["external_flux_quanta"].asDouble());
   parameters->setNumFluxQuanta(externalFluxQuanta);
 
+  // Set sign of charge.
+  const int chargeSign = simParams["physics"]["charge_sign"].asInt();
+  parameters->setChargeSign(chargeSign);
+
   //***************************************************
   // CREATE GEOMETRY
   //***************************************************
