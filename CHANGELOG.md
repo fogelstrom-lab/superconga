@@ -72,6 +72,7 @@
 - Simplify the coherence function computation by only using linear interpolation.
 - Decrease tolerance of DOS test.
 - Add explaining comments to the current linear-response test.
+- Use centered finite differences everywhere.
 
 ---
 
