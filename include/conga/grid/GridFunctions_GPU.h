@@ -288,7 +288,8 @@ __global__ void div_kernel(const T *data_x, const T *data_y, T *data_dst,
     const int idx = ty * Nx + tx;
 
     data_dst[idx] =
-        (data_x[idx + 1] - data_x[idx]) + (data_y[idx + Nx] - data_y[idx]) / h;
+        (data_x[idx + 1] - data_x[idx - 1]) +
+        (data_y[idx + Nx] - data_y[idx - Nx]) / (static_cast<T>(2) * h);
   }
 }
 
@@ -303,10 +304,10 @@ __global__ void curl_kernel(const T *data_x, const T *data_y, T *data_dst,
   const int idx = ty * Nx + tx;
 
   if (tx > 0 && tx < Nx - 1 && ty > 0 && ty < Ny - 1) {
-    const T Ay = data_y[ty * Nx + tx + 1] - data_y[idx];
-    const T Ax = data_x[(ty + 1) * Nx + tx] - data_x[idx];
+    const T dAydx = data_y[ty * Nx + tx + 1] - data_y[ty * Nx + tx - 1];
+    const T dAxdy = data_x[(ty + 1) * Nx + tx] - data_x[(ty + -1) * Nx + tx];
 
-    data_dst[idx] = (Ay - Ax) / h;
+    data_dst[idx] = (dAydx - dAxdy) / (static_cast<T>(2) * h);
   } else if (tx == 0 || ty == 0 || tx == Nx - 1 || ty == Ny - 1)
     data_dst[idx] = T(0.0);
 }
