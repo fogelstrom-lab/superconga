@@ -6,7 +6,6 @@
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
 #include "conga/compute/ComputeOrderParameter.h"
-#include "conga/defines.h"
 #include "conga/geometry/DiscGeometry.h"
 #include "conga/geometry/GeometryGroup.h"
 #include "conga/geometry/PolygonGeometry.h"
@@ -63,6 +62,49 @@ template <typename T>
 conga::vector2d<T> computeCurrentDensity(const T inTemperature,
                                          const T inVectorPotentialX,
                                          const T inVectorPotentialY) {
+  // The current is computed in linear response around a homogenous background.
+  // Keeping the dimensions it is given by:
+  //
+  // j = 2 * e * NF * <Y_{3/2} * vF * vF^T * ps>
+  // ps = hbar * nabla * chi / 2 - e A
+  //
+  // where e is the charge of an electron (the sign is up for debate), Y_{3/2}
+  // is the Yoshida function
+  //
+  // Y_{3/2} = pi T sum_n |Delta|^2 / (|Delta|^2 + epsilon^2_n)^(3/2)
+  //
+  // and is just some number.
+  //
+  // We assume a constant vector potential, A, and no phase gradient, i.e.
+  //
+  // ps = -e * A
+  //
+  // Thus, the only thing in the Fermi-surface average, <...>, that depends on
+  // the momentum is the Fermi velocity, vF. Fortunately, the integral is
+  // trivial. Ignoring the magnitude of vF we have
+  //
+  // vF * vF^T = | sin^2(phi)          , sin(phi) * cos(phi) |
+  //             | sin(phi) * cos(phi) , cos^2(phi)          |
+  //
+  // The Fermi-surface average is just |vF|^2 / 2 times the identity matrix.
+  //
+  // The current is therefore given by:
+  //
+  // j = 2 * e * NF * Y_{3/2} * (|vF|^2 / 2) * (-e * A) =
+  //   = -e^2 * NF * Y_{3/2} * |vF|^2 * A
+  //
+  // Our internal units are:
+  //
+  // E_0 = 2 * pi * kB * Tc       [energy]
+  // A_0 = E_0 / (|vF| * |e|)     [vector potential]
+  // j_0 = E_0 * NF * |vF| * |e|  [charge-current density]
+  //
+  // This gives
+  //
+  // j / j_0 = -e^2 * NF * Y_{3/2} * |vF|^2 * A / (E_0 * NF * |vF| * |e|) =
+  //         = - |e| * Y_{3/2} * |vF| * A / E_0 =
+  //         = - Y_{3/2} * A / A_0
+
   // The bulk orderparameter at this temperature.
   const T orderParameter = conga::computeOrderParameterBulkSWave(inTemperature);
 
@@ -71,7 +113,7 @@ conga::vector2d<T> computeCurrentDensity(const T inTemperature,
       inTemperature, orderParameter, static_cast<T>(ENERGY_CUTOFF));
 
   // The total factor.
-  const T factor = -static_cast<T>(conga::constants::SIGN_E) * yoshida;
+  const T factor = -yoshida;
 
   return {inVectorPotentialX * factor, inVectorPotentialY * factor};
 }
