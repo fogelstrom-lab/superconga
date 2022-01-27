@@ -71,6 +71,7 @@
 - Save the temporary config file when using the frontend in `tmp/` folder. Add `private/` folder for files not meant for git.
 - Simplify the coherence function computation by only using linear interpolation.
 - Decrease tolerance of DOS test.
+- Add explaining comments to the current linear-response test.
 
 ---
 
