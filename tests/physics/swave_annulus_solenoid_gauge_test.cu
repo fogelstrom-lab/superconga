@@ -54,7 +54,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
   const T phaseWinding = static_cast<T>(1);
-  const T stepSize = static_cast<T>(0.001);
+  const T stepSize = static_cast<T>(1);
 
   // Flux quantas to loop over.
   const std::vector<T> numFluxQuantas = {phaseWinding - static_cast<T>(0.5),
