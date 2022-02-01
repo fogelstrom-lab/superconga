@@ -254,7 +254,7 @@ template <typename T> void testSWaveAnnulusRadial() {
   const T phaseWinding = static_cast<T>(2);
   const T numFluxQuanta = static_cast<T>(1);
   const T penetrationDepth = static_cast<T>(20);
-  const T stepSize = static_cast<T>(0.001);
+  const T stepSize = static_cast<T>(1);
   const T vectorPotentialError = static_cast<T>(1e-3);
 
   // =================== ACT ==================== //

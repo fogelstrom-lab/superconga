@@ -73,6 +73,7 @@
 - Decrease tolerance of DOS test.
 - Add explaining comments to the current linear-response test.
 - Use centered finite differences everywhere.
+- Increase step size in s-wave annulus tests.
 
 ---
 
