@@ -41,7 +41,6 @@ set(SRC
     grid_data_sum_square_test.cu
     grid_normalization_test.cu
     legacy_test.cu
-    order_parameter_initial_test.cu
     order_parameter_bulk_test.cu
     parameters_test.cu
     physics/current_conservation_test.cu
