@@ -13,8 +13,6 @@
 #ifndef CONGA_VECTOR_POTENTIAL_KERNEL_H_
 #define CONGA_VECTOR_POTENTIAL_KERNEL_H_
 
-#include "../../defines.h"
-
 #include <cuda.h>
 
 #include <math.h>
@@ -23,8 +21,9 @@ namespace conga {
 template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShiftOnlyExternalKernel(
     const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
-    const T inFluxDensity, const T inArea, const int inGridResolution,
-    const T inGridElementSize, T *const outEnergyShift) {
+    const T inFluxDensity, const int inChargeSign, const T inArea,
+    const int inGridResolution, const T inGridElementSize,
+    T *const outEnergyShift) {
   // XY-coordinate indices.
   const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
   const int yIdx = blockDim.y * blockIdx.y + threadIdx.y;
@@ -50,9 +49,9 @@ __global__ void computeEnergyShiftOnlyExternalKernel(
     const int idx = yIdx * inGridResolution + xIdx;
 
     // Compute energy shift.
-    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E) *
-                          (inFermiVelocityX * vectorPotentialX +
-                           inFermiVelocityY * vectorPotentialY);
+    outEnergyShift[idx] =
+        static_cast<T>(inChargeSign) * (inFermiVelocityX * vectorPotentialX +
+                                        inFermiVelocityY * vectorPotentialY);
   }
 }
 
@@ -60,8 +59,9 @@ template <typename T, template <typename> class POTENTIAL>
 __global__ void computeEnergyShiftKernel(
     const T *const inVectorPotentialX, const T *const inVectorPotentialY,
     const T inFermiVelocityX, const T inFermiVelocityY, const T inSystemAngle,
-    const T inFluxDensity, const T inArea, const int inGridResolution,
-    const T inGridElementSize, T *const outEnergyShift) {
+    const T inFluxDensity, const int inChargeSign, const T inArea,
+    const int inGridResolution, const T inGridElementSize,
+    T *const outEnergyShift) {
   // XY-coordinate indices.
   const int xIdx = blockDim.x * blockIdx.x + threadIdx.x;
   const int yIdx = blockDim.y * blockIdx.y + threadIdx.y;
@@ -92,9 +92,9 @@ __global__ void computeEnergyShiftKernel(
     const T vectorPotentialY = inVectorPotentialY[idx] + extVectorPotentialY;
 
     // Compute energy shift.
-    outEnergyShift[idx] = static_cast<T>(constants::SIGN_E) *
-                          (inFermiVelocityX * vectorPotentialX +
-                           inFermiVelocityY * vectorPotentialY);
+    outEnergyShift[idx] =
+        static_cast<T>(inChargeSign) * (inFermiVelocityX * vectorPotentialX +
+                                        inFermiVelocityY * vectorPotentialY);
   }
 }
 } // namespace conga

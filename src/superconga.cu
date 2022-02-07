@@ -135,6 +135,10 @@ int main(int argc, char *argv[]) {
       static_cast<T>(simParams["physics"]["external_flux_quanta"].asDouble());
   parameters->setNumFluxQuanta(externalFluxQuanta);
 
+  // Set sign of charge.
+  const int chargeSign = simParams["physics"]["charge_sign"].asInt();
+  parameters->setChargeSign(chargeSign);
+
   //***************************************************
   // CREATE GEOMETRY
   //***************************************************
@@ -240,35 +244,48 @@ int main(int argc, char *argv[]) {
       if (useBulk) {
         conga::Initial<T>::bulk(orderParameterComponent);
       } else {
-        // Check if vortex-lattice start guess was supplied. 
-        if(simParams["physics"].isMember("vortex_lattice")) {
+        // Check if vortex-lattice start guess was supplied.
+        if (simParams["physics"].isMember("vortex_lattice")) {
 
-          // Get coordinates and  winding-numbers for vortex lattice start guess.
+          // Get coordinates and  winding-numbers for vortex lattice start
+          // guess.
           const Json::Value jsonVorticesCentersX =
-          simParams["physics"]["vortex_lattice"]["vortices_centers_x"];
+              simParams["physics"]["vortex_lattice"]["vortices_centers_x"];
           const Json::Value jsonVorticesCentersY =
-          simParams["physics"]["vortex_lattice"]["vortices_centers_y"];
+              simParams["physics"]["vortex_lattice"]["vortices_centers_y"];
           const Json::Value jsonVorticesWindingNumbers =
-          simParams["physics"]["vortex_lattice"]["vortices_winding_numbers"];
+              simParams["physics"]["vortex_lattice"]
+                       ["vortices_winding_numbers"];
 
           std::vector<T> vorticesCentersX;
           std::vector<T> vorticesCentersY;
           std::vector<T> vorticesWindingNumbers;
 
           // Scale to internal coordinates and add to vectors.
-          for (int vortexIdx = 0; vortexIdx < jsonVorticesCentersX.size(); ++vortexIdx) {
-             // TODO(patric): fix bug when both coordinates are offset (but unequally). The bug seems to lie in the code that centers the coordinate system(?).
-             const T xTranslatedScaled = (static_cast<T>(jsonVorticesCentersX[vortexIdx].asDouble()) - xOffset) / (static_cast<T>(0.5) * scalingFactor);
-            const T yTranslatedScaled = (static_cast<T>(jsonVorticesCentersY[vortexIdx].asDouble()) - yOffset) / (static_cast<T>(0.5) * scalingFactor);
+          for (int vortexIdx = 0; vortexIdx < jsonVorticesCentersX.size();
+               ++vortexIdx) {
+            // TODO(patric): fix bug when both coordinates are offset (but
+            // unequally). The bug seems to lie in the code that centers the
+            // coordinate system(?).
+            const T xTranslatedScaled =
+                (static_cast<T>(jsonVorticesCentersX[vortexIdx].asDouble()) -
+                 xOffset) /
+                (static_cast<T>(0.5) * scalingFactor);
+            const T yTranslatedScaled =
+                (static_cast<T>(jsonVorticesCentersY[vortexIdx].asDouble()) -
+                 yOffset) /
+                (static_cast<T>(0.5) * scalingFactor);
 
             vorticesCentersX.push_back(xTranslatedScaled);
             vorticesCentersY.push_back(yTranslatedScaled);
-            vorticesWindingNumbers.push_back(static_cast<T>(jsonVorticesWindingNumbers[vortexIdx].asDouble()));
+            vorticesWindingNumbers.push_back(static_cast<T>(
+                jsonVorticesWindingNumbers[vortexIdx].asDouble()));
           }
 
           // Overwrite phase-winding from order-parameter components.
           conga::Initial<T>::perturbedPhaseWindings(
-          orderParameterComponent, vorticesWindingNumbers, vorticesCentersX, vorticesCentersY, noiseStdDev, phaseShift);
+              orderParameterComponent, vorticesWindingNumbers, vorticesCentersX,
+              vorticesCentersY, noiseStdDev, phaseShift);
         } else {
           // No vortex-lattice start guess, use order-parameter component value.
           conga::Initial<T>::perturbedPhaseWinding(

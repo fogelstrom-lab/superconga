@@ -125,6 +125,7 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   // Add contribution from external magnetic field
   const int N0 = parameters->getGridResolutionBase();
   const int N1 = parameters->getGridResolutionCoherence();
+  const int chargeSign = parameters->getChargeSign();
   const T numFluxQuanta = parameters->getNumFluxQuanta();
   const T area = inContextModule->getGeometry()->area();
   // The pi factor comes from our choice of units for the flux density:
@@ -152,12 +153,12 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
     computeEnergyShiftKernel<T, VP>
         <<<bpg, tpb>>>(vectorPotentialRotated.getDataPointer(0),
                        vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
-                       fermiVelocityY, systemAngle, fluxDensity, area, N1, h,
-                       inEnergyShift->getDataPointer());
-  } else {
-    computeEnergyShiftOnlyExternalKernel<T, VP>
-        <<<bpg, tpb>>>(fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity,
+                       fermiVelocityY, systemAngle, fluxDensity, chargeSign,
                        area, N1, h, inEnergyShift->getDataPointer());
+  } else {
+    computeEnergyShiftOnlyExternalKernel<T, VP><<<bpg, tpb>>>(
+        fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity, chargeSign,
+        area, N1, h, inEnergyShift->getDataPointer());
   }
 }
 

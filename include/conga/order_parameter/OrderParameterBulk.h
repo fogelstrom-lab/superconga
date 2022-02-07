@@ -255,6 +255,12 @@ T computeFreeEnergyBulkSWave(const T inTemperature, const T inOrderParameter,
 template <typename T>
 T computeYoshidaBulkSWave(const T inTemperature, const T inOrderParameter,
                           const T inEnergyCutoff) {
+  if (inTemperature < std::numeric_limits<T>::epsilon()) {
+    // If the temperature is approximately zero then return the known
+    // zero-temperature value.
+    return static_cast<T>(1);
+  }
+
   const int numEnergies =
       static_cast<int>(inEnergyCutoff / inTemperature - static_cast<T>(0.5)) +
       1;

@@ -14,6 +14,7 @@
 
 #include "ContextModule.h"
 #include "defines.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <cmath>
@@ -58,6 +59,7 @@ public:
   int getNumOzakiEnergies() const;
   T getTemperature() const { return m_temperature; }
   T getNumFluxQuanta() const { return m_numFluxQuanta; }
+  int getChargeSign() const { return m_chargeSign; }
 
   T getConvergenceCriterion() const { return m_convergenceCriterion; }
 
@@ -94,6 +96,10 @@ public:
   }
   void setNumFluxQuanta(const T inNumFluxQuanta) {
     m_numFluxQuanta = inNumFluxQuanta;
+  }
+
+  void setChargeSign(const int inChargeSign) {
+    m_chargeSign = utils::sign(inChargeSign);
   }
 
   void setEnergyRange(const T inEnergyMin, const T inEnergyMax,
@@ -151,6 +157,9 @@ private:
 
   // The penetration depth used when solving for the vector potential.
   T m_penetrationDepth;
+
+  // The sign of the carrier charge.
+  int m_chargeSign;
 
   // The number of Ozaki energies.
   T m_numOzakiEnergies;
@@ -258,7 +267,7 @@ Parameters<T>::Parameters(Context<T> *const inOutContext)
     : m_grainWidth(static_cast<T>(20)),
       m_pointsPerCoherenceLength(static_cast<T>(5)), m_numAngles(64),
       m_energyCutoff(static_cast<T>(10)), m_temperature(static_cast<T>(0.5)),
-      m_numFluxQuanta(static_cast<T>(0)),
+      m_numFluxQuanta(static_cast<T>(0)), m_chargeSign(-1),
       m_convergenceCriterion(static_cast<T>(1e-6)), m_numEnergies(128),
       m_energyMin(static_cast<T>(0)), m_energyMax(static_cast<T>(3)),
       m_smearingFactor(static_cast<T>(0.05)), m_numOzakiEnergies(1),

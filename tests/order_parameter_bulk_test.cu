@@ -61,8 +61,12 @@ void testComputeOrderParameterBulkSWaveIntermediateTemperature(
 
   // See page 180 of P. Holmvall lic thesis.
   // Note that we are using 2*pi*kB*Tc as our energy scale.
-  const T preFactor = std::sqrt(static_cast<T>(2.0) /
-                                static_cast<T>(7.0 * conga::constants::APERY));
+  // The value of the Riemann zeto function evaluated at 3, i.e. Apery's
+  // constant = zeta(3).
+  // https://en.wikipedia.org/wiki/Ap%C3%A9ry's_constant
+  const T apery = static_cast<T>(std::riemann_zeta(3));
+  const T preFactor =
+      std::sqrt(static_cast<T>(2) / (static_cast<T>(7) * apery));
 
   for (const T &temperature : temperatures) {
     // =================== ACT ==================== //
