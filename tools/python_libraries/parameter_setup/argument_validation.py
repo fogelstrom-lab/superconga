@@ -235,6 +235,7 @@ runner_checks = {
         "type": dict,
         "fields": {
             "convergence_criterion": {"type": float, "low": 0.0},
+            "norm": {"type": str, "one_of": configuration.valid_norms},
             "energy_cutoff": {"type": float, "low": 0.0},
             "num_fermi_momenta": {"type": int, "low": 0},
             "num_iterations_burnin": {"type": int, "low_include": 0},

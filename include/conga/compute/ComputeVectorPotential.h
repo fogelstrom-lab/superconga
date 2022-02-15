@@ -183,9 +183,10 @@ public:
   /// residual = |x - g(x)| / |x|
   ///
   /// \param inLHS The left-hand side of the self-consitency equation, 'x'.
+  /// \param inNormType Which norm to use.
   ///
   /// \return Void.
-  void computeResidual(const GridGPU<T> &inLHS);
+  void computeResidual(const GridGPU<T> &inLHS, const ResidualNorm inNormType);
 
   /// \brief Get the resulting vector potential.
   ///
@@ -745,11 +746,12 @@ void ComputeVectorPotential<T>::solve(const GridGPU<T> &inCurrentDensity) {
 }
 
 template <typename T>
-void ComputeVectorPotential<T>::computeResidual(const GridGPU<T> &inLHS) {
+void ComputeVectorPotential<T>::computeResidual(const GridGPU<T> &inLHS,
+                                                const ResidualNorm inNormType) {
   // TODO(niclas): We need to specifiy the namespace in order to avoid
   // compilation errors due to this method having the same name as the function
   // being called.
-  m_residual = conga::computeResidual(inLHS, *m_vectorPotential);
+  m_residual = conga::computeResidual(inLHS, *m_vectorPotential, inNormType);
 }
 } // namespace conga
 

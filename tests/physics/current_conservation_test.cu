@@ -47,7 +47,7 @@ const int NUM_ANGLES = 32;
 const double ENERGY_CUTOFF = 16.0;
 
 // Convergence criterion for order-parameter residual
-const double CONVERGENCE_CRITERION = 1e-5;
+const double CONVERGENCE_CRITERION = 1e-3;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
@@ -93,6 +93,7 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
   parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
   parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
   parameters->setNumFluxQuanta(static_cast<T>(simParams::EXTERNAL_FLUX_QUANTA));
+  parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
   // from the geometry group

@@ -51,12 +51,13 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   const T grainWidth = static_cast<T>(2) * R;
   const T pointsPerCoherenceLength = static_cast<T>(3.4);
   const int numMomenta = 16;
-  const T convergenceCriterion = static_cast<T>(1e-5);
+  const T convergenceCriterion = static_cast<T>(1e-4);
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
   const T phaseWinding = static_cast<T>(1);
   const int chargeSign = -1;
   const T stepSize = static_cast<T>(1);
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
 
   // For convenience.
   const T chargePhaseWinding = static_cast<T>(chargeSign) * phaseWinding;
@@ -85,6 +86,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     parameters->setEnergyCutoff(energyCutoff);
     parameters->setNumFluxQuanta(numFluxQuanta);
     parameters->setChargeSign(chargeSign);
+    parameters->setResidualNormType(normType);
 
     // Create annulus geometry.
     conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

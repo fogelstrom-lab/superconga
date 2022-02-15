@@ -46,7 +46,7 @@ const int NUM_ANGLES = 30;
 const double ENERGY_CUTOFF = 16.0;
 
 // Convergence criterion for order-parameter residual
-const double CONVERGENCE_CRITERION = 1e-5;
+const double CONVERGENCE_CRITERION = 1e-3;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
@@ -86,6 +86,7 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
       static_cast<T>(TEST_PARAMS::CONVERGENCE_CRITERION));
   parameters->setTemperature(static_cast<T>(TEST_PARAMS::TEMPERATURE));
   parameters->setEnergyCutoff(static_cast<T>(TEST_PARAMS::ENERGY_CUTOFF));
+  parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   // Set up a disc.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

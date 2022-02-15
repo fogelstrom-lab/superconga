@@ -47,7 +47,7 @@ const int NUM_ANGLES_DWAVE = 360;
 const double ENERGY_CUTOFF = 32.0;
 
 // Convergence criterion for order-parameter residual
-const double CONVERGENCE_CRITERION = 1E-6;
+const double CONVERGENCE_CRITERION = 1E-3;
 
 // Print iteration status to terminal
 const bool PRINT_ITERATION_STATUS = true;
@@ -90,6 +90,9 @@ conga::Parameters<T> *applySimParams(const bool inUseSwave,
 
   // Set number of Ozaki poles
   parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
+
+  // Set norm type.
+  parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   return parameters;
 }

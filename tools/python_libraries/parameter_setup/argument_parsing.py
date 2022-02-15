@@ -343,6 +343,16 @@ def add_runner_arguments(parser) -> None:
         help="Convergence criterion for self-consistency.",
     )
 
+    # Norm.
+    accuracy.add_argument(
+        "-n",
+        "--norm",
+        type=str,
+        choices=configuration.valid_norms,
+        default=None,
+        help="Which norm to use when computing the residuals. In order from less to more strict; L1, L2, LInf.",
+    )
+
     # Num Ozaki energies.
     accuracy.add_argument(
         "-e",
@@ -1122,6 +1132,7 @@ def set_runner_arguments_from_cli(
     # ================== ACCURACY ================== #
     group = "accuracy"
     set_value(sim_params, "convergence_criterion", args.convergence_criterion, group)
+    set_value(sim_params, "norm", args.norm, group)
     set_value(sim_params, "energy_cutoff", args.energy_cutoff, group)
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta, group)
     set_value(sim_params, "num_iterations_burnin", args.num_iterations_burnin, group)

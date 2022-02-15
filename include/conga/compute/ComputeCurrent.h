@@ -184,7 +184,8 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     ContextModule<T>::getContext()->getGeometry()->zeroValuesOutsideDomainRef(
         _current_real);
 
-    const T residual = computeResidual(current_old, *_current_real);
+    const ResidualNorm normType = C::getParameters()->getResidualNormType();
+    const T residual = computeResidual(current_old, *_current_real, normType);
     C::setResidual(residual);
 
     const bool isConverged =

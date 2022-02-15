@@ -396,7 +396,9 @@ template <typename T> void Context<T>::compute() {
     m_computeVectorPotential->solve(currentDensity);
 
     // Compute the residual.
-    m_computeVectorPotential->computeResidual(*m_inducedVectorPotential);
+    const ResidualNorm normType = m_parameters->getResidualNormType();
+    m_computeVectorPotential->computeResidual(*m_inducedVectorPotential,
+                                              normType);
   }
 
   if (m_computeOrderParameter || computeVectorPotential) {

@@ -97,11 +97,12 @@ template <typename T> void testSWaveDisc() {
   const T grainWidth = static_cast<T>(2) * R;
   const T pointsPerCoherenceLength = static_cast<T>(2.7);
   const int numMomenta = 16;
-  const T convergenceCriterion = static_cast<T>(1e-5);
+  const T convergenceCriterion = static_cast<T>(1e-3);
   const T temperature = static_cast<T>(0.2);
   const T energyCutoff = static_cast<T>(16);
   const T numFluxQuanta = static_cast<T>(5);
   const T penetrationDepth = static_cast<T>(5);
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
 
   // =================== ACT ==================== //
   // Create context.
@@ -117,6 +118,7 @@ template <typename T> void testSWaveDisc() {
   parameters->setEnergyCutoff(energyCutoff);
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
+  parameters->setResidualNormType(normType);
 
   // Create disc geometry.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

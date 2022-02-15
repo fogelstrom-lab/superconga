@@ -241,7 +241,9 @@ void ComputeOrderParameter<T>::computePropertyFromGreens() {
           deltaOld->getComponent(i)->getGrid();
       const GridGPU<T> *const componentNew = _delta->getComponent(i)->getGrid();
 
-      const T residualComponent = computeResidual(*componentOld, *componentNew);
+      const ResidualNorm normType = param->getResidualNormType();
+      const T residualComponent =
+          computeResidual(*componentOld, *componentNew, normType);
       residual = std::max(residual, residualComponent);
     }
     C::setResidual(residual);

@@ -57,6 +57,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
   const T energyCutoff = static_cast<T>(16);
   const T numFluxQuanta = static_cast<T>(1);
   const T penetrationDepth = static_cast<T>(10);
+  const conga::ResidualNorm normType = conga::ResidualNorm::LInf;
 
   // =================== ACT ==================== //
   // Create context.
@@ -72,6 +73,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
   parameters->setEnergyCutoff(energyCutoff);
   parameters->setNumFluxQuanta(numFluxQuanta);
   parameters->setPenetrationDepth(penetrationDepth);
+  parameters->setResidualNormType(normType);
 
   // Create disc geometry.
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);

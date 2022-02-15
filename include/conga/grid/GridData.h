@@ -189,6 +189,9 @@ public:
   // Compute the L2 norm
   T L2Norm() const;
 
+  // Compute the L2 norm
+  T LInfNorm() const;
+
   /// \brief Compute the moment: 0.5 * sum(cross(r, grid)). Note that the only
   /// the z-component is returned.
   ///
@@ -928,52 +931,33 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
 // reduction to sum the square in each coordinate into a scalar. Note that the
 // first two steps are done in a single thrust::transform_reduce call.
 template <typename T, typename DEV> T GridData<T, DEV>::sumSquare() const {
-  // Initial value for the reduction: sumSquare = initValue + sum(...)
-  const T initValue = static_cast<T>(0.0);
-
-  // The unary operator to square each element
-  thrust::square<T> unaryOperatorSquare;
-
-  // The binary operator to sum (reduce) all the squares
-  thrust::plus<T> binaryOperatorPlus;
-
-  // Start iterator: pointer to the first element of the first field
-  const auto startIterator = m_vector.begin();
-
-  // Start iterator: pointer to the last element of the last field
-  const auto endIterator = m_vector.end();
-
-  const T resultSum =
-      thrust::transform_reduce(startIterator, endIterator, unaryOperatorSquare,
-                               initValue, binaryOperatorPlus);
-
-  return resultSum;
+  return thrust::transform_reduce(m_vector.begin(), m_vector.end(),
+                                  thrust::square<T>(), static_cast<T>(0),
+                                  thrust::plus<T>());
 }
 
 // Calculate the L1 Norm of a GridData object.
 template <typename T, typename DEV> T GridData<T, DEV>::L1Norm() const {
-  // Initial value for the reduction
-  const T initValue = static_cast<T>(0.0);
-
-  // The binary operator to sum (reduce) all the squares
-  thrust::plus<T> binaryOperatorPlus;
-
-  // Start iterator: pointer to the first element of the first field
-  const auto startIterator = m_vector.begin();
-
-  // Start iterator: pointer to the last element of the last field
-  const auto endIterator = m_vector.end();
-
-  const T resultNorm = thrust::transform_reduce(
-      startIterator, endIterator, absFunctor(), initValue, binaryOperatorPlus);
-  return resultNorm;
+  return thrust::transform_reduce(m_vector.begin(), m_vector.end(),
+                                  absFunctor(), static_cast<T>(0),
+                                  thrust::plus<T>());
 }
 
 // Calculate the L2 Norm of a GridData object.
 template <typename T, typename DEV> T GridData<T, DEV>::L2Norm() const {
-  // Calculate the L2 Norm using the elementwise sum of squares
-  const T resultNorm = std::sqrt(this->sumSquare());
-  return resultNorm;
+  const T normSquared = sumSquare();
+  return std::sqrt(normSquared);
+}
+
+// Calculate the LInf Norm of a GridData object.
+template <typename T, typename DEV> T GridData<T, DEV>::LInfNorm() const {
+  const T minVal =
+      thrust::reduce(m_vector.begin(), m_vector.end(),
+                     std::numeric_limits<T>::max(), thrust::minimum<T>());
+  const T maxVal =
+      thrust::reduce(m_vector.begin(), m_vector.end(),
+                     std::numeric_limits<T>::min(), thrust::maximum<T>());
+  return std::max(std::abs(minVal), std::abs(maxVal));
 }
 
 template <typename T, typename DEV>
