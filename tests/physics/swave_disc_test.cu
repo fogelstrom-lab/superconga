@@ -3,6 +3,7 @@
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
+#include "conga/accelerators/BarzilaiBorwein.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -101,7 +102,6 @@ template <typename T> void testSWaveDisc() {
   const T energyCutoff = static_cast<T>(16);
   const T numFluxQuanta = static_cast<T>(5);
   const T penetrationDepth = static_cast<T>(5);
-  const T stepSize = static_cast<T>(0.01);
 
   // =================== ACT ==================== //
   // Create context.
@@ -141,15 +141,17 @@ template <typename T> void testSWaveDisc() {
   conga::Initial<T>::bulk(orderParameterComponent);
   orderParameter->add(orderParameterComponent);
 
-  // Create accelerator.
-  context.set(std::make_unique<conga::Accelerator<T>>(stepSize));
-
   // Compute order parameter, current density, free energy, and vector
   // potential.
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeCurrent<T>(&context);
   new conga::ComputeFreeEnergy<T>(&context);
   context.add(std::make_unique<conga::ComputeVectorPotential<T>>());
+
+  // Set accelerator.
+  auto accelerator =
+      std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+  context.set(std::move(accelerator));
 
   // Run the simulation.
   context.initialize();

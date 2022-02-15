@@ -29,6 +29,7 @@ endif(doctest_FOUND)
 # ======= SOURCE FILES =======
 # Define the main set of source files
 set(SRC
+    accelerators_test.cu
     basis_function_normalization_test.cu
     bdg_utils_test.cu
     dispersion_test.cu

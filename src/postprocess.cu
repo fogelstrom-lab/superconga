@@ -325,6 +325,13 @@ int main(int argc, char *argv[]) {
     }
 
     // Set the vector potential in context.
+    if (penetrationDepth > static_cast<T>(0)) {
+      // Internally the induced vector potential is scaled by the squared
+      // penetration depth.
+      *vectorPotential *= (penetrationDepth * penetrationDepth);
+    } else {
+      vectorPotential->setZero();
+    }
     context.set(std::move(vectorPotential));
   }
 

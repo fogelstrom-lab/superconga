@@ -174,7 +174,17 @@ void saveGridData(const Context<T> *const inContext,
   const OrderParameter<T> &orderParameter = *(inContext->getOrderParameter());
   const GridGPU<T> &currentDensity =
       *(inContext->getComputeCurrent()->getResult());
-  const GridGPU<T> &vectorPotential = *(inContext->getInducedVectorPotential());
+
+  // Scale vector potential to our external units.
+  const T penetrationDepth = inContext->getParameters()->getPenetrationDepth();
+  const T vectorPotentialScale =
+      penetrationDepth > static_cast<T>(0)
+          ? static_cast<T>(1) / (penetrationDepth * penetrationDepth)
+          : static_cast<T>(0);
+  const GridGPU<T> vectorPotential =
+      *(inContext->getInducedVectorPotential()) * vectorPotentialScale;
+
+  // Compute flux density.
   const T latticeSpacing = inContext->getParameters()->getGridElementSize();
   const GridGPU<T> fluxDensity = vectorPotential.curl(latticeSpacing);
 

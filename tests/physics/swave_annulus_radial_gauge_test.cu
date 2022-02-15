@@ -3,6 +3,7 @@
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
+#include "conga/accelerators/BarzilaiBorwein.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -413,9 +414,6 @@ template <typename T> void testSWaveAnnulusRadial() {
   conga::Initial<T>::phaseWinding(orderParameterComponent, phaseWinding);
   orderParameter->add(orderParameterComponent);
 
-  // Create accelerator.
-  context.set(std::make_unique<conga::Accelerator<T>>(stepSize));
-
   // Compute order parameter, current density, free energy, and vector
   // potential.
   new conga::ComputeOrderParameter<T>(&context);
@@ -424,7 +422,10 @@ template <typename T> void testSWaveAnnulusRadial() {
   context.add(
       std::make_unique<conga::ComputeVectorPotential<T>>(vectorPotentialError));
 
-  // =================== ACT ==================== //
+  // Set accelerator.
+  auto accelerator =
+      std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+  context.set(std::move(accelerator));
 
   // Run the simulation.
   context.initialize();

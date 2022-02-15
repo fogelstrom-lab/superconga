@@ -3,6 +3,7 @@
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
+#include "conga/accelerators/BarzilaiBorwein.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -111,12 +112,14 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     conga::Initial<T>::phaseWinding(orderParameterComponent, phaseWinding);
     orderParameter->add(orderParameterComponent);
 
-    // Create accelerator.
-    context.set(std::make_unique<conga::Accelerator<T>>(stepSize));
-
     // Compute order parameter and free energy.
     new conga::ComputeOrderParameter<T>(&context);
     new conga::ComputeFreeEnergy<T>(&context);
+
+    // Set accelerator.
+    auto accelerator =
+        std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+    context.set(std::move(accelerator));
 
     // Run the simulation.
     context.initialize();

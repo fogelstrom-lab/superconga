@@ -247,20 +247,18 @@ runner_checks = {
     "accelerator": {
         "type": dict,
         "fields": {
-            "adaptive": {"type": bool},
-            "anderson_always": {"type": bool},
-            "inertia": {"type": float, "low_include": 0.0},
-            "max_mixing": {"type": float, "low": 0.0},
-            "min_mixing": {"type": float, "low": 0.0},
-            "rank": {"type": int, "low": 0},
-            "replace_oldest": {"type": bool},
-            "step_size": {"type": float, "low": 0.0},
+            "name": {"type": str, "one_of": configuration.valid_accelerators},
+            "step_size": {"type": float, "low": 0.0, "optional": True},
+            "inertia": {"type": float, "low": 0.0, "optional": True},
+            "rank": {"type": int, "low": 1, "optional": True},
+            "step_size_increase": {"type": float, "low": 0.0, "optional": True},
+            "step_size_decrease": {"type": float, "low": 0.0, "optional": True},
         },
     },
     "misc": {
         "type": dict,
         "fields": {
-            "data_format": {"type": str, "one_of": ["h5", "csv"]},
+            "data_format": {"type": str, "one_of": configuration.valid_data_formats},
             "load_path": {"type": str},
             "save_frequency": {"type": int},
             "save_path": {"type": str},
@@ -431,14 +429,6 @@ def validate_runner_arguments(
         print(
             "-- ERROR! 'num_iterations_max' must be larger than 'num_iterations_min'."
         )
-        success = False
-
-    # Check that minimum value of the accelerator parameter 'p' is smaller than the maximum.
-    if (
-        not sim_params["accelerator"]["max_mixing"]
-        >= sim_params["accelerator"]["min_mixing"]
-    ):
-        print("-- ERROR! 'max_mixing' must be larger than, or equal to, 'min_mixing'.")
         success = False
 
     # Check if vortex lattice is supplied.

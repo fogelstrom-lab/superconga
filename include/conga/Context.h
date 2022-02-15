@@ -13,8 +13,8 @@
 #ifndef CONGA_CONTEXT_H_
 #define CONGA_CONTEXT_H_
 
-#include "Accelerator.h"
 #include "ContextModule.h"
+#include "accelerators.h"
 #include "compute/ComputeVectorPotential.h"
 #include "fermi_surface/FermiSurface.h"
 #include "fermi_surface/FermiSurfaceCircle.h"
@@ -77,7 +77,7 @@ public:
   /// \param inAccelerator The accelerator as a unique pointer.
   ///
   /// \return Void.
-  void set(std::unique_ptr<Accelerator<T>> inAccelerator) {
+  void set(std::unique_ptr<accelerators::Accelerator<T>> inAccelerator) {
     m_accelerator = std::move(inAccelerator);
   }
 
@@ -161,7 +161,7 @@ private:
 
   // The accelerator. It is only used when computing the order parameter and/or
   // the vector potential.
-  std::unique_ptr<Accelerator<T>> m_accelerator;
+  std::unique_ptr<accelerators::Accelerator<T>> m_accelerator;
 
   std::vector<ComputeProperty<T> *> m_computeObjectList;
 
@@ -188,7 +188,8 @@ Context<T>::Context()
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
       m_computeVectorPotential(nullptr),
       m_startTime(std::chrono::high_resolution_clock::now()),
-      m_numIterations(0), m_accelerator(std::make_unique<Accelerator<T>>()) {}
+      m_numIterations(0),
+      m_accelerator(std::make_unique<accelerators::AdaptiveBall<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
 #ifndef NDEBUG
@@ -392,33 +393,25 @@ template <typename T> void Context<T>::compute() {
     const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
 
     // Solve Maxwell's equation relating the vector potential to the current.
-    m_computeVectorPotential->solve(currentDensity, penetrationDepth);
+    m_computeVectorPotential->solve(currentDensity);
 
     // Compute the residual.
     m_computeVectorPotential->computeResidual(*m_inducedVectorPotential);
   }
 
   if (m_computeOrderParameter || computeVectorPotential) {
-    // Compute the next order parameter and vector potential, but do not
-    // update.
+    // Compute the next order parameter and vector potential.
     if (m_computeOrderParameter && computeVectorPotential) {
-      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
-                             *(m_computeOrderParameter->getOrderParameter()),
-                             *(m_computeVectorPotential->getResult()));
+      m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
+                             *(m_computeVectorPotential->getResult()),
+                             *m_orderParameter, *m_inducedVectorPotential);
     } else if (m_computeOrderParameter && !computeVectorPotential) {
-      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
-                             *(m_computeOrderParameter->getOrderParameter()),
-                             *m_inducedVectorPotential);
+      m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
+                             *m_orderParameter);
     } else if (!m_computeOrderParameter && computeVectorPotential) {
-      m_accelerator->compute(*m_orderParameter, *m_inducedVectorPotential,
-                             *m_orderParameter,
-                             *(m_computeVectorPotential->getResult()));
+      m_accelerator->compute(*(m_computeVectorPotential->getResult()),
+                             *m_inducedVectorPotential);
     }
-
-    // Update the order parameter and vector potential.
-    // TODO(niclas): Should we really update when we have reached convergence?
-    // The update might screw it up (slightly).
-    m_accelerator->update(*m_orderParameter, *m_inducedVectorPotential);
   }
 
   // Increase iteration counter.

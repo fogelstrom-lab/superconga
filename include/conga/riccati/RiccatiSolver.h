@@ -128,8 +128,6 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
   const int chargeSign = parameters->getChargeSign();
   const T numFluxQuanta = parameters->getNumFluxQuanta();
   const T area = inContextModule->getGeometry()->area();
-  // The pi factor comes from our choice of units for the flux density:
-  // B_0 = \Phi_0 / (\pi \xi^2_0).
   const T fluxDensity = static_cast<T>(M_PI) * numFluxQuanta / area;
   const T h = parameters->getGridElementSize();
 
@@ -149,6 +147,12 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
     GridGPU<T> vectorPotentialRotated(N1, N1, 2, Type::real);
     vectorPotentialRotated.setZero();
     vectorPotentialRotated.insertRotatedGrid(inVectorPotential, -systemAngle);
+    // The induced vector potential is scaled by the squared penetration depth
+    // in order to simplify Ampere's law and the accelerators. The scaling needs
+    // to be undone here.
+    const T vectorPotentialScale =
+        static_cast<T>(1) / (penetrationDepth * penetrationDepth);
+    vectorPotentialRotated *= vectorPotentialScale;
 
     computeEnergyShiftKernel<T, VP>
         <<<bpg, tpb>>>(vectorPotentialRotated.getDataPointer(0),

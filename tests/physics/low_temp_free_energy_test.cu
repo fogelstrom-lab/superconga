@@ -2,6 +2,7 @@
 
 #include "conga/Context.h"
 #include "conga/Parameters.h"
+#include "conga/accelerators/BarzilaiBorwein.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -154,6 +155,11 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
       new conga::ComputeFreeEnergy<T>(&context);
   conga::ComputeCurrent<T> *computeCurrent =
       new conga::ComputeCurrent<T>(&context);
+
+  // Set accelerator.
+  auto accelerator =
+      std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+  context.set(std::move(accelerator));
 
   // =================== ACT ==================== //
   // Initialize simulation
