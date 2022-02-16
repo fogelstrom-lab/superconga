@@ -363,17 +363,19 @@ int main(int argc, char *argv[]) {
   // equations for a piecewise constant order parameter.
   conga::RiccatiSolver<T> *riccatiSolver;
 
-  // Gauge choice: VectorPotential::Solenoid calculates the vector potential
-  // with a solenoid gauge.
-  const bool solenoidGuage = simParams["gauge_solenoid"].asBool();
-  if (solenoidGuage) {
+  // Gauge choice.
+  const std::string gauge(simParams["physics"]["gauge"].asString());
+  if (gauge == "radial") {
+    riccatiSolver =
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+            &context);
+  } else if (gauge == "solenoid") {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
             &context);
   } else {
-    riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
-            &context);
+    std::cerr << "-- ERROR! Gauge, " << gauge << ", not understod" << std::endl;
+    return EXIT_FAILURE;
   }
 
   // Add specular BC.

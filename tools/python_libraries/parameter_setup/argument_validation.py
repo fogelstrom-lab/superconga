@@ -134,7 +134,7 @@ runner_checks = {
             "external_flux_quanta": {"type": float},
             "penetration_depth": {"type": float},
             "crystal_axes_rotation": {"type": float},
-            "gauge_solenoid": {"type": bool},
+            "gauge": {"type": str, "one_of": configuration.valid_gauges},
             "charge_sign": {"type": int, "one_of": [-1, +1]},
             "order_parameter": {
                 "type": dict,

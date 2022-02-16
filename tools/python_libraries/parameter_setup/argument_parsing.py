@@ -138,16 +138,13 @@ def add_runner_arguments(parser) -> None:
     )
 
     # Gauge.
-    gauge = physics.add_mutually_exclusive_group()
-    gauge.add_argument(
-        "--gauge-radial",
-        action="store_true",
-        help="Use the radial gauge, A = 0.5 * B * (-y, x).",
-    )
-    gauge.add_argument(
-        "--gauge-solenoid",
-        action="store_true",
-        help="Use the solenoid gauge, A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
+    physics.add_argument(
+        "-g",
+        "--gauge",
+        type=str,
+        choices=configuration.valid_gauges,
+        default=None,
+        help="Set the gauge. Radial: A = 0.5 * B * (-y, x). Solenoid: A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
     )
 
     # Charge sign.
@@ -986,9 +983,7 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "external_flux_quanta", args.external_flux_quanta, group)
     set_value(sim_params, "penetration_depth", args.penetration_depth, group)
     set_value(sim_params, "crystal_axes_rotation", args.crystal_axes_rotation, group)
-    set_flag(
-        sim_params, "gauge_solenoid", args.gauge_solenoid, args.gauge_radial, group
-    )
+    set_value(sim_params, "gauge", args.gauge, group)
     set_value(sim_params, "charge_sign", args.charge_sign, group)
 
     # ================== PHYSICS: VORTEX LATTICE ================== #
