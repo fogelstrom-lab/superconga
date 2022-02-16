@@ -34,6 +34,7 @@
 - Expose the sign of the charge carrier to the user via `--charge-sign`.
 - Support setting accelerator with default settings by just its name. All accelerators are different classes.
 - Expose the norm used when computing residuals (L1, L2, LInf) via `--norm`.
+- Set the gauge with a string instead of bool. It is set via `--gauge`.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

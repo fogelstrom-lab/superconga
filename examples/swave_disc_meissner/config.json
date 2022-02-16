@@ -4,7 +4,7 @@
 		"external_flux_quanta": 0.5,
 		"penetration_depth": 5.0,
 		"crystal_axes_rotation": 0.0,
-		"gauge_solenoid": false,
+		"gauge": "radial",
 		"charge_sign": -1,
 		"order_parameter": {
 			"s": {
