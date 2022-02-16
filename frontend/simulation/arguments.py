@@ -102,7 +102,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         type=str,
         choices=cli.VALID_GAUGES,
         default=None,
-        help="Set the gauge. Solenoid: A = 0.5 * B * Area (-y, x) / (x^2 + y^2). Symmetric: A = 0.5 * B * (-y, x).",
+        help="Set the gauge. Landau: A = (0, B * x). Solenoid: A = 0.5 * B * Area (-y, x) / (x^2 + y^2). Symmetric: A = 0.5 * B * (-y, x).",
     )
 
     # Charge sign.

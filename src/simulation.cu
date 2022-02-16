@@ -440,7 +440,10 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice.
   const std::string gauge(simulationConfig["physics"]["gauge"].asString());
-  if (gauge == "solenoid") {
+  if (gauge == "landau") {
+    riccatiSolver =
+        new conga::RiccatiSolverConfined<T, conga::gauge::Landau>(&context);
+  } else if (gauge == "solenoid") {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::gauge::Solenoid>(&context);
   } else if (gauge == "symmetric") {
@@ -480,8 +483,8 @@ int main(int argc, char *argv[]) {
     conga::io::write(configPath, simulationConfig);
     conga::io::printWrite(verbose, true, "configuration", configPath);
 
-    // TODO(niclas): Write internal parameters here as well? They do not change
-    // during the simulation.
+    // TODO(niclas): Write internal parameters here as well? They do not
+    // change during the simulation.
   }
 
   //***********************************************
