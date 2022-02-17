@@ -9,7 +9,7 @@
 #include <thrust/device_vector.h>
 
 #include <forge.h>
-#define USE_FORGE_CUDA_COPY_HELPERS
+#define USE_FORGE_CPU_COPY_HELPERS
 #include <fg/compute_copy.h>
 
 #include <iomanip>
@@ -277,8 +277,8 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   // Image pixels. Must be float.
   const int numChannels = 3;
   const int numPixels = width * height * numChannels;
-  thrust::device_vector<float> image(numPixels);
-  float *const ptr = thrust::raw_pointer_cast(image.data());
+  thrust::device_vector<float> imageGPU(numPixels);
+  float *const ptrGPU = thrust::raw_pointer_cast(imageGPU.data());
 
   // Kernel parameters.
   dim3 numBlocks;
@@ -291,7 +291,7 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
     internal::convertToColor<T, colormaps::Hot>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptr);
+                                            m_domain.getDataPointer(), ptrGPU);
     break;
   }
   case Colormap::RWB: {
@@ -299,7 +299,7 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
     internal::convertToColor<T, colormaps::RedWhiteBlue>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptr);
+                                            m_domain.getDataPointer(), ptrGPU);
     break;
   }
   case Colormap::TWILIGHT: {
@@ -307,7 +307,7 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
     internal::convertToColor<T, colormaps::Twilight>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptr);
+                                            m_domain.getDataPointer(), ptrGPU);
     break;
   }
   default: {
@@ -322,8 +322,12 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   const std::string range = stream.str();
   const std::string title = inTitle + std::string(" : ") + range;
 
-  // Actually draw the image.
-  draw(title, inCol, inRow, ptr, width, height);
+  // Copy to the CPU and pass the CPU pointer to Forge. This way we can
+  // visualize the simulation even if we are using different GPUs for
+  // computation and visualization.
+  const thrust::host_vector<float> imageCPU(imageGPU);
+  const float *const ptrCPU = thrust::raw_pointer_cast(imageCPU.data());
+  draw(title, inCol, inRow, ptrCPU, width, height);
 }
 
 template <typename T>
