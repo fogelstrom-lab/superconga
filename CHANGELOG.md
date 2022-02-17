@@ -45,6 +45,7 @@
 - Fix sign error in "chiral transformation" in Python frontend.
 - Fix plotter for multi-component order parameters.
 - Fix bug not including doctest when fetching it.
+- Fix live visualization not working when using different GPUs for computation and visualization.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
