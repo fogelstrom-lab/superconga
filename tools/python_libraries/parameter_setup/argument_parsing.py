@@ -98,7 +98,7 @@ def add_runner_arguments(parser) -> None:
     # =============== PHYSICS =============== #
     physics = parser.add_argument_group(
         title="Physics",
-        description="The order-parameter components take four arguments. The arguments are critival temperature, initial phase shift (in units of 2pi), initial phase winding (in units of 2pi), and standard deviation of the additive initial (Gaussian) noise. The critical temperatures will be scaled so that the maximum is Tc = 1.",
+        description="The order-parameter components take three arguments. The arguments are critical temperature, initial phase shift (in units of 2pi), and standard deviation of the additive initial (Gaussian) noise. The critical temperatures will be scaled so that the maximum is Tc = 1. Vortices can be added with '--vortex'. Note that vortices added using the CLI will be added to all order-parameter components. To set them separately use the config file.",
     )
 
     # Temperature.
@@ -125,7 +125,7 @@ def add_runner_arguments(parser) -> None:
         "--penetration-depth",
         type=float,
         default=None,
-        help="The London penetration depth, expressed in coherence lengths (i.e. the Ginzburg-Landau coefficient). If the value is less than zero, the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
+        help="The London penetration depth, expressed in coherence lengths (i.e. the Ginzburg-Landau coefficient). If the value is zero or less, the induced vector-potential will not be computed. In other words, the penetration depth will be infinite.",
     )
 
     # Crystal axes rotation.
@@ -156,35 +156,6 @@ def add_runner_arguments(parser) -> None:
         help="Set sign of the charge. Use -1 (+1) for electrons (holes).",
     )
 
-    # =============== PHYSICS: VORTEX LATTICE =============== #
-
-    # x-coordinate for phase winding centers.
-    physics.add_argument(
-        "--vortices-centers-x",
-        type=float,
-        default=None,
-        nargs="+",
-        help="Start guess for phase-winding centers (x-coordinate, in coherence lengths). Must be set together with --vortices-centers-y and --vortices-winding-numbers. NOTE: Overrides the phase winding of the order-parameter component.",
-    )
-
-    # y-coordinate for phase winding centers.
-    physics.add_argument(
-        "--vortices-centers-y",
-        type=float,
-        default=None,
-        nargs="+",
-        help="Start guess for phase-winding centers (y-coordinate, in coherence lengths). Must be set together with --vortices-centers-x and --vortices-winding-numbers. NOTE: Overrides the phase winding of the order-parameter component.",
-    )
-
-    # Winding numbers for the phase-winding centers.
-    physics.add_argument(
-        "--vortices-winding-numbers",
-        type=float,
-        default=None,
-        nargs="+",
-        help="Winding numbers for the phase-winding centers. Must be set together with --vortices-centers-x and --vortices-centers-y. NOTE: Overrides the phase winding of the order-parameter component.",
-    )
-
     # =============== PHYSICS: ORDER PARAMETER =============== #
 
     # D_{x^2-y^2}-wave.
@@ -199,12 +170,11 @@ def add_runner_arguments(parser) -> None:
         metavar=(
             "critical_temperature",
             "initial_phase_shift",
-            "initial_phase_winding",
             "initial_noise_stddev",
         ),
         type=float,
         default=None,
-        nargs=4,
+        nargs=3,
         help="D_(x^2-y^2)-wave order-parameter component.",
     )
 
@@ -220,12 +190,11 @@ def add_runner_arguments(parser) -> None:
         metavar=(
             "critical_temperature",
             "initial_phase_shift",
-            "initial_phase_winding",
             "initial_noise_stddev",
         ),
         type=float,
         default=None,
-        nargs=4,
+        nargs=3,
         help="D_(xy)-wave order-parameter component.",
     )
 
@@ -241,12 +210,11 @@ def add_runner_arguments(parser) -> None:
         metavar=(
             "critical_temperature",
             "initial_phase_shift",
-            "initial_phase_winding",
             "initial_noise_stddev",
         ),
         type=float,
         default=None,
-        nargs=4,
+        nargs=3,
         help="G-wave order-parameter component.",
     )
 
@@ -262,13 +230,31 @@ def add_runner_arguments(parser) -> None:
         metavar=(
             "critical_temperature",
             "initial_phase_shift",
-            "initial_phase_winding",
             "initial_noise_stddev",
         ),
         type=float,
         default=None,
-        nargs=4,
+        nargs=3,
         help="S-wave order-parameter component.",
+    )
+
+    # =============== PHYSICS: VORTICES =============== #
+
+    # Ignore geometry in config file.
+    physics.add_argument(
+        "--clear-vortices",
+        action="store_true",
+        help="Ignore the vortices specified in the config file.",
+    )
+
+    # Vortices.
+    physics.add_argument(
+        "--vortex",
+        metavar=("center_x", "center_y", "winding_number"),
+        type=float,
+        action="append",
+        nargs=3,
+        help="Add a vortex in all order-parameter components.",
     )
 
     # =============== GEOMETRY =============== #
@@ -279,7 +265,7 @@ def add_runner_arguments(parser) -> None:
 
     # Ignore geometry in config file.
     geometry.add_argument(
-        "--geometry-clear",
+        "--clear-geometry",
         action="store_true",
         help="Ignore the geometry specified in the config file.",
     )
@@ -287,23 +273,23 @@ def add_runner_arguments(parser) -> None:
     # Add disc.
     geometry.add_argument(
         "--add-disc",
-        metavar=("diameter", "center_x", "center_y"),
+        metavar=("center_x", "center_y", "diameter"),
         type=float,
         action="append",
         nargs=3,
         default=None,
-        help="Add disc to geometry. The arguments are diameter, center x, and center y.",
+        help="Add disc to geometry. The arguments are  center x, center y, and diameter.",
     )
 
     # Remove disc.
     geometry.add_argument(
         "--remove-disc",
-        metavar=("diameter", "center_x", "center_y"),
+        metavar=("center_x", "center_y", "diameter"),
         type=float,
         action="append",
         nargs=3,
         default=None,
-        help="Remove disc from geometry. The arguments are diameter, center x, and center y.",
+        help="Remove disc from geometry. The arguments are  center x, center y, and diameter.",
     )
 
     # Add regular polygon.
@@ -995,91 +981,79 @@ def set_runner_arguments_from_cli(
     set_value(sim_params, "gauge", args.gauge, group)
     set_value(sim_params, "charge_sign", args.charge_sign, group)
 
-    # ================== PHYSICS: VORTEX LATTICE ================== #
-    if (
-        (args.vortices_centers_x is not None)
-        or (args.vortices_centers_y is not None)
-        or (args.vortices_winding_numbers is not None)
-    ):
-        sim_params["physics"]["vortex_lattice"] = {
-            "vortices_centers_x": args.vortices_centers_x,
-            "vortices_centers_y": args.vortices_centers_y,
-            "vortices_winding_numbers": args.vortices_winding_numbers,
-        }
-
     # ================== PHYSICS: ORDER PARAMETER ================== #
-    component = "dx2-y2"
-    if args.no_dx2_y2_wave and (
-        component in sim_params["physics"]["order_parameter"].keys()
-    ):
-        del sim_params["physics"]["order_parameter"][component]
-    elif args.dx2_y2_wave is not None:
-        Tc, phase_shift, phase_winding, noise_stddev = args.dx2_y2_wave
-        sim_params["physics"]["order_parameter"][component] = {
-            "critical_temperature": Tc,
-            "initial_phase_shift": phase_shift,
-            "initial_phase_winding": phase_winding,
-            "initial_noise_stddev": noise_stddev,
-        }
+    # Get vortices.
+    vortices = []
+    if args.vortex is not None:
+        for vortex in args.vortex:
+            center_x, center_y, winding_number = vortex
+            vortices.append(
+                {
+                    "center_x": center_x,
+                    "center_y": center_y,
+                    "winding_number": winding_number,
+                }
+            )
 
-    component = "dxy"
-    if args.no_dxy_wave and (
-        component in sim_params["physics"]["order_parameter"].keys()
-    ):
-        del sim_params["physics"]["order_parameter"][component]
-    elif args.dxy_wave is not None:
-        Tc, phase_shift, phase_winding, noise_stddev = args.dxy_wave
-        sim_params["physics"]["order_parameter"][component] = {
-            "critical_temperature": Tc,
-            "initial_phase_shift": phase_shift,
-            "initial_phase_winding": phase_winding,
-            "initial_noise_stddev": noise_stddev,
-        }
+    # Fetch the arguments for all components so we can loop over them.
+    components = {
+        "dx2-y2": {"no_wave": args.no_dx2_y2_wave, "args": args.dx2_y2_wave},
+        "dxy": {"no_wave": args.no_dxy_wave, "args": args.dxy_wave},
+        "g": {"no_wave": args.no_g_wave, "args": args.g_wave},
+        "s": {"no_wave": args.no_s_wave, "args": args.s_wave},
+    }
 
-    component = "g"
-    if args.no_g_wave and (
-        component in sim_params["physics"]["order_parameter"].keys()
-    ):
-        del sim_params["physics"]["order_parameter"][component]
-    elif args.g_wave:
-        Tc, phase_shift, phase_winding, noise_stddev = args.g_wave
-        sim_params["physics"]["order_parameter"][component] = {
-            "critical_temperature": Tc,
-            "initial_phase_shift": phase_shift,
-            "initial_phase_winding": phase_winding,
-            "initial_noise_stddev": noise_stddev,
-        }
+    # Loop over components and update parameters.
+    for key, value in components.items():
+        key_exists = key in sim_params["physics"]["order_parameter"].keys()
+        if value["no_wave"] and key_exists:
+            # If the user has set "--no-X-wave" the component is removed.
+            del sim_params["physics"]["order_parameter"][key]
+        elif value["args"] is not None:
+            # The arguments for a component has been set, so lets update everything.
+            Tc, phase_shift, noise_stddev = value["args"]
 
-    component = "s"
-    if args.no_s_wave and (
-        component in sim_params["physics"]["order_parameter"].keys()
-    ):
-        del sim_params["physics"]["order_parameter"][component]
-    elif args.s_wave:
-        Tc, phase_shift, phase_winding, noise_stddev = args.s_wave
-        sim_params["physics"]["order_parameter"][component] = {
-            "critical_temperature": Tc,
-            "initial_phase_shift": phase_shift,
-            "initial_phase_winding": phase_winding,
-            "initial_noise_stddev": noise_stddev,
-        }
+            # Fetch vortices if component was set in config.
+            if key_exists:
+                component_vortices = sim_params["physics"]["order_parameter"][key][
+                    "vortices"
+                ]
+            else:
+                component_vortices = []
+
+            # Update all fields of the component.
+            sim_params["physics"]["order_parameter"][key] = {
+                "critical_temperature": Tc,
+                "initial_phase_shift": phase_shift,
+                "initial_noise_stddev": noise_stddev,
+                "vortices": component_vortices,
+            }
+
+        # If the component exists we must update the vortices if set.
+        if key in sim_params["physics"]["order_parameter"].keys():
+            if args.clear_vortices:
+                sim_params["physics"]["order_parameter"][key]["vortices"] = vortices
+            else:
+                sim_params["physics"]["order_parameter"][key]["vortices"].extend(
+                    vortices
+                )
 
     # ================== GEOMETRY ================== #
     group = "geometry"
-    if args.geometry_clear:
+    if args.clear_geometry:
         sim_params[group] = []
 
     # Add discs.
     if args.add_disc is not None:
         for disc in args.add_disc:
-            diameter, center_x, center_y = disc
+            center_x, center_y, diameter = disc
             sim_params[group].append(
                 {
                     "disc": {
                         "add": True,
-                        "diameter": diameter,
                         "center_x": center_x,
                         "center_y": center_y,
+                        "diameter": diameter,
                     }
                 }
             )
@@ -1104,14 +1078,14 @@ def set_runner_arguments_from_cli(
     # Remove discs.
     if args.remove_disc is not None:
         for disc in args.remove_disc:
-            diameter, center_x, center_y = disc
+            center_x, center_y, diameter = disc
             sim_params[group].append(
                 {
                     "disc": {
                         "add": False,
-                        "diameter": diameter,
                         "center_x": center_x,
                         "center_y": center_y,
+                        "diameter": diameter,
                     }
                 }
             )
