@@ -67,8 +67,8 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       // DISC: GET EXTREMUM COORDINATES
       //***************************************************
       const T radius = static_cast<T>(
-          0.5 * geometryComponentVector[i][geometryComponentName]["diameter"]
-                    .asDouble());
+          geometryComponentVector[i][geometryComponentName]["radius"]
+              .asDouble());
       const T centerX = static_cast<T>(
           geometryComponentVector[i][geometryComponentName]["center_x"]
               .asDouble());
@@ -225,14 +225,14 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
                geometryComponentVector[i]["disc"]["center_y"].asDouble()) -
            inOffsetY) /
           inScalingFactor;
-      // Disc diameter in internal coordinate system.
-      const T diameter =
+      // Disc radius in internal coordinate system.
+      const T radius =
           static_cast<T>(
-              geometryComponentVector[i]["disc"]["diameter"].asDouble()) /
+              geometryComponentVector[i]["disc"]["radius"].asDouble()) /
           inScalingFactor;
 
       // Add/remove disc.
-      outGeometry->add(new DiscGeometry<T>(inGrainFraction, diameter,
+      outGeometry->add(new DiscGeometry<T>(inGrainFraction, radius,
                                            xCenterTranslatedScaled,
                                            yCenterTranslatedScaled),
                        addOrRemove);

@@ -394,8 +394,9 @@ template <typename T> void testSWaveAnnulusRadial() {
   conga::GeometryGroup<T> *geometry = new conga::GeometryGroup<T>(&context);
   const T grainFraction = parameters->getGrainFraction();
   geometry->add(new conga::DiscGeometry<T>(grainFraction), conga::Type::add);
-  const T holeFraction = r / R;
-  geometry->add(new conga::DiscGeometry<T>(grainFraction, holeFraction),
+  const T relativeHoleRadius =
+      static_cast<T>(conga::constants::MAXIMUM_COORDINATE) * r / R;
+  geometry->add(new conga::DiscGeometry<T>(grainFraction, relativeHoleRadius),
                 conga::Type::remove);
 
   // Integrator.

@@ -25,11 +25,11 @@
 namespace conga {
 template <typename T> class DiscGeometry : public GeometryComponent<T> {
 public:
-  // Initialize a disc. inDiameter gives the diameter of the
+  // Initialize a disc. inRadius gives the diameter of the
   // disc relative to the available simulation space (to be padded by the grain
   // margin). The center coordinate is (inCenterX, inCenterY).
   DiscGeometry(const T inGrainFraction,
-               const T inDiameter = static_cast<T>(1.0),
+               const T inRadius = static_cast<T>(constants::MAXIMUM_COORDINATE),
                const T inCenterX = static_cast<T>(0.0),
                const T inCenterY = static_cast<T>(0.0));
   DiscGeometry(const DiscGeometry &inOther);
@@ -56,7 +56,8 @@ private:
   /// coordinate.
   ///
   /// \param inFractionalCoordinate Coordinate in [-MAX, MAX] of the simulation
-  /// space. \param inSimulationLatticeSideLength The number of lattice sites
+  /// space.
+  /// \param inSimulationLatticeSideLength The number of lattice sites
   /// per side length of the simulation space.
   /// \param inGridLatticeSideLength The number of elements per side length of
   /// the grid.
@@ -245,12 +246,12 @@ DiscGeometry<T>::DiscGeometry(const DiscGeometry<T> &inOther)
     : GeometryComponent<T>(inOther), m_disc() {}
 
 template <typename T>
-DiscGeometry<T>::DiscGeometry(const T inGrainFraction, const T inDiameter,
+DiscGeometry<T>::DiscGeometry(const T inGrainFraction, const T inRadius,
                               const T inCenterX, const T inCenterY)
     : GeometryComponent<T>() {
 
-  // Calculate radius from diameter and apply margin/scaling.
-  const T discRadiusPadded = static_cast<T>(0.5) * inDiameter * inGrainFraction;
+  // Apply margin/scaling.
+  const T discRadiusPadded = inRadius * inGrainFraction;
 
   // Apply scaling and margin to center coordinates
   const T centerPaddedX = inCenterX * inGrainFraction;

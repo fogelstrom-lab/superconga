@@ -230,9 +230,9 @@ runner_checks = {
                     "optional": True,
                     "fields": {
                         "add": {"type": bool},
-                        "diameter": {"type": float, "low": 0.0},
                         "center_x": {"type": float},
                         "center_y": {"type": float},
+                        "radius": {"type": float, "low": 0.0},
                     },
                 },
                 "polygon": {

@@ -41,14 +41,14 @@ template <typename T> void testZeroValuesOutsideDomain(const bool inIsDisc) {
   const T grainFracton = parameters->getGrainFraction();
   if (inIsDisc) {
     // Add two disconnected discs.
-    const T diameter = static_cast<T>(0.25);
+    const T radius = static_cast<T>(0.125);
     const T centerX = static_cast<T>(0.25);
     const T centerY = static_cast<T>(0.25);
     geometryGroup->add(
-        new conga::DiscGeometry<T>(grainFracton, diameter, centerX, centerY),
+        new conga::DiscGeometry<T>(grainFracton, radius, centerX, centerY),
         conga::Type::add);
     geometryGroup->add(
-        new conga::DiscGeometry<T>(grainFracton, diameter, -centerX, -centerY),
+        new conga::DiscGeometry<T>(grainFracton, radius, -centerX, -centerY),
         conga::Type::add);
   } else {
     const int numVerticesSquare = 4;
