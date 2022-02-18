@@ -21,9 +21,13 @@ from python_libraries.settings import configuration
 # ------------------------------------------------------------------------------
 # Validate command-line arguments based on check list, defined in validate().
 def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> bool:
-    # Check that the value is of the expected type.
+    # Check that the value is of the expected type. Or if the expected type is float, accept int as well.
     expected_type = checks["type"]
-    if not isinstance(value, expected_type):
+    is_float = expected_type == float
+    is_expected = isinstance(value, expected_type) or (
+        is_float and isinstance(value, int)
+    )
+    if not is_expected:
         print(f"-- ERROR! The field '{key}' must be of type {expected_type}.")
         return False
 
@@ -104,13 +108,6 @@ def check_dict(sim_params: dict, checks: dict) -> bool:
                 continue
 
         value = sim_params[key]
-
-        # Check that the value is of the expected type.
-        expected_type = value_checks["type"]
-        if not isinstance(value, expected_type):
-            print(f"-- ERROR! The field '{key}' must be of type {expected_type}.")
-            success = False
-            continue
 
         # Check if field is a dict: if so call the function again (recursively).
         if isinstance(value, dict):
