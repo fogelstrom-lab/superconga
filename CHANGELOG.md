@@ -46,6 +46,7 @@
 - Fix plotter for multi-component order parameters.
 - Fix bug not including doctest when fetching it.
 - Fix live visualization not working when using different GPUs for computation and visualization.
+- Fix bug rejecting float parameters in `config.json` if passed as int.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
