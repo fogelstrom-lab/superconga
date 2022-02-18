@@ -20,20 +20,27 @@
 #include <limits>
 
 namespace conga {
-namespace internal {
+namespace residual_internal {
+// Base epsilon. It is used directly when computing scalar residuals or using
+// LInf norm. For L1 and L2 norms it is scaled by the number of elements. What
+// epsilon should be is up for debate. It is needed for quantities that converge
+// to zero. If epsilon = 0 then the residual converges to 0/0 instead of
+// 0/epsilon.
+constexpr double EPSILON = 1e-4;
+
 /// \brief Compute the residual as numer / max(denom, epsilon).
 ///
 /// \param inNumer The numerator.
 /// \param inDenom The denominator.
+/// \param inEpsilon When to stop using relative error and move towards absolut
+/// error. This is needed for quantities converging to zero.
 ///
 /// \return The residual.
 template <typename T>
-inline T computeResidual(const T inNumer, const T inDenom) {
-  // What epsilon should be is up for debate.
-  const T epsilon = static_cast<T>(1e-4);
-  return inNumer / std::max(inDenom, epsilon);
+inline T computeResidual(const T inNumer, const T inDenom, const T inEpsilon) {
+  return inNumer / std::max(inDenom, inEpsilon);
 }
-} // namespace internal
+} // namespace residual_internal
 
 /// \brief Enum class for residual norm.
 enum class ResidualNorm { L1, L2, LInf };
@@ -47,7 +54,8 @@ enum class ResidualNorm { L1, L2, LInf };
 template <typename T> inline T computeResidual(const T inOld, const T inNew) {
   const T numer = std::abs(inOld - inNew);
   const T denom = std::abs(inOld);
-  return internal::computeResidual(numer, denom);
+  const T epsilon = static_cast<T>(residual_internal::EPSILON);
+  return residual_internal::computeResidual(numer, denom, epsilon);
 }
 
 /// \brief Compute the residual given old and new values.
@@ -68,15 +76,24 @@ inline T computeResidual(const GridData<T, Device> &inOld,
   // Compute.
   T numer = static_cast<T>(0);
   T denom = static_cast<T>(0);
+  T epsilon = static_cast<T>(residual_internal::EPSILON);
   switch (inNormType) {
   case ResidualNorm::L1: {
     numer = (inOld - inNew).L1Norm();
     denom = inOld.L1Norm();
+    // TODO(Niclas): This should probably be:
+    // numGrainLatticeSites * numFields *(1 + static_cast<int>(isComplex)).
+    const int numElements = inOld.numElements();
+    epsilon *= static_cast<T>(numElements);
     break;
   }
   case ResidualNorm::L2: {
     numer = (inOld - inNew).L2Norm();
     denom = inOld.L2Norm();
+    // TODO(Niclas): This should probably be:
+    // numGrainLatticeSites * numFields *(1 + static_cast<int>(isComplex)).
+    const int numElements = inOld.numElements();
+    epsilon *= static_cast<T>(numElements);
     break;
   }
   case ResidualNorm::LInf: {
@@ -85,7 +102,7 @@ inline T computeResidual(const GridData<T, Device> &inOld,
     break;
   }
   }
-  return internal::computeResidual(numer, denom);
+  return residual_internal::computeResidual(numer, denom, epsilon);
 }
 } // namespace conga
 

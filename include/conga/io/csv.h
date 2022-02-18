@@ -16,7 +16,9 @@
 #include "../order_parameter/OrderParameter.h"
 #include "CSVGridWriter.h"
 #include "CSVIterationWriter.h"
+#include "CSVPostprocessIterationWriter.h"
 #include "CSVReader.h"
+#include "CSVSimulationIterationWriter.h"
 
 #include <thrust/device_vector.h>
 

@@ -185,10 +185,7 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // A negative number means doing all of them at once.
   const int numEnergiesPerBlock = -1;
-  const int numBurnInIterations =
-      simParams["accuracy"]["num_iterations_burnin"].asInt();
-  new conga::IntegrationIteratorOzaki<T>(&context, numEnergiesPerBlock,
-                                         numBurnInIterations);
+  new conga::IntegrationIteratorOzaki<T>(&context, numEnergiesPerBlock);
 
   //***************************************************
   // SET UP ORDER PARAMETER
@@ -493,12 +490,9 @@ int main(int argc, char *argv[]) {
 
   // Set the save frequency. If the argument is negative we only save the grid
   // data at the very end.
-  const int saveFrequencyArg = simParams["misc"]["save_frequency"].asInt();
-  const int saveFrequency = (saveFrequencyArg < 0)
-                                ? std::numeric_limits<int>::max()
-                                : saveFrequencyArg;
+  const int saveFrequency = simParams["misc"]["save_frequency"].asInt();
 
-  const bool saveData = !saveDataPath.empty() && (saveFrequency > 0);
+  const bool saveData = !saveDataPath.empty() && (saveFrequency != 0);
   if (saveData) {
     // Create directories.
     std::filesystem::create_directories(saveDataPath);
@@ -515,14 +509,27 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  const bool visualize = simParams["misc"]["visualize"].asBool();
+  const int numBurnInIterations =
+      simParams["accuracy"]["num_iterations_burnin"].asInt();
   const int numIterationsMin =
       simParams["accuracy"]["num_iterations_min"].asInt();
   const int numIterationsMax =
       simParams["accuracy"]["num_iterations_max"].asInt();
   const conga::io::DataFormat dataFormat =
       conga::io::getDataFormat(simParams["misc"]["data_format"].asString());
+
+  // Make iteration writer.
+  std::shared_ptr<conga::io::CSVIterationWriter<T>> iterationWriter;
+  if (saveData) {
+    const std::filesystem::path convergencePath =
+        saveDataPath / "simulation_convergence.csv";
+    iterationWriter =
+        std::make_shared<conga::io::CSVSimulationIterationWriter<T>>(
+            convergencePath);
+  }
+
 #ifdef CONGA_VISUALIZE
+  const bool visualize = simParams["misc"]["visualize"].asBool();
   if (visualize) {
     // Create visualizer.
     const int numOrderParameterComponents =
@@ -537,24 +544,16 @@ int main(int argc, char *argv[]) {
     const int cols = numOrderParameterComponents + extraCols;
     conga::Visualizer<T> visualizer("SuperConga", cols, rows, domain);
 
-    conga::runSimulation(&context, visualizer, verbose, numIterationsMin,
-                         numIterationsMax, saveDataPath, saveFrequency,
-                         dataFormat);
-  } else {
-    conga::runSimulation(&context, verbose, numIterationsMin, numIterationsMax,
-                         saveDataPath, saveFrequency, dataFormat);
-  }
-#else
-  conga::runSimulation(&context, verbose, numIterationsMin, numIterationsMax,
-                       saveDataPath, saveFrequency, dataFormat);
+    conga::runSimulation(numBurnInIterations, numIterationsMin,
+                         numIterationsMax, verbose, iterationWriter,
+                         saveDataPath, saveFrequency, dataFormat, visualizer,
+                         context);
+  } else
 #endif // CONGA_VISUALIZE
-
-  //***********************************************
-  // SAVE RESULTS
-  //***********************************************
-  // Save at the very end.
-  if (saveData) {
-    conga::saveDataWrapper(&context, saveDataPath, dataFormat, verbose);
+  {
+    conga::runSimulation(numBurnInIterations, numIterationsMin,
+                         numIterationsMax, verbose, iterationWriter,
+                         saveDataPath, saveFrequency, dataFormat, context);
   }
 
   // Yay!

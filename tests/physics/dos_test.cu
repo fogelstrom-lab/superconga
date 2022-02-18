@@ -149,11 +149,8 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   context.initialize();
 
   // =================== ACT ==================== //
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status =
-        conga::runIteration(&context, true, 0, simParams::NUM_ITERATIONS_MAX);
-  }
+  const bool isConverged =
+      conga::runCompute(0, simParams::NUM_ITERATIONS_MAX, true, context);
 
   // Get results.
   const conga::GridGPU<T> &LDOS = *(context.getComputeLDOS()->getResult());
@@ -209,7 +206,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
         LDOS.sumField(energyIdx) / static_cast<T>(numGrainLatticeSites);
     CHECK(testDOS == doctest::Approx(expectedDOS).epsilon(inTolerance));
   }
-  CHECK(context.isConverged());
+  CHECK(isConverged);
 }
 } // namespace helper
 

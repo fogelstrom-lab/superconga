@@ -13,6 +13,7 @@
 #ifndef CONGA_BOUNDARY_CONDITION_SPECULAR_H_
 #define CONGA_BOUNDARY_CONDITION_SPECULAR_H_
 
+#include "../compute/ComputeResidual.h"
 #include "../fermi_surface/FermiSurface.h"
 #include "../utils.h"
 #include "BoundaryCondition.h"
@@ -29,7 +30,7 @@ public:
   BoundaryConditionSpecular() : BoundaryCondition<T>() {}
   ~BoundaryConditionSpecular() {}
 
-  void computeBoundaryCondition(Context<T> *ctx) override;
+  T computeBoundaryCondition(Context<T> *ctx) override;
 };
 
 namespace internal {
@@ -358,7 +359,7 @@ __global__ void boundaryConditionSpecularKernel(
 } // namespace internal
 
 template <typename T>
-void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
+T BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
   IntegrationIterator<T> *iterator = ctx->getIntegrationIterator();
   GeometryGroup<T> *geom = ctx->getGeometry();
   RiccatiSolver<T> *riccati = ctx->getRiccatiSolver();
@@ -370,6 +371,10 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
 
   int numX, numY;
   geom->getGridDimensions(numX, numY);
+
+  // Copy previous so we can compute the residual.
+  const GridGPU<T> gammaPrevious = *(bnd->getBoundaryIn_gamma());
+  const GridGPU<T> gammaTildePrevious = *(bnd->getBoundaryIn_gammabar());
 
   // Somewhat faster with streams
   cudaStream_t s1, s2;
@@ -419,52 +424,64 @@ void BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     T momentumOffsetY;
     fermiSurface->getMomentumOffset(momentumOffsetX, momentumOffsetY);
 
-    // Compute reflection
-    // TODO(niclas): Don't check the numerical value, use enum!
-    const char boundaryLabel = 2;
-    const int direction = 1;
-    internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
-        // Model parameters
-        numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
-        yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
-        systemAnglesPtr, direction,
-        // Grids for domain info/data
-        domainLabel, boundaryLabel, boundaryNormalsX, boundaryNormalsY,
-        boundaryDistance,
-        // Data relating to sparse storage for gammas
-        bnd->getIndexSparseIn_gamma()->getDataPointer(),
-        bnd->getIndexSparseOut_gamma()->getDataPointer(),
-        bnd->getNumBoundaryIntersect_gamma()->getDataPointer(),
-        bnd->getBoundaryIntersectCoords_gamma()->getDataPointer(),
-        bnd->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-        bnd->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-        bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-        bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+    // Gamma.
+    {
+      const char boundaryLabel = 2;
+      const int direction = 1;
+      internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
+          // Model parameters
+          numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
+          yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
+          systemAnglesPtr, direction,
+          // Grids for domain info/data
+          domainLabel, boundaryLabel, boundaryNormalsX, boundaryNormalsY,
+          boundaryDistance,
+          // Data relating to sparse storage for gammas
+          bnd->getIndexSparseIn_gamma()->getDataPointer(),
+          bnd->getIndexSparseOut_gamma()->getDataPointer(),
+          bnd->getNumBoundaryIntersect_gamma()->getDataPointer(),
+          bnd->getBoundaryIntersectCoords_gamma()->getDataPointer(),
+          bnd->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+          bnd->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+          bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+          bnd->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+    }
 
-    // TODO(niclas): Don't check the numerical value, use enum!
-    const char boundaryLabelTilde = 3;
-    const int directionTilde = -1;
-    internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
-        // Model parameters
-        numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
-        yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
-        systemAnglesPtr, directionTilde,
-        // Grids for domain info/data
-        domainLabel, boundaryLabelTilde, boundaryNormalsX, boundaryNormalsY,
-        boundaryDistance,
-        // Data relating to sparse storage for gammas
-        bnd->getIndexSparseIn_gammabar()->getDataPointer(),
-        bnd->getIndexSparseOut_gammabar()->getDataPointer(),
-        bnd->getNumBoundaryIntersect_gammabar()->getDataPointer(),
-        bnd->getBoundaryIntersectCoords_gammabar()->getDataPointer(),
-        bnd->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
-        bnd->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
-        bnd->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
-        bnd->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+    // GammaTilde.
+    {
+      const char boundaryLabelTilde = 3;
+      const int directionTilde = -1;
+      internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
+          // Model parameters
+          numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
+          yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
+          systemAnglesPtr, directionTilde,
+          // Grids for domain info/data
+          domainLabel, boundaryLabelTilde, boundaryNormalsX, boundaryNormalsY,
+          boundaryDistance,
+          // Data relating to sparse storage for gammas
+          bnd->getIndexSparseIn_gammabar()->getDataPointer(),
+          bnd->getIndexSparseOut_gammabar()->getDataPointer(),
+          bnd->getNumBoundaryIntersect_gammabar()->getDataPointer(),
+          bnd->getBoundaryIntersectCoords_gammabar()->getDataPointer(),
+          bnd->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+          bnd->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+          bnd->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+          bnd->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+    }
   }
-
   cudaStreamDestroy(s1);
   cudaStreamDestroy(s2);
+
+  // Get which norm to use.
+  const ResidualNorm normType = ctx->getParameters()->getResidualNormType();
+
+  // Compute residual.
+  const T gammaResidual =
+      computeResidual(gammaPrevious, *(bnd->getBoundaryIn_gamma()), normType);
+  const T gammaTildeResidual = computeResidual(
+      gammaTildePrevious, *(bnd->getBoundaryIn_gammabar()), normType);
+  return std::max(gammaResidual, gammaTildeResidual);
 }
 } // namespace conga
 

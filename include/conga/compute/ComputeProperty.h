@@ -41,6 +41,7 @@ public:
   bool isConverged() const { return m_isConverged; }
   void setConverged(const bool inConverged = true) {
     m_isConverged = inConverged;
+    m_isPartiallyConverged = inConverged;
   }
 
   bool isPartiallyConverged() const { return m_isPartiallyConverged; }
@@ -104,12 +105,14 @@ private:
 template <typename T>
 ComputeProperty<T>::ComputeProperty()
     : ContextModule<T>(), _greensCurrentAngle(0), m_isConverged(false),
-      m_isPartiallyConverged(false), m_doCompute(true) {}
+      m_isPartiallyConverged(false), m_doCompute(true),
+      m_residual(static_cast<T>(0)) {}
 
 template <typename T>
 ComputeProperty<T>::ComputeProperty(Context<T> *ctx)
     : ContextModule<T>(ctx), _greensCurrentAngle(0), m_isConverged(false),
-      m_isPartiallyConverged(false), m_doCompute(true) {}
+      m_isPartiallyConverged(false), m_doCompute(true),
+      m_residual(static_cast<T>(0)) {}
 
 template <typename T> ComputeProperty<T>::~ComputeProperty() {
 #ifndef NDEBUG

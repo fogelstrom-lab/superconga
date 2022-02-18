@@ -389,19 +389,32 @@ int main(int argc, char *argv[]) {
   //***********************************************
   // PROCESSING: RUN SIMULATION UNTIL END CRITERIA
   //***********************************************
-  conga::runSimulation(&context, verbose,
-                       postProcessConfig["num_iterations_min"].asInt(),
-                       postProcessConfig["num_iterations_max"].asInt());
+  // Path to directory containing data to save to.
+  const std::filesystem::path saveDataPath(
+      postProcessConfig["save_path"].asString());
+  const bool saveData = !saveDataPath.empty();
+
+  // Make iteration writer.
+  std::shared_ptr<conga::io::CSVIterationWriter<T>> iterationWriter;
+  if (saveData) {
+    const std::filesystem::path convergencePath =
+        saveDataPath / "postprocess_convergence.csv";
+    iterationWriter =
+        std::make_shared<conga::io::CSVPostprocessIterationWriter<T>>(
+            convergencePath);
+  }
+
+  // Run everything.
+  conga::runPostprocess(postProcessConfig["num_iterations_burnin"].asInt(),
+                        postProcessConfig["num_iterations_min"].asInt(),
+                        postProcessConfig["num_iterations_max"].asInt(),
+                        verbose, iterationWriter, context);
 
   //***********************************************
   // SAVE DATA
   //***********************************************
 
-  // Path to directory containing data to save to.
-  const std::filesystem::path saveDataPath(
-      postProcessConfig["save_path"].asString());
-
-  if (!saveDataPath.empty()) {
+  if (saveData) {
     // Create directories.
     std::filesystem::create_directories(saveDataPath);
 

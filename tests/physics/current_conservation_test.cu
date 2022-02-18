@@ -169,13 +169,9 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
 
   // =================== ACT ==================== //
   context.initialize();
-
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, simParams::PRINT_ITERATION_STATUS,
-                                 simParams::NUM_ITERATIONS_MIN,
-                                 simParams::NUM_ITERATIONS_MAX);
-  }
+  const bool isConverged = conga::runCompute(
+      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
+      simParams::PRINT_ITERATION_STATUS, context);
 
   // Fetch the grain-summed current-density magnitude
   const conga::GridGPU<T> currentDensity =
@@ -208,7 +204,7 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
         doctest::Approx(expectedMeanCurrentDensityY).epsilon(tolerance));
   CHECK(sumAbsCurrent > static_cast<T>(0));
   CHECK(freeEnergyPerUnitArea < static_cast<T>(0));
-  CHECK(context.isConverged());
+  CHECK(isConverged);
 }
 } // namespace helper
 

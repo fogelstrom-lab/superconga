@@ -122,12 +122,9 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
 
   // Initialize and run simulation.
   context.initialize();
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, TEST_PARAMS::PRINT_ITERATION_STATUS,
-                                 TEST_PARAMS::NUM_ITERATIONS_MIN,
-                                 TEST_PARAMS::NUM_ITERATIONS_MAX);
-  }
+  const bool isConverged = conga::runCompute(
+      TEST_PARAMS::NUM_ITERATIONS_MIN, TEST_PARAMS::NUM_ITERATIONS_MAX,
+      TEST_PARAMS::PRINT_ITERATION_STATUS, context);
 
   // Get the free energy, our result.
   const T freeEnergy =

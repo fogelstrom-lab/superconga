@@ -132,10 +132,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
 
   // Run the simulation.
   context.initialize();
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, true, 0, inMaxIterations);
-  }
+  const bool isConverged = conga::runCompute(0, inMaxIterations, true, context);
 
   // Save the result.
   const T freeEnergy =
@@ -150,7 +147,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
         doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
 
   // Check convergence.
-  CHECK(context.isConverged());
+  CHECK(isConverged);
 }
 } // namespace helper
 
