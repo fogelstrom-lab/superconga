@@ -134,10 +134,7 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
 
   // =================== ACT ==================== //
   context.initialize();
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, true, 0, 100);
-  }
+  const bool isConverged = conga::runCompute(0, 100, true, context);
 
   const T area = context.getGeometry()->area();
   // The pi factor comes from our choice of units for the flux density:
@@ -164,7 +161,7 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   CHECK(penetrationDepth == doctest::Approx(testPenetrationDepth)
                                 .epsilon(inTolerance)
                                 .scale(static_cast<T>(0)));
-  CHECK(context.isConverged());
+  CHECK(isConverged);
 }
 } // namespace helper
 

@@ -76,6 +76,10 @@ private:
   T m_magneticFreeEnergyPerUnitArea;
 
   GridGPU<T> *m_freeEnergyGrid;
+
+  // Whether this is the first iteration or not. If it is the first then the
+  // residual is not computed.
+  bool m_isFirstIteration;
 };
 
 /// \brief Compute the free-energy kernel I
@@ -161,7 +165,7 @@ ComputeFreeEnergy<T>::ComputeFreeEnergy()
       m_freeEnergyPerUnitArea(static_cast<T>(0)),
       m_magneticFreeEnergy(static_cast<T>(0)),
       m_magneticFreeEnergyPerUnitArea(static_cast<T>(0)),
-      m_freeEnergyGrid(nullptr) {}
+      m_freeEnergyGrid(nullptr), m_isFirstIteration(true) {}
 
 template <typename T>
 ComputeFreeEnergy<T>::ComputeFreeEnergy(Context<T> *const inOutContext)
@@ -169,7 +173,7 @@ ComputeFreeEnergy<T>::ComputeFreeEnergy(Context<T> *const inOutContext)
       m_freeEnergyPerUnitArea(static_cast<T>(0)),
       m_magneticFreeEnergy(static_cast<T>(0)),
       m_magneticFreeEnergyPerUnitArea(static_cast<T>(0)),
-      m_freeEnergyGrid(nullptr) {
+      m_freeEnergyGrid(nullptr), m_isFirstIteration(true) {
   inOutContext->add(this);
 }
 
@@ -376,12 +380,27 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     const T totalFreeEnergyPerUnitArea =
         (nonMagneticSum + magneticSum) / static_cast<T>(numGrainLatticeSites);
 
-    // Set residual and convergence.
-    const T residual =
+    // Compute residual.
+    const T actualResidual =
         computeResidual(m_freeEnergyPerUnitArea, totalFreeEnergyPerUnitArea);
+
+    // Fetch convergence criterion.
+    const T convergenceCriterion =
+        C::getParameters()->getConvergenceCriterion();
+
+    // Fake residual to use the first iteration. This is done because the
+    // initial free energy has nothing to do with the initial order parameter
+    // and vector potential. So the residual from the first iteration
+    // is nonsense, and prevents the program from saying that convergence has
+    // been reached when starting from a previously converged solution.
+    const T fakeResidual = convergenceCriterion * static_cast<T>(0.1);
+
+    // Set residual.
+    const T residual = m_isFirstIteration ? fakeResidual : actualResidual;
     ComputeProperty<T>::setResidual(residual);
-    const bool isConverged =
-        residual < C::getParameters()->getConvergenceCriterion();
+
+    // Check convergence.
+    const bool isConverged = residual < convergenceCriterion;
     ComputeProperty<T>::setConverged(isConverged);
 
     // Update member variables.
@@ -389,6 +408,7 @@ template <typename T> void ComputeFreeEnergy<T>::computePropertyFromGreens() {
     m_freeEnergyPerUnitArea = totalFreeEnergyPerUnitArea;
     m_magneticFreeEnergy = magneticFreeEnergy;
     m_magneticFreeEnergyPerUnitArea = magneticFreeEnergyPerUnitArea;
+    m_isFirstIteration = false;
   } else {
     ComputeProperty<T>::setConverged(false);
   }

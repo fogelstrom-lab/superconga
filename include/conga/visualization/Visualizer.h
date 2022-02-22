@@ -69,6 +69,11 @@ public:
   /// \brief Destructor of the visualizer class.
   ~Visualizer() { releaseGLBuffer(m_handle); };
 
+  /// \brief Show the window if hidden.
+  ///
+  /// \return Void.
+  void show() { m_window.show(); }
+
   /// \brief Draw a grid to a subplot column. If complex the magnitude and the
   /// phase will be plotted along the column. If real and 2D the magnitude and
   /// xy-components will be plotted. If real and 1D the grid itself will be
@@ -184,8 +189,8 @@ template <typename T>
 Visualizer<T>::Visualizer(const std::string inTitle, const int inColumns,
                           const int inRows, const GridGPU<char> &inDomain,
                           const int inPrecision)
-    : m_title(inTitle), m_window(1366, 768, inTitle.c_str()), m_handle(nullptr),
-      m_domain(inDomain), m_cols(inColumns), m_rows(inRows),
+    : m_title(inTitle), m_window(1366, 768, inTitle.c_str(), nullptr, true),
+      m_handle(nullptr), m_domain(inDomain), m_cols(inColumns), m_rows(inRows),
       m_precision(inPrecision) {
   assert(m_cols > 0);
   assert(m_rows > 0);

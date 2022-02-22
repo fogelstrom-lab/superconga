@@ -374,7 +374,7 @@ def add_runner_arguments(parser) -> None:
         "--num-iterations-burnin",
         type=int,
         default=None,
-        help="The number of iterations to run just converging the boundary. A finite number (~10) is recommended when using '--continue' or '--load-path'.",
+        help="The number of iterations to run just converging the boundary. If negative the boundary will be iterated until convergence, which is recommended when using '--continue' or '--load-path'.",
     )
 
     # Num iterations max.
@@ -474,13 +474,13 @@ def add_runner_arguments(parser) -> None:
         "--load-path",
         type=str,
         default=None,
-        help="Directory containing data. The simulation will resume from this data. A finite number (~10) of burn-in iterations is recommended.",
+        help="Directory containing data. The simulation will resume from this data. Burn-in until convergence '-b -1' is recommended.",
     )
     group_load.add_argument(
         "--continue",
         dest="do_continue",
         action="store_true",
-        help="Resume the simulation from the data in the '--save-path' directory. A finite number (~10) of burn-in iterations is recommended.",
+        help="Resume the simulation from the data in the '--save-path' directory. Burn-in until convergence '-b -1' is recommended.",
     )
 
     # Save data.
@@ -633,13 +633,22 @@ def add_postprocess_arguments(parser) -> None:
         help="Number of energies per block. The density of states calculation is memory intensive, which might lead to the GPU running out of memory. To solve this, the problem is divided into multiple chunks (blocks) calculated in serial.",
     )
 
+    # Num iterations burn-in.
+    parser.add_argument(
+        "-b",
+        "--num-iterations-burnin",
+        type=int,
+        default=None,
+        help="The number of iterations to run just converging the boundary. If negative the boundary will be iterated until convergence, which is recommended.",
+    )
+
     # Num iterations max.
     parser.add_argument(
         "-M",
         "--num-iterations-max",
         type=int,
         default=None,
-        help="Maximum number of self-consistent iterations to run.",
+        help="Maximum number of self-consistent iterations to run per energy block.",
     )
 
     # Num iterations min.
@@ -648,7 +657,7 @@ def add_postprocess_arguments(parser) -> None:
         "--num-iterations-min",
         type=int,
         default=None,
-        help="Minimum number of self-consistent iterations to run.",
+        help="Minimum number of self-consistent iterations to run per energy block.",
     )
 
     # Num Fermi momenta.
@@ -1177,6 +1186,7 @@ def set_postprocess_arguments_from_cli(
     set_value(sim_params, "num_energies", args.num_energies)
     set_value(sim_params, "num_energies_per_block", args.num_energies_per_block)
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
+    set_value(sim_params, "num_iterations_burnin", args.num_iterations_burnin)
     set_value(sim_params, "num_iterations_max", args.num_iterations_max)
     set_value(sim_params, "num_iterations_min", args.num_iterations_min)
     set_value(sim_params, "load_path", args.load_path)

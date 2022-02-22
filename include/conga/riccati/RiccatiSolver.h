@@ -24,6 +24,7 @@
 #include "energy_shift/LocalVectorPotential.h"
 #include "energy_shift/VectorPotential_Kernel.h"
 
+#include <cmath>
 #include <limits>
 
 /////////////////////////////////////////////////////////
@@ -64,6 +65,8 @@ public:
     return _bc_list[idx];
   }
 
+  T getResidual() const { return m_residual; }
+
   // Vector potential
   GridGPU<T> *getEnergyShift() const { return _eShift; }
 
@@ -82,6 +85,10 @@ public:
   computeCoherenceFunctions(const ParameterIterator<int> &energy_iter,
                             const GridGPU<T> *energies,
                             const GridGPU<T> *deltaRot, const int angleIdx) = 0;
+
+  virtual void computeCoherenceFunctionsBurnIn(
+      const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+      const GridGPU<T> *deltaRot, const int angleIdx) = 0;
 
   // Helper functions
   void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock,
@@ -112,6 +119,9 @@ private:
 
   // Precomputed field for energy shift
   GridGPU<T> *_eShift;
+
+  // Residual at boundary.
+  T m_residual;
 };
 
 // This function could not be put into RiccatiSolver class, because of template
@@ -168,11 +178,13 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver()
-    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _eShift(0) {}
+    : ContextModule<T>(), _gamma(0), _gammabar(0), _storage(0), _eShift(0),
+      m_residual(std::numeric_limits<T>::max()) {}
 
 template <typename T>
 RiccatiSolver<T>::RiccatiSolver(Context<T> *ctx)
-    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _eShift(0) {}
+    : ContextModule<T>(ctx), _gamma(0), _gammabar(0), _storage(0), _eShift(0),
+      m_residual(std::numeric_limits<T>::max()) {}
 
 template <typename T> RiccatiSolver<T>::~RiccatiSolver() {
 #ifndef NDEBUG
@@ -246,17 +258,23 @@ template <typename T> void RiccatiSolver<T>::computeBoundaryConditions() {
   typedef RiccatiSolver<T> R;
 
   // Apply boundary condition(s)
-  int Nbc = getNumBoundaryConditions();
+  const int Nbc = getNumBoundaryConditions();
+
+  T maxResidual = std::numeric_limits<T>::min();
 
   if (Nbc > 0) {
-    for (int i = 0; i < Nbc; ++i)
-      getBoundaryCondition(i)->computeBoundaryCondition(
+    for (int i = 0; i < Nbc; ++i) {
+      const T residual = getBoundaryCondition(i)->computeBoundaryCondition(
           ContextModule<T>::getContext());
+      maxResidual = std::max(maxResidual, residual);
+    }
   } else {
 #ifndef NDEBUG
     std::cout << "-- WARNING: No boundary conditions specified!\n";
 #endif
   }
+
+  m_residual = maxResidual;
 }
 
 template <typename T>

@@ -6,8 +6,9 @@
 	"num_energies": 128,
 	"num_energies_per_block": 32,
 	"num_fermi_momenta": 720,
+	"num_iterations_burnin": 10,
 	"num_iterations_max": 1000,
-	"num_iterations_min": 10,
+	"num_iterations_min": 0,
 	"load_path": "data/examples/dwave_phase_crystal",
 	"save_path": "",
 	"verbose": true

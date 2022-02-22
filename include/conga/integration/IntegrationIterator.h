@@ -37,7 +37,7 @@ public:
 
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
-  virtual void compute() = 0;
+  virtual void compute(const bool inIsBurnIn) = 0;
 
   // Used by BoundaryStorage to determine size of storage
   virtual int getNumEnergiesInterval() = 0;
@@ -77,7 +77,7 @@ public:
       delete _energies;
     _energies = en;
   }
-  void setNumEnergiesPerBlock(int num);
+  void setNumEnergiesPerBlock(const int inNumEnergiesPerBlock);
   void setResidues(GridGPU<T> *res) {
     if (_residues)
       delete _residues;
@@ -158,9 +158,10 @@ template <typename T> void IntegrationIterator<T>::initIterators() {
 }
 
 template <typename T>
-void IntegrationIterator<T>::setNumEnergiesPerBlock(int num) {
-  if (num != _numEnergiesPerBlock) {
-    _numEnergiesPerBlock = num;
+void IntegrationIterator<T>::setNumEnergiesPerBlock(
+    const int inNumEnergiesPerBlock) {
+  if (inNumEnergiesPerBlock != _numEnergiesPerBlock) {
+    _numEnergiesPerBlock = inNumEnergiesPerBlock;
     initialize();
   }
 }

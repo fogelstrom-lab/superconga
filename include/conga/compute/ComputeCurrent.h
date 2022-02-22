@@ -60,15 +60,21 @@ private:
 
   // Temporary grid.
   GridGPU<T> *_tmp;
+
+  // Whether this is the first iteration or not. If it is the first then the
+  // residual is not computed.
+  bool m_isFirstIteration;
 };
 
 template <typename T>
 ComputeCurrent<T>::ComputeCurrent()
-    : ComputeProperty<T>(), _current(0), _current_real(0), _tmp(0) {}
+    : ComputeProperty<T>(), _current(0), _current_real(0), _tmp(0),
+      m_isFirstIteration(true) {}
 
 template <typename T>
 ComputeCurrent<T>::ComputeCurrent(Context<T> *ctx)
-    : ComputeProperty<T>(ctx), _current(0), _current_real(0), _tmp(0) {
+    : ComputeProperty<T>(ctx), _current(0), _current_real(0), _tmp(0),
+      m_isFirstIteration(true) {
   ctx->add(this);
 }
 
@@ -184,13 +190,32 @@ template <typename T> void ComputeCurrent<T>::computePropertyFromGreens() {
     ContextModule<T>::getContext()->getGeometry()->zeroValuesOutsideDomainRef(
         _current_real);
 
+    // Compute residual.
     const ResidualNorm normType = C::getParameters()->getResidualNormType();
-    const T residual = computeResidual(current_old, *_current_real, normType);
-    C::setResidual(residual);
+    const T actualResidual =
+        computeResidual(current_old, *_current_real, normType);
 
-    const bool isConverged =
-        residual < C::getParameters()->getConvergenceCriterion();
-    C::setConverged(isConverged);
+    // Fetch convergence criterion.
+    const T convergenceCriterion =
+        C::getParameters()->getConvergenceCriterion();
+
+    // Fake residual to use the first iteration. This is done because the
+    // initial current density has nothing to do with the initial order
+    // parameter and vector potential. So the residual from the first iteration
+    // is nonsense, and prevents the program from saying that convergence has
+    // been reached when starting from a previously converged solution.
+    const T fakeResidual = convergenceCriterion * static_cast<T>(0.1);
+
+    // Set residual.
+    const T residual = m_isFirstIteration ? fakeResidual : actualResidual;
+    ComputeProperty<T>::setResidual(residual);
+
+    // Check convergence.
+    const bool isConverged = residual < convergenceCriterion;
+    ComputeProperty<T>::setConverged(isConverged);
+
+    // First iteration is done.
+    m_isFirstIteration = false;
   } else {
     C::setConverged(false);
   }

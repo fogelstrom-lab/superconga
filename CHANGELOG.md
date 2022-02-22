@@ -7,6 +7,7 @@
 - **MAJOR** Change units so that the energy scale is `2*pi*kB*Tc`, `xi_0 = hbar*vF/(2*pi*kB*Tc)`, `A_0 = Phi_0/(pi*xi_0)`, `B_0 = Phi_0/(pi*xi^2_0)`, and `j_d = 2*pi*kB*Tc*|e|*v_F*N_F` both internally and externally.
 - **MAJOR** Group related parameters in the `config.json` file, and in `--help` message.
 - **MAJOR** Use ArrayFire-Forge for visualization, support building without visualization, and without tests.
+- **MAJOR** Include the residual of the boundary coherence functions in the total residual. Print residual during burn-in. Allow for burn-in until convergence by setting negative number. Allow burn-in in postprocessing.
 - Update README.md.
 - Speed up the coherence function computation by doing the two half steps in one go.
 - Speed up the coherence function computation by computing the homogeneous solutions separately.

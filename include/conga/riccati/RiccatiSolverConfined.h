@@ -45,8 +45,17 @@ public:
                                  const GridGPU<T> *delta,
                                  const int angleIdx) override;
 
+  void computeCoherenceFunctionsBurnIn(
+      const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+      const GridGPU<T> *delta, const int angleIdx) override;
+
   // Get a string describing the vector potential type, e.g. solenoid.
   std::string getVectorPotentialType() const { return POTENTIAL<T>::type(); }
+
+private:
+  void computeCoherenceFunctionsInternal(
+      const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+      const GridGPU<T> *delta, const int angleIdx, const bool isBurnIn);
 };
 
 namespace internal {
@@ -82,19 +91,248 @@ interpolateLinear(const thrust::complex<T> &inVal0,
   return (inVal1 + inVal0) * static_cast<T>(0.5);
 }
 
+/// \brief Take a step along a trajectory and read/write boundary values if
+/// encountered.
+///
+/// \param inStep The step length (h/vF).
+/// \param inXIdx The x-index.
+/// \param inYIdx The y-index.
+/// \param inAngleIdx The angle index.
+/// \param inEnergyIdx The energy index.
+/// \param inEnergyIdxOffset The energy offset (needed for computing sparse
+/// indices).
+/// \param inNumEnergies The number of energies.
+/// \param inLatticeSideLength The number of lattice sites per side length
+/// (assuming a square lattice).
+/// \param inEnergy The energy at the current lattice site.
+/// \param inEnergyPrevious The energy at the previous lattice site.
+/// \param inOrderParameter The order parameter at the current lattice site.
+/// \param inOrderParameterPrevious The order parameter at the previous lattice
+/// site.
+/// \param inBoundaryDistances Array of distances to the boundary.
+/// \param inCoherenceIdxInward Some array of indices needed for computing
+/// sparse indices (inward).
+/// \param inCoherenceIdxOutward Some array of indices needed for computing
+/// sparse indices (outward).
+/// \param inBoundaryCoherenceInwardReal The inward, real boundary coherence
+/// value.
+/// \param inBoundaryCoherenceInwardImag The inward, imag boundary coherence
+/// value.
+/// \param inOutBoundaryCoherenceOutwardReal The outward, real boundary
+/// coherence value.
+/// \param inOutBoundaryCoherenceOutwardImag The outward, imag boundary
+/// coherence value.
+/// \param inOutBoundaryEntryCount The number of encountered entry sites.
+/// \param inOutBoundaryExitCount The number of encountered exit sites.
+/// \param inOutCoherence The previous coherence value, will be overwritten by
+/// the current value.
+template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT>
+inline __device__ void computeStep(
+    const T inStep, const int inXIdx, const int inYIdx, const int inAngleIdx,
+    const int inEnergyIdx, const int inEnergyIdxOffset, const int inNumEnergies,
+    const int inLatticeSideLength, const thrust::complex<T> &inEnergy,
+    const thrust::complex<T> &inEnergyPrevious,
+    const thrust::complex<T> &inOrderParameter,
+    const thrust::complex<T> &inOrderParameterPrevious,
+    const char inDomainLabel, const T *const __restrict__ inBoundaryDistances,
+    const int *const __restrict__ inCoherenceIdxInward,
+    const int *const __restrict__ inCoherenceIdxOutward,
+    const T *const __restrict__ inBoundaryCoherenceInwardReal,
+    const T *const __restrict__ inBoundaryCoherenceInwardImag,
+    T *const __restrict__ inOutBoundaryCoherenceOutwardReal,
+    T *const __restrict__ inOutBoundaryCoherenceOutwardImag,
+    int &inOutBoundaryEntryCount, int &inOutBoundaryExitCount,
+    thrust::complex<T> &inOutCoherence) {
+  // Spatial index for boundary distance.
+  const int spatialIdx = inYIdx * inLatticeSideLength + inXIdx;
+
+  switch (inDomainLabel) {
+  case 1: {
+    // =========== Inside domain =========== //
+    const thrust::complex<T> energyMiddle =
+        interpolateLinear(inEnergyPrevious, inEnergy);
+    const thrust::complex<T> deltaMiddle =
+        interpolateLinear(inOrderParameterPrevious, inOrderParameter);
+    // Take a step to the center of the lattice site.
+    inOutCoherence =
+        riccati::computeStep(deltaMiddle, energyMiddle, inOutCoherence, inStep);
+    break;
+  }
+  case DOMAIN_ENTRY: {
+    // =========== Boundary entry =========== //
+
+    // Read boundary coherence function value.
+    const int sparseIdx = BoundaryStorage<T>::getSparseIndex(
+        inAngleIdx, inEnergyIdx + inEnergyIdxOffset, inXIdx,
+        inOutBoundaryEntryCount, inNumEnergies, inLatticeSideLength,
+        inCoherenceIdxInward);
+    const thrust::complex<T> boundaryCoherence(
+        inBoundaryCoherenceInwardReal[sparseIdx],
+        inBoundaryCoherenceInwardImag[sparseIdx]);
+
+    // Distance to exact boundary location from the center of the lattice
+    // site.
+    const T distance = abs(inBoundaryDistances[spatialIdx]);
+    const T boundaryToCenterStep = distance * inStep;
+
+    // Take a step from the grain boundary to the center of the lattice
+    // site.
+    inOutCoherence = riccati::computeStep(
+        inOrderParameter, inEnergy, boundaryCoherence, boundaryToCenterStep);
+
+    // Increase entry counter.
+    inOutBoundaryEntryCount++;
+    break;
+  }
+  case DOMAIN_EXIT: {
+    // =========== Boundary exit =========== //
+
+    // Take a step to the center of the lattice site.
+    const thrust::complex<T> energyMiddle =
+        interpolateLinear(inEnergyPrevious, inEnergy);
+    const thrust::complex<T> deltaMiddle =
+        interpolateLinear(inOrderParameterPrevious, inOrderParameter);
+    inOutCoherence =
+        riccati::computeStep(deltaMiddle, energyMiddle, inOutCoherence, inStep);
+
+    // Distance to exact boundary location from the center of the lattice
+    // site.
+    const T distance = abs(inBoundaryDistances[spatialIdx]);
+    const T centerToBoundaryStep = distance * inStep;
+
+    // Take a step from the center of the lattice site to the grain
+    // boundary.
+    const thrust::complex<T> boundaryCoherence = riccati::computeStep(
+        inOrderParameter, inEnergy, inOutCoherence, centerToBoundaryStep);
+
+    // Store boundary gamma.
+    const int sparseIdx = BoundaryStorage<T>::getSparseIndex(
+        inAngleIdx, inEnergyIdx + inEnergyIdxOffset, inXIdx,
+        inOutBoundaryExitCount, inNumEnergies, inLatticeSideLength,
+        inCoherenceIdxOutward);
+    inOutBoundaryCoherenceOutwardReal[sparseIdx] = boundaryCoherence.real();
+    inOutBoundaryCoherenceOutwardImag[sparseIdx] = boundaryCoherence.imag();
+
+    // Increase exit counter.
+    inOutBoundaryExitCount++;
+    break;
+  }
+  default: {
+    // =========== Outside domain =========== //
+    inOutCoherence = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
+  }
+  }
+}
+
 // TODO(niclas): Put parameters in order (in, inout, out).
 template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT, int DIRECTION>
 __global__ void computeCoherenceFunction(
     const T inStep, const int N, const int Ne, const int energyIdx_offset,
     const int idx_x_min, const int idx_x_max, const int idx_y_min,
-    const int idx_y_max, const int angleIdx, const T *const energies_re,
-    const T *const energies_im, const T *const energy_shift, T *gamma_real,
-    T *gamma_imag, const T *const delta_real, const T *const delta_imag,
-    const char *const domainLabel, const T *const domainNormals_x,
-    const T *const domainNormals_y, const T *const boundaryDistance,
-    const int *const idx_in_gamma, const int *const idx_out_gamma,
-    const T *const bnd_in_gamma_real, const T *const bnd_in_gamma_imag,
-    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
+    const int idx_y_max, const int angleIdx,
+    const T *const __restrict__ energies_re,
+    const T *const __restrict__ energies_im,
+    const T *const __restrict__ energy_shift, T *gamma_real, T *gamma_imag,
+    const T *const __restrict__ delta_real,
+    const T *const __restrict__ delta_imag,
+    const char *const __restrict__ domainLabels,
+    const T *const __restrict__ boundaryDistance,
+    const int *const __restrict__ idx_in_gamma,
+    const int *const __restrict__ idx_out_gamma,
+    const T *const __restrict__ bnd_in_gamma_real,
+    const T *const __restrict__ bnd_in_gamma_imag,
+    T *const __restrict__ bnd_out_gamma_real,
+    T *const __restrict__ bnd_out_gamma_imag) {
+  // x-coordinate
+  const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;
+  // energy coordinate
+  const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
+
+  // TODO(niclas): Shouldn't we check that energy coordinate is within bounds as
+  // well?
+  if (x <= idx_x_max) {
+    // Read the energy.
+    const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
+                                                 energies_im[e_idx]);
+
+    // In order to read/write values from/to the boundary coherence functions,
+    // we need to keep track of how many boundaries we have encountered along
+    // the trajectory.
+    int boundary_entry_count = 0;
+    int boundary_exit_count = 0;
+
+    const bool isGamma = DIRECTION > 0;
+
+    // Which y-coordinate to start from is determined by whether we are solving
+    // for gamma or gammatilde (which is codified by DIRECTION.
+    const int y_start = isGamma ? idx_y_min : idx_y_max;
+
+    // The previous energy and order parameter. They are updated as we traverse
+    // the trajectory.
+    thrust::complex<T> energyPrev(static_cast<T>(0), static_cast<T>(0));
+    thrust::complex<T> deltaPrev(static_cast<T>(0), static_cast<T>(0));
+
+    // The value of the coherence function at the center of the current
+    // lattice site. It is updated as we traverse the trajectory.
+    thrust::complex<T> coherence(static_cast<T>(0), static_cast<T>(0));
+
+    // OPTIMIZATION: PRECOMPUTE Y_MIN AND Y_MAX FOR EACH ROTATIONAL FRAME
+    // Compute gamma along trajectory
+    for (int i = 0; i <= (idx_y_max - idx_y_min); ++i) {
+      const int y = y_start + DIRECTION * i;
+
+      // Index to 2d-grids (Delta)
+      const int idx = y * N + x;
+
+      // The energy and order parameter.
+      const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
+      const thrust::complex<T> delta =
+          makeOrderParameter(delta_real[idx], delta_imag[idx], isGamma);
+
+      // What type of site are we on?
+      const char domainLabel = domainLabels[idx];
+
+      // Take step and read/write boundary values.
+      computeStep<T, DOMAIN_ENTRY, DOMAIN_EXIT>(
+          inStep, x, y, angleIdx, e_idx, energyIdx_offset, Ne, N, energy,
+          energyPrev, delta, deltaPrev, domainLabel, boundaryDistance,
+          idx_in_gamma, idx_out_gamma, bnd_in_gamma_real, bnd_in_gamma_imag,
+          bnd_out_gamma_real, bnd_out_gamma_imag, boundary_entry_count,
+          boundary_exit_count, coherence);
+
+      // Store coherence function.
+      // Index to gamma grid (for all energies)
+      const int gamma_idx = e_idx * 2 * N * N + y * N + x;
+      gamma_real[gamma_idx] = coherence.real();
+      gamma_imag[gamma_idx] = coherence.imag();
+
+      // Update previous energy and order parameter.
+      energyPrev = energy;
+      deltaPrev = delta;
+    }
+  }
+}
+
+// TODO(niclas): Put parameters in order (in, inout, out).
+template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT, int DIRECTION>
+__global__ void
+computeCoherenceFunctionBurnIn(const T inStep, const int N, const int Ne,
+                               const int energyIdx_offset, const int idx_x_min,
+                               const int idx_x_max, const int idx_y_min,
+                               const int idx_y_max, const int angleIdx,
+                               const T *const __restrict__ energies_re,
+                               const T *const __restrict__ energies_im,
+                               const T *const __restrict__ energy_shift,
+                               const T *const __restrict__ delta_real,
+                               const T *const __restrict__ delta_imag,
+                               const char *const __restrict__ domainLabels,
+                               const T *const __restrict__ boundaryDistance,
+                               const int *const __restrict__ idx_in_gamma,
+                               const int *const __restrict__ idx_out_gamma,
+                               const T *const __restrict__ bnd_in_gamma_real,
+                               const T *const __restrict__ bnd_in_gamma_imag,
+                               T *const __restrict__ bnd_out_gamma_real,
+                               T *const __restrict__ bnd_out_gamma_imag) {
   // x-coordinate
   const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_min;
   // energy coordinate
@@ -142,87 +380,15 @@ __global__ void computeCoherenceFunction(
           makeOrderParameter(delta_real[idx], delta_imag[idx], isGamma);
 
       // What type of node are we on?
-      const char nodeType = domainLabel[idx];
+      const char domainLabel = domainLabels[idx];
 
-      switch (nodeType) {
-      case 1: {
-        // =========== Inside domain =========== //
-        const thrust::complex<T> energyMiddle =
-            interpolateLinear(energyPrev, energy);
-        const thrust::complex<T> deltaMiddle =
-            interpolateLinear(deltaPrev, delta);
-        // Take a step to the center of the lattice site.
-        coherence =
-            riccati::computeStep(deltaMiddle, energyMiddle, coherence, inStep);
-        break;
-      }
-      case DOMAIN_ENTRY: {
-        // =========== Boundary entry =========== //
-
-        // Read boundary coherence function value.
-        const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
-            angleIdx, e_idx + energyIdx_offset, x, boundary_entry_count, Ne, N,
-            idx_in_gamma);
-        const thrust::complex<T> gBoundary(bnd_in_gamma_real[idx_sparse],
-                                           bnd_in_gamma_imag[idx_sparse]);
-
-        // Distance to exact boundary location from the center of the lattice
-        // site.
-        const T distance = abs(boundaryDistance[idx]);
-        const T boundaryToCenterStep = distance * inStep;
-
-        // Take a step from the grain boundary to the center of the lattice
-        // site.
-        coherence = riccati::computeStep(delta, energy, gBoundary,
-                                         boundaryToCenterStep);
-
-        // Increase entry counter.
-        boundary_entry_count++;
-        break;
-      }
-      case DOMAIN_EXIT: {
-        // =========== Boundary exit =========== //
-
-        // Take a step to the center of the lattice site.
-        const thrust::complex<T> energyMiddle =
-            interpolateLinear(energyPrev, energy);
-        const thrust::complex<T> deltaMiddle =
-            interpolateLinear(deltaPrev, delta);
-        coherence =
-            riccati::computeStep(deltaMiddle, energyMiddle, coherence, inStep);
-
-        // Distance to exact boundary location from the center of the lattice
-        // site.
-        const T distance = abs(boundaryDistance[idx]);
-        const T centerToBoundaryStep = distance * inStep;
-
-        // Take a step from the center of the lattice site to the grain
-        // boundary.
-        const thrust::complex<T> gBoundary = riccati::computeStep(
-            delta, energy, coherence, centerToBoundaryStep);
-
-        // Store boundary gamma.
-        const int idx_sparse = BoundaryStorage<T>::getSparseIndex(
-            angleIdx, e_idx + energyIdx_offset, x, boundary_exit_count, Ne, N,
-            idx_out_gamma);
-        bnd_out_gamma_real[idx_sparse] = gBoundary.real();
-        bnd_out_gamma_imag[idx_sparse] = gBoundary.imag();
-
-        // Increase exit counter.
-        boundary_exit_count++;
-        break;
-      }
-      default: {
-        // =========== Outside domain =========== //
-        coherence = thrust::complex<T>(static_cast<T>(0), static_cast<T>(0));
-      }
-      }
-
-      // Store coherence function.
-      // Index to gamma grid (for all energies)
-      const int gamma_idx = e_idx * 2 * N * N + y * N + x;
-      gamma_real[gamma_idx] = coherence.real();
-      gamma_imag[gamma_idx] = coherence.imag();
+      // Take step and read/write boundary values.
+      computeStep<T, DOMAIN_ENTRY, DOMAIN_EXIT>(
+          inStep, x, y, angleIdx, e_idx, energyIdx_offset, Ne, N, energy,
+          energyPrev, delta, deltaPrev, domainLabel, boundaryDistance,
+          idx_in_gamma, idx_out_gamma, bnd_in_gamma_real, bnd_in_gamma_imag,
+          bnd_out_gamma_real, bnd_out_gamma_imag, boundary_entry_count,
+          boundary_exit_count, coherence);
 
       // Update previous energy and order parameter.
       energyPrev = energy;
@@ -238,15 +404,22 @@ __global__ void computeCoherenceFunction(
 template <typename T, int DOMAIN_ENTRY, int DOMAIN_EXIT, int DIRECTION>
 __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
     const int N, const int Ne, const int energyIdx_offset,
-    const int idx_x_offset, const int angleIdx, const T *const energies_re,
-    const T *const energies_im, const T *const energy_shift,
-    const T *const gamma_real, const T *const gamma_imag,
-    const T *const delta_real, const T *const delta_imag,
-    const char *const domainLabel, const T *const domainNormals_x,
-    const T *const domainNormals_y, const T *const boundaryDistance,
-    const int *const idx_in_gamma, const int *const idx_out_gamma,
-    const T *const bnd_in_gamma_real, const T *const bnd_in_gamma_imag,
-    T *bnd_out_gamma_real, T *bnd_out_gamma_imag) {
+    const int idx_x_offset, const int angleIdx,
+    const T *const __restrict__ energies_re,
+    const T *const __restrict__ energies_im,
+    const T *const __restrict__ energy_shift,
+    const T *const __restrict__ gamma_real,
+    const T *const __restrict__ gamma_imag,
+    const T *const __restrict__ delta_real,
+    const T *const __restrict__ delta_imag,
+    const char *const __restrict__ domainLabels,
+    const T *const __restrict__ boundaryDistance,
+    const int *const __restrict__ idx_in_gamma,
+    const int *const __restrict__ idx_out_gamma,
+    const T *const __restrict__ bnd_in_gamma_real,
+    const T *const __restrict__ bnd_in_gamma_imag,
+    T *const __restrict__ bnd_out_gamma_real,
+    T *const __restrict__ bnd_out_gamma_imag) {
   // x-coordinate
   const int x = blockDim.x * blockIdx.x + threadIdx.x + idx_x_offset;
   // energy coordinate
@@ -272,9 +445,9 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
       const thrust::complex<T> energy = energyZeroPotential + energy_shift[idx];
 
       // What type of node are we on?
-      const char nodeType = domainLabel[idx];
+      const char domainLabel = domainLabels[idx];
 
-      if (nodeType == DOMAIN_EXIT) {
+      if (domainLabel == DOMAIN_EXIT) {
         // Read order parameter
         const thrust::complex<T> delta(delta_real[idx], delta_imag[idx]);
 
@@ -327,6 +500,25 @@ template <typename T, template <typename> class POTENTIAL>
 void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
     const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
     const GridGPU<T> *deltaRot, const int current_angle_idx) {
+  const bool isBurnIn = false;
+  computeCoherenceFunctionsInternal(energy_iter, energies, deltaRot,
+                                    current_angle_idx, isBurnIn);
+}
+
+template <typename T, template <typename> class POTENTIAL>
+void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctionsBurnIn(
+    const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+    const GridGPU<T> *deltaRot, const int current_angle_idx) {
+  const bool isBurnIn = true;
+  computeCoherenceFunctionsInternal(energy_iter, energies, deltaRot,
+                                    current_angle_idx, isBurnIn);
+}
+
+template <typename T, template <typename> class POTENTIAL>
+void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctionsInternal(
+    const ParameterIterator<int> &energy_iter, const GridGPU<T> *energies,
+    const GridGPU<T> *deltaRot, const int current_angle_idx,
+    const bool inIsBurnIn) {
   typedef RiccatiSolver<T> R;
   typedef ContextModule<T> C;
 
@@ -355,10 +547,6 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
   computeEnergyShift<T, POTENTIAL>(this, inducedVectorPotential, eShift,
                                    current_angle_idx);
 
-  // Get pointers to grids
-  GridGPU<T> *gamma = R::getGamma();
-  GridGPU<T> *gammabar = R::getGammabar();
-
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
 
@@ -386,59 +574,105 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctions(
   // To allow for efficient computation with no vector potential, it is accessed
   // via a templated function object.
 
-  // 	Solve gamma by propagating riccati trajectories along positive y
-  internal::computeCoherenceFunction<T, 2, 3, 1>
-      <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
-          // Model parameters and energy values
-          stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
-          idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-          energies->getDataPointer(0, Type::real) + energyIdxOffset,
-          energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-          eShift->getDataPointer(),
-          // Grids for gamma and Delta
-          gamma->getDataPointer(0, Type::real),
-          gamma->getDataPointer(0, Type::imag),
-          deltaRot->getDataPointer(0, Type::real),
-          deltaRot->getDataPointer(0, Type::imag),
-          // Grids for domain info/data
-          geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(1, Type::real),
-          geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-          // Data relating to sparse storage for boundary gammas
-          storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
-          storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+  if (inIsBurnIn) {
+    // Solve gamma by propagating riccati trajectories along positive y
+    internal::computeCoherenceFunctionBurnIn<T, 2, 3, 1>
+        <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
+            // Model parameters and energy values
+            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
+            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+            energies->getDataPointer(0, Type::real) + energyIdxOffset,
+            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+            eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
+            deltaRot->getDataPointer(0, Type::imag),
+            // Grids for domain info/data
+            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+            // Data relating to sparse storage for boundary gammas
+            storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+            storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
-  // 	Solve gammabar by propagating riccati trajectories along negative y
-  internal::computeCoherenceFunction<T, 3, 2, -1>
-      <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
-          // Model parameters and energy values
-          stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
-          idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-          energies->getDataPointer(0, Type::real) + energyIdxOffset,
-          energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-          eShift->getDataPointer(),
-          // Grids for gamma and Delta
-          gammabar->getDataPointer(0, Type::real),
-          gammabar->getDataPointer(0, Type::imag),
-          deltaRot->getDataPointer(0, Type::real),
-          deltaRot->getDataPointer(0, Type::imag),
-          // Grids for domain info/data
-          geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(1, Type::real),
-          geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-          // Data relating to sparse storage for boundary gammas
-          storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
-          storage->getIndexSparseOut_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
-          storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+    // Solve gammabar by propagating riccati trajectories along negative y
+    internal::computeCoherenceFunctionBurnIn<T, 3, 2, -1>
+        <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
+            // Model parameters and energy values
+            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
+            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+            energies->getDataPointer(0, Type::real) + energyIdxOffset,
+            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+            eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
+            deltaRot->getDataPointer(0, Type::imag),
+            // Grids for domain info/data
+            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+            // Data relating to sparse storage for boundary gammas
+            storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
+            storage->getIndexSparseOut_gammabar()->getDataPointer(0,
+                                                                  Type::real),
+            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+  } else {
+    // Get pointers to grids
+    GridGPU<T> *gamma = R::getGamma();
+    GridGPU<T> *gammabar = R::getGammabar();
+
+    // Solve gamma by propagating riccati trajectories along positive y
+    internal::computeCoherenceFunction<T, 2, 3, 1>
+        <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
+            // Model parameters and energy values
+            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
+            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+            energies->getDataPointer(0, Type::real) + energyIdxOffset,
+            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+            eShift->getDataPointer(),
+            // Grids for gamma and Delta
+            gamma->getDataPointer(0, Type::real),
+            gamma->getDataPointer(0, Type::imag),
+            deltaRot->getDataPointer(0, Type::real),
+            deltaRot->getDataPointer(0, Type::imag),
+            // Grids for domain info/data
+            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+            // Data relating to sparse storage for boundary gammas
+            storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+            storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+
+    // Solve gammabar by propagating riccati trajectories along negative y
+    internal::computeCoherenceFunction<T, 3, 2, -1>
+        <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
+            // Model parameters and energy values
+            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
+            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+            energies->getDataPointer(0, Type::real) + energyIdxOffset,
+            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+            eShift->getDataPointer(),
+            // Grids for gamma and Delta
+            gammabar->getDataPointer(0, Type::real),
+            gammabar->getDataPointer(0, Type::imag),
+            deltaRot->getDataPointer(0, Type::real),
+            deltaRot->getDataPointer(0, Type::imag),
+            // Grids for domain info/data
+            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+            // Data relating to sparse storage for boundary gammas
+            storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
+            storage->getIndexSparseOut_gammabar()->getDataPointer(0,
+                                                                  Type::real),
+            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+  }
 
   cudaStreamDestroy(s1);
   cudaStreamDestroy(s2);
@@ -505,8 +739,6 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
           deltaRot->getDataPointer(0, Type::imag),
           // Grids for domain info/data
           geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(1, Type::real),
           geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
           // Data relating to sparse storage for boundary gammas
           storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
@@ -532,8 +764,6 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
           deltaRot->getDataPointer(0, Type::imag),
           // Grids for domain info/data
           geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(0, Type::real),
-          geom->getNormalsGrid()->getDataPointer(1, Type::real),
           geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
           // Data relating to sparse storage for boundary gammas
           storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),

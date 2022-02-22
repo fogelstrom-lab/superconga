@@ -25,10 +25,11 @@ namespace conga {
 template <typename T>
 class IntegrationIteratorKeldysh : public IntegrationIterator<T> {
 public:
-  IntegrationIteratorKeldysh();
-  ~IntegrationIteratorKeldysh();
+  IntegrationIteratorKeldysh(const int inNumEnergiesPerBlock = -1);
+  IntegrationIteratorKeldysh(Context<T> *ctx,
+                             const int inNumEnergiesPerBlock = -1);
 
-  IntegrationIteratorKeldysh(Context<T> *ctx, int numEnergiesPerBlock = -1);
+  ~IntegrationIteratorKeldysh();
 
   int initialize() override;
 
@@ -45,20 +46,22 @@ public:
 
   // Computes all properties added with addComputeProperty(). Iterate this self
   // consistently.
-  void compute() override;
+  void compute(const bool inIsBurnIn) override;
 
 private:
   int m_lastEnergyIndex;
 };
 
 template <typename T>
-IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh()
-    : IntegrationIterator<T>(), m_lastEnergyIndex(-1) {}
+IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh(
+    const int inNumEnergiesPerBlock)
+    : IntegrationIterator<T>(inNumEnergiesPerBlock), m_lastEnergyIndex(-1) {}
 
 template <typename T>
 IntegrationIteratorKeldysh<T>::IntegrationIteratorKeldysh(
-    Context<T> *ctx, int numEnergiesPerBlock)
-    : IntegrationIterator<T>(ctx, numEnergiesPerBlock), m_lastEnergyIndex(-1) {
+    Context<T> *ctx, const int inNumEnergiesPerBlock)
+    : IntegrationIterator<T>(ctx, inNumEnergiesPerBlock),
+      m_lastEnergyIndex(-1) {
 #ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>()\n";
 #endif
@@ -186,8 +189,9 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
   OrderParameter<T> *orderParameter = C::getOrderParameter();
 
   if (!energyIterator->isDone()) {
-    // Do angle loop (integrate over momentum angles)
     const int numAngles = C::getParameters()->getAngularResolution();
+
+    // Do angle loop (integrate over momentum angles)
     for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
       // Rotate order parameter field to current angle
       const GridGPU<T> *orderParameterRotated =
@@ -203,13 +207,17 @@ void IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition() {
       riccatiSolver->computeInitialCondition(*energyIterator, energies,
                                              orderParameterRotated, angleIdx);
     }
+
+    // Apply the boundary condition.
+    riccatiSolver->computeBoundaryConditions();
   }
 
   ContextModule<T>::checkCudaError(
       "IntegrationIteratorKeldysh<T>::setBoundaryInitialCondition()");
 }
 
-template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
+template <typename T>
+void IntegrationIteratorKeldysh<T>::compute(const bool inIsBurnIn) {
   typedef IntegrationIterator<T> I;
   typedef ContextModule<T> C;
 
@@ -249,17 +257,6 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
 
   // Check if we are on a new energy interval.
   if (m_lastEnergyIndex != currentEnergyIndex) {
-    // Print some info to the user, so they know why the residual suddenly
-    // increases (a lot).
-    const T startFraction =
-        static_cast<T>(currentEnergyIndex) / static_cast<T>(numEnergies);
-    const T stopFraction =
-        static_cast<T>(currentEnergyIndex + numEnergiesCurrentBlock) /
-        static_cast<T>(numEnergies);
-    const T toPercent = static_cast<T>(100);
-    std::printf("-- Energy block %.2f%% --> %.2f%%.\n",
-                startFraction * toPercent, stopFraction * toPercent);
-
     // This is a new energy interval, so everything needs to be initialized.
 
     // Intialize the Riccati solver.
@@ -277,83 +274,110 @@ template <typename T> void IntegrationIteratorKeldysh<T>::compute() {
     m_lastEnergyIndex = currentEnergyIndex;
   }
 
-  // Initialize compute objects (usually just make sure memory is allocated and
-  // zeroed).
-  for (int i = 0; i < numComputeObjects; ++i) {
-    C::getComputeObject(i)->initializeIteration(numEnergiesCurrentBlock);
-  }
-
   // Get everything needed for the angle loop.
   GridGPU<T> *energies = I::getEnergies();
   GeometryGroup<T> *geometry = C::getGeometry();
   OrderParameter<T> *orderParameter = C::getOrderParameter();
 
-  // Apply the boundary condition.
-  riccatiSolver->computeBoundaryConditions();
+  const int numAngles = C::getFermiSurface()->getNumAngles();
 
-  // Do angle loop (integrate over momentum angles).
-  const int numAngles = C::getParameters()->getAngularResolution();
-  for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
-    // Rotate order parameter.
-    const GridGPU<T> *orderParameterRotated =
-        orderParameter->getRotatedGrid(-angleIdx);
+  if (inIsBurnIn) {
+    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+      // Rotate order parameter.
+      const GridGPU<T> *orderParameterRotated =
+          orderParameter->getRotatedGrid(-angleIdx);
 
-    const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
+      const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
 
-    // Create rotated geometry.
-    geometry->create(-systemAngle);
+      // Create rotated geometry.
+      geometry->create(-systemAngle);
 
-    // Initialize the compute objects for the current angle.
+      // Solve the Riccati equations.
+      riccatiSolver->computeCoherenceFunctionsBurnIn(
+          *energyIterator, energies, orderParameterRotated, angleIdx);
+    }
+
+    // Apply the boundary condition.
+    riccatiSolver->computeBoundaryConditions();
+  } else {
+    // Initialize compute objects (usually just make sure memory is allocated
+    // and zeroed).
     for (int i = 0; i < numComputeObjects; ++i) {
-      C::getComputeObject(i)->initializeGreensAngle();
+      C::getComputeObject(i)->initializeIteration(numEnergiesCurrentBlock);
     }
 
-    // Solve the Riccati equations.
-    riccatiSolver->computeCoherenceFunctions(*energyIterator, energies,
-                                             orderParameterRotated, angleIdx);
+    // Do angle loop (integrate over momentum angles).
+    for (int angleIdx = 0; angleIdx < numAngles; ++angleIdx) {
+      // Rotate order parameter.
+      const GridGPU<T> *orderParameterRotated =
+          orderParameter->getRotatedGrid(-angleIdx);
 
-    // Compute the integrand for the current angle for every compute object.
-    for (int i = 0; i < numComputeObjects; ++i) {
-      C::getComputeObject(i)->computeGreensAngle(riccatiSolver->getGamma(),
-                                                 riccatiSolver->getGammabar());
-    }
+      const T systemAngle = C::getFermiSurface()->getSystemAngle(angleIdx);
 
-    // Add integration contribution of greens function from current angle.
-    // TODO(niclas): This can probably be done in the loop above.
-    for (int i = 0; i < numComputeObjects; ++i) {
-      C::getComputeObject(i)->integrateGreensAngle(geometry, angleIdx);
-    }
-  }
+      // Create rotated geometry.
+      geometry->create(-systemAngle);
 
-  // Update compute objects and check (partial) convergence.
-  int numConvergedComputeObjects = 0;
-  for (int i = 0; i < numComputeObjects; ++i) {
-    C::getComputeObject(i)->computePropertyFromGreens();
-    const bool isPartiallyConverged =
-        C::getComputeObject(i)->isPartiallyConverged();
-    if (isPartiallyConverged) {
-      numConvergedComputeObjects++;
-    }
-  }
-
-  // Check if all compute objects are (partially) converged.
-  const bool areAllPartiallyConverged =
-      numConvergedComputeObjects == numComputeObjects;
-  if (areAllPartiallyConverged) {
-    // Yes! So lets take the next energy interval.
-    energyIterator->next();
-
-    if (energyIterator->isDone()) {
-      // If this is the end of the energy iterator, then every interval has
-      // converged. We can thus set every compute object to converged!
+      // Initialize the compute objects for the current angle.
       for (int i = 0; i < numComputeObjects; ++i) {
-        C::getComputeObject(i)->setConverged(true);
+        C::getComputeObject(i)->initializeGreensAngle();
       }
+
+      // Solve the Riccati equations.
+      riccatiSolver->computeCoherenceFunctions(*energyIterator, energies,
+                                               orderParameterRotated, angleIdx);
+
+      // Compute the integrand for the current angle for every compute object.
+      for (int i = 0; i < numComputeObjects; ++i) {
+        C::getComputeObject(i)->computeGreensAngle(
+            riccatiSolver->getGamma(), riccatiSolver->getGammabar());
+      }
+
+      // Add integration contribution of greens function from current angle.
+      // TODO(niclas): This can probably be done in the loop above.
+      for (int i = 0; i < numComputeObjects; ++i) {
+        C::getComputeObject(i)->integrateGreensAngle(geometry, angleIdx);
+      }
+    }
+
+    // Apply the boundary condition.
+    riccatiSolver->computeBoundaryConditions();
+
+    // Update compute objects and check (partial) convergence.
+    int numConvergedComputeObjects = 0;
+    for (int i = 0; i < numComputeObjects; ++i) {
+      C::getComputeObject(i)->computePropertyFromGreens();
+      const bool isPartiallyConverged =
+          C::getComputeObject(i)->isPartiallyConverged();
+      if (isPartiallyConverged) {
+        numConvergedComputeObjects++;
+      }
+    }
+
+    // Check if the boundary is converged.
+    const T residual = riccatiSolver->getResidual();
+    const bool isBoundaryConverged =
+        residual < C::getParameters()->getConvergenceCriterion();
+
+    // Check if all compute objects are (partially) converged.
+    const bool areAllPartiallyConverged =
+        numConvergedComputeObjects == numComputeObjects;
+
+    if (areAllPartiallyConverged && isBoundaryConverged) {
+      // Yes! So lets take the next energy interval.
+      energyIterator->next();
+
+      if (energyIterator->isDone()) {
+        // If this is the end of the energy iterator, then every interval has
+        // converged. We can thus set every compute object to converged!
+        for (int i = 0; i < numComputeObjects; ++i) {
+          C::getComputeObject(i)->setConverged(true);
+        }
 #ifndef NDEBUG
-      std::cout << "IntegrationIteratorKeldysh<T>::compute(): All intervals "
-                   "converged"
-                << std::endl;
+        std::cout << "IntegrationIteratorKeldysh<T>::compute(): All intervals "
+                     "converged"
+                  << std::endl;
 #endif
+      }
     }
   }
 

@@ -95,6 +95,7 @@ public:
 
   // Functions
   int initialize();
+  void burnIn();
   void compute();
 
   // Getters of non-compute objects.
@@ -137,6 +138,7 @@ public:
   T getComputeTime() const;
 
   int getNumIterations() const { return m_numIterations; }
+
   int getNumComputeObjects() const { return m_computeObjectList.size(); }
 
   GridGPU<T> *getInducedVectorPotential() const {
@@ -145,6 +147,7 @@ public:
 
   // Helpers
   bool isConverged() const;
+  bool isPartiallyConverged() const;
 
 private:
   void add(ComputeProperty<T> *inComputeProperty);
@@ -169,6 +172,7 @@ private:
   std::chrono::time_point<std::chrono::high_resolution_clock> m_startTime;
 
   int m_numIterations;
+  bool m_isFirstComputeIteration;
 
   // Helper pointers
   ComputeCurrent<T> *m_computeCurrent;
@@ -188,7 +192,7 @@ Context<T>::Context()
       m_computeOrderParameter(nullptr), m_computeLDOS(nullptr),
       m_computeVectorPotential(nullptr),
       m_startTime(std::chrono::high_resolution_clock::now()),
-      m_numIterations(0),
+      m_numIterations(0), m_isFirstComputeIteration(true),
       m_accelerator(std::make_unique<accelerators::AdaptiveBall<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
@@ -370,24 +374,58 @@ template <typename T> int Context<T>::initialize() {
   return 0;
 }
 
-template <typename T> void Context<T>::compute() {
-  // Start timer.
+template <typename T> void Context<T>::burnIn() {
   if (m_numIterations == 0) {
+    // Start timer.
     m_startTime = std::chrono::high_resolution_clock::now();
   }
 
-  // Compute e.g. the order parameter.
-  m_integrationIterator->compute();
+  // Burn-in the boundary.
+  const bool isBurnIn = true;
+  m_integrationIterator->compute(isBurnIn);
+
+  // Increase iteration counter.
+  m_numIterations++;
+}
+
+template <typename T> void Context<T>::compute() {
+  if (m_numIterations == 0) {
+    // Start timer.
+    m_startTime = std::chrono::high_resolution_clock::now();
+  }
 
   // The London penetration depth.
   const T penetrationDepth = m_parameters->getPenetrationDepth();
 
   // Compute the induced vector potential. It can only be done if the current
   // density is computed, and the penetration depth is finite.
-  const bool computeVectorPotential = m_computeVectorPotential &&
-                                      m_computeCurrent &&
-                                      (penetrationDepth > static_cast<T>(0));
-  if (computeVectorPotential) {
+  const bool doComputeVectorPotential = m_computeVectorPotential &&
+                                        m_computeCurrent &&
+                                        (penetrationDepth > static_cast<T>(0));
+
+  if (!m_isFirstComputeIteration) {
+    // Take step with accelerator.
+    if (m_computeOrderParameter || doComputeVectorPotential) {
+      // Compute the next order parameter and vector potential.
+      if (m_computeOrderParameter && doComputeVectorPotential) {
+        m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
+                               *(m_computeVectorPotential->getResult()),
+                               *m_orderParameter, *m_inducedVectorPotential);
+      } else if (m_computeOrderParameter && !doComputeVectorPotential) {
+        m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
+                               *m_orderParameter);
+      } else if (!m_computeOrderParameter && doComputeVectorPotential) {
+        m_accelerator->compute(*(m_computeVectorPotential->getResult()),
+                               *m_inducedVectorPotential);
+      }
+    }
+  }
+
+  // Compute e.g. the order parameter.
+  const bool isBurnIn = false;
+  m_integrationIterator->compute(isBurnIn);
+
+  if (doComputeVectorPotential) {
     // Note that it is assumed that all values outside of the grain is already
     // set to zero.
     const GridGPU<T> currentDensity = *(m_computeCurrent->getResult());
@@ -401,23 +439,11 @@ template <typename T> void Context<T>::compute() {
                                               normType);
   }
 
-  if (m_computeOrderParameter || computeVectorPotential) {
-    // Compute the next order parameter and vector potential.
-    if (m_computeOrderParameter && computeVectorPotential) {
-      m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
-                             *(m_computeVectorPotential->getResult()),
-                             *m_orderParameter, *m_inducedVectorPotential);
-    } else if (m_computeOrderParameter && !computeVectorPotential) {
-      m_accelerator->compute(*(m_computeOrderParameter->getOrderParameter()),
-                             *m_orderParameter);
-    } else if (!m_computeOrderParameter && computeVectorPotential) {
-      m_accelerator->compute(*(m_computeVectorPotential->getResult()),
-                             *m_inducedVectorPotential);
-    }
-  }
-
   // Increase iteration counter.
   m_numIterations++;
+
+  // First compute iteration is done.
+  m_isFirstComputeIteration = false;
 }
 
 template <typename T> T Context<T>::getComputeTime() const {
@@ -441,6 +467,12 @@ template <typename T> T Context<T>::getResidual() const {
     maxResidual = m_computeVectorPotential->getResidual();
   }
 
+  // Get residual of the coherence functions at the boundary.
+  {
+    const T residual = m_riccatiSolver->getResidual();
+    maxResidual = std::max(residual, maxResidual);
+  }
+
   // Get the convergence for all compute objects.
   const int numComputeObjects = getNumComputeObjects();
   for (int i = 0; i < numComputeObjects; ++i) {
@@ -450,21 +482,31 @@ template <typename T> T Context<T>::getResidual() const {
   return maxResidual;
 }
 
-template <typename T> bool Context<T>::isConverged() const {
-  bool success = true;
+template <typename T> bool Context<T>::isPartiallyConverged() const {
+  const T convergenceCriterion = m_parameters->getConvergenceCriterion();
+  const T residual = getResidual();
+  bool success = residual < convergenceCriterion;
 
-  // Check the convergence of the vector potential first.
-  if (m_computeVectorPotential) {
-    const T convergenceCriterion = m_parameters->getConvergenceCriterion();
-    const T residual = m_computeVectorPotential->getResidual();
-    success = residual < convergenceCriterion;
+  // Check if isPartiallyConverged has been set in all compute objects.
+  const int numComputeObjects = getNumComputeObjects();
+  for (int i = 0; i < numComputeObjects; ++i) {
+    success &= m_computeObjectList[i]->isPartiallyConverged();
   }
 
-  // Check the convergence for all compute objects.
+  return success;
+}
+
+template <typename T> bool Context<T>::isConverged() const {
+  const T convergenceCriterion = m_parameters->getConvergenceCriterion();
+  const T residual = getResidual();
+  bool success = residual < convergenceCriterion;
+
+  // Check if isConverged has been set in all compute objects.
   const int numComputeObjects = getNumComputeObjects();
   for (int i = 0; i < numComputeObjects; ++i) {
     success &= m_computeObjectList[i]->isConverged();
   }
+
   return success;
 }
 } // namespace conga

@@ -157,10 +157,7 @@ template <typename T> void testSWaveDisc() {
 
   // Run the simulation.
   context.initialize();
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, true, 0, 100);
-  }
+  const bool isConverged = conga::runCompute(0, 100, true, context);
 
   // Save the result.
   const T freeEnergy =
@@ -173,6 +170,7 @@ template <typename T> void testSWaveDisc() {
   // Compare results.
   CHECK(freeEnergy ==
         doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
+  CHECK(isConverged);
 }
 } // namespace helper
 

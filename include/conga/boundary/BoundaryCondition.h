@@ -21,7 +21,7 @@ public:
   BoundaryCondition() {}
   virtual ~BoundaryCondition() {}
 
-  virtual void computeBoundaryCondition(Context<T> *ctx) = 0;
+  virtual T computeBoundaryCondition(Context<T> *ctx) = 0;
 };
 } // namespace conga
 

@@ -168,12 +168,9 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
   // Initialize simulation
   context.initialize();
 
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, simParams::PRINT_ITERATION_STATUS,
-                                 simParams::NUM_ITERATIONS_MIN,
-                                 simParams::NUM_ITERATIONS_MAX);
-  }
+  const bool isConverged = conga::runCompute(
+      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
+      simParams::PRINT_ITERATION_STATUS, context);
 
   // Remove all spurious values outside actual grain
   context.getGeometry()->zeroValuesOutsideDomainRef(
@@ -220,7 +217,7 @@ void testLowTempBulkValues(const T inTolerance, const T inToleranceFreeEnergy,
       doctest::Approx(expectedAverageCurrent).epsilon(currentDensityTolerance));
   CHECK(testAverageFreeEnergy == doctest::Approx(expectedAverageFreeEnergy)
                                      .epsilon(inToleranceFreeEnergy));
-  CHECK(context.isConverged());
+  CHECK(isConverged);
 }
 } // namespace helper
 

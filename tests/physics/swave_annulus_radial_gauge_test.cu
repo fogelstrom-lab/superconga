@@ -431,10 +431,7 @@ template <typename T> void testSWaveAnnulusRadial() {
 
   // Run the simulation.
   context.initialize();
-  conga::Status status = conga::Status::kContinue;
-  while (status != conga::Status::kQuit) {
-    status = conga::runIteration(&context, true, 0, 100);
-  }
+  const bool isConverged = conga::runCompute(0, 100, true, context);
 
   // The results.
   const T freeEnergy =
@@ -463,6 +460,8 @@ template <typename T> void testSWaveAnnulusRadial() {
   CHECK(
       magneticMoment ==
       doctest::Approx(magneticMomentExpected).epsilon(tolerance).scale(scale));
+
+  CHECK(isConverged);
 }
 
 /// \brief Compare the expression of the magnetic moment using (a,b) factors to

@@ -187,6 +187,8 @@ template <typename T> void ComputeLDOS<T>::computePropertyFromGreens() {
     const bool isPartiallyConverged =
         residual < C::getParameters()->getConvergenceCriterion();
     ComputeProperty<T>::setPartiallyConverged(isPartiallyConverged);
+  } else {
+    ComputeProperty<T>::setConverged(false);
   }
 }
 } // namespace conga

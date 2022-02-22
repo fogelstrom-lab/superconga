@@ -14,40 +14,44 @@
 
 #include "Context.h"
 #include "compute/ComputeFreeEnergy.h"
+#include "io/CSVIterationWriter.h"
 
 #include <iostream>
 
 namespace conga {
+namespace iteration_internal {
 /// \brief Print iteration status.
 ///
 /// Output status to terminal in each iteration.
 ///
-/// \param inContext - Context object to delete.
+/// \param inContext Context object.
 ///
-/// \return - void
-template <typename T> void printIterationStatus(Context<T> *inContext) {
+/// \return Void
+template <typename T>
+void inline printIterationStatus(const Context<T> &inContext) {
   // Get the number of iterations so far.
-  const int numIterations = inContext->getNumIterations();
+  const int numIterations = inContext.getNumIterations();
 
   // Get the max residual.
-  const T maxResidual = inContext->getResidual();
+  const T maxResidual = inContext.getResidual();
 
   // Get the computation time for this iteration.
-  const T computeTime = inContext->getComputeTime();
+  const T computeTime = inContext.getComputeTime();
   const T speed = static_cast<T>(numIterations) / computeTime;
 
   // Convert to hours or minutes if more appropriate.
-  const T secondsPerHour = static_cast<T>(3600);
   const T secondsPerMinute = static_cast<T>(60);
-  const int hours = static_cast<int>(computeTime / static_cast<T>(3600));
-  const int minutes = static_cast<int>(computeTime / secondsPerMinute) -
-                      hours * static_cast<T>(60);
-  const int seconds =
-      static_cast<int>(computeTime) - hours * 3600 - minutes * 60;
+  const T minutesPerHour = static_cast<T>(60);
+  const T secondsPerHour = secondsPerMinute * minutesPerHour;
+  const int hours = static_cast<int>(computeTime / secondsPerHour);
+  const int minutes =
+      static_cast<int>(computeTime / secondsPerMinute) - hours * minutesPerHour;
+  const int seconds = static_cast<int>(computeTime) - hours * secondsPerHour -
+                      minutes * secondsPerMinute;
 
   // Get the free-energy computation object.
   const ComputeFreeEnergy<T> *const computeFreeEnergy =
-      inContext->getComputeFreeEnergy();
+      inContext.getComputeFreeEnergy();
 
   if (computeFreeEnergy) {
     // Get the free energy.
@@ -55,84 +59,181 @@ template <typename T> void printIterationStatus(Context<T> *inContext) {
 
     // Print values.
     std::printf(
-        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Speed: %0.2f [Hz] | Max "
+        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Avg Speed: %0.2f [Hz] | "
         "Residual: %e | Free Energy: %e\n",
         numIterations, hours, minutes, seconds, speed, maxResidual, freeEnergy);
   } else {
     // Print values.
     std::printf(
-        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Speed: %0.2f [Hz] | Max "
+        "Iteration: %d | Time: %d:%d:%d [h:m:s] | Avg Speed: %0.2f [Hz] | "
         "Residual: %e\n",
         numIterations, hours, minutes, seconds, speed, maxResidual);
   }
 }
 
-/// \brief Iteration status enum class
+/// \brief Wrapper for running "burn-in" or "compute" a number of iterations.
 ///
-/// kContinue - Everything is fine, carry on.
-/// kQuit - We have either converged or lost patience.
-/// kSave - Time to save the results so far.
-enum class Status { kContinue, kQuit, kSave };
-
-/// \brief Single iteration simulation wrapper
-///
-/// Wrapper for running one iteration without plotting results.
-///
-/// \param inOutContext Context object for simulation.
-/// \param inVerbose Print iteration status to terminal or not.
+/// \param inIsCompute Whether to do compute or burn-in iterations.
 /// \param inNumIterationsMin The minimum number of iterations.
 /// \param inNumIterationsMax The maximum number of iterations.
-/// \param inSaveDataInterval How frequently to save data.
+/// \param inVerbose Whether to print to the terminal or not.
+/// \param inIterationWriter Iteration writer for saving iteration data to file.
+/// \param inOutContext The context object.
 ///
-/// \return Simulation status.
+/// \return Success.
 template <typename T>
-Status runIteration(Context<T> *inOutContext, const bool inVerbose = true,
-                    const int inNumIterationsMin = 0,
-                    const int inNumIterationsMax = 10000,
-                    const int inSaveDataInterval = 0) {
-  // Solve equations for all compute objects.
-  inOutContext->compute();
-
-  // Output iteration status to the terminal.
-  if (inVerbose) {
-    printIterationStatus(inOutContext);
+bool inline runIterations(
+    const bool inIsCompute, const int inNumIterationsMin,
+    const int inNumIterationsMax, const bool inVerbose,
+    const std::shared_ptr<io::CSVIterationWriter<T>> &inIterationWriter,
+    Context<T> &inOutContext) {
+  if ((inNumIterationsMin == 0) && (inNumIterationsMax == 0)) {
+    // Nothing to do.
+    return false;
   }
 
-  const int numIterations = inOutContext->getNumIterations();
+  bool isConverged = false;
 
-  // Check for convergence.
-  const bool isConverged =
-      (inOutContext->isConverged()) && (numIterations >= inNumIterationsMin);
+  // Start counter at one because we count the number of done iterations from
+  // one.
+  for (int i = 1; i < std::numeric_limits<int>::max(); ++i) {
+    if (inIsCompute) {
+      // Solve equations for all compute objects.
+      inOutContext.compute();
 
-  // Check for maximum number of iterations.
-  const bool patienceReached = (numIterations >= inNumIterationsMax);
+      // Check convergence. Partial convergence for e.g. the LDoS means that one
+      // energy block out of many has converged, but for e.g. the order
+      // parameter it means that everything is converged.
+      isConverged = inOutContext.isPartiallyConverged();
+    } else {
+      // Update boundary coherence functions.
+      inOutContext.burnIn();
 
-  // Print status if simulation finished.
-  if (inVerbose) {
-    if (isConverged) {
-      std::cout << "-- SUCCESS! Simulation converged." << std::endl;
-    } else if (patienceReached) {
-      std::cout << "-- FAILURE! Simulation did not converge." << std::endl;
+      // Check convergence.
+      const T convergenceCriterion =
+          inOutContext.getParameters()->getConvergenceCriterion();
+      const T residual = inOutContext.getRiccatiSolver()->getResidual();
+      isConverged = residual < convergenceCriterion;
+    }
+
+    // Output iteration status to the terminal.
+    if (inVerbose) {
+      printIterationStatus(inOutContext);
+    }
+
+    // Save iteration data to file.
+    if (inIterationWriter.get()) {
+      inIterationWriter->write(inOutContext);
+    }
+
+    // Determine if to quit.
+    const bool minReached = i >= inNumIterationsMin;
+    const bool maxReached =
+        (inNumIterationsMax < 0) ? false : (i >= inNumIterationsMax);
+    const bool quit = (isConverged && minReached) || maxReached;
+
+    if (quit) {
+      break;
     }
   }
 
-  // Determine what to do.
-  const bool quit = isConverged || patienceReached;
-  const bool saveData = inSaveDataInterval > 0
-                            ? (numIterations % inSaveDataInterval == 0)
-                            : false;
+  return isConverged;
+}
+} // namespace iteration_internal
 
-  // Set status.
-  Status status;
-  if (quit) {
-    status = Status::kQuit;
-  } else if (saveData) {
-    status = Status::kSave;
-  } else {
-    status = Status::kContinue;
+/// \brief Wrapper for running "burn-in" a number of iterations.
+///
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVerbose Whether to print to the terminal or not.
+/// \param inIterationWriter Iteration writer for saving iteration data to file.
+/// \param inOutContext The context object.
+///
+/// \return Success.
+template <typename T>
+bool inline runBurnIn(
+    const int inNumIterationsMin, const int inNumIterationsMax,
+    const bool inVerbose,
+    const std::shared_ptr<io::CSVIterationWriter<T>> &inIterationWriter,
+    Context<T> &inOutContext) {
+  if (inVerbose) {
+    std::cout << "-- Starting burn-in (converging boundary)." << std::endl;
   }
 
-  return status;
+  const bool isCompute = false;
+  const bool isConverged = iteration_internal::runIterations(
+      isCompute, inNumIterationsMin, inNumIterationsMax, inVerbose,
+      inIterationWriter, inOutContext);
+
+  if (inVerbose) {
+    if (isConverged) {
+      std::cout << "-- Stopping burn-in (converged)." << std::endl;
+    } else {
+      std::cout << "-- Stopping burn-in (unconverged)." << std::endl;
+    }
+  }
+
+  return isConverged;
+}
+
+/// \brief Wrapper for running "burn-in" a number of iterations.
+///
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVerbose Whether to print to the terminal or not.
+/// \param inOutContext The context object.
+///
+/// \return Success.
+template <typename T>
+bool inline runBurnIn(const int inNumIterationsMin,
+                      const int inNumIterationsMax, const bool inVerbose,
+                      Context<T> &inOutContext) {
+  // Nullptr.
+  const std::shared_ptr<io::CSVIterationWriter<T>> iterationWriter;
+  const bool isConverged = runBurnIn(inNumIterationsMin, inNumIterationsMax,
+                                     inVerbose, iterationWriter, inOutContext);
+  return isConverged;
+}
+
+/// \brief Wrapper for running "compute" a number of iterations.
+///
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVerbose Whether to print to the terminal or not.
+/// \param inIterationWriter Iteration writer for saving iteration data to file.
+/// \param inOutContext The context object.
+///
+/// \return Success.
+template <typename T>
+bool inline runCompute(
+    const int inNumIterationsMin, const int inNumIterationsMax,
+    const bool inVerbose,
+    const std::shared_ptr<io::CSVIterationWriter<T>> &inIterationWriter,
+    Context<T> &inOutContext) {
+  const bool isCompute = true;
+  const bool isConverged = iteration_internal::runIterations(
+      isCompute, inNumIterationsMin, inNumIterationsMax, inVerbose,
+      inIterationWriter, inOutContext);
+  return isConverged;
+}
+
+/// \brief Wrapper for running "compute" a number of iterations.
+///
+/// \param inNumIterationsMin The minimum number of iterations.
+/// \param inNumIterationsMax The maximum number of iterations.
+/// \param inVerbose Whether to print to the terminal or not.
+/// \param inOutContext The context object.
+///
+/// \return Success.
+template <typename T>
+bool inline runCompute(const int inNumIterationsMin,
+                       const int inNumIterationsMax, const bool inVerbose,
+                       Context<T> &inOutContext) {
+  // Nullptr.
+  const std::shared_ptr<io::CSVIterationWriter<T>> iterationWriter;
+  const bool isConverged = runCompute(inNumIterationsMin, inNumIterationsMax,
+                                      inVerbose, iterationWriter, inOutContext);
+  return isConverged;
 }
 } // namespace conga
 
