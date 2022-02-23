@@ -273,23 +273,23 @@ def add_runner_arguments(parser) -> None:
     # Add disc.
     geometry.add_argument(
         "--add-disc",
-        metavar=("center_x", "center_y", "diameter"),
+        metavar=("center_x", "center_y", "radius"),
         type=float,
         action="append",
         nargs=3,
         default=None,
-        help="Add disc to geometry. The arguments are  center x, center y, and diameter.",
+        help="Add disc to geometry.",
     )
 
     # Remove disc.
     geometry.add_argument(
         "--remove-disc",
-        metavar=("center_x", "center_y", "diameter"),
+        metavar=("center_x", "center_y", "radius"),
         type=float,
         action="append",
         nargs=3,
         default=None,
-        help="Remove disc from geometry. The arguments are  center x, center y, and diameter.",
+        help="Remove disc from geometry.",
     )
 
     # Add regular polygon.
@@ -1046,14 +1046,14 @@ def set_runner_arguments_from_cli(
     # Add discs.
     if args.add_disc is not None:
         for disc in args.add_disc:
-            center_x, center_y, diameter = disc
+            center_x, center_y, radius = disc
             sim_params[group].append(
                 {
                     "disc": {
                         "add": True,
                         "center_x": center_x,
                         "center_y": center_y,
-                        "diameter": diameter,
+                        "radius": radius,
                     }
                 }
             )
@@ -1078,14 +1078,14 @@ def set_runner_arguments_from_cli(
     # Remove discs.
     if args.remove_disc is not None:
         for disc in args.remove_disc:
-            center_x, center_y, diameter = disc
+            center_x, center_y, radius = disc
             sim_params[group].append(
                 {
                     "disc": {
                         "add": False,
                         "center_x": center_x,
                         "center_y": center_y,
-                        "diameter": diameter,
+                        "radius": radius,
                     }
                 }
             )
