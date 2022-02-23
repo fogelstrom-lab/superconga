@@ -36,6 +36,7 @@
 - Support setting accelerator with default settings by just its name. All accelerators are different classes.
 - Expose the norm used when computing residuals (L1, L2, LInf) via `--norm`.
 - Set the gauge with a string instead of bool. It is set via `--gauge`.
+- Make starting positions of vortices per component. Vortices added with the CLI are added to all components.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

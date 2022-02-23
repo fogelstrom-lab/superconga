@@ -10,14 +10,14 @@
 			"dxy": {
 				"critical_temperature": 1.0,
 				"initial_phase_shift": 0.0,
-				"initial_phase_winding": 0.0,
-				"initial_noise_stddev": 0.0
+				"initial_noise_stddev": 0.0,
+				"vortices": []
 			},
 			"dx2-y2": {
 				"critical_temperature": 1.0,
 				"initial_phase_shift": 0.25,
-				"initial_phase_winding": 0.0,
-				"initial_noise_stddev": 0.0
+				"initial_noise_stddev": 0.0,
+				"vortices": []
 			}
 		}
 	},
@@ -25,9 +25,9 @@
 		{
 			"disc": {
 				"add": true,
-				"diameter": 25.0,
 				"center_x": 0.0,
-				"center_y": 0.0
+				"center_y": 0.0,
+				"diameter": 25.0
 			}
 		}
 	],

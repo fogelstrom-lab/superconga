@@ -142,8 +142,18 @@ runner_checks = {
                         "fields": {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
-                            "initial_phase_winding": {"type": float},
                             "initial_noise_stddev": {"type": float},
+                            "vortices": {
+                                "type": list,
+                                "sub": {
+                                    "type": dict,
+                                    "fields": {
+                                        "winding_number": {"type": float},
+                                        "center_x": {"type": float},
+                                        "center_y": {"type": float},
+                                    },
+                                },
+                            },
                         },
                     },
                     "dxy": {
@@ -152,8 +162,18 @@ runner_checks = {
                         "fields": {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
-                            "initial_phase_winding": {"type": float},
                             "initial_noise_stddev": {"type": float},
+                            "vortices": {
+                                "type": list,
+                                "sub": {
+                                    "type": dict,
+                                    "fields": {
+                                        "winding_number": {"type": float},
+                                        "center_x": {"type": float},
+                                        "center_y": {"type": float},
+                                    },
+                                },
+                            },
                         },
                     },
                     "g": {
@@ -162,8 +182,18 @@ runner_checks = {
                         "fields": {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
-                            "initial_phase_winding": {"type": float},
                             "initial_noise_stddev": {"type": float},
+                            "vortices": {
+                                "type": list,
+                                "sub": {
+                                    "type": dict,
+                                    "fields": {
+                                        "winding_number": {"type": float},
+                                        "center_x": {"type": float},
+                                        "center_y": {"type": float},
+                                    },
+                                },
+                            },
                         },
                     },
                     "s": {
@@ -172,19 +202,20 @@ runner_checks = {
                         "fields": {
                             "critical_temperature": {"type": float, "low": 0.0},
                             "initial_phase_shift": {"type": float},
-                            "initial_phase_winding": {"type": float},
                             "initial_noise_stddev": {"type": float},
+                            "vortices": {
+                                "type": list,
+                                "sub": {
+                                    "type": dict,
+                                    "fields": {
+                                        "winding_number": {"type": float},
+                                        "center_x": {"type": float},
+                                        "center_y": {"type": float},
+                                    },
+                                },
+                            },
                         },
                     },
-                },
-            },
-            "vortex_lattice": {
-                "type": dict,
-                "optional": True,
-                "fields": {
-                    "vortices_centers_x": {"type": list, "sub": {"type": float}},
-                    "vortices_centers_y": {"type": list, "sub": {"type": float}},
-                    "vortices_winding_numbers": {"type": list, "sub": {"type": float}},
                 },
             },
         },

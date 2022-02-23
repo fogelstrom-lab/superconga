@@ -221,6 +221,7 @@ template <typename T> T OrderParameterComponent<T>::deltaBulk() const {
   const BasisFunctionSymmetry symmetry = m_basisFunction.getSymmetry();
   T scale;
   switch (symmetry) {
+  case BasisFunctionSymmetry::GWAVE:
   case BasisFunctionSymmetry::DWAVE_XY:
   case BasisFunctionSymmetry::DWAVE_X2_Y2: {
     scale = static_cast<T>(constants::D_WAVE_BULK / constants::S_WAVE_BULK);

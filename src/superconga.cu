@@ -237,71 +237,46 @@ int main(int argc, char *argv[]) {
                                                 criticalTemperature);
 
       // Get initial phase parameters.
-      const T phaseWinding =
-          static_cast<T>(opCompParams["initial_phase_winding"].asDouble());
       const T noiseStdDev =
           static_cast<T>(opCompParams["initial_noise_stddev"].asDouble());
       const T phaseShift = static_cast<T>(
           2.0 * M_PI * opCompParams["initial_phase_shift"].asDouble());
 
-      // Check if we should initialize to bulk.
-      const T eps = std::numeric_limits<T>::epsilon();
-      const bool useBulk = (std::abs(phaseWinding) < eps) &&
-                           (std::abs(noiseStdDev) < eps) &&
-                           (std::abs(phaseShift) < eps) &&
-                           (!simParams["physics"].isMember("vortex_lattice"));
+      // Vortices.
+      const Json::Value vortices = opCompParams["vortices"];
 
       // Initialize order parameter with a guess.
-      if (useBulk) {
-        conga::Initial<T>::bulk(orderParameterComponent);
-      } else {
-        // Check if vortex-lattice start guess was supplied.
-        if (simParams["physics"].isMember("vortex_lattice")) {
+      if (vortices.size() > 0) {
+        std::vector<T> vorticesCentersX;
+        std::vector<T> vorticesCentersY;
+        std::vector<T> vorticesWindingNumbers;
 
-          // Get coordinates and  winding-numbers for vortex lattice start
-          // guess.
-          const Json::Value jsonVorticesCentersX =
-              simParams["physics"]["vortex_lattice"]["vortices_centers_x"];
-          const Json::Value jsonVorticesCentersY =
-              simParams["physics"]["vortex_lattice"]["vortices_centers_y"];
-          const Json::Value jsonVorticesWindingNumbers =
-              simParams["physics"]["vortex_lattice"]
-                       ["vortices_winding_numbers"];
+        // Scale to internal coordinates and add to vectors.
+        for (const Json::Value &vortex : vortices) {
+          // TODO(patric): fix bug when both coordinates are offset (but
+          // unequally). The bug seems to lie in the code that centers the
+          // coordinate system(?).
+          const T xTranslatedScaled =
+              (static_cast<T>(vortex["center_x"].asDouble()) - xOffset) /
+              (static_cast<T>(0.5) * scalingFactor);
+          const T yTranslatedScaled =
+              (static_cast<T>(vortex["center_y"].asDouble()) - yOffset) /
+              (static_cast<T>(0.5) * scalingFactor);
 
-          std::vector<T> vorticesCentersX;
-          std::vector<T> vorticesCentersY;
-          std::vector<T> vorticesWindingNumbers;
-
-          // Scale to internal coordinates and add to vectors.
-          for (int vortexIdx = 0; vortexIdx < jsonVorticesCentersX.size();
-               ++vortexIdx) {
-            // TODO(patric): fix bug when both coordinates are offset (but
-            // unequally). The bug seems to lie in the code that centers the
-            // coordinate system(?).
-            const T xTranslatedScaled =
-                (static_cast<T>(jsonVorticesCentersX[vortexIdx].asDouble()) -
-                 xOffset) /
-                (static_cast<T>(0.5) * scalingFactor);
-            const T yTranslatedScaled =
-                (static_cast<T>(jsonVorticesCentersY[vortexIdx].asDouble()) -
-                 yOffset) /
-                (static_cast<T>(0.5) * scalingFactor);
-
-            vorticesCentersX.push_back(xTranslatedScaled);
-            vorticesCentersY.push_back(yTranslatedScaled);
-            vorticesWindingNumbers.push_back(static_cast<T>(
-                jsonVorticesWindingNumbers[vortexIdx].asDouble()));
-          }
-
-          // Overwrite phase-winding from order-parameter components.
-          conga::Initial<T>::perturbedPhaseWindings(
-              orderParameterComponent, vorticesWindingNumbers, vorticesCentersX,
-              vorticesCentersY, noiseStdDev, phaseShift);
-        } else {
-          // No vortex-lattice start guess, use order-parameter component value.
-          conga::Initial<T>::perturbedPhaseWinding(
-              orderParameterComponent, phaseWinding, noiseStdDev, phaseShift);
+          vorticesCentersX.push_back(xTranslatedScaled);
+          vorticesCentersY.push_back(yTranslatedScaled);
+          vorticesWindingNumbers.push_back(
+              static_cast<T>(vortex["winding_number"].asDouble()));
         }
+
+        // Overwrite phase-winding from order-parameter components.
+        conga::Initial<T>::perturbedPhaseWindings(
+            orderParameterComponent, vorticesWindingNumbers, vorticesCentersX,
+            vorticesCentersY, noiseStdDev, phaseShift);
+
+      } else {
+        conga::Initial<T>::random(orderParameterComponent, noiseStdDev,
+                                  phaseShift);
       }
 
       // Add the initialized component to the total order parameter.

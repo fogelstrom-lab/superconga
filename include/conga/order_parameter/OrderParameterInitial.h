@@ -162,25 +162,6 @@ public:
                          const std::vector<T> &inCentersY,
                          const T inNoiseStdDev = static_cast<T>(0.01),
                          const T inPhaseShift = static_cast<T>(0.0));
-
-  /// \brief Initialize order parameter from existing one via file.
-  ///
-  /// \param inOutDeltaComponent Pointer to order parameter.
-  /// \param inFilename Filename (full path) of existing order parameter.
-  ///
-  /// \return void.
-  static int read(OrderParameterComponent<T> *inOutDeltaComponent,
-                  const char *const inFilename);
-
-  /// \brief Initialize order parameter from existing one via file.
-  ///
-  /// \param inOutDeltaComponent Pointer to order parameter.
-  /// \param inFilename Filename (full path) of existing order parameter.
-  /// \param inFileNumber Number to append to file name.
-  ///
-  /// \return void.
-  static int read(OrderParameterComponent<T> *inOutDeltaComponent,
-                  const char *const inFilename, const int inFileNumber);
 };
 
 namespace internal {
@@ -439,33 +420,6 @@ void Initial<T>::random(OrderParameterComponent<T> *inOutDeltaComponent,
   const T centerY = static_cast<T>(0);
   perturbedPhaseWinding(inOutDeltaComponent, phaseWinding, inNoiseStdDev,
                         inPhase, centerX, centerY);
-}
-
-template <typename T>
-int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
-                     const char *const inFilename) {
-  GridCPU<T> tmp;
-
-  if (tmp.read(inFilename))
-    return 1;
-
-  GridGPU<T> *delta = inOutDeltaComponent->getGrid();
-
-  if (tmp.dimX() != delta->dimX())
-    tmp.resample(delta->dimX(), delta->dimY());
-
-  *delta = tmp;
-
-  return 0;
-}
-
-template <typename T>
-int Initial<T>::read(OrderParameterComponent<T> *inOutDeltaComponent,
-                     const char *const inFilename, const int inFileNumber) {
-  char fn[512];
-  sprintf(fn, "%s.%d.grd", inFilename, inFileNumber);
-
-  return read(inOutDeltaComponent, fn);
 }
 } // namespace conga
 
