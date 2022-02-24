@@ -601,6 +601,16 @@ def add_postprocess_arguments(parser) -> None:
         help="The smearing (broadening) factor to the energy in the propagator, used to compute the density of states.",
     )
 
+    # Norm.
+    parser.add_argument(
+        "-n",
+        "--norm",
+        type=str,
+        choices=configuration.valid_norms,
+        default=None,
+        help="Which norm to use when computing the residuals. In order from less to more strict; L1, L2, LInf.",
+    )
+
     # Num energies.
     parser.add_argument(
         "-e",
@@ -1157,6 +1167,7 @@ def set_postprocess_arguments_from_cli(
     set_value(sim_params, "energy_max", args.energy_max)
     set_value(sim_params, "energy_min", args.energy_min)
     set_value(sim_params, "energy_smearing", args.energy_smearing)
+    set_value(sim_params, "norm", args.norm)
     set_value(sim_params, "num_energies", args.num_energies)
     set_value(sim_params, "num_energies_per_block", args.num_energies_per_block)
     set_value(sim_params, "num_fermi_momenta", args.num_fermi_momenta)
