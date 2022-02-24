@@ -302,6 +302,7 @@ postprocess_checks = {
     "energy_max": {"type": float, "low_include": 0.0},
     "energy_min": {"type": float, "low_include": 0.0},
     "energy_smearing": {"type": float, "low": 0.0},
+    "norm": {"type": str, "one_of": configuration.valid_norms},
     "num_energies": {"type": int, "low": 0},
     "num_energies_per_block": {"type": int, "low": 0},
     "num_fermi_momenta": {"type": int, "low": 0},

@@ -38,6 +38,7 @@
 - Set the gauge with a string instead of bool. It is set via `--gauge`.
 - Make starting positions of vortices per component. Vortices added with the CLI are added to all components.
 - Set radius of disc, not diameter.
+- Allow setting separate norm used when computing residuals during spectroscopy computation.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

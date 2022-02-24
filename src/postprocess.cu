@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
   parameters->setChargeSign(chargeSign);
 
   // Set which norm to use when computing residuals.
-  const std::string residualNorm(simParams["accuracy"]["norm"].asString());
+  const std::string residualNorm(postProcessConfig["norm"].asString());
   if (residualNorm == "L1") {
     parameters->setResidualNormType(conga::ResidualNorm::L1);
   } else if (residualNorm == "L2") {
