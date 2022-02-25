@@ -27,8 +27,7 @@ namespace io {
 /// \return Void.
 void write(const std::filesystem::path &inFileName, const Json::Value &inJSON) {
   std::ofstream ofstreamJSON(inFileName);
-  const int indentation = 4;
-  ofstreamJSON << std::setw(indentation) << inJSON << std::endl;
+  ofstreamJSON << inJSON.toStyledString() << std::endl;
 }
 
 /// \brief Read JSON from file.
