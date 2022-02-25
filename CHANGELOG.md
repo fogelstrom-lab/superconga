@@ -85,6 +85,7 @@
 - Use centered finite differences everywhere.
 - Increase step size in s-wave annulus tests.
 - Remove order parameter initial test.
+- Use JsonCpp's own styled string when writing json files.
 
 ---
 
