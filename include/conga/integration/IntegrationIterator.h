@@ -77,7 +77,6 @@ public:
       delete _energies;
     _energies = en;
   }
-  void setNumEnergiesPerBlock(const int inNumEnergiesPerBlock);
   void setResidues(GridGPU<T> *res) {
     if (_residues)
       delete _residues;
@@ -155,15 +154,6 @@ template <typename T> void IntegrationIterator<T>::initIterators() {
   _numAngles =
       ContextModule<T>::getContext()->getParameters()->getAngularResolution();
   _numIter = 0;
-}
-
-template <typename T>
-void IntegrationIterator<T>::setNumEnergiesPerBlock(
-    const int inNumEnergiesPerBlock) {
-  if (inNumEnergiesPerBlock != _numEnergiesPerBlock) {
-    _numEnergiesPerBlock = inNumEnergiesPerBlock;
-    initialize();
-  }
 }
 } // namespace conga
 

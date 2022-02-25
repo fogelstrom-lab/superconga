@@ -98,8 +98,9 @@ template <typename T> int IntegrationIteratorOzaki<T>::initialize() {
   std::cout << "IntegrationIteratorOzaki::initialize()\n";
 #endif
   IntegrationIterator<T>::initialize();
-
-  initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
+  const int numEnergiesPerBlock =
+      IntegrationIterator<T>::getNumEnergiesPerBlock();
+  initIterators(numEnergiesPerBlock);
 
   return 0;
 }
@@ -209,18 +210,16 @@ void IntegrationIteratorOzaki<T>::initIterators(
 
   ParameterIterator<int> *iter = new ParameterIterator<int>(0, numEnergies);
   I::setEnergyIterator(iter);
+
+  const int numEnergiesPerBlock =
+      inNumEnergiesPerBlock < 1 ? numEnergies
+                                : std::min(inNumEnergiesPerBlock, numEnergies);
+  iter->setIncrement(numEnergiesPerBlock);
+
 #ifndef NDEBUG
   std::cout << "Initializing ozaki iterator with Ne = " << numEnergies
-            << ", NeBlock = " << inNumEnergiesPerBlock << "\n";
-#endif
+            << ", NeBlock = " << numEnergiesPerBlock << "\n";
 
-  if (inNumEnergiesPerBlock < 1) {
-    iter->setIncrement(numEnergies);
-  } else {
-    iter->setIncrement(inNumEnergiesPerBlock);
-  }
-
-#ifndef NDEBUG
   for (iter->begin(); !iter->isDone(); iter->next()) {
     std::cout << "min = " << iter->getMin() << "\n";
     std::cout << "max = " << iter->getMax() << "\n";
