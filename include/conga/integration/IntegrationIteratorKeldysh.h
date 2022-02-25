@@ -34,7 +34,7 @@ public:
   int initialize() override;
 
   // Configures energy iterators
-  void initIterators(int numEnergiesPerBlock);
+  void initIterators(const int inNumEnergiesPerBlock);
   void initEnergies() override;
 
   int getNumEnergiesInterval() override;
@@ -82,7 +82,9 @@ template <typename T> int IntegrationIteratorKeldysh<T>::initialize() {
 
   IntegrationIterator<T>::initialize();
 
-  initIterators(IntegrationIterator<T>::getNumEnergiesPerBlock());
+  const int numEnergiesPerBlock =
+      IntegrationIterator<T>::getNumEnergiesPerBlock();
+  initIterators(numEnergiesPerBlock);
   return 0;
 }
 
@@ -125,7 +127,8 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
 }
 
 template <typename T>
-void IntegrationIteratorKeldysh<T>::initIterators(int numEnergiesPerBlock) {
+void IntegrationIteratorKeldysh<T>::initIterators(
+    const int inNumEnergiesPerBlock) {
 #ifndef NDEBUG
   std::cout << "IntegrationIteratorKeldysh<T>::initIterators()\n";
 #endif
@@ -134,23 +137,20 @@ void IntegrationIteratorKeldysh<T>::initIterators(int numEnergiesPerBlock) {
 
   initEnergies();
 
-  int numEnergies = I::getEnergies()->dimX();
+  const int numEnergies = I::getEnergies()->dimX();
 
   ParameterIterator<int> *iter = new ParameterIterator<int>(0, numEnergies);
   I::setEnergyIterator(iter);
+
+  const int numEnergiesPerBlock =
+      inNumEnergiesPerBlock < 1 ? numEnergies
+                                : std::min(inNumEnergiesPerBlock, numEnergies);
+  iter->setIncrement(numEnergiesPerBlock);
+
 #ifndef NDEBUG
   std::cout << "Initializing keldysh iterator with Ne = " << numEnergies
             << ", NeBlock = " << numEnergiesPerBlock << "\n";
-#endif
 
-  if (numEnergiesPerBlock == -1) {
-    // TODO(niclas): This should be default parameter?
-    iter->setIncrement(64);
-  } else {
-    iter->setIncrement(numEnergiesPerBlock);
-  }
-
-#ifndef NDEBUG
   for (iter->begin(); !iter->isDone(); iter->next()) {
     std::cout << "min = " << iter->getMin() << "\n";
     std::cout << "max = " << iter->getMax() << "\n";

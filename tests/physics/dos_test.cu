@@ -57,8 +57,6 @@ const double POINTS_PER_COHERENCE_LENGTH = 2.0;
 const int NUM_ANGLES = 160;
 // Number of energies in total.
 const int NUM_ENERGIES = 32;
-// How many energies to compute the LDOS for in parallel.
-const int NUM_ENERGIES_PER_BLOCK = NUM_ENERGIES;
 // The range of the energies.
 const double ENERGY_MIN = 0.0;
 const double ENERGY_MAX = 0.5;
@@ -115,8 +113,7 @@ void testDensityOfStates(const T inTolerance, const bool inUseSwave,
   }
 
   // Iterator.
-  new conga::IntegrationIteratorKeldysh<T>(&context,
-                                           simParams::NUM_ENERGIES_PER_BLOCK);
+  new conga::IntegrationIteratorKeldysh<T>(&context);
 
   // Choose a Riccati solver for a confined geometry, without magnetic fields
   conga::RiccatiSolver<T> *riccatiSolver =
