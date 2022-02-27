@@ -1,6 +1,6 @@
 # SuperConga
 
-[Niclas Wall-Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Pascal Stadler](https://gitlab.com/pascalsta), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
+[Niclas Wall Wennerdal](https://gitlab.com/niclas_wall_wennerdal), [Patric Holmvall](https://gitlab.com/Holmvall), [Oleksii Shevtsov](https://gitlab.com/oshevtsov), [Pascal Stadler](https://gitlab.com/pascalsta), [Mikael Håkansson](https://www.linkedin.com/in/mikael-h%C3%A5kansson-07549a1)
 
 SuperConga is an open-source framework for simulating the physics of superconducting and condensed-matter systems, specifically 2D mesoscopic grains in equilibrium, by using the quasiclassical theory of superconductivity. The core is written in C++ and CUDA, exploiting the parallel nature quasiclassics and utilizing the computational power of modern GPUs.
 
@@ -27,32 +27,45 @@ If you have used SuperConga in your research or found it useful, please [cite it
 
 
 ## Basic usage
-The code is most easily run via its Python(3) frontend `superconga.py`. It is highly recommended to use the `--file` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-vortex lattice example:
-```shell
-python superconga.py --file examples/swave_abrikosov_vortex_lattice/config.json
-```
-These example files can easily be copied/modified with a text editor, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
+The code is most easily run via its Python frontend `superconga.py`. The subcommands available are shown by running
 ```shell
 python superconga.py --help
 ```
-or refer to the [tutorial](https://superconga.gitlab.io/superconga-doc/tutorials.html) in the online documentation.
+Instructions are also available at the [tutorial](https://superconga.gitlab.io/superconga-doc/tutorials.html) in the online documentation.
+
+In order to run a simulation the subcommand `simulate` is used. It is highly recommended to use the `--config` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-vortex lattice example:
+```shell
+python superconga.py simulate --config examples/swave_abrikosov_vortex_lattice/simulation_config.json
+```
+These example files can easily be copied/modified with a text editor, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
+```shell
+python superconga.py simulate --help
+```
 
 
 ## Data post-processing and visualization
-By default the examples save data at the end of the simulation. It is written to the path specified by the `save_path` option in `config.json` (which can also be overriden by the command-line argument `--save-path`). Whatever path was used, it will be printed to the terminal upon successfully finishing the simulation. The data is saved in two formats: real-space observables and quantities are saved in human-readable `.csv`-files (i.e. columns of Comma-Separated Values), while parameters and and other scalar quantities are generally saved in `.json`-files. These formats are supported by most modern programming languages and post-processing/plotting tools. To facilitate post-processing and plotting, an additional Python program is available, called `plotter.py`, which demonstrates how the data can be parsed from file and plotted. To simply plot all the data in e.g. `data/examples/swave_abrikosov_vortex_lattice/`, use the `--load-path` argument:
+By default the examples save data at the end of the simulation. It is written to the path specified by the `save_path` option in `simulation_config.json` (which can also be overridden by the command-line argument `--save-path`). Whatever path was used, it will be printed to the terminal upon successfully finishing the simulation. The data is saved as either CSV or hdf5 format, which can be set by the argument `--data-format`. Convergence data is always saved as CSV, and scalar quantities, e.g. averages, as JSON. To plot the simulation data, in e.g. `data/examples/swave_abrikosov_vortex_lattice/`, use the `plot-simulation` subcommand and the `--load-path` argument:
 ```shell
-python plotter.py --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-simulation --load-path data/examples/swave_abrikosov_vortex_lattice
 ```
-To see further usage instructions, run `python plotter.py --help`, or refer to the [tutorials](https://superconga.gitlab.io/superconga-doc/tutorials.html).
+To see further usage instructions, run `python superconga.py plot-simulation --help`. How the simulation converged can be plotted using the `plot-convergence` subcommand
+```shell
+python superconga.py plot-convergence --view simulation --load-path data/examples/swave_abrikosov_vortex_lattice
+```
 
 After a simulation has converged the local density of states can be computed by running
 ```shell
-python postprocess.py --file examples/swave_abrikosov_vortex_lattice/postprocess.json
+python superconga.py postprocess --config examples/swave_abrikosov_vortex_lattice/postprocess_config.json
 ```
-which will generate more data files in `data/examples/swave_abrikosov_vortex_lattice/`. The local density of states can then be visualized using the tool `ldos_plotter.py`
+which will generate more data files in `data/examples/swave_abrikosov_vortex_lattice/`. The local density of states can then be visualized using the subcommand `plot-postprocess`
 ```shell
-python ldos_plotter.py --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-postprocess --load-path data/examples/swave_abrikosov_vortex_lattice
 ```
+Note that the plots are interactive. By clicking in either plot the data being visualized will be updated. How the postprocess converged can be plotted using the `plot-convergence` subcommand
+```shell
+python superconga.py plot-convergence --view postprocess --load-path data/examples/swave_abrikosov_vortex_lattice
+```
+
 
 ## Contribute
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
@@ -73,4 +86,4 @@ SuperConga development is supported by the Applied Quantum Physics Laboratory at
 
 
 ## Authors
-The current lead developers are Niclas Wall-Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
+The current lead developers are Niclas Wall Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
