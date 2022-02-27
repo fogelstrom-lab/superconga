@@ -4,74 +4,73 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
-"""Frontend for SuperConga: Superconductivity simulation framework on GPU.
-
-SuperConga Main file for setting up self-consistent simulations in a confined
-geometry (a mesoscopic grain). Different superconducting order parameters and
-geometries can be specified, as well as physical parameters such as temperature
-and external fields. To set these, create a .json parameter-file as in examples
-and give the path to this file with the -f option. All parameters, except the geometry, 
-can be overridden using the command-line options.
-"""
-
-# Built-in modules and third-party libraries.
+import argparse
 import os
 import sys
-from pathlib import Path
 
-# Custom libraries.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "tools/"))
-from python_libraries.parameter_setup import argument_parsing as AP
-from python_libraries.parameter_setup import argument_validation as AV
-from python_libraries.runner import binary_caller
-from python_libraries.settings import configuration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "frontend"))
+from simulation import simulation
+from postprocess import postprocess
+from simulation_plotter import simulation_plotter
+from postprocess_plotter import postprocess_plotter
+from convergence_plotter import convergence_plotter
 
 # -----------------------------------------------------------------------------
 # MAIN FUNCTION
 # -----------------------------------------------------------------------------
 def main() -> None:
-    # ======================================================================#
-    #                            ARGUMENT PARSING                           #
-    # ======================================================================#
-    # Front-end is e.g. runner or plotter.
-    frontend = "runner"
-    # Program name and description for command-line help message.
-    program_name = "SuperConga"
-    program_description = "SuperConga Main file for setting up self-consistent simulations in a confined geometry (a mesoscopic grain). Different superconducting order parameters and geometries can be specified, as well as physical parameters such as temperature and external fields. To set these, create a .json parameter-file as in the folders in 'examples/', and give the path to this file with the -f option. All parameters can be overridden using the command-line options specified below."
-    # Parse command-line arguments, and possibly a JSON file which specifies
-    # config plotting parameters. The JSON file is provided via: -f|--file.
-    simulation_parameters, cpp_info = AP.parse_command_line_arguments(
-        program_name=program_name,
-        program_description=program_description,
-        frontend=frontend,
+    # Create parser and subparsers.
+    parser = argparse.ArgumentParser(description="SuperConga frontend.")
+
+    # Version number.
+    parser.add_argument("-V", "--version", action="version", version="v0.7.0")
+
+    # Create subparsers.
+    subparsers = parser.add_subparsers(
+        help="SuperConga subcommands. Run 'superconga.py <subcommand> --help' for help about the specific subcommand.",
     )
 
-    # ======================================================================#
-    #                   ARGUMENT VALIDATION AND PROCESSING                  #
-    # ======================================================================#
-    # Status of CPP binary execution.
-    status_code = 0
+    # Add simulation parser.
+    simulation_parser = subparsers.add_parser("simulate")
+    simulation.make_parser(simulation_parser)
 
-    # Validate user input (e.g. check that data path exists).
-    # Exit if there are errors.
-    success = AV.validate_arguments(
-        arguments_dict=simulation_parameters, frontend=frontend
-    )
-    if not success:
+    # Add postprocess parser.
+    postprocess_parser = subparsers.add_parser("postprocess")
+    postprocess.make_parser(postprocess_parser)
+
+    # Add simulation plotter parser.
+    simulation_plotter_parser = subparsers.add_parser("plot-simulation")
+    simulation_plotter.make_parser(simulation_plotter_parser)
+
+    # Add postprocess plotter parser.
+    postprocess_plotter_parser = subparsers.add_parser("plot-postprocess")
+    postprocess_plotter.make_parser(postprocess_plotter_parser)
+
+    # Add convergence plotter parser.
+    convergence_plotter_parser = subparsers.add_parser("plot-convergence")
+    convergence_plotter.make_parser(convergence_plotter_parser)
+
+    # Parse arguments.
+    args = parser.parse_args()
+
+    # Print help if no subparser specified.
+    if len(sys.argv) == 1:
+        parser.print_help()
         sys.exit(1)
 
-    # Launch binary.
-    cpp_path, cpp_precision = cpp_info
-    if cpp_path is None:
-        cpp_path = os.path.join(
-            os.path.dirname(__file__),
-            "build/release/bin/superconga_f" + str(cpp_precision),
-        )
-    tmp_path = os.path.join(os.path.dirname(__file__), "tmp")
-    binary_caller.run_cpp_binary(cpp_path, tmp_path, simulation_parameters)
-
-    # Quit the program.
-    sys.exit(status_code)
+    # Run.
+    if args.which == "simulation":
+        simulation.main(args)
+    elif args.which == "postprocess":
+        postprocess.main(args)
+    elif args.which == "simulation_plotter":
+        simulation_plotter.main(args)
+    elif args.which == "postprocess_plotter":
+        postprocess_plotter.main(args)
+    elif args.which == "convergence_plotter":
+        convergence_plotter.main(args)
+    else:
+        sys.exit(f"-- ERROR! Command '{args.which}' not implemented.")
 
 
 if __name__ == "__main__":

@@ -97,7 +97,7 @@ template <typename T> void IntegrationIteratorKeldysh<T>::initEnergies() {
 
   const T eMin = param->getEnergyMin();
   const T eMax = param->getEnergyMax();
-  const T smearingFactor = param->getSmearingFactor();
+  const T smearingFactor = param->getEnergyBroadening();
 
   const int numEnergies = param->getNumEnergies();
 

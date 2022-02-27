@@ -1,0 +1,61 @@
+{
+	"physics": {
+		"temperature": 0.1,
+		"external_flux_quanta": 0.0,
+		"penetration_depth": -1.0,
+		"crystal_axes_rotation": 0.0,
+		"gauge": "radial",
+		"charge_sign": -1,
+		"order_parameter": {
+			"dx2-y2": {
+				"critical_temperature": 1.0,
+				"initial_phase_shift": 0.0,
+				"initial_noise_stddev": 0.01,
+				"vortices": []
+			}
+		}
+	},
+	"geometry": [
+		{
+			"polygon": {
+				"add": true,
+				"vertices_x": [
+					25.0,
+					0.0,
+					0.0,
+					5.0,
+					25.0
+				],
+				"vertices_y": [
+					25.0,
+					25.0,
+					0.0,
+					0.0,
+					20.0
+				]
+			}
+		}
+	],
+	"numerics": {
+		"convergence_criterion": 1e-05,
+		"energy_cutoff": 16.0,
+		"norm": "L2",
+		"num_fermi_momenta": 32,
+		"num_iterations_burnin": 0,
+		"num_iterations_max": 1000,
+		"num_iterations_min": 0,
+		"points_per_coherence_length": 8.0,
+		"vector_potential_error": 1e-06
+	},
+	"accelerator": {
+		"name": "Adaptive-Ball"
+	},
+	"misc": {
+		"data_format": "h5",
+		"load_path": "",
+		"save_frequency": -1,
+		"save_path": "data/examples/dwave_phase_crystal",
+		"verbose": true,
+		"visualize": true
+	}
+}

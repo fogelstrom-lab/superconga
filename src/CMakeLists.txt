@@ -6,7 +6,7 @@ message(
 )
 
 # Define the main set of source files
-set(SRC superconga.cu postprocess.cu)
+set(SRC simulation.cu postprocess.cu)
 
 # Define precisions.
 set(CONGA_SINGLE_PRECISION OFF ON)

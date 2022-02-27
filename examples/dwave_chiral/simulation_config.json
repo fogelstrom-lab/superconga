@@ -1,0 +1,56 @@
+{
+	"physics": {
+		"temperature": 0.5,
+		"external_flux_quanta": 0.0,
+		"penetration_depth": -1.0,
+		"crystal_axes_rotation": 0.0,
+		"gauge": "radial",
+		"charge_sign": -1,
+		"order_parameter": {
+			"dxy": {
+				"critical_temperature": 1.0,
+				"initial_phase_shift": 0.0,
+				"initial_noise_stddev": 0.0,
+				"vortices": []
+			},
+			"dx2-y2": {
+				"critical_temperature": 1.0,
+				"initial_phase_shift": 0.25,
+				"initial_noise_stddev": 0.0,
+				"vortices": []
+			}
+		}
+	},
+	"geometry": [
+		{
+			"disc": {
+				"add": true,
+				"center_x": 0.0,
+				"center_y": 0.0,
+				"radius": 12.5
+			}
+		}
+	],
+	"numerics": {
+		"convergence_criterion": 1e-05,
+		"energy_cutoff": 16.0,
+		"norm": "L2",
+		"num_fermi_momenta": 32,
+		"num_iterations_burnin": 0,
+		"num_iterations_max": 1000,
+		"num_iterations_min": 0,
+		"points_per_coherence_length": 8.0,
+		"vector_potential_error": 1e-06
+	},
+	"accelerator": {
+		"name": "Adaptive-Ball"
+	},
+	"misc": {
+		"data_format": "h5",
+		"load_path": "",
+		"save_frequency": -1,
+		"save_path": "data/examples/dwave_chiral",
+		"verbose": true,
+		"visualize": true
+	}
+}
