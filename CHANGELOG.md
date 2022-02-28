@@ -40,6 +40,7 @@
 - Make starting positions of vortices per component. Vortices added with the CLI are added to all components.
 - Set radius of disc, not diameter.
 - Allow setting separate norm used when computing residuals during spectroscopy computation.
+- Change default colormap to YlGnBu in plotters. Reverse the colormap used for angles so that blue is always positive, and red negative. Use the same colors in live visualizer.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

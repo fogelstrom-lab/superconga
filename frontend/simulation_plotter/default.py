@@ -15,7 +15,11 @@ settings = {
     "alphabet": True,
     "show_path": True,
     "use_tex": True,
-    "colormaps": {"default": "RdBu", "magnitude": "hot", "angle": "twilight_shifted"},
+    "colormaps": {
+        "default": "RdBu",
+        "magnitude": "YlGnBu",
+        "angle": "twilight_shifted_r",
+    },
     "exterior_color": "dimgray",
 }
 

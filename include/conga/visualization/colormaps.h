@@ -9,8 +9,8 @@
 
 namespace conga {
 namespace colormaps {
-/// \brief Hot colormap.
-struct Hot {
+/// \brief YlGnBu colormap.
+struct YlGnBu {
   /// \brief Convert grayscale pixel in the range [0,1] to color.
   ///
   /// \param inVal The grayscale value.
@@ -19,16 +19,56 @@ struct Hot {
   /// \param outBlue The resulting blue intensity.
   _HD_ static void compute(const float inVal, float &outRed, float &outGreen,
                            float &outBlue) {
+    // The values below were obtained by fitting a polynomial to the Matplotlib
+    // colormap. It is not exact, but reasonably close.
+
+    // Red.
+    const float r6 = 31.14985763f;
+    const float r5 = -105.51096449f;
+    const float r4 = 126.50620633f;
+    const float r3 = -61.81929185f;
+    const float r2 = 9.84384196f;
+    const float r1 = -1.15995827f;
+    const float r0 = 1.00879115f;
+
+    // Green.
+    const float g6 = -5.91477522f;
+    const float g5 = 23.71285119f;
+    const float g4 = -32.7233085f;
+    const float g3 = 20.09376464f;
+    const float g2 = -6.4745131f;
+    const float g1 = 0.44749983f;
+    const float g0 = 0.98621283f;
+
+    // Blue.
+    const float b6 = -13.67309768f;
+    const float b5 = 35.34259532f;
+    const float b4 = -29.63803511f;
+    const float b3 = 4.38614756f;
+    const float b2 = 4.83524471f;
+    const float b1 = -1.77880347f;
+    const float b0 = 0.85812289f;
+
+    // Powers of the grayscale intensity.
+    const float val1 = max(inVal, 0.0f);
+    const float val2 = val1 * val1;
+    const float val3 = val2 * val1;
+    const float val4 = val2 * val2;
+    const float val5 = val2 * val3;
+    const float val6 = val3 * val3;
+
     // Set colors.
-    const float scaledVal = 3.0f * inVal;
-    outRed = min(max(scaledVal, 0.0f), 1.0f);
-    outGreen = min(max(scaledVal - 1.0f, 0.0f), 1.0f);
-    outBlue = min(max(scaledVal - 2.0f, 0.0f), 1.0f);
+    outRed = r6 * val6 + r5 * val5 + r4 * val4 + r3 * val3 + r2 * val2 +
+             r1 * val1 + r0;
+    outGreen = g6 * val6 + g5 * val5 + g4 * val4 + g3 * val3 + g2 * val2 +
+               g1 * val1 + g0;
+    outBlue = b6 * val6 + b5 * val5 + b4 * val4 + b3 * val3 + b2 * val2 +
+              b1 * val1 + b0;
   }
 };
 
 /// \brief Red-white-blue colormap (zero is mapped to white).
-struct RedWhiteBlue {
+struct RdBu {
   /// \brief Convert grayscale pixel in the range [-1,+1] to color.
   ///
   /// \param inVal The grayscale value.
@@ -37,103 +77,114 @@ struct RedWhiteBlue {
   /// \param outBlue The resulting blue intensity.
   _HD_ static void compute(const float inVal, float &outRed, float &outGreen,
                            float &outBlue) {
-    // TODO(niclas): Change so that it conforms with Matplotlibs RdBu.
+    // The values below were obtained by fitting a polynomial to the Matplotlib
+    // colormap. It is not exact, but reasonably close.
 
-    // For convenience.
-    const bool positive = inVal > 0.0f;
-    const float tmp = 1.0f - abs(inVal);
+    // Red.
+    const float r6 = -0.70345843f;
+    const float r5 = 0.31917521f;
+    const float r4 = 1.48151386f;
+    const float r3 = 0.00316337f;
+    const float r2 = -1.53259179f;
+    const float r1 = -0.48950088f;
+    const float r0 = 0.96017916f;
 
-    // Set colors.
-    outRed = positive ? tmp : 1.0f;
-    outGreen = tmp;
-    outBlue = positive ? 1.0f : tmp;
-  }
-};
+    // Green.
+    const float g6 = -0.28988233f;
+    const float g5 = -0.35716038f;
+    const float g4 = 1.10727099f;
+    const float g3 = 0.34213596f;
+    const float g2 = -1.6637647f;
+    const float g1 = 0.10106193f;
+    const float g0 = 0.94316445f;
 
-/// \brief Twilight colormap (cyclic).
-struct Twilight {
-  /// \brief Convert grayscale pixel in the range [-1,+1] to color.
-  ///
-  /// \param inVal The grayscale value.
-  /// \param outRed The resulting red intensity.
-  /// \param outGreen The resulting green intensity.
-  /// \param outBlue The resulting blue intensity.
-  _HD_ static void compute(const float inVal, float &outRed, float &outGreen,
-                           float &outBlue) {
-    // TODO(niclas): This is a bit horrible. The values were obtained by fitting
-    // 5-degree polynomials to Matplotlibs Twilight colormap.
-
-    // Red negative.
-    const float rn5 = 6.30819466f;
-    const float rn4 = 12.57317797f;
-    const float rn3 = 5.47363281f;
-    const float rn2 = -1.3760424f;
-    const float rn1 = -1.40483219f;
-    const float rn0 = 0.12429275f;
-
-    // Red positive.
-    const float rp5 = -0.11196211f;
-    const float rp4 = 2.91030803f;
-    const float rp3 = -4.77245237f;
-    const float rp2 = 1.6682225f;
-    const float rp1 = 1.1296943f;
-    const float rp0 = 0.13486743f;
-
-    // Green negative.
-    const float gn5 = -0.57212334f;
-    const float gn4 = 0.64850747f;
-    const float gn3 = 3.88774111f;
-    const float gn2 = 3.71270168f;
-    const float gn1 = 0.15889372f;
-    const float gn0 = 0.03691657f;
-
-    // Green positive.
-    const float gp5 = 4.030221f;
-    const float gp4 = -10.97781645f;
-    const float gp3 = 9.8657821f;
-    const float gp2 = -2.60150958f;
-    const float gp1 = 0.58478138f;
-    const float gp0 = 0.02210853f;
-
-    // Blue negative.
-    const float bn5 = 4.80058585f;
-    const float bn4 = 14.12307721f;
-    const float bn3 = 12.84216484f;
-    const float bn2 = 2.8212216f;
-    const float bn1 = -1.49734293f;
-    const float bn0 = 0.15358266f;
-
-    // Blue positive.
-    const float bp5 = -6.91048841f;
-    const float bp4 = 13.70431717f;
-    const float bp3 = -6.18112154f;
-    const float bp2 = -0.83681335f;
-    const float bp1 = 1.01764403f;
-    const float bp0 = 0.15516054f;
+    // Blue.
+    const float b6 = -1.31362931f;
+    const float b5 = -0.27708307f;
+    const float b4 = 2.42015189f;
+    const float b3 = -0.04662716f;
+    const float b2 = -1.81557643f;
+    const float b1 = 0.44075829f;
+    const float b0 = 0.93207682f;
 
     // Powers of the grayscale intensity.
     const float val1 = inVal;
-    const float val2 = inVal * inVal;
-    const float val3 = val2 * inVal;
+    const float val2 = val1 * val1;
+    const float val3 = val2 * val1;
     const float val4 = val2 * val2;
     const float val5 = val2 * val3;
-
-    // For convenience.
-    const bool positive = inVal > 0.0f;
+    const float val6 = val3 * val3;
 
     // Set colors.
-    outRed = positive ? (rp5 * val5 + rp4 * val4 + rp3 * val3 + rp2 * val2 +
-                         rp1 * val1 + rp0)
-                      : (rn5 * val5 + rn4 * val4 + rn3 * val3 + rn2 * val2 +
-                         rn1 * val1 + rn0);
-    outGreen = positive ? (gp5 * val5 + gp4 * val4 + gp3 * val3 + gp2 * val2 +
-                           gp1 * val1 + gp0)
-                        : (gn5 * val5 + gn4 * val4 + gn3 * val3 + gn2 * val2 +
-                           gn1 * val1 + gn0);
-    outBlue = positive ? (bp5 * val5 + bp4 * val4 + bp3 * val3 + bp2 * val2 +
-                          bp1 * val1 + bp0)
-                       : (bn5 * val5 + bn4 * val4 + bn3 * val3 + bn2 * val2 +
-                          bn1 * val1 + bn0);
+    outRed = r6 * val6 + r5 * val5 + r4 * val4 + r3 * val3 + r2 * val2 +
+             r1 * val1 + r0;
+    outGreen = g6 * val6 + g5 * val5 + g4 * val4 + g3 * val3 + g2 * val2 +
+               g1 * val1 + g0;
+    outBlue = b6 * val6 + b5 * val5 + b4 * val4 + b3 * val3 + b2 * val2 +
+              b1 * val1 + b0;
+  }
+};
+
+/// \brief Twilight shifted reversed colormap (cyclic).
+struct TwilightShiftedReversed {
+  /// \brief Convert grayscale pixel in the range [-1,+1] to color.
+  ///
+  /// \param inVal The grayscale value.
+  /// \param outRed The resulting red intensity.
+  /// \param outGreen The resulting green intensity.
+  /// \param outBlue The resulting blue intensity.
+  _HD_ static void compute(const float inVal, float &outRed, float &outGreen,
+                           float &outBlue) {
+    // The values below were obtained by fitting a polynomial to the Matplotlib
+    // colormap. It is not exact, but reasonably close.
+
+    // Red.
+    const float rs3 = 0.024342f;
+    const float rc3 = 0.05702154f;
+    const float rs2 = -0.02748823f;
+    const float rc2 = -0.00080247f;
+    const float rs1 = -0.13564209f;
+    const float rc1 = 0.2683719f;
+    const float r0 = 0.54373334f;
+
+    // Green.
+    const float gs3 = -0.01150307f;
+    const float gc3 = 0.00871481f;
+    const float gs2 = 0.0046331f;
+    const float gc2 = 0.02714641f;
+    const float gs1 = 0.05230238f;
+    const float gc1 = 0.38335767f;
+    const float g0 = 0.41835701f;
+
+    // Blue.
+    const float bs3 = -0.01967491f;
+    const float bc3 = 0.07132136f;
+    const float bs2 = -0.00237468f;
+    const float bc2 = 0.01179835f;
+    const float bs1 = 0.18933604f;
+    const float bc1 = 0.2378788f;
+    const float b0 = 0.5418722f;
+
+    // The different angles.
+    const float val1 = inVal * static_cast<float>(M_PI);
+    const float val2 = 2.0f * val1;
+    const float val3 = 3.0f * val1;
+
+    // Sin/cos of the angles.
+    const float s3 = sin(val3);
+    const float c3 = cos(val3);
+    const float s2 = sin(val2);
+    const float c2 = cos(val2);
+    const float s1 = sin(val1);
+    const float c1 = cos(val1);
+
+    // Set colors.
+    outRed =
+        rs3 * s3 + rc3 * c3 + rs2 * s2 + rc2 * c2 + rs1 * s1 + rc1 * c1 + r0;
+    outGreen =
+        gs3 * s3 + gc3 * c3 + gs2 * s2 + gc2 * c2 + gs1 * s1 + gc1 * c1 + g0;
+    outBlue =
+        bs3 * s3 + bc3 * c3 + bs2 * s2 + bc2 * c2 + bs1 * s1 + bc1 * c1 + b0;
   }
 };
 } // namespace colormaps

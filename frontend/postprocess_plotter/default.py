@@ -14,9 +14,9 @@ settings = {
     "alphabet": True,
     "show_path": True,
     "use_tex": True,
-    "colormap": "hot",
+    "colormap": "YlGnBu",
     "exterior_color": "dimgray",
     "dos_color": "black",
     "ldos_color": "red",
-    "marker_color": "blue",
+    "marker_color": "red",
 }
