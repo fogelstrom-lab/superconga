@@ -53,6 +53,7 @@
 - Fix live visualization not working when using different GPUs for computation and visualization.
 - Fix bug rejecting float parameters in `config.json` if passed as int.
 - Fix bug not setting the number of energies per block to all energies if passed a negative number in postprocess. Expose the functionality in the frontend.
+- Fix bug not saving convergence data for finite save frequency
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.

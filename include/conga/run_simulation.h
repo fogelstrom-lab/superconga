@@ -143,7 +143,8 @@ void inline runSimulation(
     bool quit = false;
     while (!quit) {
       // Run a single iteration.
-      isConverged = runCompute(0, 1, inVerbose, inOutContext);
+      isConverged =
+          runCompute(0, 1, inVerbose, inIterationWriter, inOutContext);
 
       // Check iteration number.
       const int numIterations = inOutContext.getNumIterations();
