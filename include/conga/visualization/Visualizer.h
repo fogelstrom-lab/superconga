@@ -19,7 +19,7 @@
 
 namespace conga {
 /// \brief Colormap enum.
-enum class Colormap { HOT, RWB, TWILIGHT };
+enum class Colormap { ANGLE, DEFAULT, MAGNITUDE };
 
 template <typename T> class Visualizer {
 private:
@@ -230,30 +230,31 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
     // Draw magnitude.
     const std::string titleMagnitude =
         std::string("|") + inTitle + std::string("|");
-    draw(titleMagnitude, inCol, 0, inGrid.abs(), 0, Colormap::HOT, inErase);
+    draw(titleMagnitude, inCol, 0, inGrid.abs(), 0, Colormap::MAGNITUDE,
+         inErase);
 
     // Draw phase.
     const std::string titlePhase =
         std::string("arg(") + inTitle + std::string(")");
-    draw(titlePhase, inCol, 1, inGrid.complexPhase(), 0, Colormap::TWILIGHT,
+    draw(titlePhase, inCol, 1, inGrid.complexPhase(), 0, Colormap::ANGLE,
          inErase);
   } else if (inGrid.numFields() == 2) {
     // Draw magnitude.
     const std::string titleMagnitude =
         std::string("|") + inTitle + std::string("|");
-    draw(titleMagnitude, inCol, 0, inGrid.fieldMagnitude(), 0, Colormap::HOT,
-         inErase);
+    draw(titleMagnitude, inCol, 0, inGrid.fieldMagnitude(), 0,
+         Colormap::MAGNITUDE, inErase);
 
     // Draw x-component.
     const std::string titleX = inTitle + std::string("_x");
-    draw(titleX, inCol, 1, inGrid, 0, Colormap::RWB, inErase);
+    draw(titleX, inCol, 1, inGrid, 0, Colormap::DEFAULT, inErase);
 
     // Draw y-component.
     const std::string titleY = inTitle + std::string("_y");
-    draw(titleY, inCol, 2, inGrid, 1, Colormap::RWB, inErase);
+    draw(titleY, inCol, 2, inGrid, 1, Colormap::DEFAULT, inErase);
   } else {
     assert(inGrid.numFields() == 1);
-    draw(inTitle, inCol, 0, inGrid, 0, Colormap::RWB, inErase);
+    draw(inTitle, inCol, 0, inGrid, 0, Colormap::DEFAULT, inErase);
   }
 }
 
@@ -269,15 +270,23 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   assert(m_domain.dimY() == height);
   assert(inGrid.representation() == Type::real);
 
-  // Compute min/max values.
-  T minVal;
-  T maxVal;
-  inGrid.minmax(minVal, maxVal, inField, Type::real);
+  T minVal = static_cast<T>(0);
+  T maxVal = static_cast<T>(0);
+  T scale = static_cast<T>(0);
+  if (inColormap == Colormap::ANGLE) {
+    // Range is always [-pi, pi).
+    maxVal = static_cast<T>(M_PI);
+    minVal = -maxVal;
+    scale = static_cast<T>(M_1_PI);
+  } else {
+    // Compute min/max values.
+    inGrid.minmax(minVal, maxVal, inField, Type::real);
 
-  // Scaling factor in order to bring the values into [-1,+1] or [0,+1].
-  const T lim = std::max(std::abs(maxVal), std::abs(minVal));
-  const T epsilon = std::numeric_limits<T>::epsilon();
-  const T scale = static_cast<T>(1) / std::max(lim, epsilon);
+    // Scaling factor in order to bring the values into [-1,+1] or [0,+1].
+    const T lim = std::max(std::abs(maxVal), std::abs(minVal));
+    const T epsilon = std::numeric_limits<T>::epsilon();
+    scale = static_cast<T>(1) / std::max(lim, epsilon);
+  }
 
   // Image pixels. Must be float.
   const int numChannels = 3;
@@ -291,25 +300,25 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   inGrid.getKernelDimensions(numBlocks, numThreadsPerBlock);
 
   switch (inColormap) {
-  case Colormap::HOT: {
+  case Colormap::MAGNITUDE: {
     // Convert to hot and flip y-axis.
-    internal::convertToColor<T, colormaps::Hot>
+    internal::convertToColor<T, colormaps::YlGnBu>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
                                             m_domain.getDataPointer(), ptrGPU);
     break;
   }
-  case Colormap::RWB: {
+  case Colormap::DEFAULT: {
     // Convert to red-white-blue and flip y-axis.
-    internal::convertToColor<T, colormaps::RedWhiteBlue>
+    internal::convertToColor<T, colormaps::RdBu>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
                                             m_domain.getDataPointer(), ptrGPU);
     break;
   }
-  case Colormap::TWILIGHT: {
+  case Colormap::ANGLE: {
     // Convert to twlight and flip y-axis.
-    internal::convertToColor<T, colormaps::Twilight>
+    internal::convertToColor<T, colormaps::TwilightShiftedReversed>
         <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
                                             inGrid.getDataPointer(inField),
                                             m_domain.getDataPointer(), ptrGPU);
@@ -321,6 +330,8 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   }
 
   // Add range to title.
+  // TODO(Niclas): The induced vector potential is scaled by the squared
+  // penetration depth internally. So the range is not correct.
   std::stringstream stream;
   stream << std::scientific << std::setprecision(m_precision) << "[" << minVal
          << ", " << maxVal << "]";

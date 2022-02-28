@@ -459,7 +459,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
     group_visualize.add_argument(
         "--visualize",
         action="store_true",
-        help="Real-time plotting. The units are E_0=2*pi*kB*Tc, j_d = E_0*|e|*v_F*N_F, A_0 = Phi_0 / (pi*xi_0), and B_0 = \Phi_0/(pi*xi^2_0), where xi_0 = hbar*vF/E_0, and Phi_0 = pi*hbar/|e|.",
+        help="Real-time plotting. The units are E_0=2*pi*kB*Tc, j_d = E_0*|e|*v_F*N_F, A_0 = Phi_0 / (pi*xi_0), and B_0 = \Phi_0/(pi*xi^2_0), where xi_0 = hbar*vF/E_0, and Phi_0 = pi*hbar/|e|. Remember that blue is positive in all plots, and red negative.",
     )
     group_visualize.add_argument(
         "--no-visualize", action="store_true", help="No real-time plotting."
