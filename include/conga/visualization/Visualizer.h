@@ -55,6 +55,23 @@ private:
   void draw(const std::string &inTitle, const int inCol, const int inRow,
             const float *const inData, const int inWidth, const int inHeight);
 
+  /// \brief Draw a grid to a subplot.
+  ///
+  /// \param inTitle The title of the subplot (the range will be appended).
+  /// \param inCol The column index to plot it.
+  /// \param inRow The row index to plot it.
+  /// \param inGrid The grid to plot.
+  /// \param inField The field of the grid to plot.
+  /// \param inColormap Which colormap to use.
+  /// \param inErase Whether to erase the values outside of the domain.
+  /// \param inRangeScale Factor to scale the printed range with.
+  ///
+  /// \return Void.
+  void draw(const std::string &inTitle, const int inCol, const int inRow,
+            const GridGPU<T> &inGrid, const int inField,
+            const Colormap inColormap, const bool inErase,
+            const T inRangeScale);
+
 public:
   /// \brief Constructor of the visualizer class.
   ///
@@ -83,25 +100,25 @@ public:
   /// \param inCol The column index to plot it.
   /// \param inGrid The grid to plot.
   /// \param inErase Whether to erase the values outside of the domain.
+  /// \param inRangeScale Factor to scale the printed range with.
+  ///
+  /// \return Void.
+  void draw(const std::string &inTitle, const int inCol,
+            const GridGPU<T> &inGrid, const bool inErase, const T inRangeScale);
+
+  /// \brief Draw a grid to a subplot column. If complex the magnitude and the
+  /// phase will be plotted along the column. If real and 2D the magnitude and
+  /// xy-components will be plotted. If real and 1D the grid itself will be
+  /// plotted.
+  ///
+  /// \param inTitle The title of the subplots (the range will be appended).
+  /// \param inCol The column index to plot it.
+  /// \param inGrid The grid to plot.
+  /// \param inErase Whether to erase the values outside of the domain.
   ///
   /// \return Void.
   void draw(const std::string &inTitle, const int inCol,
             const GridGPU<T> &inGrid, const bool inErase);
-
-  /// \brief Draw a grid to a subplot.
-  ///
-  /// \param inTitle The title of the subplot (the range will be appended).
-  /// \param inCol The column index to plot it.
-  /// \param inRow The row index to plot it.
-  /// \param inGrid The grid to plot.
-  /// \param inField The field of the grid to plot.
-  /// \param inColormap Which colormap to use.
-  /// \param inErase Whether to erase the values outside of the domain.
-  ///
-  /// \return Void.
-  void draw(const std::string &inTitle, const int inCol, const int inRow,
-            const GridGPU<T> &inGrid, const int inField,
-            const Colormap inColormap, const bool inErase);
 
   /// \brief Set additional information that will be plotted in the window
   /// title.
@@ -222,7 +239,8 @@ template <typename T> void Visualizer<T>::setInfo(const bool inRunning) {
 
 template <typename T>
 void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
-                         const GridGPU<T> &inGrid, const bool inErase) {
+                         const GridGPU<T> &inGrid, const bool inErase,
+                         const T inRangeScale) {
   const bool isComplex = inGrid.isComplex();
   if (isComplex) {
     assert(inGrid.numFields() == 1);
@@ -231,38 +249,47 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
     const std::string titleMagnitude =
         std::string("|") + inTitle + std::string("|");
     draw(titleMagnitude, inCol, 0, inGrid.abs(), 0, Colormap::MAGNITUDE,
-         inErase);
+         inErase, inRangeScale);
 
     // Draw phase.
     const std::string titlePhase =
         std::string("arg(") + inTitle + std::string(")");
+    const T phaseRangeScale = static_cast<T>(1);
     draw(titlePhase, inCol, 1, inGrid.complexPhase(), 0, Colormap::ANGLE,
-         inErase);
+         inErase, phaseRangeScale);
   } else if (inGrid.numFields() == 2) {
     // Draw magnitude.
     const std::string titleMagnitude =
         std::string("|") + inTitle + std::string("|");
     draw(titleMagnitude, inCol, 0, inGrid.fieldMagnitude(), 0,
-         Colormap::MAGNITUDE, inErase);
+         Colormap::MAGNITUDE, inErase, inRangeScale);
 
     // Draw x-component.
     const std::string titleX = inTitle + std::string("_x");
-    draw(titleX, inCol, 1, inGrid, 0, Colormap::DEFAULT, inErase);
+    draw(titleX, inCol, 1, inGrid, 0, Colormap::DEFAULT, inErase, inRangeScale);
 
     // Draw y-component.
     const std::string titleY = inTitle + std::string("_y");
-    draw(titleY, inCol, 2, inGrid, 1, Colormap::DEFAULT, inErase);
+    draw(titleY, inCol, 2, inGrid, 1, Colormap::DEFAULT, inErase, inRangeScale);
   } else {
     assert(inGrid.numFields() == 1);
-    draw(inTitle, inCol, 0, inGrid, 0, Colormap::DEFAULT, inErase);
+    draw(inTitle, inCol, 0, inGrid, 0, Colormap::DEFAULT, inErase,
+         inRangeScale);
   }
+}
+
+template <typename T>
+void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
+                         const GridGPU<T> &inGrid, const bool inErase) {
+  const T rangeScale = static_cast<T>(1);
+  draw(inTitle, inCol, inGrid, inErase, rangeScale);
 }
 
 template <typename T>
 void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
                          const int inRow, const GridGPU<T> &inGrid,
                          const int inField, const Colormap inColormap,
-                         const bool inErase) {
+                         const bool inErase, const T inRangeScale) {
   const int width = inGrid.dimX();
   const int height = inGrid.dimY();
 
@@ -270,18 +297,14 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   assert(m_domain.dimY() == height);
   assert(inGrid.representation() == Type::real);
 
-  T minVal = static_cast<T>(0);
-  T maxVal = static_cast<T>(0);
+  // Compute min/max values.
+  const auto [minVal, maxVal] = inGrid.minmax(inField, Type::real);
+
   T scale = static_cast<T>(0);
   if (inColormap == Colormap::ANGLE) {
-    // Range is always [-pi, pi).
-    maxVal = static_cast<T>(M_PI);
-    minVal = -maxVal;
+    // The range is always [-pi, pi)].
     scale = static_cast<T>(M_1_PI);
   } else {
-    // Compute min/max values.
-    inGrid.minmax(minVal, maxVal, inField, Type::real);
-
     // Scaling factor in order to bring the values into [-1,+1] or [0,+1].
     const T lim = std::max(std::abs(maxVal), std::abs(minVal));
     const T epsilon = std::numeric_limits<T>::epsilon();
@@ -330,11 +353,9 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   }
 
   // Add range to title.
-  // TODO(Niclas): The induced vector potential is scaled by the squared
-  // penetration depth internally. So the range is not correct.
   std::stringstream stream;
-  stream << std::scientific << std::setprecision(m_precision) << "[" << minVal
-         << ", " << maxVal << "]";
+  stream << std::scientific << std::setprecision(m_precision) << "["
+         << minVal * inRangeScale << ", " << maxVal * inRangeScale << "]";
   const std::string range = stream.str();
   const std::string title = inTitle + std::string(" : ") + range;
 

@@ -90,7 +90,15 @@ private:
 
     // Get the vector potential. It is used both for the average vector
     // potential, and average flux density.
-    GridGPU<T> vectorPotential = *(inContext.getInducedVectorPotential());
+    // The vector potential is scaled by the squared penetration depth
+    // internally. Undo the scaling here.
+    const T penetrationDepth = inContext.getParameters()->getPenetrationDepth();
+    const T vectorPotentialScale =
+        penetrationDepth > static_cast<T>(0)
+            ? static_cast<T>(1) / (penetrationDepth * penetrationDepth)
+            : static_cast<T>(0);
+    GridGPU<T> vectorPotential =
+        *(inContext.getInducedVectorPotential()) * vectorPotentialScale;
 
     // Average flux density.
     // TODO(niclas): Should this be computed outside of the grain?

@@ -115,9 +115,7 @@ template <typename T> void testPhaseGradient() {
 
   // Loop over xy-components.
   for (int i = 0; i < 2; ++i) {
-    T overlapMin;
-    T overlapMax;
-    overlap.minmax(overlapMin, overlapMax, i);
+    const auto [overlapMin, overlapMax] = overlap.minmax(i);
 
     // Check that the overlap does not have the wrong sign (zero is ok and
     // expected).

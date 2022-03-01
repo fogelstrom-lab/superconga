@@ -43,6 +43,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 namespace conga {
 // Forward declarations. These can be used when we want to refer to another
@@ -247,8 +248,8 @@ public:
   // Copy single field from this to target
   void copyFieldTo(GridData *target, int thisField, int otherField) const;
 
-  void minmax(T &minv, T &maxv, int field = 0,
-              Type::type part = Type::real) const;
+  std::pair<T, T> minmax(const int field = 0,
+                         const Type::type part = Type::real) const;
 
   //// Modifying utility functions ////
 
@@ -1270,9 +1271,12 @@ bool GridData<T, DEV>::dimEq(const GridData<T, DEV> &A,
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::minmax(T &minv, T &maxv, int field,
-                              Type::type part) const {
+std::pair<T, T> GridData<T, DEV>::minmax(const int field,
+                                         const Type::type part) const {
+  T minv;
+  T maxv;
   GridFunctions<T, DEV>::minmax(*this, minv, maxv, field, part);
+  return {minv, maxv};
 }
 
 template <typename T, typename DEV>

@@ -234,6 +234,7 @@ void inline runSimulation(
       int col = 0;
       const int numOrderParameterComponents =
           inOutContext.getOrderParameter()->getNumComponents();
+      const bool orderParameterErase = true;
       for (; col < numOrderParameterComponents; ++col) {
         // Get order parameter.
         const GridGPU<T> &orderParameter =
@@ -244,29 +245,39 @@ void inline runSimulation(
             inOutContext.getOrderParameter()->getComponent(col)->getType();
 
         // Draw.
-        inOutVisualizer.draw(type, col, orderParameter, true);
+        inOutVisualizer.draw(type, col, orderParameter, orderParameterErase);
       }
 
       // Draw the current density.
       const GridGPU<T> &current =
           *(inOutContext.getComputeCurrent()->getResult());
-      inOutVisualizer.draw(std::string("J"), col, current, true);
+      const bool currentDensityErase = true;
+      inOutVisualizer.draw(std::string("J"), col, current, currentDensityErase);
       col++;
 
       const T penetrationDepth =
           inOutContext.getParameters()->getPenetrationDepth();
       if (penetrationDepth > static_cast<T>(0)) {
+        // The vector potential is scaled by the squared penetration depth
+        // internally. Undo the scaling when printing the range.
+        const T rangeScale =
+            static_cast<T>(1) / (penetrationDepth * penetrationDepth);
+
         // Draw the induced vector-potential.
         const GridGPU<T> &vectorPotential =
             *(inOutContext.getInducedVectorPotential());
-        inOutVisualizer.draw(std::string("A"), col, vectorPotential, false);
+        const bool vectorPotentialErase = false;
+        inOutVisualizer.draw(std::string("A"), col, vectorPotential,
+                             vectorPotentialErase, rangeScale);
         col++;
 
         // Draw the induced flux-density.
         const T latticeElementSize =
             inOutContext.getParameters()->getGridElementSize();
         const GridGPU<T> fluxDensity = vectorPotential.curl(latticeElementSize);
-        inOutVisualizer.draw(std::string("B_z"), col, fluxDensity, false);
+        const bool fluxDensityErase = false;
+        inOutVisualizer.draw(std::string("B_z"), col, fluxDensity,
+                             fluxDensityErase, rangeScale);
       }
 
       const bool running = !isConverged;
