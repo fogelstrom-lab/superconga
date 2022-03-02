@@ -134,7 +134,7 @@ template <typename T>
 void Picard<T>::computeInternal(const GridGPU<T> &inG,
                                 GridGPU<T> &inOutX) const {
   // Take a step.
-  inOutX -= (inOutX - inG) * m_stepSize;
+  inOutX += (inG - inOutX) * m_stepSize;
 }
 } // namespace accelerators
 } // namespace conga

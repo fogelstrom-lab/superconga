@@ -26,9 +26,9 @@ public:
   /// \brief Constructor of the Polyak accelerator.
   ///
   /// \param inStepSize The step size.
-  /// \param inInertia The inertia.
+  /// \param inDrag The drag.
   explicit Polyak(const T inStepSize = m_stepSizeDefault,
-                  const T inInertia = m_inertiaDefault);
+                  const T inDrag = m_dragDefault);
 
   /// \brief Constructor of the Polyak accelerator.
   ///
@@ -95,27 +95,28 @@ private:
 
   // Defaults.
   static constexpr T m_stepSizeDefault = static_cast<T>(2);
-  static constexpr T m_inertiaDefault = static_cast<T>(0.5);
+  static constexpr T m_dragDefault = static_cast<T>(0.5);
 
   // The step size.
   const T m_stepSize;
 
-  // The inertia.
-  const T m_inertia;
+  // The drag.
+  const T m_drag;
 
   // If initialized.
   bool m_initialized;
 
-  // The running-mean step.
-  GridGPU<T> m_step;
+  // The velocity.
+  GridGPU<T> m_velocity;
 };
 
 template <typename T>
-Polyak<T>::Polyak(const T inStepSize, const T inInertia)
-    : Accelerator<T>(), m_stepSize(inStepSize), m_inertia(inInertia),
+Polyak<T>::Polyak(const T inStepSize, const T inDrag)
+    : Accelerator<T>(), m_stepSize(inStepSize), m_drag(inDrag),
       m_initialized(false) {
   assert(m_stepSize > static_cast<T>(0));
-  assert(m_inertia > static_cast<T>(0));
+  assert(m_drag > static_cast<T>(0));
+  assert(m_drag < static_cast<T>(1));
 }
 
 template <typename T>
@@ -124,12 +125,12 @@ Polyak<T>::Polyak(const Json::Value &inJSON)
       m_stepSize(inJSON.isMember("step_size")
                      ? static_cast<T>(inJSON["step_size"].asDouble())
                      : m_stepSizeDefault),
-      m_inertia(inJSON.isMember("inertia")
-                    ? static_cast<T>(inJSON["inertia"].asDouble())
-                    : m_inertiaDefault),
+      m_drag(inJSON.isMember("drag") ? static_cast<T>(inJSON["drag"].asDouble())
+                                     : m_dragDefault),
       m_initialized(false) {
   assert(m_stepSize > static_cast<T>(0));
-  assert(m_inertia > static_cast<T>(0));
+  assert(m_drag > static_cast<T>(0));
+  assert(m_drag < static_cast<T>(1));
 }
 
 template <typename T> void Polyak<T>::initialize(const GridGPU<T> &inX) {
@@ -138,8 +139,8 @@ template <typename T> void Polyak<T>::initialize(const GridGPU<T> &inX) {
   const int numFields = inX.numFields();
   const Type::type representation = inX.representation();
 
-  m_step = GridGPU<T>(dimX, dimY, numFields, representation);
-  m_step.setZero();
+  m_velocity = GridGPU<T>(dimX, dimY, numFields, representation);
+  m_velocity.setZero();
 
   m_initialized = true;
 }
@@ -214,8 +215,8 @@ namespace polyak_internal {
 template <typename T>
 __global__ void computeInternal(const int inDimX, const int inDimY,
                                 const int inDimZ, const T inStepSize,
-                                const T inInertia, const T *const inGradient,
-                                T *const inOutStep, T *const inOutX) {
+                                const T inDrag, const T *const inDiff,
+                                T *const inOutVelocity, T *const inOutX) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -227,12 +228,13 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
     // Linear index.
     const int idx = inDimX * (z * inDimY + y) + x;
 
-    // Update step.
-    const T step = inOutStep[idx] * inInertia + inGradient[idx] * inStepSize;
-    inOutStep[idx] = step;
+    // Update velocity.
+    const T velocity = inOutVelocity[idx] * (static_cast<T>(1) - inDrag) +
+                       inDiff[idx] * inStepSize;
+    inOutVelocity[idx] = velocity;
 
     // Compute the result.
-    inOutX[idx] -= step;
+    inOutX[idx] += velocity;
   }
 }
 } // namespace polyak_internal
@@ -253,14 +255,13 @@ void Polyak<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   dim3 numThreadsPerBlock;
   inOutX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
 
-  // This is, of course, not truly the gradient. But when comparing with e.g.
-  // gradient descent, it takes the gradients place.
-  const GridGPU<T> gradient = inOutX - inG;
+  // The difference.
+  const GridGPU<T> diff = inG - inOutX;
 
   // Take a step.
   polyak_internal::computeInternal<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, numFields, m_stepSize, m_inertia, gradient.getDataPointer(),
-      m_step.getDataPointer(), inOutX.getDataPointer());
+      dimX, dimY, numFields, m_stepSize, m_drag, diff.getDataPointer(),
+      m_velocity.getDataPointer(), inOutX.getDataPointer());
 }
 } // namespace accelerators
 } // namespace conga

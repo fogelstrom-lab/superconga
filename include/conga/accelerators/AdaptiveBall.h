@@ -117,8 +117,8 @@ private:
   // If initialized.
   bool m_initialized;
 
-  // The running-mean step.
-  GridGPU<T> m_step;
+  // The running-mean.
+  GridGPU<T> m_mean;
 
   // The step size per "field".
   std::vector<T> m_stepSize;
@@ -164,8 +164,8 @@ template <typename T> void AdaptiveBall<T>::initialize(const GridGPU<T> &inX) {
   const int numFields = inX.numFields();
   const Type::type representation = inX.representation();
 
-  m_step = GridGPU<T>(dimX, dimY, numFields, representation);
-  m_step.setZero();
+  m_mean = GridGPU<T>(dimX, dimY, numFields, representation);
+  m_mean.setZero();
 
   m_stepSize.resize(numFields);
   std::fill(m_stepSize.begin(), m_stepSize.end(), m_stepSizeInit);
@@ -246,9 +246,8 @@ namespace adaptive_ball_internal {
 template <typename T>
 __global__ void computeInternal(const int inDimX, const int inDimY,
                                 const int inDimZ, const T *const inStepSize,
-                                const T *const inInertia,
-                                const T *const inGradient, T *const inOutStep,
-                                T *const inOutX) {
+                                const T *const inInertia, const T *const inDiff,
+                                T *const inOutMean, T *const inOutX) {
   // Indices of spatial coordinates.
   const int x = blockIdx.x * blockDim.x + threadIdx.x;
   const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -260,14 +259,14 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
     // Linear index.
     const int idx = inDimX * (z * inDimY + y) + x;
 
-    // Update step.
+    // Update mean.
     const T inertia = inInertia[z];
-    const T step = inOutStep[idx] * inertia +
-                   inGradient[idx] * (static_cast<T>(1) - inertia);
-    inOutStep[idx] = step;
+    const T mean =
+        inOutMean[idx] * inertia + inDiff[idx] * (static_cast<T>(1) - inertia);
+    inOutMean[idx] = mean;
 
     // Compute the result.
-    inOutX[idx] -= inStepSize[z] * step;
+    inOutX[idx] += inStepSize[z] * mean;
   }
 }
 } // namespace adaptive_ball_internal
@@ -285,23 +284,22 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
   const int dimY = inOutX.dimY();
   const int numFields = inOutX.numFields();
 
-  // This is, of course, not truly the gradient. But when comparing with e.g.
-  // gradient descent, it takes the gradients place.
-  const GridGPU<T> gradient = inOutX - inG;
+  // The difference.
+  const GridGPU<T> diff = inG - inOutX;
 
   // Use for changing the step size and inertia.
-  const GridGPU<T> G2 = gradient * gradient;
-  const GridGPU<T> M2 = m_step * m_step;
-  const GridGPU<T> GM = gradient * m_step;
+  const GridGPU<T> D2 = diff * diff;
+  const GridGPU<T> M2 = m_mean * m_mean;
+  const GridGPU<T> DM = diff * m_mean;
 
   for (int i = 0; i < numFields; ++i) {
-    // Compute the cosine similarity between the gradient and the
+    // Compute the cosine similarity between the diff and the
     // previous step.
-    const T gm = GM.sumField(i);
-    const T g = std::sqrt(G2.sumField(i));
+    const T dm = DM.sumField(i);
+    const T d = std::sqrt(D2.sumField(i));
     const T m = std::sqrt(M2.sumField(i));
     const T similarity =
-        gm / std::max(g * m, std::numeric_limits<T>::epsilon());
+        dm / std::max(d * m, std::numeric_limits<T>::epsilon());
 
     // Adjust the the step size. Increase step size if similar, otherwise
     // decrease it.
@@ -310,9 +308,9 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
                          : std::pow(m_decrease, -similarity);
     m_stepSize[i] *= factor;
 
-    // Adjust the inertia. Lean towards the gradient if it is smaller than the
+    // Adjust the inertia. Lean towards the diff if it is smaller than the
     // previous step.
-    m_inertia[i] = m > static_cast<T>(0) ? g / (g + m) : static_cast<T>(0);
+    m_inertia[i] = m > static_cast<T>(0) ? d / (d + m) : static_cast<T>(0);
   }
 
   // Copy to the GPU.
@@ -327,8 +325,8 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
   // Take a step.
   adaptive_ball_internal::computeInternal<<<numBlocks, numThreadsPerBlock>>>(
       dimX, dimY, numFields, thrust::raw_pointer_cast(stepSizeGPU.data()),
-      thrust::raw_pointer_cast(inertiaGPU.data()), gradient.getDataPointer(),
-      m_step.getDataPointer(), inOutX.getDataPointer());
+      thrust::raw_pointer_cast(inertiaGPU.data()), diff.getDataPointer(),
+      m_mean.getDataPointer(), inOutX.getDataPointer());
 }
 } // namespace accelerators
 } // namespace conga
