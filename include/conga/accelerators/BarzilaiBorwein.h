@@ -93,17 +93,17 @@ private:
   // The initial step size.
   const T m_stepSizeInit;
 
-  // If initialized.
-  bool m_initialized;
+  // Used to switch between BB methods.
+  int m_iterationIdx;
 
-  // The previous order parameter and vector potential.
+  // The previous.
   GridGPU<T> m_xPrevious;
-  GridGPU<T> m_gPrevious;
+  GridGPU<T> m_dPrevious;
 };
 
 template <typename T>
 BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize)
-    : Accelerator<T>(), m_stepSizeInit(inStepSize), m_initialized(false) {
+    : Accelerator<T>(), m_stepSizeInit(inStepSize), m_iterationIdx(0) {
   assert(m_stepSize > static_cast<T>(0));
 }
 
@@ -113,7 +113,7 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
       m_stepSizeInit(inJSON.isMember("step_size")
                          ? static_cast<T>(inJSON["step_size"].asDouble())
                          : m_stepSizeDefault),
-      m_initialized(false) {
+      m_iterationIdx(0) {
   assert(m_stepSize > static_cast<T>(0));
 }
 
@@ -185,36 +185,37 @@ void BarzilaiBorwein<T>::compute(const GridGPU<T> &inVectorPotentialG,
 template <typename T>
 void BarzilaiBorwein<T>::computeInternal(const GridGPU<T> &inG,
                                          GridGPU<T> &inOutX) {
-  // This is, of course, not truly the gradient. But when comparing with e.g.
-  // gradient descent, it takes the gradients place.
-  const GridGPU<T> gradient = inOutX - inG;
+  // The difference.
+  const GridGPU<T> diff = inG - inOutX;
 
   // Set step size.
   T stepSize = m_stepSizeInit;
 
   // See:
   // https://www.caam.rice.edu/~yzhang/caam565/L1_reg/BB-step.pdf
-  if (m_initialized) {
-    const GridGPU<T> dG = gradient - m_gPrevious;
+  // https://pages.cs.wisc.edu/~swright/726/handouts/barzilai-borwein.pdf
+  if (m_iterationIdx > 0) {
+    const GridGPU<T> dD = diff - m_dPrevious;
     const GridGPU<T> dX = inOutX - m_xPrevious;
 
-    // For small BB step size use:
-    // m_stepSizeInit = dot / dG.sumSquare();
-    const T dot = std::abs(sumGrid(dX * dG));
-    stepSize = dX.sumSquare() / dot;
+    const T dot = std::abs(sumGrid(dX * dD));
+    // Alternate between aggressive and cautious steps. stepSize \propto dot
+    // being the aggresive step.
+    stepSize =
+        (m_iterationIdx % 2 == 0) ? dot / dD.sumSquare() : dX.sumSquare() / dot;
     // Should this minimum step size be exposed?
     stepSize = std::max(stepSize, static_cast<T>(1e-3));
   }
 
   // Update previous.
   m_xPrevious = inOutX;
-  m_gPrevious = gradient;
+  m_dPrevious = diff;
 
   // Take step.
-  inOutX -= gradient * stepSize;
+  inOutX += diff * stepSize;
 
-  // First iteration is done.
-  m_initialized = true;
+  // Update iteration index.
+  m_iterationIdx++;
 }
 } // namespace accelerators
 } // namespace conga

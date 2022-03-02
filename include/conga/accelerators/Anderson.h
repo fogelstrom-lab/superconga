@@ -38,18 +38,18 @@ public:
   ///
   /// It does so by writing it as
   ///
-  /// f(x) = x - g(x) = 0
+  /// d(x) = g(x) - x = 0
   ///
   /// and by solving the least-squares problem
   ///
-  /// min_w ||sum_i (f_i * w_i)||^2
+  /// min_w ||sum_i (d_i * w_i)||^2
   /// subject to: sum_i (w_i) = 1
   ///
   /// and forming a linear combination of the N previous steps
   ///
   /// x_min = sum_i (w_i * x_i)
-  /// f_min = sum_i (w_i * f_i)
-  /// x_{i+1} = x_min - f_min * s
+  /// d_min = sum_i (w_i * d_i)
+  /// x_{i+1} = x_min + d_min * s
   ///
   /// where 's' is the step size.
   ///
@@ -134,10 +134,10 @@ private:
   /// \brief Set the concatenated grids.
   ///
   /// \param inX The left-hand side of the self-consistency equation. x.
-  /// \param inF The residual, f(x) = g(x) - x.
+  /// \param inDiff The residual, f(x) = g(x) - x.
   ///
   /// \return Void.
-  void set(const GridGPU<T> &inX, const GridGPU<T> &inF);
+  void set(const GridGPU<T> &inX, const GridGPU<T> &inDiff);
 
   /// \brief Compute the next order parameter and vector potential.
   ///
@@ -161,9 +161,9 @@ private:
   // The iteration counter.
   std::size_t m_iterationIdx;
 
-  // The storage of the differences f(x) = g(x) - x, where x is the order
+  // The storage of the differences d(x) = g(x) - x, where x is the order
   // parameter and the vector potential concatenated.
-  std::vector<GridGPU<T>> m_F;
+  std::vector<GridGPU<T>> m_D;
 
   // The storage of x, where x is the order parameter and the vector potential
   // concatenated.
@@ -265,34 +265,34 @@ void Anderson<T>::compute(const GridGPU<T> &inVectorPotentialG,
 }
 
 template <typename T>
-void Anderson<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inF) {
+void Anderson<T>::set(const GridGPU<T> &inX, const GridGPU<T> &inDiff) {
   // Slight optimization, compute it here instead of every time in 'solve'.
-  const T squaredResidual = inF.sumSquare();
+  const T squaredResidual = inDiff.sumSquare();
 
-  if (m_F.size() == m_rank) {
+  if (m_D.size() == m_rank) {
     // Get the oldest index.
     const auto minelem = std::min_element(m_indices.begin(), m_indices.end());
     const std::size_t idx = std::distance(m_indices.begin(), minelem);
 
     // Replace.
     m_X[idx] = inX;
-    m_F[idx] = inF;
+    m_D[idx] = inDiff;
     m_squaredResiduals[idx] = squaredResidual;
     m_indices[idx] = m_iterationIdx;
   } else {
     m_X.push_back(inX);
-    m_F.push_back(inF);
+    m_D.push_back(inDiff);
     m_squaredResiduals.push_back(squaredResidual);
     m_indices.push_back(m_iterationIdx);
   }
 }
 
 template <typename T> std::vector<T> Anderson<T>::solve() {
-  assert(m_F.size() == m_X.size());
-  assert(m_F.size() == m_squaredResiduals.size());
+  assert(m_D.size() == m_X.size());
+  assert(m_D.size() == m_squaredResiduals.size());
 
   // The number of equations.
-  const std::size_t numEqs = m_F.size();
+  const std::size_t numEqs = m_D.size();
 
   // The number of equations plus the constraint.
   const std::size_t numTotalEqs = numEqs + 1;
@@ -313,7 +313,7 @@ template <typename T> std::vector<T> Anderson<T>::solve() {
   for (std::size_t i = 0; i < numEqs; ++i) {
     A(i, i) = m_squaredResiduals[i] * scale;
     for (std::size_t j = i + 1; j < numEqs; ++j) {
-      const T val = sumGrid(m_F[i] * m_F[j]) * scale;
+      const T val = sumGrid(m_D[i] * m_D[j]) * scale;
       A(i, j) = val;
       A(j, i) = val;
     }
@@ -335,12 +335,11 @@ template <typename T> std::vector<T> Anderson<T>::solve() {
 
 template <typename T>
 void Anderson<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
-  // Grid of residuals, what Matthias Eschrig calls f. What is also called
-  // "gradient" in other accelerators.
-  const GridGPU<T> F = inOutX - inG;
+  // The difference.
+  const GridGPU<T> diff = inG - inOutX;
 
   // Set this iteration, i.e. update the member variables.
-  set(inOutX, F);
+  set(inOutX, diff);
 
   // Solve the system of equations, determining the next step.
   const std::vector<T> weights = solve();
@@ -348,7 +347,7 @@ void Anderson<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   // Compute result.
   inOutX.setZero();
   for (std::size_t i = 0; i < m_X.size(); ++i) {
-    inOutX += (m_X[i] - m_F[i] * m_stepSize) * weights[i];
+    inOutX += (m_X[i] + m_D[i] * m_stepSize) * weights[i];
   }
 
   // Increase iteration index.

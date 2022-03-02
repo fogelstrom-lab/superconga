@@ -370,22 +370,22 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         help="The step size in the accelerator.",
     )
     accelerator.add_argument(
-        "--inertia",
+        "--drag",
         type=float,
         default=None,
-        help="The inertia of the Polyak accelerator.",
+        help="The drag in the Polyak accelerator.",
     )
     accelerator.add_argument(
         "--step-size-increase",
         type=float,
         default=None,
-        help="The maximum step-size increase in the Adaptive-Ball accelerator.",
+        help="The step-size increase factor in the Adaptive-Ball accelerator.",
     )
     accelerator.add_argument(
         "--step-size-decrease",
         type=float,
         default=None,
-        help="The maximum step-size decrease in the Adaptive-Ball accelerator.",
+        help="The step-size decrease factor in the Adaptive-Ball accelerator.",
     )
     accelerator.add_argument(
         "--rank",
@@ -703,8 +703,8 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
     )
     cli.set_value(
         config=config,
-        key="inertia",
-        value=args.inertia,
+        key="drag",
+        value=args.drag,
         group=group,
     )
     cli.set_value(
@@ -928,7 +928,7 @@ def get_checks() -> dict:
             "fields": {
                 "name": {"type": str, "one_of": cli.VALID_ACCELERATORS},
                 "step_size": {"type": float, "low": 0.0, "optional": True},
-                "inertia": {"type": float, "low": 0.0, "optional": True},
+                "drag": {"type": float, "low": 0.0, "high": 1.0, "optional": True},
                 "rank": {"type": int, "low": 1, "optional": True},
                 "step_size_increase": {"type": float, "low": 0.0, "optional": True},
                 "step_size_decrease": {"type": float, "low": 0.0, "optional": True},

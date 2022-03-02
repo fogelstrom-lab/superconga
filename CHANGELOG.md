@@ -90,6 +90,7 @@
 - Increase step size in s-wave annulus tests.
 - Remove order parameter initial test.
 - Use JsonCpp's own styled string when writing json files.
+- Rename inertia to drag in the Polyak accelerator, and change signs in accelerator expressions to conform with the paper.
 
 ---
 
