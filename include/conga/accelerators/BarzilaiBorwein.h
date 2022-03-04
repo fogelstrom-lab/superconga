@@ -104,7 +104,7 @@ private:
 template <typename T>
 BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize), m_iterationIdx(0) {
-  assert(m_stepSize > static_cast<T>(0));
+  assert(m_stepSizeInit > static_cast<T>(0));
 }
 
 template <typename T>
@@ -114,7 +114,7 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
                          ? static_cast<T>(inJSON["step_size"].asDouble())
                          : m_stepSizeDefault),
       m_iterationIdx(0) {
-  assert(m_stepSize > static_cast<T>(0));
+  assert(m_stepSizeInit > static_cast<T>(0));
 }
 
 template <typename T>
