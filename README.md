@@ -33,9 +33,9 @@ python superconga.py --help
 ```
 Instructions are also available at the [tutorial](https://superconga.gitlab.io/superconga-doc/tutorials.html) in the online documentation.
 
-In order to run a simulation the subcommand `simulate` is used. It is highly recommended to use the `--config` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-vortex lattice example:
+In order to run a simulation the subcommand `simulate` is used. It is highly recommended to use the `--config` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-lattice example:
 ```shell
-python superconga.py simulate --config examples/swave_abrikosov_vortex_lattice/simulation_config.json
+python superconga.py simulate --config examples/swave_abrikosov_lattice/simulation_config.json
 ```
 These example files can easily be copied/modified with a text editor, to create new simulations of other systems. To see further usage instructions, use the `-h` or `--help` flag
 ```shell
@@ -44,26 +44,26 @@ python superconga.py simulate --help
 
 
 ## Data post-processing and visualization
-By default the examples save data at the end of the simulation. It is written to the path specified by the `save_path` option in `simulation_config.json` (which can also be overridden by the command-line argument `--save-path`). Whatever path was used, it will be printed to the terminal upon successfully finishing the simulation. The data is saved as either CSV or hdf5 format, which can be set by the argument `--data-format`. Convergence data is always saved as CSV, and scalar quantities, e.g. averages, as JSON. To plot the simulation data, in e.g. `data/examples/swave_abrikosov_vortex_lattice/`, use the `plot-simulation` subcommand and the `--load-path` argument:
+By default the examples save data at the end of the simulation. It is written to the path specified by the `save_path` option in `simulation_config.json` (which can also be overridden by the command-line argument `--save-path`). Whatever path was used, it will be printed to the terminal upon successfully finishing the simulation. The data is saved as either CSV or hdf5 format, which can be set by the argument `--data-format`. Convergence data is always saved as CSV, and scalar quantities, e.g. averages, as JSON. To plot the simulation data, in e.g. `data/examples/swave_abrikosov_lattice/`, use the `plot-simulation` subcommand and the `--load-path` argument:
 ```shell
-python superconga.py plot-simulation --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-simulation --load-path data/examples/swave_abrikosov_lattice
 ```
 To see further usage instructions, run `python superconga.py plot-simulation --help`. How the simulation converged can be plotted using the `plot-convergence` subcommand
 ```shell
-python superconga.py plot-convergence --view simulation --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-convergence --view simulation --load-path data/examples/swave_abrikosov_lattice
 ```
 
 After a simulation has converged the local density of states can be computed by running
 ```shell
-python superconga.py postprocess --config examples/swave_abrikosov_vortex_lattice/postprocess_config.json
+python superconga.py postprocess --config examples/swave_abrikosov_lattice/postprocess_config.json
 ```
-which will generate more data files in `data/examples/swave_abrikosov_vortex_lattice/`. The local density of states can then be visualized using the subcommand `plot-postprocess`
+which will generate more data files in `data/examples/swave_abrikosov_lattice/`. The local density of states can then be visualized using the subcommand `plot-postprocess`
 ```shell
-python superconga.py plot-postprocess --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-postprocess --load-path data/examples/swave_abrikosov_lattice
 ```
 Note that the plots are interactive. By clicking in either plot the data being visualized will be updated. How the postprocess converged can be plotted using the `plot-convergence` subcommand
 ```shell
-python superconga.py plot-convergence --view postprocess --load-path data/examples/swave_abrikosov_vortex_lattice
+python superconga.py plot-convergence --view postprocess --load-path data/examples/swave_abrikosov_lattice
 ```
 
 
