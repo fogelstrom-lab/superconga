@@ -51,6 +51,20 @@ Folder:
 dwave_plus_swave
 ```
 
+## S-Wave Abrikosov Lattice
+
+A simulation of an s-wave superconductor in a square grain, with high external flux
+quanta, inducing an Abrikosov vortex lattice. The lattice illustrates several microscopic
+effects, including 1. the vortex shell effect where the vortices enter in concentric shells
+rather than one-by-one, and 2. the lattice shape effect where the lattice mimics the
+rotational symmetry of the grain (and the OP pairing symmetry if asymmetric).
+Note that the result is sensitive to the initial guess of the order parameter.
+
+Folders:
+```
+swave_abrikosov_lattice
+```
+
 ## S-Wave Disc: The Meissner Effect
 
 A simulation of an s-wave superconductor in a disc-shaped grain. 
@@ -71,18 +85,4 @@ circulating Meissner currents, along the edge, and a vortex in the middle.
 Folder:
 ```
 swave_disc_vortex
-```
-
-## S-Wave Abrikosov Vortex Lattice
-
-A simulation of an s-wave superconductor in a square grain, with high external flux
-quanta, inducing an Abrikosov vortex lattice. The lattice illustrates several microscopic
-effects, including 1. the vortex shell effect where the vortices enter in concentric shells
-rather than one-by-one, and 2. the lattice shape effect where the lattice mimics the
-rotational symmetry of the grain (and the OP pairing symmetry if asymmetric).
-Note that the result is sensitive to the initial guess of the order parameter.
-
-Folders:
-```
-swave_abrikosov_vortex_lattice
 ```

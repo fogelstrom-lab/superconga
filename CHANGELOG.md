@@ -92,6 +92,7 @@
 - Remove order parameter initial test.
 - Use JsonCpp's own styled string when writing json files.
 - Rename inertia to drag in the Polyak accelerator, and change signs in accelerator expressions to conform with the paper.
+- Shorten Abrikosov lattice example to `swave_abrikosov_lattice`.
 
 ---
 
