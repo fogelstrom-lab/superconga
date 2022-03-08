@@ -370,6 +370,18 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         help="The step size in the accelerator.",
     )
     accelerator.add_argument(
+        "--step-size-max",
+        type=float,
+        default=None,
+        help="The maximum step size. Only used in accelerators with an adaptive step size, e.g. Adaptive-Ball and Barzilai-Borwein.",
+    )
+    accelerator.add_argument(
+        "--step-size-min",
+        type=float,
+        default=None,
+        help="The minimum step size. Only used in accelerators with an adaptive step size, e.g. Adaptive-Ball and Barzilai-Borwein.",
+    )
+    accelerator.add_argument(
         "--drag",
         type=float,
         default=None,
@@ -703,6 +715,18 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
     )
     cli.set_value(
         config=config,
+        key="step_size_max",
+        value=args.step_size_max,
+        group=group,
+    )
+    cli.set_value(
+        config=config,
+        key="step_size_min",
+        value=args.step_size_min,
+        group=group,
+    )
+    cli.set_value(
+        config=config,
         key="drag",
         value=args.drag,
         group=group,
@@ -928,10 +952,17 @@ def get_checks() -> dict:
             "fields": {
                 "name": {"type": str, "one_of": cli.VALID_ACCELERATORS},
                 "step_size": {"type": float, "low": 0.0, "optional": True},
+                "step_size_max": {"type": float, "low": 0.0, "optional": True},
+                "step_size_min": {"type": float, "low_include": 0.0, "optional": True},
                 "drag": {"type": float, "low": 0.0, "high": 1.0, "optional": True},
                 "rank": {"type": int, "low": 1, "optional": True},
-                "step_size_increase": {"type": float, "low": 0.0, "optional": True},
-                "step_size_decrease": {"type": float, "low": 0.0, "optional": True},
+                "step_size_increase": {"type": float, "low": 1.0, "optional": True},
+                "step_size_decrease": {
+                    "type": float,
+                    "low": 0.0,
+                    "high": 1.0,
+                    "optional": True,
+                },
             },
         },
         "misc": {

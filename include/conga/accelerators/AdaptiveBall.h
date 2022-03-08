@@ -35,9 +35,13 @@ public:
   /// with.
   /// \param inDecreaseFactor The factor to maximally decrease the step size
   /// with.
+  /// \param inMaxStepSize The maximum step size.
+  /// \param inMinStepSize The minimum step size.
   explicit AdaptiveBall(const T inStepSize = m_stepSizeDefault,
                         const T inIncreaseFactor = m_increaseDefault,
-                        const T inDecreaseFactor = m_decreaseDefault);
+                        const T inDecreaseFactor = m_decreaseDefault,
+                        const T inMaxStepSize = m_maxStepSizeDefault,
+                        const T inMinStepSize = m_minStepSizeDefault);
 
   /// \brief Constructor of the adaptive-ball accelerator.
   ///
@@ -106,6 +110,8 @@ private:
   static constexpr T m_stepSizeDefault = static_cast<T>(1);
   static constexpr T m_increaseDefault = static_cast<T>(1.2599210498948732);
   static constexpr T m_decreaseDefault = static_cast<T>(0.15915494309189535);
+  static constexpr T m_maxStepSizeDefault = static_cast<T>(100);
+  static constexpr T m_minStepSizeDefault = static_cast<T>(0.001);
 
   // The initial step size.
   const T m_stepSizeInit;
@@ -113,6 +119,10 @@ private:
   // Factors to increase/decrease the step size.
   const T m_increase;
   const T m_decrease;
+
+  // The limits of the step size.
+  const T m_maxStepSize;
+  const T m_minStepSize;
 
   // If initialized.
   bool m_initialized;
@@ -129,14 +139,18 @@ private:
 
 template <typename T>
 AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inIncreaseFactor,
-                              const T inDecreaseFactor)
+                              const T inDecreaseFactor, const T inMaxStepSize,
+                              const T inMinStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize),
       m_increase(inIncreaseFactor), m_decrease(inDecreaseFactor),
+      m_maxStepSize(inMaxStepSize), m_minStepSize(inMinStepSize),
       m_initialized(false) {
   assert(m_stepSizeInit > static_cast<T>(0));
   assert(m_increase > static_cast<T>(1));
   assert(m_decrease < static_cast<T>(1));
   assert(m_decrease > static_cast<T>(0));
+  assert(m_maxStepSize > static_cast<T>(0));
+  assert(m_maxStepSize >= m_minStepSize);
 }
 
 template <typename T>
@@ -151,11 +165,19 @@ AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
       m_decrease(inJSON.isMember("step_size_decrease")
                      ? static_cast<T>(inJSON["step_size_decrease"].asDouble())
                      : m_decreaseDefault),
+      m_maxStepSize(inJSON.isMember("step_size_max")
+                        ? static_cast<T>(inJSON["step_size_max"].asDouble())
+                        : m_maxStepSizeDefault),
+      m_minStepSize(inJSON.isMember("step_size_min")
+                        ? static_cast<T>(inJSON["step_size_min"].asDouble())
+                        : m_minStepSizeDefault),
       m_initialized(false) {
   assert(m_stepSizeInit > static_cast<T>(0));
   assert(m_increase > static_cast<T>(1));
   assert(m_decrease < static_cast<T>(1));
   assert(m_decrease > static_cast<T>(0));
+  assert(m_maxStepSize > static_cast<T>(0));
+  assert(m_maxStepSize >= m_minStepSize);
 }
 
 template <typename T> void AdaptiveBall<T>::initialize(const GridGPU<T> &inX) {
@@ -306,7 +328,8 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
     const T factor = similarity > static_cast<T>(0)
                          ? std::pow(m_increase, similarity)
                          : std::pow(m_decrease, -similarity);
-    m_stepSize[i] *= factor;
+    m_stepSize[i] =
+        std::clamp(m_stepSize[i] * factor, m_minStepSize, m_maxStepSize);
 
     // Adjust the inertia. Lean towards the diff if it is smaller than the
     // previous step.
