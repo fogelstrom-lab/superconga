@@ -29,7 +29,11 @@ public:
   /// \brief Constructor of the Barzilai-Borwein accelerator.
   ///
   /// \param inStepSize The initial step size.
-  explicit BarzilaiBorwein(const T inStepSize = m_stepSizeDefault);
+  /// \param inMaxStepSize The maximum step size.
+  /// \param inMinStepSize The minimum step size.
+  explicit BarzilaiBorwein(const T inStepSize = m_stepSizeDefault,
+                           const T inMaxStepSize = m_maxStepSizeDefault,
+                           const T inMinStepSize = m_minStepSizeDefault);
 
   /// \brief Constructor of the Barzilai-Borwein accelerator.
   ///
@@ -89,9 +93,15 @@ private:
 
   // Defaults.
   static constexpr T m_stepSizeDefault = static_cast<T>(1);
+  static constexpr T m_maxStepSizeDefault = static_cast<T>(100);
+  static constexpr T m_minStepSizeDefault = static_cast<T>(0.001);
 
   // The initial step size.
   const T m_stepSizeInit;
+
+  // The limits of the step size.
+  const T m_maxStepSize;
+  const T m_minStepSize;
 
   // Used to switch between BB methods.
   int m_iterationIdx;
@@ -102,9 +112,14 @@ private:
 };
 
 template <typename T>
-BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize)
-    : Accelerator<T>(), m_stepSizeInit(inStepSize), m_iterationIdx(0) {
+BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize, const T inMaxStepSize,
+                                    const T inMinStepSize)
+    : Accelerator<T>(), m_stepSizeInit(inStepSize),
+      m_maxStepSize(inMaxStepSize), m_minStepSize(inMinStepSize),
+      m_iterationIdx(0) {
   assert(m_stepSizeInit > static_cast<T>(0));
+  assert(m_maxStepSize > static_cast<T>(0));
+  assert(m_maxStepSize >= m_minStepSize);
 }
 
 template <typename T>
@@ -113,8 +128,16 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
       m_stepSizeInit(inJSON.isMember("step_size")
                          ? static_cast<T>(inJSON["step_size"].asDouble())
                          : m_stepSizeDefault),
+      m_maxStepSize(inJSON.isMember("step_size_max")
+                        ? static_cast<T>(inJSON["step_size_max"].asDouble())
+                        : m_maxStepSizeDefault),
+      m_minStepSize(inJSON.isMember("step_size_min")
+                        ? static_cast<T>(inJSON["step_size_min"].asDouble())
+                        : m_minStepSizeDefault),
       m_iterationIdx(0) {
   assert(m_stepSizeInit > static_cast<T>(0));
+  assert(m_maxStepSize > static_cast<T>(0));
+  assert(m_maxStepSize >= m_minStepSize);
 }
 
 template <typename T>
@@ -203,9 +226,10 @@ void BarzilaiBorwein<T>::computeInternal(const GridGPU<T> &inG,
     // being the aggresive step.
     stepSize =
         (m_iterationIdx % 2 == 0) ? dot / dD.sumSquare() : dX.sumSquare() / dot;
-    // Should this minimum step size be exposed?
-    stepSize = std::max(stepSize, static_cast<T>(1e-3));
   }
+
+  // Clamp to range.
+  stepSize = std::clamp(stepSize, m_minStepSize, m_maxStepSize);
 
   // Update previous.
   m_xPrevious = inOutX;
