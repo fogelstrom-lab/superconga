@@ -96,6 +96,7 @@
 - Shorten Abrikosov lattice example to `swave_abrikosov_lattice`.
 - Simplify the Barzilai-Borwein accelerator.
 - Improve the Adaptive-Ball acccelerator. Optimize the inertia and change default parameters.
+- Use nearest-neighbour extrapolation when extending values at the boundary.
 
 ---
 
