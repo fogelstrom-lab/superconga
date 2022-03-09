@@ -155,14 +155,14 @@ bool read(const bool inDefinedEverywhere, const HighFive::File &inFile,
 
     if (!inDefinedEverywhere) {
       // Read the domain.
-      GridGPU<char> domain(dimX, dimY, 1, Type::real);
+      GridGPU<char> domainLabels(dimX, dimY, 1, Type::real);
       std::vector<char> domainData;
       inFile.getDataSet("domain").read(domainData);
-      domain.setVector(domainData);
+      domainLabels.setVector(domainData);
 
       // Extend values outside of the domain (to avoid boundary interpolation
       // issues).
-      geometry::extendValuesAtBoundary(domain, tmp);
+      geometry::extendValuesAtBoundary(domainLabels, tmp);
     }
 
     // Change resolution of the grid.
@@ -203,12 +203,7 @@ bool read(const HighFive::File &inFile, const std::string &inName,
   const bool definedEverywhere = true;
   const bool exist =
       internal::read(definedEverywhere, inFile, inName, inOutGrid);
-  if (!exist) {
-    return false;
-  }
-
-  // Success!
-  return true;
+  return exist;
 }
 
 /// \brief Read an order parameter from h5-file.

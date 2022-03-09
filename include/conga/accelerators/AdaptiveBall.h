@@ -349,6 +349,14 @@ T AdaptiveBall<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
       xB = x;
     }
 
+    // Make sure that the signs of errorA and errorB differ.
+    if (utils::sign(errorA) == utils::sign(errorB)) {
+#ifndef NDEBUG
+      std::cerr << "-- WARNING! The computation of the inertia did not converge." << std::endl;
+#endif
+      break;
+    }
+
     // New guess.
     x = static_cast<T>(0.5) * (xA + xB);
   }
