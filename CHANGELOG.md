@@ -42,6 +42,7 @@
 - Allow setting separate norm used when computing residuals during spectroscopy computation.
 - Change default colormap to YlGnBu in plotters. Reverse the colormap used for angles so that blue is always positive, and red negative. Use the same colors in live visualizer.
 - Expose the min/max step-size limits in the frontend.
+- Increase the maximum number of iterations in the examples.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
