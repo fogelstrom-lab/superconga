@@ -26,52 +26,13 @@
 #include <stdlib.h>
 #include <vector>
 
-//*******************************************************
-// SIMULATION PARAMETERS common between test cases
-//*******************************************************
-
-namespace simParams {
-// Temperature in units of T_c
-const double TEMPERATURE = 0.5;
-
-// Size of superconducting grain in coherence lengths hbar*<vF>/(2*pi*kB*Tc)
-const double GRAIN_SIDE_LENGTH = 10.0;
-
-// Number of lattice points per coherence length
-const double POINTS_PER_COHERENCE_LENGTH = 1.0;
-
-// Number of discrete trajectory angles (on the Fermi-surface).
-const int NUM_ANGLES = 32;
-
-// The energy cutoff.
-const double ENERGY_CUTOFF = 16.0;
-
-// Convergence criterion for order-parameter residual
-const double CONVERGENCE_CRITERION = 1e-3;
-
-// Print iteration status to terminal
-const bool PRINT_ITERATION_STATUS = true;
-
-// Maximum number of iterations
-const int NUM_ITERATIONS_MAX = 100;
-
-// Minimum number of iterations
-const int NUM_ITERATIONS_MIN = 1;
-
-// The external magnetic field.
-const double EXTERNAL_FLUX_QUANTA = 0.01;
-
+namespace helper {
 // Which polygons to test.
 // TODO(niclas): We probably have some bug. Only even polygons work. FIX
 // THIS!!! Add more polygons, solenoids, irregular polygons, and disjoint
 // polygons.
 const std::vector<int> NUM_VERTICES = {-1, 4, 6};
 
-// The tolerance is this factor times the machine precision.
-const double EPSILON_TOLERANCE = 10.0;
-} // namespace simParams
-
-namespace helper {
 // ========================= Test helper objects ========================= //
 
 // *** Test bulk free energy and order-parameter value at low temperature *** //
@@ -82,17 +43,15 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
   // Create Context
   conga::Context<T> context;
 
-  // Set parameters to the values specified in simParams struct
+  // Set parameters.
   conga::Parameters<T> *parameters = new conga::Parameters<T>(&context);
-  parameters->setGrainWidth(static_cast<T>(simParams::GRAIN_SIDE_LENGTH));
-  parameters->setPointsPerCoherenceLength(
-      static_cast<T>(simParams::POINTS_PER_COHERENCE_LENGTH));
-  parameters->setAngularResolution(simParams::NUM_ANGLES);
-  parameters->setConvergenceCriterion(
-      static_cast<T>(simParams::CONVERGENCE_CRITERION));
-  parameters->setTemperature(static_cast<T>(simParams::TEMPERATURE));
-  parameters->setEnergyCutoff(static_cast<T>(simParams::ENERGY_CUTOFF));
-  parameters->setNumFluxQuanta(static_cast<T>(simParams::EXTERNAL_FLUX_QUANTA));
+  parameters->setGrainWidth(static_cast<T>(10));
+  parameters->setPointsPerCoherenceLength(static_cast<T>(2));
+  parameters->setAngularResolution(32);
+  parameters->setConvergenceCriterion(static_cast<T>(1e-3));
+  parameters->setTemperature(static_cast<T>(0.5));
+  parameters->setEnergyCutoff(static_cast<T>(16));
+  parameters->setNumFluxQuanta(static_cast<T>(0.01));
   parameters->setResidualNormType(conga::ResidualNorm::LInf);
 
   // Create geometry group: add/remove geometry objects (e.g. discs, polygons)
@@ -169,9 +128,7 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
 
   // =================== ACT ==================== //
   context.initialize();
-  const bool isConverged = conga::runCompute(
-      simParams::NUM_ITERATIONS_MIN, simParams::NUM_ITERATIONS_MAX,
-      simParams::PRINT_ITERATION_STATUS, context);
+  const bool isConverged = conga::runCompute(1, 100, true, context);
 
   // Fetch the grain-summed current-density magnitude
   const conga::GridGPU<T> currentDensity =
@@ -195,8 +152,7 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
   const T expectedMeanCurrentDensityX = static_cast<T>(0);
   const T expectedMeanCurrentDensityY = static_cast<T>(0);
 
-  const T tolerance = static_cast<T>(simParams::EPSILON_TOLERANCE) *
-                      std::numeric_limits<T>::epsilon();
+  const T tolerance = static_cast<T>(10) * std::numeric_limits<T>::epsilon();
 
   CHECK(testMeanCurrentDensityX ==
         doctest::Approx(expectedMeanCurrentDensityX).epsilon(tolerance));
@@ -214,7 +170,7 @@ TEST_CASE("Test current conservation - s-wave (float)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::SWAVE;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<float>(symmetry, numVertices);
   }
@@ -224,7 +180,7 @@ TEST_CASE("Test current conservation - s-wave (double)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::SWAVE;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<double>(symmetry, numVertices);
   }
@@ -234,7 +190,7 @@ TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (float)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<float>(symmetry, numVertices);
   }
@@ -244,7 +200,7 @@ TEST_CASE("Test current conservation - d_{x^2 - y^2}-wave (double)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::DWAVE_X2_Y2;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<double>(symmetry, numVertices);
   }
@@ -254,7 +210,7 @@ TEST_CASE("Test current conservation - d_{xy}-wave (float)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::DWAVE_XY;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<float>(symmetry, numVertices);
   }
@@ -264,7 +220,7 @@ TEST_CASE("Test current conservation - d_{xy}-wave (double)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::DWAVE_XY;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<double>(symmetry, numVertices);
   }
@@ -274,7 +230,7 @@ TEST_CASE("Test current conservation - g-wave (float)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::GWAVE;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<float>(symmetry, numVertices);
   }
@@ -284,7 +240,7 @@ TEST_CASE("Test current conservation - g-wave (double)") {
   const conga::BasisFunctionSymmetry symmetry =
       conga::BasisFunctionSymmetry::GWAVE;
 
-  for (const int numVertices : simParams::NUM_VERTICES) {
+  for (const int numVertices : helper::NUM_VERTICES) {
     std::cout << "numVertices = " << numVertices << std::endl;
     helper::testCurrentConservation<double>(symmetry, numVertices);
   }

@@ -49,7 +49,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   // needed. This needs to be investigated! Here a small phase winding and low
   // resolution is used in order for the test to not take forever.
   const T grainWidth = static_cast<T>(2) * R;
-  const T pointsPerCoherenceLength = static_cast<T>(3.4);
+  const T pointsPerCoherenceLength = static_cast<T>(3.5);
   const int numMomenta = 16;
   const T convergenceCriterion = static_cast<T>(1e-4);
   const T temperature = static_cast<T>(0.2);
@@ -70,6 +70,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
   // =================== ACT ==================== //
   // For storing the results.
   std::vector<T> freeEnergies;
+  std::vector<bool> convergenceSuccess;
 
   // Loop over flux quantas and compute the free energy.
   for (const T numFluxQuanta : numFluxQuantas) {
@@ -127,6 +128,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     // Run the simulation.
     context.initialize();
     const bool isConverged = conga::runCompute(0, 100, true, context);
+    convergenceSuccess.push_back(isConverged);
 
     // Save the result.
     const T freeEnergy =
@@ -158,6 +160,9 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     // Compare results.
     CHECK(freeEnergies[i] ==
           doctest::Approx(freeEnergyExpected).epsilon(tolerance).scale(scale));
+
+    // Check that it converged.
+    CHECK(convergenceSuccess[i]);
   }
 
   // Basic sanity check, the free energy should be lower at numFluxQuanta =

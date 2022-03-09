@@ -8,99 +8,62 @@
 namespace conga {
 namespace geometry {
 namespace internal {
-// Slow operation, so we have two explicit kernels, one for complex and one for
-// real valued.
 template <typename T>
-__global__ void extendValuesAtBoundary_kernel( // complex
-    const char *const dom_ptr, T *grid_real, T *grid_imag, int Nx_geom,
-    int Ny_geom, int Nx_target, int Ny_target, int Nx_geom_offset,
-    int Ny_geom_offset, const int numExtend) {
-  int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  int tf = blockIdx.z;
+__global__ void extendValuesAtBoundary_kernel(
+    const int inDimX, const int inDimY, const int inDimZ, const int inNumExtend,
+    const char *const inDomainLabels, T *const inOutTarget) {
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
+  const int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-  if (tx < Nx_target && ty < Ny_target) {
-    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
+  if (x < inDimX && y < inDimY && z < inDimZ) {
+    const int idxDomain = y * inDimX + x;
+    const char domainLabel = inDomainLabels[idxDomain];
 
-    int i, j, idx_neighbor, idx_geom_neighbor;
+    if (domainLabel == 0) {
+      // Extent of the window along the x-axis.
+      const int xMin = max(x - inNumExtend, 0);
+      const int xMax = min(x + inNumExtend, inDimX - 1);
 
-    T interp_real = static_cast<T>(0.0);
-    T interp_imag = static_cast<T>(0.0);
+      // Extent of the window along the y-axis.
+      const int yMin = max(y - inNumExtend, 0);
+      const int yMax = min(y + inNumExtend, inDimY - 1);
 
-    int numNeighbors = 0;
+      T val = static_cast<T>(0);
+      int numPoints = 0;
+      int minSquaredDistance = 1000;
 
-    if (dom_ptr[idx_geom] == 0) {
-      for (j = -numExtend; j <= numExtend; ++j) {
-        for (i = -numExtend; i <= numExtend; ++i) {
-          if ((tx + i) > 0 && (tx + i) < Nx_target && (ty + j) > 0 &&
-              (ty + j) < Ny_target) {
-            idx_geom_neighbor =
-                (ty + j + Ny_geom_offset) * Nx_geom + (tx + i + Nx_geom_offset);
+      for (int ky = yMin; ky <= yMax; ++ky) {
+        for (int kx = xMin; kx <= xMax; ++kx) {
+          const int idxDomain = ky * inDimX + kx;
+          const char domainLabel = inDomainLabels[idxDomain];
 
-            if (dom_ptr[idx_geom_neighbor] > 0) {
-              idx_neighbor = tf * 2 * Nx_target * Ny_target +
-                             (ty + j) * Nx_target + (tx + i);
+          if (domainLabel > 0) {
+            // The squared distance to the pixel from the window center.
+            const int dx = x - kx;
+            const int dy = y - ky;
+            const int squaredDistance = dx * dx + dy * dy;
 
-              interp_real += grid_real[idx_neighbor];
-              interp_imag += grid_imag[idx_neighbor];
+            // The index of this point.
+            const int idxNeighbour = (z * inDimY + ky) * inDimX + kx;
 
-              numNeighbors++;
+            // Update if better or equal.
+            if (squaredDistance < minSquaredDistance) {
+              val = inOutTarget[idxNeighbour];
+              numPoints = 1;
+              minSquaredDistance = squaredDistance;
+            } else if (squaredDistance == minSquaredDistance) {
+              val += inOutTarget[idxNeighbour];
+              numPoints++;
             }
           }
         }
       }
-    }
 
-    if (numNeighbors) {
-      const int idx = tf * 2 * Nx_target * Ny_target + ty * Nx_target + tx;
-      grid_real[idx] = interp_real / (T)numNeighbors;
-      grid_imag[idx] = interp_imag / (T)numNeighbors;
-    }
-  }
-}
-
-template <typename T>
-__global__ void extendValuesAtBoundary_kernel( // real
-    const char *const dom_ptr, T *grid_real, int Nx_geom, int Ny_geom,
-    int Nx_target, int Ny_target, int Nx_geom_offset, int Ny_geom_offset,
-    const int numExtend) {
-  int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  int tf = blockIdx.z;
-
-  if (tx < Nx_target && ty < Ny_target) {
-    int idx_geom = (ty + Ny_geom_offset) * Nx_geom + (tx + Nx_geom_offset);
-
-    int i, j, idx_neighbor, idx_geom_neighbor;
-
-    T interp_real = static_cast<T>(0.0);
-
-    int numNeighbors = 0;
-
-    if (dom_ptr[idx_geom] == 0) {
-      for (j = -numExtend; j <= numExtend; ++j) {
-        for (i = -numExtend; i <= numExtend; ++i) {
-          if ((tx + i) > 0 && (tx + i) < Nx_target && (ty + j) > 0 &&
-              (ty + j) < Ny_target) {
-            idx_geom_neighbor =
-                (ty + j + Ny_geom_offset) * Nx_geom + (tx + i + Nx_geom_offset);
-
-            if (dom_ptr[idx_geom_neighbor] > 0) {
-              idx_neighbor =
-                  tf * Nx_target * Ny_target + (ty + j) * Nx_target + (tx + i);
-
-              interp_real += grid_real[idx_neighbor];
-
-              numNeighbors++;
-            }
-          }
-        }
+      if (numPoints > 0) {
+        const int idx = (z * inDimY + y) * inDimX + x;
+        inOutTarget[idx] = val / static_cast<T>(numPoints);
       }
-    }
-
-    if (numNeighbors) {
-      const int idx = tf * Nx_target * Ny_target + ty * Nx_target + tx;
-      grid_real[idx] = interp_real / (T)numNeighbors;
     }
   }
 }
@@ -109,20 +72,15 @@ __global__ void extendValuesAtBoundary_kernel( // real
 template <typename T>
 void extendValuesAtBoundary(const GridGPU<char> &inDomainLabels,
                             GridGPU<T> &inOutTarget) {
-  const int Nx_geom = inDomainLabels.dimX();
-  const int Ny_geom = inDomainLabels.dimY();
+  // Sanity checks.
+  assert(inDomainLabels.dimX() == inOutTarget.dimX());
+  assert(inDomainLabels.dimY() == inOutTarget.dimY());
 
-  const int Nx_target = inOutTarget.dimX();
-  const int Ny_target = inOutTarget.dimY();
-
-  const int Nx_geom_offset = (Nx_geom - Nx_target) / 2;
-  const int Ny_geom_offset = (Ny_geom - Ny_target) / 2;
-
-  const int Nf = inOutTarget.numFields();
-
-  // Set kernel dimensions
-  dim3 bpg, tpb;
-  inOutTarget.getKernelDimensionsFields(bpg, tpb);
+  // Dimensions.
+  const int dimX = inOutTarget.dimX();
+  const int dimY = inOutTarget.dimY();
+  const int complexFactor = inOutTarget.isComplex() ? 2 : 1;
+  const int dimZ = complexFactor * inOutTarget.numFields();
 
   // This is a sensible value. It probably does not need to be exposed to the
   // user. Note that 2 is chosen due to corner artifacts otherwise.
@@ -130,18 +88,17 @@ void extendValuesAtBoundary(const GridGPU<char> &inDomainLabels,
   // separately.
   const int numExtend = 2;
 
-  if (inOutTarget.isComplex()) {
-    internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
-        inDomainLabels.getDataPointer(),
-        inOutTarget.getDataPointer(0, Type::real),
-        inOutTarget.getDataPointer(0, Type::imag), Nx_geom, Ny_geom, Nx_target,
-        Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
-  } else {
-    internal::extendValuesAtBoundary_kernel<T><<<bpg, tpb>>>(
-        inDomainLabels.getDataPointer(),
-        inOutTarget.getDataPointer(0, Type::real), Nx_geom, Ny_geom, Nx_target,
-        Ny_target, Nx_geom_offset, Ny_geom_offset, numExtend);
-  }
+  // Kernel parameters.
+  dim3 blocksPerGrid;
+  dim3 threadsPerBlock;
+  inOutTarget.getKernelDimensions(blocksPerGrid, threadsPerBlock, dimX, dimY,
+                                  dimZ);
+
+  // Launch kernel.
+  internal::extendValuesAtBoundary_kernel<T>
+      <<<blocksPerGrid, threadsPerBlock>>>(dimX, dimY, dimZ, numExtend,
+                                           inDomainLabels.getDataPointer(),
+                                           inOutTarget.getDataPointer());
 }
 } // namespace geometry
 } // namespace conga
