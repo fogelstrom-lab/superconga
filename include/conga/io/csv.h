@@ -13,6 +13,7 @@
 #define CONGA_IO_CSV_H_
 
 #include "../Type.h"
+#include "../geometry/domain_ops.h"
 #include "../order_parameter/OrderParameter.h"
 #include "CSVGridWriter.h"
 #include "CSVIterationWriter.h"
@@ -119,6 +120,13 @@ void copy(const std::vector<T> inSrc1, const std::vector<T> inSrc2,
 }
 } // namespace internal
 
+/// \brief Read the vector potential from file.
+///
+/// \param inFileName The full path the data file.
+/// \param inOutGrid The grid to put the data in. If the spatial dimensions to
+/// not match it will be interpolated.
+///
+/// \return Success.
 template <typename T>
 bool read(const std::filesystem::path &inFileName, GridGPU<T> &inOutGrid) {
   // Get the dimensions of the grid.
@@ -191,8 +199,6 @@ bool read(const std::filesystem::path &inFileName, GridGPU<T> &inOutGrid) {
     internal::copy(cpuX, cpuY, inOutGrid);
 
     // Resize (via interpolation), to the desired size.
-    // TODO(niclas): There is an undesired effect of zeros outside of the grain
-    // leaking in.
     inOutGrid.resample(dimX, dimY);
   } else {
     // Copy data.
@@ -202,6 +208,94 @@ bool read(const std::filesystem::path &inFileName, GridGPU<T> &inOutGrid) {
   return true;
 }
 
+/// \brief Read the domain from file.
+///
+/// \param inFileName The full path the data file.
+/// \param inOutGrid The grid to put the data in. If the spatial dimensions to
+/// not match it will be resized.
+///
+/// \return Success.
+template <>
+bool read(const std::filesystem::path &inFileName, GridGPU<char> &inOutGrid) {
+  // Get the dimensions of the grid.
+  const int dimX = inOutGrid.dimX();
+  const int dimY = inOutGrid.dimY();
+  const int numFields = inOutGrid.numFields();
+  const Type::type representation = inOutGrid.representation();
+
+  // Sanity check the number of components (fields).
+  if (numFields != 1) {
+    std::cerr << "-- ERROR! The domain must have one component." << std::endl;
+    return false;
+  }
+
+  // Sanity check the representation.
+  if (representation != Type::real) {
+    std::cerr << "-- ERROR! The domain must be a real-valued grid."
+              << std::endl;
+    return false;
+  }
+
+  // Read the CSV-file to a map.
+  // Note that we are creating an "int" reader. This is because the domain is
+  // actually saved as int, not char.
+  const CSVReader<int> csvReader(inFileName);
+
+  // Abort if something went wrong.
+  if (!csvReader.success()) {
+    return false;
+  }
+
+  // Get the resulting map.
+  const std::map<std::string, std::vector<int>> &map = csvReader.getMap();
+
+  // Construct the key.
+  const std::string key = "domain";
+
+  // Check if the keys exist.
+  const bool keyExists = csvReader.contains(key);
+
+  if (!keyExists) {
+    std::cerr << "-- ERROR! The file does not contain the column, '" << key
+              << "'." << std::endl;
+    return false;
+  }
+
+  // Get the vectors.
+  // Note, 'map' does not have a const overload for the access operator '[]'. So
+  // either the map must not be const, or we must use 'at'.
+  const std::vector<int> &tmp = map.at(key);
+
+  // Cast to char.
+  std::vector<char> domainCPU;
+  for (const auto val : tmp) {
+    domainCPU.push_back(static_cast<char>(val));
+  }
+
+  // Sanity check the sizes.
+  const std::size_t expectedSize = static_cast<std::size_t>(dimX * dimY);
+  if (domainCPU.size() != expectedSize) {
+    // Get the actual lattice side-length in the read data.
+    const int N =
+        static_cast<int>(std::sqrt(static_cast<double>(domainCPU.size())));
+
+    // Check if it is a square.
+    if (N * N != static_cast<int>(domainCPU.size())) {
+      std::cerr << "-- ERROR! The data is not square." << std::endl;
+      return false;
+    }
+
+    // Resize the domain.
+    inOutGrid = GridGPU<char>(N, N, numFields, representation);
+  }
+
+  // Copy data.
+  inOutGrid.setVector(domainCPU);
+
+  return true;
+}
+
+/// \brief Read the order parameter from file.
 template <typename T>
 bool read(const std::filesystem::path &inFileName,
           OrderParameter<T> &inOutOrderParameter) {
@@ -221,6 +315,18 @@ bool read(const std::filesystem::path &inFileName,
 
   // The types of the order-parameter components.
   const std::vector<std::string> types = inOutOrderParameter.getTypes();
+
+  // Read the domain labels from file.
+  // Note, the dimensions do not matter, it will be resized.
+  GridGPU<char> domainLabels(1, 1, 1, Type::real);
+  const std::filesystem::path domainFileName =
+      inFileName.parent_path() / "domain.csv";
+  const bool domainSuccess = read(domainFileName, domainLabels);
+
+  // Abort if something went wrong.
+  if (!domainSuccess) {
+    return false;
+  }
 
   for (int i = 0; i < numComponents; ++i) {
     // Get the component grid.
@@ -273,9 +379,11 @@ bool read(const std::filesystem::path &inFileName,
       // Copy data.
       internal::copy(cpuReal, cpuImag, component);
 
+      // Extend values outside of the domain (to avoid boundary interpolation
+      // issues).
+      geometry::extendValuesAtBoundary(domainLabels, component);
+
       // Resize (via interpolation), to the desired size.
-      // TODO(niclas): There is an undesired effect of zeros outside of the
-      // grain leaking in.
       component.resample(dimX, dimY);
     } else {
       // Copy data.

@@ -270,9 +270,7 @@ public:
                                  Type::type part = Type::complex);
 
   // Change resolution of grid, with linear interpolation of existing data.
-  void resample(const int nx_new, const int ny_new);
-  void resample(GridData *&target, const int nx_new,
-                const int ny_new) const; //(CPU NOT IMPLEMENTED)
+  void resample(const int inDimX, const int inDimY);
 
   //// Helper query functions ////
 
@@ -1199,14 +1197,8 @@ void GridData<T, DEV>::insertRotatedGridAdditive(const GridData *other,
 }
 
 template <typename T, typename DEV>
-void GridData<T, DEV>::resample(const int nx_new, const int ny_new) {
-  GridFunctions<T, DEV>::resample(nx_new, ny_new);
-}
-
-template <typename T, typename DEV>
-void GridData<T, DEV>::resample(GridData *&target, const int nx_new,
-                                const int ny_new) const {
-  GridFunctions<T, DEV>::resample(target, nx_new, ny_new);
+void GridData<T, DEV>::resample(const int inDimX, const int inDimY) {
+  GridFunctions<T, DEV>::resample(inDimX, inDimY);
 }
 
 template <typename T, typename DEV>

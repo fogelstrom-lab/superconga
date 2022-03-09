@@ -58,6 +58,7 @@
 - Fix bug not saving convergence data for finite save frequency.
 - Undo the internal scaling of the vector potential when printing the range in the live visualization, as well when saving scalar quantities.
 - Fix bug in Barzilai-Borwein asserts.
+- Fix bug in spatial interpolation when restarting from different resolution.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.

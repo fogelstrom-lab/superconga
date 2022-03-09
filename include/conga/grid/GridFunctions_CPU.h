@@ -14,6 +14,7 @@
 #define CONGA_GRID_FUNCTIONS_CPU_H_
 
 #include "../Type.h"
+#include "../defines.h"
 #include "../utils.h"
 
 #include <thrust/device_vector.h>
@@ -84,7 +85,7 @@ template <typename T> struct GridFunctions<T, thrust::host_vector<T>> {
                             const int y_offset, Type::type part);
 
   // Change resolution of grid, with linear interpolation of existing data.
-  void resample(const int nx_new, const int ny_new);
+  void resample(const int inDimX, const int inDimY);
 
   // Find min and max value of range
   void minmax(const GridData<T, thrust::host_vector<T>> &grid, T &minv, T &maxv,
@@ -649,86 +650,78 @@ void GridFunctions<T, thrust::host_vector<T>>::insertRotatedGridAdditive(
 }
 
 template <typename T>
-void GridFunctions<T, thrust::host_vector<T>>::resample(const int nx_new,
-                                                        const int ny_new) {
+void GridFunctions<T, thrust::host_vector<T>>::resample(const int inDimX,
+                                                        const int inDimY) {
   const int isComplex = int(grid->isComplex());
-  const int numFields = grid->numFields();
-  const int numElements = nx_new * ny_new * numFields * (1 + isComplex);
+  const int dimZ = grid->numFields() * (1 + isComplex);
+  const int numElements = inDimX * inDimY * dimZ;
 
-  // Allocate vector for new grid
-  thrust::host_vector<T> *vec_tmp = new thrust::host_vector<T>(numElements);
+  // Allocate vector for new grid.
+  thrust::host_vector<T> dst(numElements);
 
-  T *data, *data_tmp;
+  // Get the old spatial dimensions.
+  const int oldDimX = grid->dimX();
+  const int oldDimY = grid->dimY();
 
-  const int nx = grid->dimX();
-  const int ny = grid->dimY();
+  // Get the old data.
+  const thrust::host_vector<T> &src = grid->getVector();
 
-  int i, j, c, p, idx_new;
+  // We have a number of safety pixels along each edge of the simulation space.
+  // These pixels should not be a part of the interpolation.
+  // TODO(Niclas): If we change the margin size then we need to read the margin
+  // from file. And have two inputs to this function: marginOld and marginNew.
+  const int margin = constants::GRAIN_SIZE_MARGIN;
+  const int twoMargin = 2 * margin;
 
-  int x_int, y_int, x_add, y_add;
-  T sx, sy, x, y, x_frac, y_frac, x1_interp, x2_interp;
-  size_t ptr_offset;
+  for (int z = 0; z < dimZ; ++z) {
+    for (int y = 0; y < inDimY; ++y) {
+      for (int x = 0; x < inDimX; ++x) {
+        // Scaling factor between grids.
+        // The safety margin should not be included in the scales.
+        const T xScale = static_cast<T>(oldDimX - 1 - twoMargin) /
+                         static_cast<T>(inDimX - 1 - twoMargin);
+        const T yScale = static_cast<T>(oldDimY - 1 - twoMargin) /
+                         static_cast<T>(inDimY - 1 - twoMargin);
 
-  const Type::type part[2] = {Type::real, Type::imag};
+        // Coordinates in old grid.
+        const T xOld = xScale * static_cast<T>(x - margin) + margin;
+        const T yOld = yScale * static_cast<T>(y - margin) + margin;
 
-  for (c = 0; c < grid->numFields(); ++c) {
-    for (p = 0; p < 1 + isComplex; ++p) {
-      data = grid->getDataPointer(c, part[p]);
+        // Floor coordinates.
+        const int xFloor = static_cast<int>(xOld);
+        const int yFloor = static_cast<int>(yOld);
 
-      ptr_offset =
-          nx_new * ny_new *
-          (c * (1 + isComplex) + int(part[p] == Type::imag && isComplex));
-      data_tmp = thrust::raw_pointer_cast(vec_tmp->data()) + ptr_offset;
+        // Fractions.
+        const T xFrac = xOld - static_cast<T>(xFloor);
+        const T yFrac = yOld - static_cast<T>(yFloor);
 
-      for (j = 0; j < ny_new; ++j) {
-        for (i = 0; i < nx_new; ++i) {
-          idx_new = j * nx_new + i;
+        // What to add to the index to get the next pixel. If there is no next
+        // pixel the value is zero.
+        const int xNext = x < inDimX - 1 ? 1 : 0;
+        const int yNext = y < inDimY - 1 ? oldDimX : 0;
 
-          // Scaling factor between grids
-          sx = (T)(nx - 1) / (T)(nx_new - 1);
-          sy = (T)(ny - 1) / (T)(ny_new - 1);
+        // Indices to interpolate with.
+        const int idx00 = (z * oldDimY + yFloor) * oldDimX + xFloor;
+        const int idx01 = idx00 + xNext;
+        const int idx10 = idx00 + yNext;
+        const int idx11 = idx10 + xNext;
 
-          // Coordinates to old grid
-          x = sx * i;
-          y = sy * j;
+        const T x1_interp =
+            (static_cast<T>(1) - xFrac) * src[idx00] + xFrac * src[idx01];
 
-          x_int = x;
-          y_int = y;
+        const T x2_interp =
+            (static_cast<T>(1) - xFrac) * src[idx10] + xFrac * src[idx11];
 
-          x_frac = x - (T)x_int;
-          y_frac = y - (T)y_int;
-
-          // Bilinear interpolation
-          if (i == nx_new - 1)
-            x_add = 0;
-          else
-            x_add = 1;
-          if (j == ny_new - 1)
-            y_add = 0;
-          else
-            y_add = 1;
-
-          x1_interp = ((T)1.0 - x_frac) * data[y_int * nx + x_int] +
-                      x_frac * data[y_int * nx + (x_int + x_add)];
-
-          x2_interp = ((T)1.0 - x_frac) * data[(y_int + y_add) * nx + x_int] +
-                      x_frac * data[(y_int + y_add) * nx + (x_int + x_add)];
-
-          data_tmp[idx_new] =
-              ((T)1.0 - y_frac) * x1_interp + y_frac * x2_interp;
-        }
+        const int idx = (z * inDimY + y) * inDimX + x;
+        dst[idx] = (static_cast<T>(1) - yFrac) * x1_interp + yFrac * x2_interp;
       }
     }
   }
 
-  grid->m_vector = vec_tmp;
-
-  // Change affected class member variables
-  grid->_dimX = nx_new;
-  grid->_dimY = ny_new;
-
-  grid->_allocatedMemTotal -= nx * ny * numFields * (1 + isComplex) * sizeof(T);
-  grid->_allocatedMemTotal += numElements * sizeof(T);
+  // Change affected class member variables.
+  grid->_dimX = inDimX;
+  grid->_dimY = inDimY;
+  grid->m_vector = dst;
 }
 
 template <typename T>

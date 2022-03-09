@@ -234,7 +234,7 @@ vector2d<T> computeFermiMomentum(
       // Make sure that the signs of eA and eB differ.
       if (utils::sign(eA) == utils::sign(eB)) {
 #ifndef NDEBUG
-        std::cout << "-- ERROR! Failure of the bisection method." << std::endl;
+        std::cerr << "-- ERROR! Failure of the bisection method." << std::endl;
 #endif
         break;
       }
