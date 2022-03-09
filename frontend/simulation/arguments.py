@@ -388,16 +388,16 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         help="The drag in the Polyak accelerator.",
     )
     accelerator.add_argument(
-        "--step-size-increase",
+        "--step-size-factor",
         type=float,
         default=None,
-        help="The step-size increase factor in the Adaptive-Ball accelerator.",
+        help="The step-size factor, determining how much the step size should increase/decrease, in the Adaptive-Ball accelerator.",
     )
     accelerator.add_argument(
-        "--step-size-decrease",
+        "--cos-similarity-min",
         type=float,
         default=None,
-        help="The step-size decrease factor in the Adaptive-Ball accelerator.",
+        help="The minimum cosine similarity to tolerate in the Adaptive-Ball accelerator",
     )
     accelerator.add_argument(
         "--rank",
@@ -733,14 +733,14 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
     )
     cli.set_value(
         config=config,
-        key="step_size_increase",
-        value=args.step_size_increase,
+        key="step_size_factor",
+        value=args.step_size_factor,
         group=group,
     )
     cli.set_value(
         config=config,
-        key="step_size_decrease",
-        value=args.step_size_decrease,
+        key="cos_similarity_min",
+        value=args.cos_similarity_min,
         group=group,
     )
     cli.set_value(
@@ -956,8 +956,8 @@ def get_checks() -> dict:
                 "step_size_min": {"type": float, "low_include": 0.0, "optional": True},
                 "drag": {"type": float, "low": 0.0, "high": 1.0, "optional": True},
                 "rank": {"type": int, "low": 1, "optional": True},
-                "step_size_increase": {"type": float, "low": 1.0, "optional": True},
-                "step_size_decrease": {
+                "step_size_factor": {"type": float, "low": 1.0, "optional": True},
+                "cos_similarity_min": {
                     "type": float,
                     "low": 0.0,
                     "high": 1.0,
