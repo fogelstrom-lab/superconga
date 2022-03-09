@@ -95,6 +95,7 @@
 - Rename inertia to drag in the Polyak accelerator, and change signs in accelerator expressions to conform with the paper.
 - Shorten Abrikosov lattice example to `swave_abrikosov_lattice`.
 - Simplify the Barzilai-Borwein accelerator.
+- Improve the Adaptive-Ball acccelerator. Optimize the inertia and change default parameters.
 
 ---
 

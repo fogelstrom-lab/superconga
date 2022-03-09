@@ -2,6 +2,7 @@
 
 #include "conga/Context.h"
 #include "conga/Parameters.h"
+#include "conga/accelerators/BarzilaiBorwein.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -119,6 +120,11 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
   // Create compute objects.
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeFreeEnergy<T>(&context);
+
+  // Set accelerator.
+  auto accelerator =
+      std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+  context.set(std::move(accelerator));
 
   // Initialize and run simulation.
   context.initialize();

@@ -31,15 +31,13 @@ public:
   /// \brief Constructor of the adaptive-ball accelerator.
   ///
   /// \param inStepSize The step size.
-  /// \param inIncreaseFactor The factor to maximally increase the step size
-  /// with.
-  /// \param inDecreaseFactor The factor to maximally decrease the step size
-  /// with.
+  /// \param inStepSizeFactor The factor used when adjusting the step size.
+  /// \param inMinCosSimilarity The mininum tolerated cosine similarity.
   /// \param inMaxStepSize The maximum step size.
   /// \param inMinStepSize The minimum step size.
   explicit AdaptiveBall(const T inStepSize = m_stepSizeDefault,
-                        const T inIncreaseFactor = m_increaseDefault,
-                        const T inDecreaseFactor = m_decreaseDefault,
+                        const T inStepSizeFactor = m_stepSizeFactorDefault,
+                        const T inMinCosSimilarity = m_minCosSimilarityDefault,
                         const T inMaxStepSize = m_maxStepSizeDefault,
                         const T inMinStepSize = m_minStepSizeDefault);
 
@@ -98,6 +96,18 @@ private:
   /// \return Void.
   void initialize(const GridGPU<T> &inX);
 
+  /// \brief Compute the new inertial value using the bisection method.
+  ///
+  /// \param inDiffNorm The L2-norm of the difference.
+  /// \param inMeanNorm The L2-norm of the running mean.
+  /// \param inDotProduct The dot product between the difference and the running
+  /// mean.
+  /// \param inMinCosSimilarity The target minimum tolerated cosine similarity.
+  ///
+  /// \return The new inertia.
+  T computeInertia(const T inDiffNorm, const T inMeanNorm, const T inDotProduct,
+                   const T inMinCosSimilarity);
+
   /// \brief Compute the next order parameter and vector potential.
   ///
   /// \param inG The right-hand side of the self-consistency equation, 'g(x)'.
@@ -107,18 +117,18 @@ private:
   void computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX);
 
   // Defaults.
-  static constexpr T m_stepSizeDefault = static_cast<T>(1);
-  static constexpr T m_increaseDefault = static_cast<T>(1.2599210498948732);
-  static constexpr T m_decreaseDefault = static_cast<T>(0.15915494309189535);
-  static constexpr T m_maxStepSizeDefault = static_cast<T>(100);
-  static constexpr T m_minStepSizeDefault = static_cast<T>(0.001);
+  static constexpr T m_stepSizeDefault = static_cast<T>(0.5);
+  static constexpr T m_stepSizeFactorDefault = static_cast<T>(1.234);
+  static constexpr T m_minCosSimilarityDefault = static_cast<T>(0.7);
+  static constexpr T m_maxStepSizeDefault = static_cast<T>(10);
+  static constexpr T m_minStepSizeDefault = static_cast<T>(0.01);
 
   // The initial step size.
   const T m_stepSizeInit;
 
-  // Factors to increase/decrease the step size.
-  const T m_increase;
-  const T m_decrease;
+  // Parameters used for adjusting the step size and inertia.
+  const T m_stepSizeFactor;
+  const T m_minCosSimilarity;
 
   // The limits of the step size.
   const T m_maxStepSize;
@@ -138,17 +148,16 @@ private:
 };
 
 template <typename T>
-AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inIncreaseFactor,
-                              const T inDecreaseFactor, const T inMaxStepSize,
+AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inStepSizeFactor,
+                              const T inMinCosSimilarity, const T inMaxStepSize,
                               const T inMinStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize),
-      m_increase(inIncreaseFactor), m_decrease(inDecreaseFactor),
-      m_maxStepSize(inMaxStepSize), m_minStepSize(inMinStepSize),
-      m_initialized(false) {
+      m_stepSizeFactor(inStepSizeFactor),
+      m_minCosSimilarity(inMinCosSimilarity), m_maxStepSize(inMaxStepSize),
+      m_minStepSize(inMinStepSize), m_initialized(false) {
   assert(m_stepSizeInit > static_cast<T>(0));
-  assert(m_increase > static_cast<T>(1));
-  assert(m_decrease < static_cast<T>(1));
-  assert(m_decrease > static_cast<T>(0));
+  assert(m_stepSizeFactor > static_cast<T>(1));
+  assert(m_minCosSimilarity >= static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
 }
@@ -159,12 +168,14 @@ AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
       m_stepSizeInit(inJSON.isMember("step_size")
                          ? static_cast<T>(inJSON["step_size"].asDouble())
                          : m_stepSizeDefault),
-      m_increase(inJSON.isMember("step_size_increase")
-                     ? static_cast<T>(inJSON["step_size_increase"].asDouble())
-                     : m_increaseDefault),
-      m_decrease(inJSON.isMember("step_size_decrease")
-                     ? static_cast<T>(inJSON["step_size_decrease"].asDouble())
-                     : m_decreaseDefault),
+      m_stepSizeFactor(
+          inJSON.isMember("step_size_factor")
+              ? static_cast<T>(inJSON["step_size_factor"].asDouble())
+              : m_stepSizeFactorDefault),
+      m_minCosSimilarity(
+          inJSON.isMember("cos_similarity_min")
+              ? static_cast<T>(inJSON["cos_similarity_min"].asDouble())
+              : m_minCosSimilarityDefault),
       m_maxStepSize(inJSON.isMember("step_size_max")
                         ? static_cast<T>(inJSON["step_size_max"].asDouble())
                         : m_maxStepSizeDefault),
@@ -173,9 +184,9 @@ AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
                         : m_minStepSizeDefault),
       m_initialized(false) {
   assert(m_stepSizeInit > static_cast<T>(0));
-  assert(m_increase > static_cast<T>(1));
-  assert(m_decrease < static_cast<T>(1));
-  assert(m_decrease > static_cast<T>(0));
+  assert(m_stepSizeFactor > static_cast<T>(1));
+  assert(m_minCosSimilarity >= static_cast<T>(0));
+  assert(m_minCosSimilarity <= static_cast<T>(1));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
 }
@@ -294,6 +305,58 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
 } // namespace adaptive_ball_internal
 
 template <typename T>
+T AdaptiveBall<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
+                                  const T inDotProduct,
+                                  const T inMinCosSimilarity) {
+  // In the following x = inertia.
+
+  // The error when x = 1.
+  T errorA = inDotProduct / (inDiffNorm * inMeanNorm) - inMinCosSimilarity;
+  T xA = static_cast<T>(1);
+
+  // The error when x = 0.
+  T errorB = static_cast<T>(1) - inMinCosSimilarity;
+  T xB = static_cast<T>(0);
+
+  // Initial guess, in the middle.
+  T x = static_cast<T>(0.5) * (xA + xB);
+
+  // We don't have to be very strict.
+  const T convergenceCriterion = static_cast<T>(0.01);
+
+  // Loop until converged.
+  bool isConverged = false;
+  while (!isConverged) {
+    // Compute the similarity.
+    const T y = (static_cast<T>(1) - x);
+    const T numer = x * inDotProduct + y * inDiffNorm * inDiffNorm;
+    const T denom =
+        inDiffNorm * std::sqrt(x * x * inMeanNorm * inMeanNorm +
+                               static_cast<T>(2) * x * y * inDotProduct +
+                               y * y * inDiffNorm * inDiffNorm);
+    const T similarity = numer / denom;
+
+    // Check convergence.
+    const T error = similarity - inMinCosSimilarity;
+    isConverged = std::abs(error) < convergenceCriterion;
+
+    // Replace an end point.
+    if (utils::sign(error) == utils::sign(errorA)) {
+      errorA = error;
+      xA = x;
+    } else {
+      errorB = error;
+      xB = x;
+    }
+
+    // New guess.
+    x = static_cast<T>(0.5) * (xA + xB);
+  }
+
+  return x;
+}
+
+template <typename T>
 void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
                                       GridGPU<T> &inOutX) {
   // Initialize grids.
@@ -315,25 +378,27 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
   const GridGPU<T> DM = diff * m_mean;
 
   for (int i = 0; i < numFields; ++i) {
-    // Compute the cosine similarity between the diff and the
-    // previous step.
-    const T dm = DM.sumField(i);
     const T d = std::sqrt(D2.sumField(i));
     const T m = std::sqrt(M2.sumField(i));
-    const T similarity =
-        dm / std::max(d * m, std::numeric_limits<T>::epsilon());
+    const T denom = d * m;
 
-    // Adjust the the step size. Increase step size if similar, otherwise
-    // decrease it.
-    const T factor = similarity > static_cast<T>(0)
-                         ? std::pow(m_increase, similarity)
-                         : std::pow(m_decrease, -similarity);
-    m_stepSize[i] =
-        std::clamp(m_stepSize[i] * factor, m_minStepSize, m_maxStepSize);
+    if (denom > static_cast<T>(0)) {
+      // Compute the cosine ditsance.
+      const T dot = DM.sumField(i);
+      const T cosSimilarity = dot / denom;
 
-    // Adjust the inertia. Lean towards the diff if it is smaller than the
-    // previous step.
-    m_inertia[i] = m > static_cast<T>(0) ? d / (d + m) : static_cast<T>(0);
+      // Adjust the the step size. Increase step size if similar, otherwise
+      // decrease it.
+      m_stepSize[i] *= std::pow(m_stepSizeFactor, cosSimilarity);
+
+      // New inertia.
+      if (cosSimilarity < m_minCosSimilarity) {
+        m_inertia[i] = computeInertia(d, m, dot, m_minCosSimilarity);
+      }
+    }
+
+    // Clamp to range.
+    m_stepSize[i] = std::clamp(m_stepSize[i], m_minStepSize, m_maxStepSize);
   }
 
   // Copy to the GPU.

@@ -36,18 +36,18 @@ enum class AcceleratorType {
 /// \brief Just some simple test checking that the accelerators converge.
 ///
 /// \param AcceleratorType Which accelerator to test.
-/// \param inMaxIterations The maximum number of iterations.
 ///
 /// \return Void.
 template <typename T>
-void testAccelerator(const AcceleratorType &inAcceleratorType,
-                     const int inMaxIterations) {
+void testAccelerator(const AcceleratorType &inAcceleratorType) {
   // =================== ARRANGE ==================== //
   // The accuracy of the test.
-  const T tolerance = static_cast<T>(1e-5);
+  const T tolerance = static_cast<T>(1e-3);
   const T scale = static_cast<T>(0);
 
-  // The radius of the disc.
+  // Max number of iterations.
+  const int maxIterations = 100;
+
   // General parameters.
   const T grainWidth = static_cast<T>(10);
   const T pointsPerCoherenceLength = static_cast<T>(3);
@@ -132,7 +132,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
 
   // Run the simulation.
   context.initialize();
-  const bool isConverged = conga::runCompute(0, inMaxIterations, true, context);
+  const bool isConverged = conga::runCompute(0, maxIterations, true, context);
 
   // Save the result.
   const T freeEnergy =
@@ -140,7 +140,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
 
   // =================== ASSERT ==================== //
   // The expected value. Just to check that they converge to the same solution.
-  const T freeEnergyExpected = static_cast<T>(-0.0185555592);
+  const T freeEnergyExpected = static_cast<T>(-0.0185386592);
 
   // Compare results.
   CHECK(freeEnergy ==
@@ -156,15 +156,13 @@ void testAccelerator(const AcceleratorType &inAcceleratorType,
 TEST_CASE("Test Adaptive-Ball - <float>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::ADAPTIVE_BALL;
-  const int maxIterations = 20;
-  helper::testAccelerator<float>(acceleratorType, maxIterations);
+  helper::testAccelerator<float>(acceleratorType);
 }
 
 TEST_CASE("Test Adaptive-Ball - <double>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::ADAPTIVE_BALL;
-  const int maxIterations = 20;
-  helper::testAccelerator<double>(acceleratorType, maxIterations);
+  helper::testAccelerator<double>(acceleratorType);
 }
 
 // ================ Anderson ================ //
@@ -172,15 +170,13 @@ TEST_CASE("Test Adaptive-Ball - <double>") {
 TEST_CASE("Test Anderson - <float>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::ANDERSON;
-  const int maxIterations = 20;
-  helper::testAccelerator<float>(acceleratorType, maxIterations);
+  helper::testAccelerator<float>(acceleratorType);
 }
 
 TEST_CASE("Test Anderson- <double>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::ANDERSON;
-  const int maxIterations = 20;
-  helper::testAccelerator<double>(acceleratorType, maxIterations);
+  helper::testAccelerator<double>(acceleratorType);
 }
 
 // ================ Barzilai-Borwein ================ //
@@ -188,15 +184,13 @@ TEST_CASE("Test Anderson- <double>") {
 TEST_CASE("Test Barzilai-Borwein - <float>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::BARZILAI_BORWEIN;
-  const int maxIterations = 40;
-  helper::testAccelerator<float>(acceleratorType, maxIterations);
+  helper::testAccelerator<float>(acceleratorType);
 }
 
 TEST_CASE("Test Barzilai-Borwein - <double>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::BARZILAI_BORWEIN;
-  const int maxIterations = 40;
-  helper::testAccelerator<double>(acceleratorType, maxIterations);
+  helper::testAccelerator<double>(acceleratorType);
 }
 
 // ================ Picard ================ //
@@ -204,15 +198,13 @@ TEST_CASE("Test Barzilai-Borwein - <double>") {
 TEST_CASE("Test Picard - <float>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::PICARD;
-  const int maxIterations = 40;
-  helper::testAccelerator<float>(acceleratorType, maxIterations);
+  helper::testAccelerator<float>(acceleratorType);
 }
 
 TEST_CASE("Test Picard - <double>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::PICARD;
-  const int maxIterations = 40;
-  helper::testAccelerator<double>(acceleratorType, maxIterations);
+  helper::testAccelerator<double>(acceleratorType);
 }
 
 // ================ Polyak ================ //
@@ -220,13 +212,11 @@ TEST_CASE("Test Picard - <double>") {
 TEST_CASE("Test Polyak - <float>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::POLYAK;
-  const int maxIterations = 40;
-  helper::testAccelerator<float>(acceleratorType, maxIterations);
+  helper::testAccelerator<float>(acceleratorType);
 }
 
 TEST_CASE("Test Polyak - <double>") {
   const helper::AcceleratorType acceleratorType =
       helper::AcceleratorType::POLYAK;
-  const int maxIterations = 40;
-  helper::testAccelerator<double>(acceleratorType, maxIterations);
+  helper::testAccelerator<double>(acceleratorType);
 }
