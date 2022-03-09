@@ -96,9 +96,6 @@ private:
   static constexpr T m_maxStepSizeDefault = static_cast<T>(100);
   static constexpr T m_minStepSizeDefault = static_cast<T>(0.001);
 
-  // The initial step size.
-  const T m_stepSizeInit;
-
   // The limits of the step size.
   const T m_maxStepSize;
   const T m_minStepSize;
@@ -106,18 +103,19 @@ private:
   // Used to switch between BB methods.
   int m_iterationIdx;
 
+  // The step size.
+  T m_stepSize;
+
   // The previous.
-  GridGPU<T> m_xPrevious;
   GridGPU<T> m_dPrevious;
 };
 
 template <typename T>
 BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize, const T inMaxStepSize,
                                     const T inMinStepSize)
-    : Accelerator<T>(), m_stepSizeInit(inStepSize),
-      m_maxStepSize(inMaxStepSize), m_minStepSize(inMinStepSize),
-      m_iterationIdx(0) {
-  assert(m_stepSizeInit > static_cast<T>(0));
+    : Accelerator<T>(), m_stepSize(inStepSize), m_maxStepSize(inMaxStepSize),
+      m_minStepSize(inMinStepSize), m_iterationIdx(0) {
+  assert(m_stepSize > static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
 }
@@ -125,9 +123,9 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize, const T inMaxStepSize,
 template <typename T>
 BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
     : Accelerator<T>(),
-      m_stepSizeInit(inJSON.isMember("step_size")
-                         ? static_cast<T>(inJSON["step_size"].asDouble())
-                         : m_stepSizeDefault),
+      m_stepSize(inJSON.isMember("step_size")
+                     ? static_cast<T>(inJSON["step_size"].asDouble())
+                     : m_stepSizeDefault),
       m_maxStepSize(inJSON.isMember("step_size_max")
                         ? static_cast<T>(inJSON["step_size_max"].asDouble())
                         : m_maxStepSizeDefault),
@@ -135,7 +133,7 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
                         ? static_cast<T>(inJSON["step_size_min"].asDouble())
                         : m_minStepSizeDefault),
       m_iterationIdx(0) {
-  assert(m_stepSizeInit > static_cast<T>(0));
+  assert(m_stepSize > static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
 }
@@ -211,32 +209,28 @@ void BarzilaiBorwein<T>::computeInternal(const GridGPU<T> &inG,
   // The difference.
   const GridGPU<T> diff = inG - inOutX;
 
-  // Set step size.
-  T stepSize = m_stepSizeInit;
-
   // See:
   // https://www.caam.rice.edu/~yzhang/caam565/L1_reg/BB-step.pdf
   // https://pages.cs.wisc.edu/~swright/726/handouts/barzilai-borwein.pdf
   if (m_iterationIdx > 0) {
     const GridGPU<T> dD = diff - m_dPrevious;
-    const GridGPU<T> dX = inOutX - m_xPrevious;
 
-    const T dot = std::abs(sumGrid(dX * dD));
     // Alternate between aggressive and cautious steps. stepSize \propto dot
     // being the aggresive step.
-    stepSize =
-        (m_iterationIdx % 2 == 0) ? dot / dD.sumSquare() : dX.sumSquare() / dot;
+    const T dot = std::abs(sumGrid(m_dPrevious * dD));
+    const T scale = (m_iterationIdx % 2 == 0) ? dot / dD.sumSquare()
+                                              : m_dPrevious.sumSquare() / dot;
+    m_stepSize *= scale;
   }
 
   // Clamp to range.
-  stepSize = std::clamp(stepSize, m_minStepSize, m_maxStepSize);
+  m_stepSize = std::clamp(m_stepSize, m_minStepSize, m_maxStepSize);
 
   // Update previous.
-  m_xPrevious = inOutX;
   m_dPrevious = diff;
 
   // Take step.
-  inOutX += diff * stepSize;
+  inOutX += diff * m_stepSize;
 
   // Update iteration index.
   m_iterationIdx++;
