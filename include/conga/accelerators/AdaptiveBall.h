@@ -120,8 +120,8 @@ private:
   static constexpr T m_stepSizeDefault = static_cast<T>(0.5);
   static constexpr T m_stepSizeFactorDefault = static_cast<T>(1.234);
   static constexpr T m_minCosSimilarityDefault = static_cast<T>(0.7);
-  static constexpr T m_maxStepSizeDefault = static_cast<T>(10);
-  static constexpr T m_minStepSizeDefault = static_cast<T>(0.01);
+  static constexpr T m_maxStepSizeDefault = static_cast<T>(100);
+  static constexpr T m_minStepSizeDefault = static_cast<T>(0.001);
 
   // The initial step size.
   const T m_stepSizeInit;
@@ -352,7 +352,9 @@ T AdaptiveBall<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
     // Make sure that the signs of errorA and errorB differ.
     if (utils::sign(errorA) == utils::sign(errorB)) {
 #ifndef NDEBUG
-      std::cerr << "-- WARNING! The computation of the inertia did not converge." << std::endl;
+      std::cerr
+          << "-- WARNING! The computation of the inertia did not converge."
+          << std::endl;
 #endif
       break;
     }
