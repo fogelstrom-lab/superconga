@@ -98,6 +98,7 @@
 - Simplify the Barzilai-Borwein accelerator.
 - Improve the Adaptive-Ball acccelerator. Optimize the inertia and change default parameters.
 - Use nearest-neighbour extrapolation when extending values at the boundary.
+- Increase step-size limits in Adaptive-Ball accelerator.
 
 ---
 
