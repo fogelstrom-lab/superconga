@@ -51,7 +51,7 @@
 		"data_format": "h5",
 		"load_path": "",
 		"save_frequency": -1,
-		"save_path": "data/examples/swave_abrikosov_vortex_lattice",
+		"save_path": "data/examples/swave_abrikosov_lattice",
 		"verbose": true,
 		"visualize": true
 	}
