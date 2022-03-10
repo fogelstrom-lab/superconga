@@ -16,7 +16,7 @@
 	},
 	"misc": {
 		"data_format": "h5",
-		"load_path": "data/examples/swave_abrikosov_vortex_lattice",
+		"load_path": "data/examples/swave_abrikosov_lattice",
 		"save_path": "",
 		"verbose": true
 	}
