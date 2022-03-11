@@ -1046,7 +1046,7 @@ GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions(
   // The maximum number of threads per block along the y-axis.
   const int maxThreadsY = maxThreadsPerBlock;
 
-  // The maximum number of threads per block along the x-axis.
+  // The maximum number of threads per block along the z-axis.
   // Note that 64 is the maximum along z accordint to the CUDA specs.
   const int maxThreadsZ = std::min(maxThreadsPerBlock, 64);
 
@@ -1060,7 +1060,7 @@ GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions(
   int nThreadsY =
       std::min(static_cast<int>(std::pow(2, exponentY)), maxThreadsY);
 
-  // Set the number of threads per block along the y-axis.
+  // Set the number of threads per block along the z-axis.
   const int exponentZ = static_cast<int>(std::ceil(std::log2(inDimZ)));
   int nThreadsZ =
       std::min(static_cast<int>(std::pow(2, exponentZ)), maxThreadsZ);
