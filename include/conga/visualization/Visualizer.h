@@ -318,9 +318,7 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   float *const ptrGPU = thrust::raw_pointer_cast(imageGPU.data());
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inGrid.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inGrid.getKernelDimensions();
 
   switch (inColormap) {
   case Colormap::MAGNITUDE: {

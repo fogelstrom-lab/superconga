@@ -248,9 +248,7 @@ __global__ void computeCoherenceFunction(
   // energy coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  // TODO(niclas): Shouldn't we check that energy coordinate is within bounds as
-  // well?
-  if (x <= idx_x_max) {
+  if (x <= idx_x_max && e_idx < Ne) {
     // Read the energy.
     const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
                                                  energies_im[e_idx]);
@@ -338,9 +336,7 @@ computeCoherenceFunctionBurnIn(const T inStep, const int N, const int Ne,
   // energy coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  // TODO(niclas): Shouldn't we check that energy coordinate is within bounds as
-  // well?
-  if (x <= idx_x_max) {
+  if (x <= idx_x_max && e_idx < Ne) {
     // Read the energy.
     const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
                                                  energies_im[e_idx]);
@@ -425,7 +421,7 @@ __global__ void computeGammaFunctionInitialBoundaryTemplate_kernel(
   // energy coordinate
   const int e_idx = blockDim.y * blockIdx.y + threadIdx.y;
 
-  if (x < N) {
+  if (x < N && e_idx < Ne) {
     // Read the energy.
     const thrust::complex<T> energyZeroPotential(energies_re[e_idx],
                                                  energies_im[e_idx]);
@@ -550,10 +546,8 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctionsInternal(
   GeometryGroup<T> *geom = R::getGeometry();
   BoundaryStorage<T> *storage = R::getBoundaryStorage();
 
-  dim3 blocksPerGrid, threadsPerBlock;
-
-  R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
-                              numEnergiesCurrentBlock, current_angle_idx);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      R::getKernelDimensionsOptim(numEnergiesCurrentBlock, current_angle_idx);
 
   const int idx_x_min =
       (storage->getTrajectoryRangeX()->getDataPointer(0))[current_angle_idx];
@@ -711,10 +705,8 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
   const int trajectoryIdx_start =
       storage->getTrajectoryStartIndexAngle(current_angle_idx);
 
-  dim3 blocksPerGrid;
-  dim3 threadsPerBlock;
-  R::getKernelDimensionsOptim(blocksPerGrid, threadsPerBlock,
-                              numEnergiesCurrentBlock, current_angle_idx);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      R::getKernelDimensionsOptim(numEnergiesCurrentBlock, current_angle_idx);
 
   // Compute energy shift from magnetic field
   GridGPU<T> *eShift = R::getEnergyShift();

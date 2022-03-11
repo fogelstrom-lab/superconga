@@ -613,9 +613,8 @@ void ComputeVectorPotential<T>::subtractMean(const GridGPU<T> &inSrc,
   const thrust::device_vector<T> meansGPU = meansCPU;
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inSrc.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] =
+      inSrc.getKernelDimensionsFields();
 
   // Call CUDA kernel.
   cvp_internal::subtractMean<<<numBlocks, numThreadsPerBlock>>>(
@@ -662,9 +661,8 @@ void ComputeVectorPotential<T>::solveInternal(
   const int dimension = inCurrentDensity.numFields();
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  m_vectorPotential->getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] =
+      m_vectorPotential->getKernelDimensionsFields();
 
   if (m_maxError > 0.0) {
     // Set to zero because we will add stuff to it.

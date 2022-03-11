@@ -15,9 +15,9 @@
 namespace helper {
 // All float/double tests use the same tolerances.
 // TODO(niclas): Why must the float symmetry-tolerance be so large?
-const float FLOAT_TOLERANCE = 1e-3f;
+const float FLOAT_TOLERANCE = 2e-3f;
 const float FLOAT_SYMMETRY_TOLERANCE = 1e-3;
-const double DOUBLE_TOLERANCE = 1e-4;
+const double DOUBLE_TOLERANCE = 2e-4;
 const double DOUBLE_SYMMETRY_TOLERANCE = 1e-8;
 
 // When the max error is non-zero, this is the value used.
@@ -39,21 +39,29 @@ T computeRelativeFrobeniusNorm(const conga::GridCPU<T> &inTest,
   const int numX = inTest.dimX();
   const int numY = inRef.dimY();
 
-  T sumA2 = static_cast<T>(0);
-  T sumB2 = static_cast<T>(0);
-  T sumAB = static_cast<T>(0);
-  for (int j = 0; j < numY; ++j) {
-    for (int i = 0; i < numX; ++i) {
-      const int idx = j * numX + i;
-      const T a = testPtr[idx];
-      const T b = refPtr[idx];
-      sumA2 += a * a;
-      sumB2 += b * b;
-      sumAB += a * b;
-    }
+  double meanA2 = 0.0;
+  double meanB2 = 0.0;
+  double meanAB = 0.0;
+  for (int n = 0; n < numX * numY; ++n) {
+    const double a = static_cast<double>(testPtr[n]);
+    const double b = static_cast<double>(refPtr[n]);
+
+    // Using Welford's algorithm for numerical precision.
+    // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+    const double invNumElements = 1.0 / static_cast<double>(n + 1);
+
+    // Update A*A mean.
+    meanA2 += (a * a - meanA2) * invNumElements;
+
+    // Update B*B mean.
+    meanB2 += (b * b - meanB2) * invNumElements;
+
+    // Update A*B mean.
+    meanAB += (a * b - meanAB) * invNumElements;
   }
-  return std::sqrt(sumA2 + sumB2 - static_cast<T>(2) * sumAB) /
-         std::sqrt(sumB2);
+
+  const double result = std::sqrt((meanA2 + meanB2 - 2.0 * meanAB) / meanB2);
+  return static_cast<T>(result);
 }
 
 /// \brief Test that the vector potential is square symmetric.
@@ -119,7 +127,7 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
                             const T inTolerance, const T inSymmetryTolerance) {
   // =================== ARRANGE ==================== //
   // The number of lattice sites per side.
-  const int N = 555;
+  const int N = 256;
 
   // Physical side length of a lattice cell.
   const T latticeSpacing = static_cast<T>(0.1);
@@ -209,11 +217,9 @@ void testMagnetoStaticsDisc(const bool inAnalytical, const T inMaxError,
   const conga::GridCPU<T> potentialCPU = *(computeVectorPotential.getResult());
 
   // =================== ASSERT ==================== //
-  const T expectedRelativeFrobeniusNorm = static_cast<T>(0);
   const T testRelativeFrobeniusNorm =
       computeRelativeFrobeniusNorm(potentialCPU, expectedPotential);
-  CHECK(testRelativeFrobeniusNorm ==
-        doctest::Approx(expectedRelativeFrobeniusNorm).epsilon(inTolerance));
+  CHECK(testRelativeFrobeniusNorm < inTolerance);
 
   // It is a bit ugly to test the symmetry here as well. But it saves time.
   SUBCASE("Symmetry") { testSymmetry(potentialCPU, inSymmetryTolerance); }

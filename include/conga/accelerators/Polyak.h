@@ -251,9 +251,8 @@ void Polyak<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   const int numFields = inOutX.numFields();
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutX.getKernelDimensionsFields(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] =
+      inOutX.getKernelDimensionsFields();
 
   // The difference.
   const GridGPU<T> diff = inG - inOutX;

@@ -277,16 +277,14 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   T rotatedCenterY;
   utils::rotate(inAngle, centerX, centerY, rotatedCenterX, rotatedCenterY);
 
-  int numX, numY;
-  G::getGridDimensions(numX, numY);
+  const auto [numX, numY] = G::getGridDimensions();
 
   const int N = G::getParameters()->getGridResolutionBase();
   const T offsetX = convertCoordinate(rotatedCenterX, N, numX);
   const T offsetY = convertCoordinate(rotatedCenterY, N, numY);
   const T radius = m_disc.getRadius() * static_cast<T>(N - 1);
 
-  dim3 bpg, tpb;
-  G::getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = G::getKernelDimensions();
 
   // Defines discrete boundary domain and properties
   internal::generateDisc_Kernel<T><<<bpg, tpb>>>(
@@ -312,9 +310,8 @@ DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
   const T radius = m_disc.getRadius() * static_cast<T>(N - 1);
 
   // Get the required kernel dimensions.
-  dim3 bpg, tpb;
-  GridGPU<T>::getKernelDimensions(bpg, tpb, inLatticeSideLength,
-                                  inLatticeSideLength);
+  const auto [bpg, tpb] =
+      GridGPU<T>::getKernelDimensions(inLatticeSideLength, inLatticeSideLength);
 
   // Compute domain labels.
   internal::generateDisc_Kernel<T>

@@ -20,6 +20,7 @@
 #include <thrust/device_vector.h>
 
 #include <cmath>
+#include <utility>
 
 namespace conga {
 ///////////////////////////////////////////
@@ -101,12 +102,27 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
   void minmax(const GridData<T, thrust::device_vector<T>> &grid, T &minv,
               T &maxv, int field, Type::type part) const;
 
-  // Helper functions to create kernel dimensions
-  void getKernelDimensions(dim3 &blocksPerGrid, dim3 &threadsPerBlock) const;
-  void getKernelDimensionsFields(dim3 &blocksPerGrid,
-                                 dim3 &threadsPerBlock) const;
-  static void getKernelDimensions(dim3 &bpg, dim3 &tpb, int nx, int ny,
-                                  int nf = 1);
+  /// \brief Get the CUDA kernel dimensions spanning the spatial elements.
+  ///
+  /// \return The pair {number of blocks per grid, number of threads per block}.
+  std::pair<dim3, dim3> getKernelDimensions() const;
+
+  /// \brief Get the CUDA kernel dimensions spanning the spatial elements and
+  /// all fields.
+  ///
+  /// \return The pair {number of blocks per grid, number of threads per block}.
+  std::pair<dim3, dim3> getKernelDimensionsFields() const;
+
+  /// \brief Get the CUDA kernel dimensions from requested number of threads.
+  ///
+  /// \param inDimX The number of requested threads along the x-axis.
+  /// \param inDimY The number of requested threads along the y-axis.
+  /// \param inDimZ The number of requested threads along the z-axis (fields,
+  /// real/imag etc).
+  ///
+  /// \return The pair {number of blocks per grid, number of threads per block}.
+  static std::pair<dim3, dim3>
+  getKernelDimensions(const int inDimX, const int inDimY, const int inDimZ = 1);
 
   // Check for latest error
   static int checkCudaError(std::string msg = "");
@@ -114,18 +130,18 @@ template <typename T> struct GridFunctions<T, thrust::device_vector<T>> {
 
 namespace internal {
 template <typename T, typename T2>
-__global__ void typeConvert_kernel(const T *data_src, T2 *data_dst,
-                                   const int Nx, const int Ny,
-                                   const int complex) {
-  // Coordinates to grid
+__global__ void typeConvert_kernel(const int inDimX, const int inDimY,
+                                   const int inDimZ, const T *const inSrc,
+                                   T2 *const outDst) {
+  // Thread indices.
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  const int tf = blockIdx.z;
+  const int tz = blockIdx.z * blockDim.z + threadIdx.z;
 
-  const int idx = tf * (1 + complex) * Nx * Ny + ty * Nx + tx;
-
-  if (tx < Nx && ty < Ny)
-    data_dst[idx] = T2(data_src[idx]);
+  if (tx < inDimX && ty < inDimY && tz < inDimZ) {
+    const int idx = (tz * inDimY + ty) * inDimX + tx;
+    outDst[idx] = static_cast<T2>(inSrc[idx]);
+  }
 }
 
 template <typename T> __global__ void transpose_kernel(T *data, const int Nx) {
@@ -143,46 +159,47 @@ template <typename T> __global__ void transpose_kernel(T *data, const int Nx) {
 }
 
 template <typename T>
-__global__ void complexMagnitudeSq_kernel(const T *data_re, const T *data_im,
-                                          T *result, const int Nx,
-                                          const int Ny) {
-  // Coordinates to grid
+__global__ void
+complexMagnitudeSq_kernel(const int inDimX, const int inDimY, const int inDimZ,
+                          const T *const inSrcReal, const T *const inSrcImag,
+                          T *const outDst) {
+  // Thread indices.
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  const int tf = blockIdx.z;
+  const int tz = blockIdx.z * blockDim.z + threadIdx.z;
 
-  const int idx_src = tf * 2 * Nx * Ny + ty * Nx + tx;
-  const int idx_dst = tf * Nx * Ny + ty * Nx + tx;
+  if (tx < inDimX && ty < inDimY && tz < inDimZ) {
+    // Indices.
+    const int annoyingComplexFactor = 2;
+    const int srcIdx =
+        tz * annoyingComplexFactor * inDimX * inDimY + ty * inDimX + tx;
+    const int dstIdx = tz * inDimX * inDimY + ty * inDimX + tx;
 
-  if (tx < Nx && ty < Ny) {
-    T re = data_re[idx_src];
-    T im = data_im[idx_src];
-
-    result[idx_dst] = re * re + im * im;
+    const T real = inSrcReal[srcIdx];
+    const T imag = inSrcImag[srcIdx];
+    outDst[dstIdx] = real * real + imag * imag;
   }
 }
 
 template <typename T>
-__global__ void complexPhase_kernel(const T *const inReal,
-                                    const T *const inImag, T *const outPhase,
-                                    const int inNumX, const int inNumY) {
-  // Coordinates to grid.
+__global__ void complexPhase_kernel(const int inDimX, const int inDimY,
+                                    const int inDimZ, const T *const inSrcReal,
+                                    const T *const inSrcImag, T *const outDst) {
+  // Thread indices.
   const int tx = blockIdx.x * blockDim.x + threadIdx.x;
   const int ty = blockIdx.y * blockDim.y + threadIdx.y;
-  const int tf = blockIdx.z;
+  const int tz = blockIdx.z * blockDim.z + threadIdx.z;
 
-  // TODO(niclas): This requires some explanation.
-  const int idx_src = tf * 2 * inNumX * inNumY + ty * inNumX + tx;
-  const int idx_dst = tf * inNumX * inNumY + ty * inNumX + tx;
+  if (tx < inDimX && ty < inDimY && tz < inDimZ) {
+    // Indices.
+    const int annoyingComplexFactor = 2;
+    const int srcIdx =
+        tz * annoyingComplexFactor * inDimX * inDimY + ty * inDimX + tx;
+    const int dstIdx = tz * inDimX * inDimY + ty * inDimX + tx;
 
-  // TODO(niclas): We should check that tf < numFields or something. We souldn't
-  // trust that the kernel call was made with exactly the right number of
-  // threads.
-  if (tx < inNumX && ty < inNumY) {
-    const T real = inReal[idx_src];
-    const T imag = inImag[idx_src];
-
-    outPhase[idx_dst] = atan2(imag, real);
+    const T real = inSrcReal[srcIdx];
+    const T imag = inSrcImag[srcIdx];
+    outDst[dstIdx] = atan2(imag, real);
   }
 }
 
@@ -566,19 +583,17 @@ template <typename T>
 template <typename T2>
 void GridFunctions<T, thrust::device_vector<T>>::typeConvert(
     GridData<T2, thrust::device_vector<T2>> &other) const {
-  dim3 tpb, bpg;
-  getKernelDimensionsFields(bpg, tpb);
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+  const int numFields = grid->numFields();
+  const bool isComplex = grid->isComplex();
+  const int dimZ = numFields * (isComplex ? 2 : 1);
 
-  int complex = int(grid->isComplex());
+  const auto [blocksPerGrid, threadsPerBlock] =
+      getKernelDimensions(dimX, dimY, dimZ);
 
-  internal::typeConvert_kernel<T, T2><<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real), other.getDataPointer(0, Type::real),
-      grid->_dimX, grid->_dimY, complex);
-
-  if (complex)
-    internal::typeConvert_kernel<T, T2><<<bpg, tpb>>>(
-        grid->getDataPointer(0, Type::imag),
-        other.getDataPointer(0, Type::imag), grid->_dimX, grid->_dimY, complex);
+  internal::typeConvert_kernel<T, T2><<<blocksPerGrid, threadsPerBlock>>>(
+      dimX, dimY, dimZ, grid->getDataPointer(), other.getDataPointer());
 }
 
 template <typename T>
@@ -592,8 +607,7 @@ GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
     return *grid;
   }
 
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   int f_start = 0, f_end = grid->_numFields - 1;
 
@@ -616,12 +630,20 @@ GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
     GridData<T, thrust::device_vector<T>> *result) const {
-  dim3 tpb, bpg;
-  getKernelDimensionsFields(bpg, tpb);
+  const auto [blocksPerGrid, threadsPerBlock] = getKernelDimensionsFields();
 
-  internal::complexMagnitudeSq_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
-      result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY);
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+  const int numFields = grid->numFields();
+  const bool isComplex = grid->isComplex();
+
+  // Sanity check.
+  assert(isComplex);
+
+  internal::complexMagnitudeSq_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      dimX, dimY, numFields, grid->getDataPointer(0, Type::real),
+      grid->getDataPointer(0, Type::imag),
+      result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData::complexMagnitudeSq()");
 }
@@ -629,12 +651,20 @@ void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
     GridData<T, thrust::device_vector<T>> *result) const {
-  dim3 tpb, bpg;
-  getKernelDimensionsFields(bpg, tpb);
+  const auto [blocksPerGrid, threadsPerBlock] = getKernelDimensionsFields();
 
-  internal::complexPhase_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
-      result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY);
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+  const int numFields = grid->numFields();
+  const bool isComplex = grid->isComplex();
+
+  // Sanity check.
+  assert(isComplex);
+
+  internal::complexPhase_kernel<<<blocksPerGrid, threadsPerBlock>>>(
+      dimX, dimY, numFields, grid->getDataPointer(0, Type::real),
+      grid->getDataPointer(0, Type::imag),
+      result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData::complexPhase()");
 }
@@ -642,8 +672,7 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   internal::complexPhaseGradient_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
@@ -660,8 +689,7 @@ T GridFunctions<T, thrust::device_vector<T>>::moment(const T h) const {
   assert(grid->representation() == Type::real);
 
   // Kernel parameters.
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   // Dimensions.
   const int dimX = grid->dimX();
@@ -687,8 +715,7 @@ T GridFunctions<T, thrust::device_vector<T>>::moment(const T h) const {
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
     GridData<T, thrust::device_vector<T>> *result) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   internal::fieldMagnitude_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real),
@@ -701,8 +728,7 @@ void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::div(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   internal::div_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
@@ -714,8 +740,7 @@ void GridFunctions<T, thrust::device_vector<T>>::div(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::curl(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   internal::curl_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
@@ -727,8 +752,7 @@ void GridFunctions<T, thrust::device_vector<T>>::curl(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::del2(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   const T inv_h2 = 1.0 / (h * h);
 
@@ -744,8 +768,7 @@ void GridFunctions<T, thrust::device_vector<T>>::del2(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::sumFieldComponents(
     GridData<T, thrust::device_vector<T>> *result) const {
-  dim3 tpb, bpg;
-  getKernelDimensions(bpg, tpb);
+  const auto [bpg, tpb] = getKernelDimensions();
 
   internal::sumFieldComponents_kernel<<<bpg, tpb>>>(
       grid->getDataPointer(0, Type::real),
@@ -794,8 +817,7 @@ void GridFunctions<T, thrust::device_vector<T>>::insertGrid(
     bpg = Ny_other;
   }
 
-  dim3 threadsPerBlock, blocksPerGrid;
-  getKernelDimensions(blocksPerGrid, threadsPerBlock, tpb, bpg);
+  const auto [blocksPerGrid, threadsPerBlock] = getKernelDimensions(tpb, bpg);
 
   for (int c = 0; c < grid->_numFields; ++c) {
     int c_other = c >= Nf_other ? Nf_other - 1 : c;
@@ -832,8 +854,7 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGrid(
   const bool complex_other = other->isComplex();
 
   // Kernel launch
-  dim3 threadsPerBlock, blocksPerGrid;
-  getKernelDimensions(blocksPerGrid, threadsPerBlock);
+  const auto [blocksPerGrid, threadsPerBlock] = getKernelDimensions();
 
   for (int c = 0; c < grid->_numFields; ++c) {
     int field_other = c;
@@ -899,8 +920,7 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGridAdditive(
   const bool complex_other = other->isComplex();
 
   // Kernel launch
-  dim3 threadsPerBlock, blocksPerGrid;
-  getKernelDimensions(blocksPerGrid, threadsPerBlock);
+  const auto [blocksPerGrid, threadsPerBlock] = getKernelDimensions();
 
   for (int c = fieldStart; c < fieldEnd; ++c) {
     int field_other = c;
@@ -967,9 +987,8 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int inDimX,
   // Kernel parameters.
   // TODO(Niclas): This can be slightly optimized by not spawning threads for
   // the safety margin.
-  dim3 threadsPerBlock;
-  dim3 blocksPerGrid;
-  getKernelDimensions(blocksPerGrid, threadsPerBlock, inDimX, inDimY, dimZ);
+  const auto [blocksPerGrid, threadsPerBlock] =
+      getKernelDimensions(inDimX, inDimY, dimZ);
 
   // Launch kernel.
   internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
@@ -999,39 +1018,85 @@ void GridFunctions<T, thrust::device_vector<T>>::minmax(
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions(
-    dim3 &blocksPerGrid, dim3 &threadsPerBlock) const {
-  getKernelDimensions(blocksPerGrid, threadsPerBlock, grid->_dimX, grid->_dimY,
-                      1);
+std::pair<dim3, dim3>
+GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions() const {
+  return getKernelDimensions(grid->_dimX, grid->_dimY);
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::getKernelDimensionsFields(
-    dim3 &blocksPerGrid, dim3 &threadsPerBlock) const {
-  getKernelDimensions(blocksPerGrid, threadsPerBlock, grid->_dimX, grid->_dimY,
-                      grid->_numFields);
+std::pair<dim3, dim3>
+GridFunctions<T, thrust::device_vector<T>>::getKernelDimensionsFields() const {
+  return getKernelDimensions(grid->_dimX, grid->_dimY, grid->_numFields);
 }
 
 template <typename T>
-void GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions(
-    dim3 &blocksPerGrid, dim3 &threadsPerBlock, int Nx, int Ny, int Nf) {
-  int tpb_x, bpg_x;
+std::pair<dim3, dim3>
+GridFunctions<T, thrust::device_vector<T>>::getKernelDimensions(
+    const int inDimX, const int inDimY, const int inDimZ) {
+  // The maximum number of threads per block.
+  // What this number should be is up for debate. The tests are the fastest
+  // with 32. but large simulations are faster with 256 or 512 for float, and
+  // 128 for double.
+  // TODO(Niclas): Investigate this.
+  const int maxThreadsPerBlock = 128;
 
-  const int threadmax = 64;
+  // The maximum number of threads per block along the x-axis.
+  const int maxThreadsX = maxThreadsPerBlock;
 
-  if (Nx <= threadmax) {
-    tpb_x = Nx;
-    bpg_x = 1;
-  } else {
-    tpb_x = threadmax;
-    bpg_x = Nx / threadmax;
+  // The maximum number of threads per block along the y-axis.
+  const int maxThreadsY = maxThreadsPerBlock;
 
-    if (tpb_x * bpg_x != Nx)
-      bpg_x++;
+  // The maximum number of threads per block along the x-axis.
+  // Note that 64 is the maximum along z accordint to the CUDA specs.
+  const int maxThreadsZ = std::min(maxThreadsPerBlock, 64);
+
+  // Set the number of threads per block along the x-axis.
+  const int exponentX = static_cast<int>(std::ceil(std::log2(inDimX)));
+  int nThreadsX =
+      std::min(static_cast<int>(std::pow(2, exponentX)), maxThreadsX);
+
+  // Set the number of threads per block along the y-axis.
+  const int exponentY = static_cast<int>(std::ceil(std::log2(inDimY)));
+  int nThreadsY =
+      std::min(static_cast<int>(std::pow(2, exponentY)), maxThreadsY);
+
+  // Set the number of threads per block along the y-axis.
+  const int exponentZ = static_cast<int>(std::ceil(std::log2(inDimZ)));
+  int nThreadsZ =
+      std::min(static_cast<int>(std::pow(2, exponentZ)), maxThreadsZ);
+
+  // Reduce the number of threads per block until less than the maximum.
+  while ((nThreadsX * nThreadsY * nThreadsZ) > maxThreadsPerBlock) {
+    // Check if the largest dim is one of y and z.
+    const bool yLargest = (nThreadsY >= nThreadsZ) && (nThreadsY >= nThreadsX);
+    const bool zLargest = (nThreadsZ >= nThreadsY) && (nThreadsZ >= nThreadsX);
+
+    // Reduce the largest dimension, starting with z as it has the lowest bound
+    // on the number of threads per block.
+    if (zLargest) {
+      nThreadsZ = std::max(nThreadsZ / 2, 1);
+    } else if (yLargest) {
+      nThreadsY = std::max(nThreadsY / 2, 1);
+    } else {
+      nThreadsX = std::max(nThreadsX / 2, 1);
+    }
   }
 
-  threadsPerBlock = dim3(tpb_x, 1, 1);
-  blocksPerGrid = dim3(bpg_x, Ny, Nf);
+  // Set the number of blocks along the x-axis.
+  const int nBlocksX = static_cast<int>(
+      std::ceil(static_cast<double>(inDimX) / static_cast<double>(nThreadsX)));
+
+  // Set the number of blocks along the y-axis.
+  const int nBlocksY = static_cast<int>(
+      std::ceil(static_cast<double>(inDimY) / static_cast<double>(nThreadsY)));
+
+  // Set the number of blocks along the z-axis.
+  const int nBlocksZ = static_cast<int>(
+      std::ceil(static_cast<double>(inDimZ) / static_cast<double>(nThreadsZ)));
+
+  const dim3 blocksPerGrid(nBlocksX, nBlocksY, nBlocksZ);
+  const dim3 threadsPerBlock(nThreadsX, nThreadsY, nThreadsZ);
+  return {blocksPerGrid, threadsPerBlock};
 }
 
 template <typename T>

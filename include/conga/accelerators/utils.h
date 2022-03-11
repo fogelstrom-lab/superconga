@@ -59,9 +59,7 @@ template <typename T>
 void concatenate(const OrderParameter<T> &inOrderParameter,
                  GridGPU<T> &inOutDst) {
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutDst.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inOutDst.getKernelDimensions();
 
   // Dimensions.
   const int dimX = inOutDst.dimX();
@@ -101,9 +99,7 @@ void concatenate(const OrderParameter<T> &inOrderParameter,
   concatenate(inOrderParameter, inOutDst);
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inOutDst.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inOutDst.getKernelDimensions();
 
   // Dimensions.
   const int dimX = inOutDst.dimX();
@@ -131,9 +127,7 @@ void concatenate(const OrderParameter<T> &inOrderParameter,
 template <typename T>
 void split(const GridGPU<T> &inSrc, OrderParameter<T> &inOutOrderParameter) {
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inSrc.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inSrc.getKernelDimensions();
 
   // Dimensions.
   const int dimX = inSrc.dimX();
@@ -173,9 +167,7 @@ void split(const GridGPU<T> &inSrc, OrderParameter<T> &inOutOrderParameter,
   split(inSrc, inOutOrderParameter);
 
   // Kernel parameters.
-  dim3 numBlocks;
-  dim3 numThreadsPerBlock;
-  inSrc.getKernelDimensions(numBlocks, numThreadsPerBlock);
+  const auto [numBlocks, numThreadsPerBlock] = inSrc.getKernelDimensions();
 
   // Dimensions.
   const int dimX = inSrc.dimX();

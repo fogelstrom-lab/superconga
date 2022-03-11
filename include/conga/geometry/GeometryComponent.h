@@ -21,6 +21,7 @@
 #include <cuda.h>
 
 #include <iostream>
+#include <utility>
 
 namespace conga {
 template <typename T> class GeometryComponent {
@@ -35,11 +36,13 @@ public:
   Parameters<T> *getParameters() const { return _param; }
   void setParameters(Parameters<T> *param) { _param = param; }
 
-  // Convenience function to get discrete dimensions of geomtetry
-  void getGridDimensions(int &Nx, int &Ny) const;
+  /// \brief Convenience function to get discrete dimensions of geometry.
+  ///
+  /// \return The pair {Nx, Ny}.
+  std::pair<int, int> getGridDimensions() const;
 
   // Convenience function to set cuda grid dimensions
-  void getKernelDimensions(dim3 &bpg, dim3 &tpb) const;
+  std::pair<dim3, dim3> getKernelDimensions() const;
 
   // Getters (pointers to data in corresponding grids)
   char *getDomainLabels() const;
@@ -203,11 +206,8 @@ template <typename T> void GeometryComponent<T>::freeMem() {
 }
 
 template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
-  int Nx, Ny;
-  dim3 tpb, bpg;
-
-  getGridDimensions(Nx, Ny);
-  getKernelDimensions(bpg, tpb);
+  const auto [Nx, Ny] = getGridDimensions();
+  const auto [bpg, tpb] = getKernelDimensions();
 
   // Label boundary interface nodes
   GridGPU<char> *oldLabels = _domainLabels;
@@ -222,32 +222,23 @@ template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
 }
 
 template <typename T>
-void GeometryComponent<T>::getGridDimensions(int &Nx, int &Ny) const {
+std::pair<int, int> GeometryComponent<T>::getGridDimensions() const {
   if (_domainLabels) {
-    Nx = _domainLabels->dimX();
-    Ny = _domainLabels->dimY();
+    const int Nx = _domainLabels->dimX();
+    const int Ny = _domainLabels->dimY();
+    return {Nx, Ny};
   } else {
 #ifndef NDEBUG
     std::cout << "GeometryComponent<T>::getGridDimensions() Error: "
                  "_domainLabels not initialized.\n";
 #endif
-    Nx = 0;
-    Ny = 0;
+    return {0, 0};
   }
 }
 
 template <typename T>
-void GeometryComponent<T>::getKernelDimensions(dim3 &bpg, dim3 &tpb) const {
-  int Nx, Ny;
-  getGridDimensions(Nx, Ny);
-
-  int tx = 64;
-  int bx = Nx / tx;
-  if (tx * bx != Nx)
-    bx++;
-
-  tpb = dim3(tx, 1);
-  bpg = dim3(bx, Ny);
+std::pair<dim3, dim3> GeometryComponent<T>::getKernelDimensions() const {
+  return _domainLabels->getKernelDimensions();
 }
 
 template <typename T> char *GeometryComponent<T>::getDomainLabels() const {
