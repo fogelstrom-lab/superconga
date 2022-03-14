@@ -293,56 +293,91 @@ __global__ void fieldMagnitude_kernel(const T *data, T *data_dst, const int Nx,
 }
 
 template <typename T>
-__global__ void div_kernel(const T *data_x, const T *data_y, T *data_dst,
-                           const T h, const int Nx, const int Ny) {
-  // Coordinates to grid
-  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void div_kernel(const int inDimX, const int inDimY,
+                           const T inInvDenom, const T *const inSrcX,
+                           const T *const inSrcY, T *const outDst) {
+  // Spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  if (tx > 0 && tx < Nx - 1 && ty > 0 && ty < Ny - 1) {
-    // Grid index
-    const int idx = ty * Nx + tx;
+  if (x < inDimX && y < inDimY) {
+    // Next and previous x-coordinate making sure we're inside bounds.
+    const int xNext = min(x + 1, inDimX - 1);
+    const int xPrev = max(x - 1, 0);
 
-    data_dst[idx] =
-        (data_x[idx + 1] - data_x[idx - 1]) +
-        (data_y[idx + Nx] - data_y[idx - Nx]) / (static_cast<T>(2) * h);
+    // Next and previous y-coordinate making sure we're inside bounds.
+    const int yNext = min(y + 1, inDimY - 1);
+    const int yPrev = max(y - 1, 0);
+
+    // The derivatives.
+    const T dAxdx = (inSrcX[y * inDimX + xNext] - inSrcX[y * inDimX + xPrev]) /
+                    static_cast<T>(xNext - xPrev);
+    const T dAydy = (inSrcY[yNext * inDimX + x] - inSrcY[yPrev * inDimX + x]) /
+                    static_cast<T>(yNext - yPrev);
+
+    // The actual divergence.
+    const int idx = y * inDimX + x;
+    outDst[idx] = (dAxdx + dAydy) * inInvDenom;
   }
 }
 
 template <typename T>
-__global__ void curl_kernel(const T *data_x, const T *data_y, T *data_dst,
-                            const T h, const int Nx, const int Ny) {
-  // Coordinates to grid
-  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void curl_kernel(const int inDimX, const int inDimY,
+                            const T inInvDenom, const T *const inSrcX,
+                            const T *const inSrcY, T *const outDst) {
+  // Spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  // Grid index
-  const int idx = ty * Nx + tx;
+  if (x < inDimX && y < inDimY) {
+    // Next and previous x-coordinate making sure we're inside bounds.
+    const int xNext = min(x + 1, inDimX - 1);
+    const int xPrev = max(x - 1, 0);
 
-  if (tx > 0 && tx < Nx - 1 && ty > 0 && ty < Ny - 1) {
-    const T dAydx = data_y[ty * Nx + tx + 1] - data_y[ty * Nx + tx - 1];
-    const T dAxdy = data_x[(ty + 1) * Nx + tx] - data_x[(ty + -1) * Nx + tx];
+    // Next and previous y-coordinate making sure we're inside bounds.
+    const int yNext = min(y + 1, inDimY - 1);
+    const int yPrev = max(y - 1, 0);
 
-    data_dst[idx] = (dAydx - dAxdy) / (static_cast<T>(2) * h);
-  } else if (tx == 0 || ty == 0 || tx == Nx - 1 || ty == Ny - 1)
-    data_dst[idx] = T(0.0);
+    // The derivatives.
+    const T dAydx = (inSrcY[y * inDimX + xNext] - inSrcY[y * inDimX + xPrev]) /
+                    static_cast<T>(xNext - xPrev);
+    const T dAxdy = (inSrcX[yNext * inDimX + x] - inSrcX[yPrev * inDimX + x]) /
+                    static_cast<T>(yNext - yPrev);
+
+    // The actual curl.
+    const int idx = y * inDimX + x;
+    outDst[idx] = (dAydx - dAxdy) * inInvDenom;
+  }
 }
 
 template <typename T>
-__global__ void del2_kernel(T *del2_f, const T *f, const T inv_h2, const int Nx,
-                            const int Ny) {
-  // Coordinates to grid
-  const int tx = blockIdx.x * blockDim.x + threadIdx.x;
-  const int ty = blockIdx.y * blockDim.y + threadIdx.y;
+__global__ void del2_kernel(const int inDimX, const int inDimY,
+                            const int inDimZ, const T inInvDenom,
+                            const T *const inSrc, T *const outDst) {
+  // Spatial coordinates.
+  const int x = blockIdx.x * blockDim.x + threadIdx.x;
+  const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-  const int idx = ty * Nx + tx;
+  // Internal coordinate.
+  const int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-  if (tx > 0 && tx < Nx - 1 && ty > 0 && ty < Ny - 1)
-    del2_f[idx] = (f[idx + 1] + f[idx - 1] + f[idx + Nx] + f[idx - Nx] -
-                   T(4.0) * f[idx]) *
-                  inv_h2;
-  else if (tx == 0 || ty == 0 || tx == Nx - 1 || ty == Ny - 1)
-    del2_f[idx] = T(0.0);
+  if (x < inDimX && y < inDimY && z < inDimZ) {
+    // Next and previous x-coordinate making sure we're inside bounds.
+    const int xNext = min(x + 1, inDimX - 1);
+    const int xPrev = max(x - 1, 0);
+
+    // Next and previous y-coordinate making sure we're inside bounds.
+    const int yNext = min(y + 1, inDimY - 1);
+    const int yPrev = max(y - 1, 0);
+
+    // Note that we extrapolate outside of the domain using the (implicit)
+    // nearest-neighbour extrapolation.
+    const int idx = y * inDimX + x;
+    outDst[idx] = (outDst[y * inDimX + xNext] + outDst[y * inDimX + xPrev] +
+                   outDst[yNext * inDimX + x] + outDst[yPrev * inDimX + x] -
+                   static_cast<T>(4) * outDst[idx]) *
+                  inInvDenom;
+  }
 }
 
 template <typename T>
@@ -728,11 +763,30 @@ void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::div(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
+  // Sanity checks.
+  assert(grid->dimX() == result->dimX());
+  assert(grid->dimY() == result->dimY());
+  assert(grid->numFields() == 2);
+  assert(grid->representation() == Type::real);
+  assert(result->numFields() == 1);
+  assert(result->representation() == Type::real);
+  assert(h > static_cast<T>(0));
+
+  // Do division outside of the kernel.
+  const T invLatticeSiteSideLength = static_cast<T>(1) / h;
+
+  // Dimensions.
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+
+  // Kernel parameters.
   const auto [bpg, tpb] = getKernelDimensions();
 
-  internal::div_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
-      result->getDataPointer(0, Type::real), h, grid->dimX(), grid->dimY());
+  // Launch kernel.
+  internal::div_kernel<<<bpg, tpb>>>(dimX, dimY, invLatticeSiteSideLength,
+                                     grid->getDataPointer(0, Type::real),
+                                     grid->getDataPointer(1, Type::real),
+                                     result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData<T>::div()");
 }
@@ -740,11 +794,30 @@ void GridFunctions<T, thrust::device_vector<T>>::div(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::curl(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
+  // Sanity checks.
+  assert(grid->dimX() == result->dimX());
+  assert(grid->dimY() == result->dimY());
+  assert(grid->numFields() == 2);
+  assert(grid->representation() == Type::real);
+  assert(result->numFields() == 1);
+  assert(result->representation() == Type::real);
+  assert(h > static_cast<T>(0));
+
+  // Do division outside of the kernel.
+  const T invLatticeSiteSideLength = static_cast<T>(1) / h;
+
+  // Dimensions.
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+
+  // Kernel parameters.
   const auto [bpg, tpb] = getKernelDimensions();
 
-  internal::curl_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real), grid->getDataPointer(1, Type::real),
-      result->getDataPointer(0, Type::real), h, grid->dimX(), grid->dimY());
+  // Launch kernel.
+  internal::curl_kernel<<<bpg, tpb>>>(dimX, dimY, invLatticeSiteSideLength,
+                                      grid->getDataPointer(0, Type::real),
+                                      grid->getDataPointer(1, Type::real),
+                                      result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData<T>::curl()");
 }
@@ -752,15 +825,30 @@ void GridFunctions<T, thrust::device_vector<T>>::curl(
 template <typename T>
 void GridFunctions<T, thrust::device_vector<T>>::del2(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
-  const auto [bpg, tpb] = getKernelDimensions();
+  // Sanity checks.
+  assert(grid->dimX() == result->dimX());
+  assert(grid->dimY() == result->dimY());
+  assert(grid->isComplex() == result->isComplex());
+  assert(grid->representation() == result->representation());
+  assert(h > static_cast<T>(0));
 
-  const T inv_h2 = 1.0 / (h * h);
+  // Do division outside of the kernel.
+  const T invLatticeSiteArea = static_cast<T>(1) / (h * h);
 
-  for (int c = 0; c < result->numFields(); ++c) {
-    internal::del2_kernel<<<bpg, tpb>>>(result->getDataPointer(c, Type::real),
-                                        grid->getDataPointer(c, Type::real),
-                                        inv_h2, grid->dimX(), grid->dimY());
-  }
+  // Dimensions.
+  const int dimX = grid->dimX();
+  const int dimY = grid->dimY();
+  const int numFields = grid->numFields();
+  const bool isComplex = grid->isComplex();
+  const int dimZ = numFields * (isComplex ? 2 : 1);
+
+  // Kernel parameters.
+  const auto [bpg, tpb] = getKernelDimensions(dimX, dimY, dimZ);
+
+  // Launch kernel.
+  internal::del2_kernel<<<bpg, tpb>>>(dimX, dimY, dimZ, invLatticeSiteArea,
+                                      grid->getDataPointer(),
+                                      result->getDataPointer());
 
   checkCudaError("GridData<T>::del2()");
 }
