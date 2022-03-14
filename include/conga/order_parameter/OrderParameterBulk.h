@@ -270,7 +270,7 @@ T computeYoshidaBulkSWave(const T inTemperature, const T inOrderParameter,
     const T matsubaraEnergy =
         inTemperature * (static_cast<T>(n) + static_cast<T>(0.5));
     const T Omega = std::hypot(inOrderParameter, matsubaraEnergy);
-    energySum += static_cast<T>(1) / std::pow(Omega, 3);
+    energySum += static_cast<T>(1) / static_cast<T>(std::pow(Omega, 3));
   }
 
   return inTemperature * inOrderParameter * inOrderParameter * energySum;

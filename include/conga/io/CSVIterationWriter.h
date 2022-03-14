@@ -13,6 +13,9 @@ public:
   /// \brief Constructor.
   CSVIterationWriter() {}
 
+  /// \brief Destructor.
+  virtual ~CSVIterationWriter() {}
+
   /// \brief Write convergence info for this iteration to file.
   ///
   /// \param inContext Context object.

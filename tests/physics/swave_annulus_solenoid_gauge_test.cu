@@ -154,7 +154,8 @@ template <typename T> void testSWaveAnnulusSolenoid() {
     // Form the kinetic free energy.
     const T numFluxQuanta = numFluxQuantas[i];
     const T freeEnergyKinetic =
-        factor * std::pow(numFluxQuanta - chargePhaseWinding, 2);
+        factor *
+        static_cast<T>(std::pow(numFluxQuanta - chargePhaseWinding, 2));
     const T freeEnergyExpected = freeEnergyBulk + freeEnergyKinetic;
 
     // Compare results.

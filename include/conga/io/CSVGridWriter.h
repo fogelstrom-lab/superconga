@@ -59,7 +59,7 @@ private:
                     const std::vector<std::string> &inFieldTitles,
                     const std::filesystem::path &inFilePath) const {
     bool fieldsAsIndex = false;
-    if (inFieldTitles.size() != inGrid.numFields()) {
+    if (inFieldTitles.size() != static_cast<std::size_t>(inGrid.numFields())) {
       if (inFieldTitles.size() == 1) {
         // If one field title is provided, put the fields in the grid as a third
         // dimension.
