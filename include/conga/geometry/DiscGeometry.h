@@ -69,7 +69,8 @@ private:
     const int diff = inGridLatticeSideLength - inSimulationLatticeSideLength;
     const T halfDiff = static_cast<T>(0.5) * static_cast<T>(diff);
     return static_cast<T>(inSimulationLatticeSideLength - 1) *
-               (inFractionalCoordinate + constants::MAXIMUM_COORDINATE) +
+               (inFractionalCoordinate +
+                static_cast<T>(constants::MAXIMUM_COORDINATE)) +
            halfDiff;
   }
 

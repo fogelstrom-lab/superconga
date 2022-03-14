@@ -40,12 +40,12 @@ void inline printIterationStatus(const Context<T> &inContext) {
   const T speed = static_cast<T>(numIterations) / computeTime;
 
   // Convert to hours or minutes if more appropriate.
-  const T secondsPerMinute = static_cast<T>(60);
-  const T minutesPerHour = static_cast<T>(60);
-  const T secondsPerHour = secondsPerMinute * minutesPerHour;
-  const int hours = static_cast<int>(computeTime / secondsPerHour);
+  const int secondsPerMinute = 60;
+  const int minutesPerHour = 60;
+  const int secondsPerHour = secondsPerMinute * minutesPerHour;
+  const int hours = static_cast<int>(computeTime) / secondsPerHour;
   const int minutes =
-      static_cast<int>(computeTime / secondsPerMinute) - hours * minutesPerHour;
+      static_cast<int>(computeTime) / secondsPerMinute - hours * minutesPerHour;
   const int seconds = static_cast<int>(computeTime) - hours * secondsPerHour -
                       minutes * secondsPerMinute;
 

@@ -50,7 +50,10 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
   T xMin = std::numeric_limits<T>::max();
   T yMax = std::numeric_limits<T>::min();
   T yMin = std::numeric_limits<T>::max();
-  for (int i = 0; i < geometryComponentVector.size(); ++i) {
+
+  const int numGeometryComponents =
+      static_cast<int>(geometryComponentVector.size());
+  for (int i = 0; i < numGeometryComponents; ++i) {
     // Fetch geometry component type (e.g. disc).
     const std::vector<std::string> geometryComponentNames =
         geometryComponentVector[i].getMemberNames();
@@ -103,7 +106,8 @@ void computeGeometryScaling(const Json::Value &inSimulationParameters,
       }
 
       // Note, having n as std::size_t causes a bug in JsonCpp...
-      for (int n = 0; n < xVerticesDict.size(); ++n) {
+      const int numVertics = static_cast<int>(xVerticesDict.size());
+      for (int n = 0; n < numVertics; ++n) {
         const T x = static_cast<T>(xVerticesDict[n].asDouble());
         const T y = static_cast<T>(yVerticesDict[n].asDouble());
 
@@ -196,7 +200,9 @@ void addGeometryComponents(GeometryGroup<T> *outGeometry,
       inSimulationParameters["geometry"];
 
   // Loop over list of geometry components.
-  for (int i = 0; i < geometryComponentVector.size(); ++i) {
+  const int numGeometryComponents =
+      static_cast<int>(geometryComponentVector.size());
+  for (int i = 0; i < numGeometryComponents; ++i) {
     // Fetch geometry component type (e.g. disc).
     const std::vector<std::string> geometryComponentNames =
         geometryComponentVector[i].getMemberNames();

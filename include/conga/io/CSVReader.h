@@ -178,7 +178,7 @@ bool CSVReader<T>::read(const std::filesystem::path &inFileName) {
 template <typename T>
 bool CSVReader<T>::contains(const std::string &inKey) const {
   // TODO(niclas): In C++20 we can use the method 'contains' instead.
-  for (const auto [key, value] : m_map) {
+  for (const auto &[key, value] : m_map) {
     if (key == inKey) {
       return true;
     }

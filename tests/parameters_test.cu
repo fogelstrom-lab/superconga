@@ -33,7 +33,7 @@ template <typename T> void testGridResolution() {
       const int expectedGridResolutionRotated =
           (tmp - gridResolution) % 2 == 0 ? tmp : tmp + 1;
       const T expectedGridElementSize =
-          static_cast<T>(1) / pointsPerCoherenceLength;
+          static_cast<T>(1.0 / pointsPerCoherenceLength);
 
       CHECK(testGridResolutionCoherence == expectedGridResolutionRotated);
       CHECK(testGridResolutionDeltaRotated == expectedGridResolutionRotated);
