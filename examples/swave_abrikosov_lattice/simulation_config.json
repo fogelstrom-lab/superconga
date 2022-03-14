@@ -25,11 +25,11 @@
 		{
 			"regular_polygon": {
 				"add": true,
-				"side_length": 25.0,
 				"center_x": 0.0,
 				"center_y": 0.0,
 				"num_edges": 4,
-				"rotation": 0.0
+				"rotation": 0.0,
+				"side_length": 25.0
 			}
 		}
 	],

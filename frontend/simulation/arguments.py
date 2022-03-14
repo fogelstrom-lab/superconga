@@ -249,7 +249,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
     # Add regular polygon.
     geometry.add_argument(
         "--add-regular-polygon",
-        metavar=("side_length", "center_x", "center_y", "num_edges", "rotation"),
+        metavar=("center_x", "center_y", "num_edges", "rotation", "side_length"),
         type=float,
         action="append",
         nargs=5,
@@ -260,7 +260,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
     # Remove regular polygon.
     geometry.add_argument(
         "--remove-regular-polygon",
-        metavar=("side_length", "center_x", "center_y", "num_edges", "rotation"),
+        metavar=("center_x", "center_y", "num_edges", "rotation", "side_length"),
         type=float,
         action="append",
         nargs=5,
@@ -596,16 +596,16 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
     # Add regular polygons.
     if args.add_regular_polygon is not None:
         for regular_polygon in args.add_regular_polygon:
-            side_length, center_x, center_y, num_edges, rotation = regular_polygon
+            center_x, center_y, num_edges, rotation, side_length = regular_polygon
             config[group].append(
                 {
                     "regular_polygon": {
                         "add": True,
-                        "side_length": side_length,
                         "center_x": center_x,
                         "center_y": center_y,
                         "num_edges": int(num_edges),
                         "rotation": rotation,
+                        "side_length": side_length,
                     }
                 }
             )
@@ -628,16 +628,16 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
     # Remove regular polygons.
     if args.remove_regular_polygon is not None:
         for regular_polygon in args.remove_regular_polygon:
-            side_length, center_x, center_y, num_edges, rotation = regular_polygon
+            center_x, center_y, num_edges, rotation, side_length = regular_polygon
             config[group].append(
                 {
                     "regular_polygon": {
                         "add": False,
-                        "side_length": side_length,
                         "center_x": center_x,
                         "center_y": center_y,
                         "num_edges": int(num_edges),
                         "rotation": rotation,
+                        "side_length": side_length,
                     }
                 }
             )
@@ -822,9 +822,9 @@ def get_checks() -> dict:
                                     "sub": {
                                         "type": dict,
                                         "fields": {
-                                            "winding_number": {"type": float},
                                             "center_x": {"type": float},
                                             "center_y": {"type": float},
+                                            "winding_number": {"type": float},
                                         },
                                     },
                                 },
@@ -842,9 +842,9 @@ def get_checks() -> dict:
                                     "sub": {
                                         "type": dict,
                                         "fields": {
-                                            "winding_number": {"type": float},
                                             "center_x": {"type": float},
                                             "center_y": {"type": float},
+                                            "winding_number": {"type": float},
                                         },
                                     },
                                 },
@@ -862,9 +862,9 @@ def get_checks() -> dict:
                                     "sub": {
                                         "type": dict,
                                         "fields": {
-                                            "winding_number": {"type": float},
                                             "center_x": {"type": float},
                                             "center_y": {"type": float},
+                                            "winding_number": {"type": float},
                                         },
                                     },
                                 },
@@ -882,9 +882,9 @@ def get_checks() -> dict:
                                     "sub": {
                                         "type": dict,
                                         "fields": {
-                                            "winding_number": {"type": float},
                                             "center_x": {"type": float},
                                             "center_y": {"type": float},
+                                            "winding_number": {"type": float},
                                         },
                                     },
                                 },
@@ -923,11 +923,11 @@ def get_checks() -> dict:
                         "optional": True,
                         "fields": {
                             "add": {"type": bool},
-                            "side_length": {"type": float, "low": 0.0},
                             "center_x": {"type": float},
                             "center_y": {"type": float},
                             "num_edges": {"type": int, "excluded": [0, 1, 2]},
                             "rotation": {"type": float},
+                            "side_length": {"type": float, "low": 0.0},
                         },
                     },
                 },
