@@ -19,11 +19,11 @@
 		{
 			"regular_polygon": {
 				"add": true,
-				"side_length": 10.0,
 				"center_x": 0.0,
 				"center_y": 0.0,
 				"num_edges": 8,
-				"rotation": 0.0
+				"rotation": 0.0,
+				"side_length": 10.0
 			}
 		}
 	],

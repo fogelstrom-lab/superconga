@@ -44,6 +44,7 @@
 - Expose the min/max step-size limits in the frontend.
 - Increase the maximum number of iterations in the examples.
 - Add (large) penetration depth in phase-crystal example.
+- Change order of regular-polygon parameters, in the CLI, to alphabetical order.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
