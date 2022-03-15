@@ -10,8 +10,14 @@
 			"dx2-y2": {
 				"critical_temperature": 1.0,
 				"initial_phase_shift": 0.0,
-				"initial_noise_stddev": 0.01,
-				"vortices": []
+				"initial_noise_stddev": 0.0,
+				"vortices": [
+					{
+						"center_x": 50.0,
+						"center_y": -25.0,
+						"winding_number": -1.0
+					}
+				]
 			}
 		}
 	},
