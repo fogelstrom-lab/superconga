@@ -1,9 +1,10 @@
 # Examples
 
-A collection of parameter files, one per example, demonstrating different physical aspects of superconductors that are computable through the SuperConga framework. Run the examples with `superconga.py` with the `--file` argument (from the root directory from the repository):
+A collection of parameter files, one per example, demonstrating different physical aspects of superconductors that are computable through the SuperConga framework. Run the examples with e.g.:
 ```shell
-python3 superconga.py --file examples/swave_abrikosov_vortex_lattice/config.json
+python superconga.py simulate --config examples/dwave_octagon/simulation_config.json
 ```
+from the root directory from the repository.
 
 See tutorials in the [online documentation](https://superconga.gitlab.io/superconga-doc/) for more information.
 
