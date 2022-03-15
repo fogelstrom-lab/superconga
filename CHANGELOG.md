@@ -45,6 +45,7 @@
 - Increase the maximum number of iterations in the examples.
 - Add (large) penetration depth in phase-crystal example.
 - Change order of regular-polygon parameters, in the CLI, to alphabetical order.
+- Use deterministic initialization for the phase-crystal example.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
