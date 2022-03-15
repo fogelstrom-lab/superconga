@@ -118,6 +118,7 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const T inStepSize, const T inMaxStepSize,
   assert(m_stepSize > static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
+  assert(m_minStepSize > static_cast<T>(0));
 }
 
 template <typename T>
@@ -136,6 +137,7 @@ BarzilaiBorwein<T>::BarzilaiBorwein(const Json::Value &inJSON)
   assert(m_stepSize > static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
+  assert(m_minStepSize > static_cast<T>(0));
 }
 
 template <typename T>
@@ -215,9 +217,13 @@ void BarzilaiBorwein<T>::computeInternal(const GridGPU<T> &inG,
   if (m_iterationIdx > 0) {
     const GridGPU<T> dD = diff - m_dPrevious;
 
-    // Alternate between aggressive and cautious steps. stepSize \propto dot
-    // being the aggresive step.
+    // Note that according to the BB paper negative step-sizes are ok. However,
+    // forcing the step size to be positive seems to help. Which also makes
+    // sense because we want to follow the fix-point steps, just taking
+    // longer/shorter steps.
     const T dot = std::abs(sumGrid(m_dPrevious * dD));
+
+    // Alternate between long (even) and short (odd) step sizes.
     const T scale = (m_iterationIdx % 2 == 0) ? dot / dD.sumSquare()
                                               : m_dPrevious.sumSquare() / dot;
     m_stepSize *= scale;
