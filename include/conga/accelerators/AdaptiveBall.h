@@ -160,6 +160,7 @@ AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inStepSizeFactor,
   assert(m_minCosSimilarity >= static_cast<T>(0));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
+  assert(m_minStepSize > static_cast<T>(0));
 }
 
 template <typename T>
@@ -189,6 +190,7 @@ AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
   assert(m_minCosSimilarity <= static_cast<T>(1));
   assert(m_maxStepSize > static_cast<T>(0));
   assert(m_maxStepSize >= m_minStepSize);
+  assert(m_minStepSize > static_cast<T>(0));
 }
 
 template <typename T> void AdaptiveBall<T>::initialize(const GridGPU<T> &inX) {

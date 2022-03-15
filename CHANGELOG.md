@@ -106,6 +106,7 @@
 - Increase step-size limits in Adaptive-Ball accelerator.
 - Add range checks for all dimensions in all CUDA kernels. Tune the number of GPU threads to be faster on larger simulations.
 - Fix most debug build warnings.
+- Add comments and more asserts to accelerators. Use double precision when summing an entire grid.
 
 ---
 

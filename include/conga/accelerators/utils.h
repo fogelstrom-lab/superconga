@@ -40,11 +40,11 @@ __global__ void copy(const int inDimX, const int inDimY, const T *const inSrc,
 ///
 /// \return The sum.
 template <typename T> T sumGrid(const GridGPU<T> &inGrid) {
-  T sum = static_cast<T>(0);
+  double sum = 0.0;
   for (int i = 0; i < inGrid.numFields(); ++i) {
-    sum += inGrid.sumField(i);
+    sum += static_cast<double>(inGrid.sumField(i));
   }
-  return sum;
+  return static_cast<T>(sum);
 }
 
 /// \brief Concatenate the order.parameter components.

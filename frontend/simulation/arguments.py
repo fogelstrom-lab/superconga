@@ -953,7 +953,7 @@ def get_checks() -> dict:
                 "name": {"type": str, "one_of": cli.VALID_ACCELERATORS},
                 "step_size": {"type": float, "low": 0.0, "optional": True},
                 "step_size_max": {"type": float, "low": 0.0, "optional": True},
-                "step_size_min": {"type": float, "low_include": 0.0, "optional": True},
+                "step_size_min": {"type": float, "low": 0.0, "optional": True},
                 "drag": {"type": float, "low": 0.0, "high": 1.0, "optional": True},
                 "rank": {"type": int, "low": 1, "optional": True},
                 "step_size_factor": {"type": float, "low": 1.0, "optional": True},
