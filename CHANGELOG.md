@@ -48,6 +48,7 @@
 - Use deterministic initialization for the phase-crystal example.
 - Update examples README with new frontend.
 - Change initialization of Abrikosov-lattice example in order to get a lower free energy.
+- Move installation guide to this repo, i.e. to the main README.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
