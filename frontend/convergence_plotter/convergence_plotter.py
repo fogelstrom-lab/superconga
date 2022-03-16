@@ -20,16 +20,16 @@ sys.path.insert(0, "../")
 from common import plotting, read
 
 
-def compute_kernel(sigma):
+def compute_kernel(blur):
     # Approx smallest value of any kernel element.
     epsilon = 1e-3
 
     # Compute required padding (and kernel size).
-    normalization = sigma * np.sqrt(2.0 * np.pi)
-    pad = int(sigma * np.sqrt(-2.0 * np.log(epsilon * normalization)))
+    normalization = blur * np.sqrt(2.0 * np.pi)
+    pad = int(blur * np.sqrt(-2.0 * np.log(epsilon * normalization)))
     kernel_size = 2 * pad + 1
 
-    arg = np.linspace(-pad, pad, kernel_size) / sigma
+    arg = np.linspace(-pad, pad, kernel_size) / blur
     kernel = np.exp(-(arg ** 2) / 2)
     kernel /= np.sum(kernel)
     return kernel
@@ -46,9 +46,9 @@ def convolve(data, kernel):
     return np.convolve(data_padded, kernel, mode="valid")
 
 
-def plot(ax, x, y, label, sigma, color, alpha):
-    if sigma > 0:
-        kernel = compute_kernel(sigma=sigma)
+def plot(ax, x, y, label, blur, color, alpha):
+    if blur > 0:
+        kernel = compute_kernel(blur=blur)
         y_smoothed = convolve(data=y, kernel=kernel)
         ax.semilogy(x, y_smoothed, label=label, color=color)
 
@@ -63,7 +63,7 @@ def run(
     data_dir: str,
     save_path: Optional[str] = None,
     view: Optional[str] = default.settings["view"],
-    sigma: Optional[int] = default.settings["sigma"],
+    blur: Optional[int] = default.settings["blur"],
     subplot_width: Optional[int] = default.settings["subplot_width"],
     subplot_height: Optional[int] = default.settings["subplot_height"],
     fontsize: Optional[int] = default.settings["fontsize"],
@@ -154,7 +154,7 @@ def run(
             y=data,
             label=label,
             color=color,
-            sigma=sigma,
+            blur=blur,
             alpha=alpha,
         )
     ymin = 0.1 * convergence_criterion
@@ -182,7 +182,7 @@ def run(
             y=(data - vmin),
             label=r"$\Omega$",
             color=color,
-            sigma=sigma,
+            blur=blur,
             alpha=alpha,
         )
 
@@ -230,7 +230,7 @@ def main(args: argparse.Namespace) -> None:
         data_dir=args.load_path,
         save_path=args.save_path,
         view=args.view,
-        sigma=args.sigma,
+        blur=args.blur,
         subplot_width=args.subplot_width,
         subplot_height=args.subplot_height,
         fontsize=args.fontsize,

@@ -7,7 +7,7 @@
 # Default settings.
 settings = {
     "view": "simulation",
-    "sigma": 0,
+    "blur": 0,
     "subplot_width": 7.0,
     "subplot_height": 6.5,
     "fontsize": 14,

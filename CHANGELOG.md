@@ -49,6 +49,7 @@
 - Update examples README with new frontend.
 - Change initialization of Abrikosov-lattice example in order to get a lower free energy.
 - Move installation guide to this repo, i.e. to the main README.
+- Improve help messages in frontend.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

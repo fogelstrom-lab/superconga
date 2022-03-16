@@ -19,7 +19,7 @@ def make_parser(parser: argparse.ArgumentParser):
         required=True,
         type=str,
         default=None,
-        help="Path to data directory.  (Default: %(default)s)",
+        help="Path to data directory. (Default: %(default)s)",
     )
 
     parser.add_argument(
@@ -27,7 +27,7 @@ def make_parser(parser: argparse.ArgumentParser):
         "--save-path",
         type=str,
         default=None,
-        help="Save the figure instead of showing it.  (Default: %(default)s)",
+        help="Save the figure instead of showing it. E.g. '-S image.png' or '-S image.pdf'. (Default: %(default)s)",
     )
 
     parser.add_argument(

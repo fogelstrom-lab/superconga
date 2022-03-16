@@ -27,7 +27,7 @@ def make_parser(parser: argparse.ArgumentParser):
         "--save-path",
         type=str,
         default=None,
-        help="Save the figure instead of showing it. (Default: %(default)s)",
+        help="Save the figure instead of showing it. E.g. '-S image.png' or '-S image.pdf'. (Default: %(default)s)",
     )
 
     parser.add_argument(
@@ -39,9 +39,9 @@ def make_parser(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--sigma",
+        "--blur",
         type=float,
-        default=default.settings["sigma"],
+        default=default.settings["blur"],
         help="Standard deviation of Gaussian blur. If zero or less no blur will be applied. (Default: %(default)s)",
     )
 
