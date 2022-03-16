@@ -47,6 +47,7 @@
 - Change order of regular-polygon parameters, in the CLI, to alphabetical order.
 - Use deterministic initialization for the phase-crystal example.
 - Update examples README with new frontend.
+- Change initialization of Abrikosov-lattice example in order to get a lower free energy.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
