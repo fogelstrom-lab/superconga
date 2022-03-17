@@ -361,7 +361,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         type=str,
         choices=cli.VALID_ACCELERATORS,
         default=None,
-        help="Which accelerator to use. Note that AB = Adaptive-Ball and BB = Barzilai-Borwein.",
+        help="Which accelerator to use. Note that bb is an alias for Barzilai-Borwein.",
     )
     accelerator.add_argument(
         "--step-size",
@@ -373,13 +373,13 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         "--step-size-max",
         type=float,
         default=None,
-        help="The maximum step size. Only used in accelerators with an adaptive step size, e.g. Adaptive-Ball and Barzilai-Borwein.",
+        help="The maximum step size. Only used in accelerators with an adaptive step size, e.g. Cognac and Barzilai-Borwein.",
     )
     accelerator.add_argument(
         "--step-size-min",
         type=float,
         default=None,
-        help="The minimum step size. Only used in accelerators with an adaptive step size, e.g. Adaptive-Ball and Barzilai-Borwein.",
+        help="The minimum step size. Only used in accelerators with an adaptive step size, e.g. Cognac and Barzilai-Borwein.",
     )
     accelerator.add_argument(
         "--drag",
@@ -391,13 +391,13 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         "--step-size-factor",
         type=float,
         default=None,
-        help="The step-size factor, determining how much the step size should increase/decrease, in the Adaptive-Ball accelerator.",
+        help="The step-size factor, determining how much the step size should increase/decrease, in the Cognac accelerator.",
     )
     accelerator.add_argument(
         "--cos-similarity-min",
         type=float,
         default=None,
-        help="The minimum cosine similarity to tolerate in the Adaptive-Ball accelerator",
+        help="The minimum cosine similarity to tolerate in the Cognac accelerator",
     )
     accelerator.add_argument(
         "--rank",

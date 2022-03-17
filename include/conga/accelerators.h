@@ -12,9 +12,9 @@
 #ifndef CONGA_ACCELERATORS_H_
 #define CONGA_ACCELERATORS_H_
 
-#include "accelerators/AdaptiveBall.h"
 #include "accelerators/Anderson.h"
 #include "accelerators/BarzilaiBorwein.h"
+#include "accelerators/Cognac.h"
 #include "accelerators/Picard.h"
 #include "accelerators/Polyak.h"
 
