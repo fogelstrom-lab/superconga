@@ -39,6 +39,89 @@ def get_rows_cols(view: list, num_op_comps: int) -> tuple:
     return rows, cols
 
 
+def make_plot_row(
+    fig,
+    axes,
+    idx,
+    data,
+    extent,
+    labels,
+    colormaps,
+    bad_color="dimgray",
+    landscape=False,
+    cartesian=False,
+) -> None:
+    # Extract row axes.
+    axes_row = axes[:, idx] if landscape else axes[idx, :]
+    num_axes = len(axes_row)
+
+    if data.shape[0] == 1:
+        # Sanity check.
+        assert (num_axes == 1) or (num_axes == 2)
+
+        # Determine which axis to turn on/off.
+        ax_idx_on = int(num_axes == 2 and landscape)
+        ax_idx_off = 1 - ax_idx_on
+
+        # Plot the data.
+        plotting.imshow_and_colorbar(
+            fig=fig,
+            ax=axes_row[ax_idx_on],
+            data=np.squeeze(data),
+            label=labels[0],
+            extent=extent,
+            plot_type=plotting.PlotType.DEFAULT,
+            colormap=colormaps["default"],
+            bad_color=bad_color,
+        )
+
+        # Turn off the unused axis.
+        if num_axes == 2:
+            axes_row[ax_idx_off].axis("off")
+    else:
+        # Sanity checks.
+        assert data.shape[0] == 2
+        assert len(axes_row) == 2
+
+        if cartesian:
+            # Plot (real, imag) or (x, y) components.
+            for i, ax in enumerate(axes_row):
+                plotting.imshow_and_colorbar(
+                    fig=fig,
+                    ax=ax,
+                    data=data[i, :, :],
+                    label=labels[i],
+                    extent=extent,
+                    plot_type=plotting.PlotType.DEFAULT,
+                    colormap=colormaps["default"],
+                    bad_color=bad_color,
+                )
+        else:
+            # Plot magnitude.
+            plotting.imshow_and_colorbar(
+                fig=fig,
+                ax=axes_row[0],
+                data=np.hypot(data[0, :, :], data[1, :, :]),
+                label=labels[0],
+                extent=extent,
+                plot_type=plotting.PlotType.MAGNITUDE,
+                colormap=colormaps["magnitude"],
+                bad_color=bad_color,
+            )
+
+            # Plot phase or angle.
+            plotting.imshow_and_colorbar(
+                fig=fig,
+                ax=axes_row[1],
+                data=np.arctan2(data[1, :, :], data[0, :, :]),
+                label=labels[1],
+                extent=extent,
+                plot_type=plotting.PlotType.ANGLE,
+                colormap=colormaps["angle"],
+                bad_color=bad_color,
+            )
+
+
 def run(
     data_dir: str,
     save_path: Optional[str] = None,
@@ -126,7 +209,7 @@ def run(
             )
 
             # Plot a row (or column if landscape == True).
-            plotting.make_plot_row(
+            make_plot_row(
                 fig=fig,
                 axes=axes,
                 idx=idx,
