@@ -111,6 +111,7 @@
 - Add range checks for all dimensions in all CUDA kernels. Tune the number of GPU threads to be faster on larger simulations.
 - Fix most debug build warnings.
 - Add comments and more asserts to accelerators. Use double precision when summing an entire grid.
+- Move `make_plot_row function` from common to simulation plotter.
 
 ---
 
