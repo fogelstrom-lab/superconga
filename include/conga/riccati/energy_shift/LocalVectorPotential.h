@@ -40,13 +40,13 @@ template <typename T> struct LinearCentered {
   static std::string type() { return std::string("linear_centered"); }
 };
 
-template <typename T> struct Radial {
+template <typename T> struct Symmetric {
   _HD_ static void computeVectorPotential_local(const T inFluxDensity,
                                                 const T inArea, const T inX,
                                                 const T inY,
                                                 T &outVectorPotentialX,
                                                 T &outVectorPotentialY);
-  static std::string type() { return std::string("radial"); }
+  static std::string type() { return std::string("symmetric"); }
 };
 
 template <typename T> struct Solenoid {
@@ -76,7 +76,7 @@ _HD_ void VectorPotential::LinearCentered<T>::computeVectorPotential_local(
 }
 
 template <typename T>
-_HD_ void VectorPotential::Radial<T>::computeVectorPotential_local(
+_HD_ void VectorPotential::Symmetric<T>::computeVectorPotential_local(
     const T inFluxDensity, const T inArea, const T inX, const T inY,
     T &outVectorPotentialX, T &outVectorPotentialY) {
   const T factor = static_cast<T>(0.5) * inFluxDensity;

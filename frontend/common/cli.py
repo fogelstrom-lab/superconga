@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 # Valid choices for certain commands.
 VALID_PRECISIONS = [32, 64]
-VALID_GAUGES = ["radial", "solenoid"]
+VALID_GAUGES = ["solenoid", "symmetric"]
 VALID_CHARGE_SIGNS = [-1, +1]
 VALID_NORMS = ["L1", "L2", "LInf"]
 VALID_ACCELERATORS = [

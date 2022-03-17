@@ -442,13 +442,13 @@ int main(int argc, char *argv[]) {
 
   // Gauge choice.
   const std::string gauge(simulationConfig["physics"]["gauge"].asString());
-  if (gauge == "radial") {
-    riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
-            &context);
-  } else if (gauge == "solenoid") {
+  if (gauge == "solenoid") {
     riccatiSolver =
         new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
+            &context);
+  } else if (gauge == "symmetric") {
+    riccatiSolver =
+        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
             &context);
   } else {
     std::cerr << "-- ERROR! Gauge, " << gauge << ", not understod" << std::endl;
