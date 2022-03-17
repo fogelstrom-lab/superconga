@@ -98,7 +98,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         type=str,
         choices=cli.VALID_GAUGES,
         default=None,
-        help="Set the gauge. Radial: A = 0.5 * B * (-y, x). Solenoid: A = 0.5 * B * Area (-y, x) / (x^2 + y^2).",
+        help="Set the gauge. Solenoid: A = 0.5 * B * Area (-y, x) / (x^2 + y^2). Symmetric: A = 0.5 * B * (-y, x).",
     )
 
     # Charge sign.
@@ -107,7 +107,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         type=int,
         choices=cli.VALID_CHARGE_SIGNS,
         default=None,
-        help="Set sign of the charge. Use -1 (+1) for electrons (holes).",
+        help="Set sign of the charge carriers, i.e. charge_sign = q / |e|. Use -1 (+1) for electrons (holes). Note that this affects which sign the vortex winding-number should have for a vortex (negative) and anti-vortex (positive), given a positive external flux-density.",
     )
 
     # =============== PHYSICS: ORDER PARAMETER =============== #
@@ -208,7 +208,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
         type=float,
         action="append",
         nargs=3,
-        help="Add a vortex in all order-parameter components.",
+        help="Add a vortex in all order-parameter components. Note, a vortex has a negative winding number, and an anti-vortex a positive winding number, for a positive external flux-density and negatively charged carriers.",
     )
 
     # =============== GEOMETRY =============== #

@@ -404,7 +404,7 @@ template <typename T> void testSWaveAnnulusRadial() {
 
   // Create solver with radial gauge.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
           &context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 

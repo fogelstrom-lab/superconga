@@ -113,7 +113,7 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   new conga::IntegrationIteratorOzaki<T>(&context);
 
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Radial>(
+      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
           &context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
