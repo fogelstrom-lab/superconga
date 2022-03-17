@@ -74,7 +74,11 @@ def run(
     colors: Optional[dict] = default.settings["colors"],
 ) -> None:
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
-    plotting.set_global_parameters(fontsize=fontsize, use_tex=use_tex)
+    plotting.set_global_parameters(
+        fontsize=fontsize,
+        use_tex=use_tex,
+        formatter_limits=(0, 3),
+    )
 
     # Read configuration file and set posible filenames of the convergence file.
     if view == "simulation":

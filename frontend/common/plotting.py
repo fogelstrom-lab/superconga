@@ -55,8 +55,9 @@ def get_extent(ppxi, dim_x, dim_y):
 
 class PlotType(Enum):
     DEFAULT = 1
-    MAGNITUDE = 2
-    ANGLE = 3
+    POSITIVE = 2
+    NEGATIVE = 3
+    ANGLE = 4
 
 
 def imshow_and_colorbar(
@@ -76,9 +77,12 @@ def imshow_and_colorbar(
     colorbar_pad=0.04,
 ) -> None:
     # Get colormap and ranges from plot type.
-    if plot_type == PlotType.MAGNITUDE:
+    if plot_type == PlotType.POSITIVE:
         vmax = max(np.nanmax(data), epsilon)
         vmin = 0
+    elif plot_type == PlotType.NEGATIVE:
+        vmax = 0
+        vmin = min(np.nanmin(data), -epsilon)
     elif plot_type == PlotType.ANGLE:
         vmax = np.pi
         vmin = -np.pi
@@ -197,17 +201,24 @@ def set_alphabetic_labels(axes):
             idx += 1
 
 
-def set_global_parameters(fontsize, use_tex):
+def set_global_parameters(
+    fontsize=14,
+    use_tex=True,
+    titlesize="medium",
+    fonttype="none",
+    use_mathtext=True,
+    formatter_limits=(-0, 0),
+):
     # Check if TeX dependencies are installed.
     use_tex = use_tex and mpl.checkdep_usetex(True)
 
     plt.rcParams.update(
         {
             "font.size": fontsize,
-            "axes.titlesize": "medium",
+            "axes.titlesize": titlesize,
             "text.usetex": use_tex,
-            "svg.fonttype": "none",
-            "axes.formatter.use_mathtext": True,
-            "axes.formatter.limits": (-0, 0),
+            "svg.fonttype": fonttype,
+            "axes.formatter.use_mathtext": use_mathtext,
+            "axes.formatter.limits": formatter_limits,
         }
     )

@@ -57,7 +57,11 @@ def run(
     postprocess_config = read.get_postprocess_config(data_dir=data_dir)
 
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
-    plotting.set_global_parameters(fontsize=fontsize, use_tex=use_tex)
+    plotting.set_global_parameters(
+        fontsize=fontsize,
+        use_tex=use_tex,
+        formatter_limits=(-3, 3),
+    )
 
     # Make figure.
     rows, cols = (1, 2)
@@ -111,7 +115,7 @@ def run(
         label=None,
         extent=extent,
         colormap=colormap,
-        plot_type=plotting.PlotType.MAGNITUDE,
+        plot_type=plotting.PlotType.POSITIVE,
         bad_color=exterior_color,
     )
 

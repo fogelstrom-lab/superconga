@@ -104,7 +104,7 @@ def make_plot_row(
                 data=np.hypot(data[0, :, :], data[1, :, :]),
                 label=labels[0],
                 extent=extent,
-                plot_type=plotting.PlotType.MAGNITUDE,
+                plot_type=plotting.PlotType.POSITIVE,
                 colormap=colormaps["magnitude"],
                 bad_color=bad_color,
             )
