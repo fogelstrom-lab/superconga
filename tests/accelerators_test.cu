@@ -85,8 +85,7 @@ void testAccelerator(const AcceleratorType &inAcceleratorType) {
 
   // Create solver with radial gauge.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
-          &context);
+      new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Create s-wave order parameter with phase winding.

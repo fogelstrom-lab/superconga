@@ -95,8 +95,7 @@ void testCurrentConservation(const conga::BasisFunctionSymmetry inSymmetry,
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
-          &context);
+      new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   // Add specular BC
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 

@@ -68,8 +68,7 @@ template <typename T> void testPhaseGradient() {
 
   // Create solver.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-          &context);
+      new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Create s-wave order parameter with phase winding.

@@ -42,8 +42,8 @@ __global__ void computeEnergyShiftOnlyExternalKernel(
 
     T vectorPotentialX;
     T vectorPotentialY;
-    POTENTIAL<T>::computeVectorPotential_local(
-        inFluxDensity, inArea, x, y, vectorPotentialX, vectorPotentialY);
+    POTENTIAL<T>::compute(inFluxDensity, inArea, x, y, vectorPotentialX,
+                          vectorPotentialY);
 
     // Linear index.
     const int idx = yIdx * inGridResolution + xIdx;
@@ -81,8 +81,8 @@ __global__ void computeEnergyShiftKernel(
     // External vector potential.
     T extVectorPotentialX;
     T extVectorPotentialY;
-    POTENTIAL<T>::computeVectorPotential_local(
-        inFluxDensity, inArea, x, y, extVectorPotentialX, extVectorPotentialY);
+    POTENTIAL<T>::compute(inFluxDensity, inArea, x, y, extVectorPotentialX,
+                          extVectorPotentialY);
 
     // Linear index.
     const int idx = yIdx * inGridResolution + xIdx;

@@ -103,8 +103,7 @@ template <typename T> void testSWaveAnnulusSolenoid() {
 
     // Create solver with solenoid gauge.
     conga::RiccatiSolver<T> *riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
-            &context);
+        new conga::RiccatiSolverConfined<T, conga::gauge::Solenoid>(&context);
     riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
     // Create s-wave order parameter with phase winding.

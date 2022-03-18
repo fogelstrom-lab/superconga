@@ -436,20 +436,16 @@ int main(int argc, char *argv[]) {
   //***************************************************
   // CHOOSE RICCATI SOLVER AND BOUNDARY CONDITIONS
   //***************************************************
-  // RiccatiSolverConfined: provides analytic solutions to the Riccati equations
-  // for a piecewise constant order parameter.
   conga::RiccatiSolver<T> *riccatiSolver;
 
   // Gauge choice.
   const std::string gauge(simulationConfig["physics"]["gauge"].asString());
   if (gauge == "solenoid") {
     riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Solenoid>(
-            &context);
+        new conga::RiccatiSolverConfined<T, conga::gauge::Solenoid>(&context);
   } else if (gauge == "symmetric") {
     riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
-            &context);
+        new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   } else {
     std::cerr << "-- ERROR! Gauge, " << gauge << ", not understod" << std::endl;
     return EXIT_FAILURE;

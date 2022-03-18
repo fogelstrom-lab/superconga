@@ -116,6 +116,7 @@
 - Move `make_plot_row function` from common to simulation plotter.
 - Create plot-type enum for strictly negative quantities in frontend.
 - Add unit test of Green functions.
+- Add unit test of vector-potential gauges.
 
 ---
 

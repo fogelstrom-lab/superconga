@@ -21,7 +21,7 @@
 #include "../integration/IntegrationIterator.h"
 #include "../utils.h"
 #include "RiccatiSolutions.h"
-#include "energy_shift/LocalVectorPotential.h"
+#include "energy_shift/Gauges.h"
 #include "energy_shift/VectorPotential_Kernel.h"
 
 #include <cmath>
@@ -166,10 +166,12 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
                        vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
                        fermiVelocityY, systemAngle, fluxDensity, chargeSign,
                        area, N1, h, inEnergyShift->getDataPointer());
-  } else {
+  } else if (std::abs(fluxDensity) > static_cast<T>(0)) {
     computeEnergyShiftOnlyExternalKernel<T, VP><<<bpg, tpb>>>(
         fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity, chargeSign,
         area, N1, h, inEnergyShift->getDataPointer());
+  } else {
+    inEnergyShift->setZero();
   }
 }
 
