@@ -153,8 +153,7 @@ template <typename T> void testCurrentDensity(const T inTemperature) {
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-          &context);
+      new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set order parameter.

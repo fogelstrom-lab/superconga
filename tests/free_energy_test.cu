@@ -99,8 +99,7 @@ template <typename T> T computeFreeEnergy(const bool inSwapOrder) {
 
   // Choose a Riccati solver for a confined geometry.
   conga::RiccatiSolver<T> *riccatiSolver =
-      new conga::RiccatiSolverConfined<T, conga::VectorPotential::Symmetric>(
-          &context);
+      new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
   riccatiSolver->add(new conga::BoundaryConditionSpecular<T>);
 
   // Set up order parameter.

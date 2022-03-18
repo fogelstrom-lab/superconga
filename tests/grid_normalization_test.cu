@@ -106,8 +106,7 @@ void testGridNormalization(const T inTolerance, const T inStartRealPart,
     // Choose a Riccati solver for a confined geometry, without magnetic
     // fields
     conga::RiccatiSolver<T> *riccatiSolver =
-        new conga::RiccatiSolverConfined<T, conga::VectorPotential::None>(
-            &context);
+        new conga::RiccatiSolverConfined<T, conga::gauge::Symmetric>(&context);
 
     // Set up order parameter
     conga::OrderParameter<T> *orderParameter =
