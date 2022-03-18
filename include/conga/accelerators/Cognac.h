@@ -1,16 +1,7 @@
-//===-------------- AdaptiveBall.h - AdaptiveBall accelerator. ------------===//
-//
 // Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
-//
-//===----------------------------------------------------------------------===//
-///
-/// \file
-/// Adaptive-ball accelerator.
-///
-//===----------------------------------------------------------------------===//
-#ifndef CONGA_ADAPTIVE_BALL_H_
-#define CONGA_ADAPTIVE_BALL_H_
+#ifndef CONGA_COGNAC_H_
+#define CONGA_COGNAC_H_
 
 #include "../Type.h"
 #include "Accelerator.h"
@@ -26,28 +17,28 @@
 
 namespace conga {
 namespace accelerators {
-template <typename T> class AdaptiveBall : public Accelerator<T> {
+template <typename T> class Cognac : public Accelerator<T> {
 public:
-  /// \brief Constructor of the adaptive-ball accelerator.
+  /// \brief Constructor of the Cognac accelerator.
   ///
   /// \param inStepSize The step size.
   /// \param inStepSizeFactor The factor used when adjusting the step size.
   /// \param inMinCosSimilarity The mininum tolerated cosine similarity.
   /// \param inMaxStepSize The maximum step size.
   /// \param inMinStepSize The minimum step size.
-  explicit AdaptiveBall(const T inStepSize = m_stepSizeDefault,
-                        const T inStepSizeFactor = m_stepSizeFactorDefault,
-                        const T inMinCosSimilarity = m_minCosSimilarityDefault,
-                        const T inMaxStepSize = m_maxStepSizeDefault,
-                        const T inMinStepSize = m_minStepSizeDefault);
+  explicit Cognac(const T inStepSize = m_stepSizeDefault,
+                  const T inStepSizeFactor = m_stepSizeFactorDefault,
+                  const T inMinCosSimilarity = m_minCosSimilarityDefault,
+                  const T inMaxStepSize = m_maxStepSizeDefault,
+                  const T inMinStepSize = m_minStepSizeDefault);
 
-  /// \brief Constructor of the adaptive-ball accelerator.
+  /// \brief Constructor of the Cognac accelerator.
   ///
   /// \param inJSON JSON with parameters. Absent keys get default values.
-  explicit AdaptiveBall(const Json::Value &inJSON);
+  explicit Cognac(const Json::Value &inJSON);
 
-  /// \brief Destructor of the adaptive-ball accelerator.
-  ~AdaptiveBall(){};
+  /// \brief Destructor of the Cognac accelerator.
+  ~Cognac(){};
 
   /// \brief Compute the next order parameter and vector potential.
   ///
@@ -148,9 +139,9 @@ private:
 };
 
 template <typename T>
-AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inStepSizeFactor,
-                              const T inMinCosSimilarity, const T inMaxStepSize,
-                              const T inMinStepSize)
+Cognac<T>::Cognac(const T inStepSize, const T inStepSizeFactor,
+                  const T inMinCosSimilarity, const T inMaxStepSize,
+                  const T inMinStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize),
       m_stepSizeFactor(inStepSizeFactor),
       m_minCosSimilarity(inMinCosSimilarity), m_maxStepSize(inMaxStepSize),
@@ -164,7 +155,7 @@ AdaptiveBall<T>::AdaptiveBall(const T inStepSize, const T inStepSizeFactor,
 }
 
 template <typename T>
-AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
+Cognac<T>::Cognac(const Json::Value &inJSON)
     : Accelerator<T>(),
       m_stepSizeInit(inJSON.isMember("step_size")
                          ? static_cast<T>(inJSON["step_size"].asDouble())
@@ -193,7 +184,7 @@ AdaptiveBall<T>::AdaptiveBall(const Json::Value &inJSON)
   assert(m_minStepSize > static_cast<T>(0));
 }
 
-template <typename T> void AdaptiveBall<T>::initialize(const GridGPU<T> &inX) {
+template <typename T> void Cognac<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
   const int dimY = inX.dimY();
   const int numFields = inX.numFields();
@@ -212,10 +203,10 @@ template <typename T> void AdaptiveBall<T>::initialize(const GridGPU<T> &inX) {
 }
 
 template <typename T>
-void AdaptiveBall<T>::compute(const OrderParameter<T> &inOrderParameterG,
-                              const GridGPU<T> &inVectorPotentialG,
-                              OrderParameter<T> &inOutOrderParameterX,
-                              GridGPU<T> &inOutVectorPotentialX) {
+void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
+                        const GridGPU<T> &inVectorPotentialG,
+                        OrderParameter<T> &inOutOrderParameterX,
+                        GridGPU<T> &inOutVectorPotentialX) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inVectorPotentialG.dimX();
   const int dimY = inVectorPotentialG.dimY();
@@ -243,8 +234,8 @@ void AdaptiveBall<T>::compute(const OrderParameter<T> &inOrderParameterG,
 }
 
 template <typename T>
-void AdaptiveBall<T>::compute(const OrderParameter<T> &inOrderParameterG,
-                              OrderParameter<T> &inOutOrderParameterX) {
+void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
+                        OrderParameter<T> &inOutOrderParameterX) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inOrderParameterG.getComponentGrid(0)->dimX();
   const int dimY = inOrderParameterG.getComponentGrid(0)->dimY();
@@ -271,8 +262,8 @@ void AdaptiveBall<T>::compute(const OrderParameter<T> &inOrderParameterG,
 }
 
 template <typename T>
-void AdaptiveBall<T>::compute(const GridGPU<T> &inVectorPotentialG,
-                              GridGPU<T> &inOutVectorPotentialX) {
+void Cognac<T>::compute(const GridGPU<T> &inVectorPotentialG,
+                        GridGPU<T> &inOutVectorPotentialX) {
   // Take step.
   computeInternal(inVectorPotentialG, inOutVectorPotentialX);
 }
@@ -307,9 +298,8 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
 } // namespace adaptive_ball_internal
 
 template <typename T>
-T AdaptiveBall<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
-                                  const T inDotProduct,
-                                  const T inMinCosSimilarity) {
+T Cognac<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
+                            const T inDotProduct, const T inMinCosSimilarity) {
   // In the following x = inertia.
 
   // The error when x = 1.
@@ -369,8 +359,7 @@ T AdaptiveBall<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
 }
 
 template <typename T>
-void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
-                                      GridGPU<T> &inOutX) {
+void Cognac<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   // Initialize grids.
   if (!m_initialized) {
     initialize(inOutX);
@@ -430,4 +419,4 @@ void AdaptiveBall<T>::computeInternal(const GridGPU<T> &inG,
 } // namespace accelerators
 } // namespace conga
 
-#endif // CONGA_ADAPTIVE_BALL_H_
+#endif // CONGA_COGNAC_H_

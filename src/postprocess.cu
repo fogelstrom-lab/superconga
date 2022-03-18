@@ -176,11 +176,11 @@ int main(int argc, char *argv[]) {
   // Set which norm to use when computing residuals.
   const std::string residualNorm(
       postprocessConfig["numerics"]["norm"].asString());
-  if (residualNorm == "L1") {
+  if (residualNorm == "l1") {
     parameters->setResidualNormType(conga::ResidualNorm::L1);
-  } else if (residualNorm == "L2") {
+  } else if (residualNorm == "l2") {
     parameters->setResidualNormType(conga::ResidualNorm::L2);
-  } else if (residualNorm == "LInf") {
+  } else if (residualNorm == "linf") {
     parameters->setResidualNormType(conga::ResidualNorm::LInf);
   } else {
     std::cerr << "-- ERROR! Norm type, " << residualNorm << ", not understod"

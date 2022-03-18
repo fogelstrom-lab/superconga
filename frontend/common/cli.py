@@ -10,15 +10,14 @@ from typing import Optional, Union
 VALID_PRECISIONS = [32, 64]
 VALID_GAUGES = ["solenoid", "symmetric"]
 VALID_CHARGE_SIGNS = [-1, +1]
-VALID_NORMS = ["L1", "L2", "LInf"]
+VALID_NORMS = ["l1", "l2", "linf"]
 VALID_ACCELERATORS = [
-    "Adaptive-Ball",
-    "AB",
-    "Anderson",
-    "Barzilai-Borwein",
-    "BB",
-    "Picard",
-    "Polyak",
+    "anderson",
+    "barzilai-borwein",
+    "bb",
+    "cognac",
+    "picard",
+    "polyak",
 ]
 VALID_DATA_FORMATS = ["h5", "csv"]
 

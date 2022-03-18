@@ -142,11 +142,11 @@ int main(int argc, char *argv[]) {
   // Set which norm to use when computing residuals.
   const std::string residualNorm(
       simulationConfig["numerics"]["norm"].asString());
-  if (residualNorm == "L1") {
+  if (residualNorm == "l1") {
     parameters->setResidualNormType(conga::ResidualNorm::L1);
-  } else if (residualNorm == "L2") {
+  } else if (residualNorm == "l2") {
     parameters->setResidualNormType(conga::ResidualNorm::L2);
-  } else if (residualNorm == "LInf") {
+  } else if (residualNorm == "linf") {
     parameters->setResidualNormType(conga::ResidualNorm::LInf);
   } else {
     std::cerr << "-- ERROR! Norm type, " << residualNorm << ", not understod"
@@ -385,23 +385,23 @@ int main(int argc, char *argv[]) {
 
   // Make accelerator.
   std::unique_ptr<conga::accelerators::Accelerator<T>> accelerator;
-  if (acceleratorName == "Adaptive-Ball" || acceleratorName == "AB") {
-    // Create Adaptive-Ball accelerator.
-    accelerator = std::make_unique<conga::accelerators::AdaptiveBall<T>>(
-        simulationConfig["accelerator"]);
-  } else if (acceleratorName == "Anderson") {
+  if (acceleratorName == "anderson") {
     // Create Anderson accelerator.
     accelerator = std::make_unique<conga::accelerators::Anderson<T>>(
         simulationConfig["accelerator"]);
-  } else if (acceleratorName == "Barzilai-Borwein" || acceleratorName == "BB") {
+  } else if (acceleratorName == "barzilai-borwein" || acceleratorName == "bb") {
     // Create Barzilai-Borwein accelerator.
     accelerator = std::make_unique<conga::accelerators::BarzilaiBorwein<T>>(
         simulationConfig["accelerator"]);
-  } else if (acceleratorName == "Picard") {
+  } else if (acceleratorName == "cognac") {
+    // Create Cognac accelerator.
+    accelerator = std::make_unique<conga::accelerators::Cognac<T>>(
+        simulationConfig["accelerator"]);
+  } else if (acceleratorName == "picard") {
     // Create Picard accelerator.
     accelerator = std::make_unique<conga::accelerators::Picard<T>>(
         simulationConfig["accelerator"]);
-  } else if (acceleratorName == "Polyak") {
+  } else if (acceleratorName == "polyak") {
     // Create Polyak accelerator.
     accelerator = std::make_unique<conga::accelerators::Polyak<T>>(
         simulationConfig["accelerator"]);

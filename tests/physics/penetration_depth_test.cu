@@ -3,7 +3,7 @@
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
-#include "conga/accelerators/AdaptiveBall.h"
+#include "conga/accelerators/Cognac.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -125,8 +125,8 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   conga::Initial<T>::bulk(orderParameterComponent);
   orderParameter->add(orderParameterComponent);
 
-  context.set(std::make_unique<conga::accelerators::AdaptiveBall<T>>(
-      static_cast<T>(0.001)));
+  context.set(
+      std::make_unique<conga::accelerators::Cognac<T>>(static_cast<T>(0.001)));
 
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeCurrent<T>(&context);

@@ -26,9 +26,9 @@
 namespace helper {
 /// \brief Enum class for the accelerators.
 enum class AcceleratorType {
-  ADAPTIVE_BALL,
   ANDERSON,
   BARZILAI_BORWEIN,
+  COGNAC,
   PICARD,
   POLYAK
 };
@@ -108,16 +108,16 @@ void testAccelerator(const AcceleratorType &inAcceleratorType) {
   // Set accelerator.
   std::unique_ptr<conga::accelerators::Accelerator<T>> accelerator;
   switch (inAcceleratorType) {
-  case AcceleratorType::ADAPTIVE_BALL: {
-    accelerator = std::make_unique<conga::accelerators::AdaptiveBall<T>>();
-    break;
-  }
   case AcceleratorType::ANDERSON: {
     accelerator = std::make_unique<conga::accelerators::Anderson<T>>();
     break;
   }
   case AcceleratorType::BARZILAI_BORWEIN: {
     accelerator = std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
+    break;
+  }
+  case AcceleratorType::COGNAC: {
+    accelerator = std::make_unique<conga::accelerators::Cognac<T>>();
     break;
   }
   case AcceleratorType::PICARD: {
@@ -151,17 +151,17 @@ void testAccelerator(const AcceleratorType &inAcceleratorType) {
 }
 } // namespace helper
 
-// ================ Adaptive-Ball ================ //
+// ================ Cognac ================ //
 
-TEST_CASE("Test Adaptive-Ball - <float>") {
+TEST_CASE("Test Cognac - <float>") {
   const helper::AcceleratorType acceleratorType =
-      helper::AcceleratorType::ADAPTIVE_BALL;
+      helper::AcceleratorType::COGNAC;
   helper::testAccelerator<float>(acceleratorType);
 }
 
-TEST_CASE("Test Adaptive-Ball - <double>") {
+TEST_CASE("Test Cognac - <double>") {
   const helper::AcceleratorType acceleratorType =
-      helper::AcceleratorType::ADAPTIVE_BALL;
+      helper::AcceleratorType::COGNAC;
   helper::testAccelerator<double>(acceleratorType);
 }
 
