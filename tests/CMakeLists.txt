@@ -38,6 +38,7 @@ set(SRC
     fermi_surface_tight_binding_test.cu
     free_energy_test.cu
     geometry_test.cu
+    green_elements_test.cu
     grid_data_sum_magnitude_test.cu
     grid_data_sum_square_test.cu
     grid_normalization_test.cu

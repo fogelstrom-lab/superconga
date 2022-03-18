@@ -43,48 +43,6 @@ template <typename T> struct Greens {
   }
 };
 
-/// \brief Compute the Green function "f".
-///
-/// f = -2i \gamma / (1 + \gamma \tilde{gamma})
-///
-/// \param inGamma The coherence function "gamma".
-/// \param inGammaTilde The coherence function "gammaTilde".
-///
-/// \return The green function "f".
-template <typename T> struct GreensAnomalous {
-  _HD_ static thrust::complex<T>
-  compute(const thrust::complex<T> &inGamma,
-          const thrust::complex<T> &inGammaTilde) {
-    const thrust::complex<T> tmp =
-        -static_cast<T>(2.0) * inGamma /
-        (static_cast<T>(1.0) + inGamma * inGammaTilde);
-
-    // Multiply by I.
-    return thrust::complex<T>(-tmp.imag(), tmp.real());
-  }
-};
-
-/// \brief Compute the Green function "\tilde{f}".
-///
-/// \tilde{f} = 2i \tilde{gamma} / (1 + \gamma \tilde{gamma})
-///
-/// \param inGamma The coherence function "gamma".
-/// \param inGammaTilde The coherence function "gammaTilde".
-///
-/// \return The Green function "\tilde{f}".
-template <typename T> struct GreensAnomalousTilde {
-  _HD_ static thrust::complex<T>
-  compute(const thrust::complex<T> &inGamma,
-          const thrust::complex<T> &inGammaTilde) {
-    const thrust::complex<T> tmp =
-        static_cast<T>(2.0) * inGammaTilde /
-        (static_cast<T>(1.0) + inGamma * inGammaTilde);
-
-    // Multiply by I.
-    return thrust::complex<T>(-tmp.imag(), tmp.real());
-  }
-};
-
 /// \brief Compute sum of the the Green functions "f + \tilde{f}^*".
 ///
 /// f = -2i \gamma / (1 + \gamma \tilde{gamma})

@@ -115,6 +115,7 @@
 - Add comments and more asserts to accelerators. Use double precision when summing an entire grid.
 - Move `make_plot_row function` from common to simulation plotter.
 - Create plot-type enum for strictly negative quantities in frontend.
+- Add unit test of Green functions.
 
 ---
 
