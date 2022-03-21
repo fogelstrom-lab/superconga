@@ -4,6 +4,10 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+The main part of the postprocess plotter.
+"""
+
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +23,8 @@ from common import plotting, read
 
 
 def get_title_ldos(energy):
+    """Given the energy get the title of the LDoS plot."""
+
     return (
         r"$N(\mathbf{R}, \epsilon) / (2 N_\mathrm{F}) \; | \; \epsilon = %0.2f [2\pi k_\mathrm{B} T_\mathrm{c}]$"
         % energy
@@ -26,6 +32,8 @@ def get_title_ldos(energy):
 
 
 def get_title_dos(x, y):
+     """Given the position, get the title of the DoS plot."""
+
     if np.isnan(x) or np.isnan(y):
         title = r"$N(\mathbf{R}, \epsilon) / (2 N_\mathrm{F}) \; | \; \mathbf{R} = (?, ?) [\xi_0]$"
     else:
@@ -52,6 +60,8 @@ def run(
     ldos_color: Optional[str] = default.settings["ldos_color"],
     marker_color: Optional[str] = default.settings["marker_color"],
 ) -> None:
+    """Run the postprocess plotter."""
+
     # Read configuration files.
     simulation_config = read.get_simulation_config(data_dir=data_dir)
     postprocess_config = read.get_postprocess_config(data_dir=data_dir)
@@ -284,6 +294,8 @@ def run(
 # MAIN FUNCTION
 # -----------------------------------------------------------------------------
 def main(args: argparse.Namespace) -> None:
+    """Main entry of the postprocess plotter."""
+
     # Run the plotter.
     run(
         data_dir=args.load_path,

@@ -4,6 +4,8 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Functionality for creating the argument parser for a simulation, as well as validating the inputs."""
+
 import argparse
 import sys
 
@@ -12,6 +14,8 @@ from common import cli
 
 
 def make_parser(parser: argparse.ArgumentParser) -> None:
+    """Given a parser, add all arguments for the simulation."""
+
     parser.set_defaults(which="simulation")
 
     parser.description = "Run a simulation."
@@ -479,6 +483,8 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
+    """Update the configuration parameters with arguments from the CLI."""
+
     # ================== PHYSICS ================== #
     group = "physics"
     cli.set_value(
@@ -797,6 +803,8 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
 
 
 def get_checks() -> dict:
+    """Get the sanity checks to perform on the configuration parameters."""
+
     checks = {
         "physics": {
             "type": dict,

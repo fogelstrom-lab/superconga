@@ -4,6 +4,10 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+The main part of the simulation runner.
+"""
+
 import argparse
 import json
 import os
@@ -22,6 +26,8 @@ from convergence_plotter import convergence_plotter
 # MAIN FUNCTION
 # -----------------------------------------------------------------------------
 def main(args: argparse.Namespace) -> None:
+    """Run a simulation."""
+
     config = {}
 
     # Read config file.

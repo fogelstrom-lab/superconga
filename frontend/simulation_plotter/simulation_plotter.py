@@ -4,6 +4,10 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+The main part of the simulation plotter.
+"""
+
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +23,8 @@ from common import plotting, read
 
 
 def get_rows_cols(view: list, num_op_comps: int) -> tuple:
+    """Compute the number of needed rows and columns in order to plot everything requested."""
+
     rows = 0
     cols = 0
     for what in view:
@@ -51,6 +57,8 @@ def make_plot_row(
     landscape=False,
     cartesian=False,
 ) -> None:
+    """Make an entire row (or column) of plots."""
+
     # Extract row axes.
     axes_row = axes[:, idx] if landscape else axes[idx, :]
     num_axes = len(axes_row)
@@ -137,6 +145,8 @@ def run(
     colormaps: Optional[dict] = default.settings["colormaps"],
     exterior_color: Optional[str] = default.settings["exterior_color"],
 ) -> None:
+    """Run the simulation plotter."""
+
     # Read configuration file.
     config = read.get_simulation_config(data_dir=data_dir)
 
@@ -250,6 +260,8 @@ def run(
 # MAIN FUNCTION
 # -----------------------------------------------------------------------------
 def main(args: argparse.Namespace) -> None:
+    """Main entry of the simulation plotter."""
+
     colormaps = {
         "default": args.cmap_default,
         "magnitude": args.cmap_magnitude,

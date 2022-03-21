@@ -4,6 +4,8 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Common functionality for plotting using Matplotlib."""
+
 from enum import Enum
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -21,6 +23,8 @@ def make_figure(
     sharey=False,
     name=None,
 ):
+    """Make a figure."""
+
     # Compute figure size.
     width = cols * subplot_width
     height = rows * subplot_height
@@ -47,6 +51,8 @@ def make_figure(
 
 
 def get_extent(ppxi, dim_x, dim_y):
+    """Compute the extent along the xy-axes given the resolution and number of lattice sites."""
+
     lattice_site_length = 1 / ppxi
     x_lim = lattice_site_length * (dim_x - 1) / 2
     y_lim = lattice_site_length * (dim_y - 1) / 2
@@ -54,6 +60,8 @@ def get_extent(ppxi, dim_x, dim_y):
 
 
 class PlotType(Enum):
+    """Enum for describing what kind of data is being plotted."""
+
     DEFAULT = 1
     POSITIVE = 2
     NEGATIVE = 3
@@ -76,6 +84,8 @@ def imshow_and_colorbar(
     colorbar_fraction=0.046,
     colorbar_pad=0.04,
 ) -> None:
+    """Create a heatmap using imshow and create a colorbar."""
+
     # Get colormap and ranges from plot type.
     if plot_type == PlotType.POSITIVE:
         vmax = max(np.nanmax(data), epsilon)
@@ -136,6 +146,8 @@ def imshow_and_colorbar(
 
 
 def set_colorbar_ticks_and_labels(colorbar, vmin, vmax, num_ticks=5):
+    """Set the ticks and tick labels of a colorbar."""
+
     ticks = np.linspace(vmin, vmax, num_ticks)
     colorbar.set_ticks(ticks)
     for label in colorbar.ax.yaxis.get_ticklabels()[1::2]:
@@ -143,6 +155,8 @@ def set_colorbar_ticks_and_labels(colorbar, vmin, vmax, num_ticks=5):
 
 
 def set_axes_ticks_and_labels(axes, extent):
+    """Set the ticks and tick labels of all axes, e.g. xy-labels of heatmaps."""
+
     # Make axes labels and ticks.
     _, x_lim, _, y_lim = extent
     xtick = np.floor(x_lim)
@@ -192,6 +206,8 @@ def set_axes_ticks_and_labels(axes, extent):
 
 
 def set_alphabetic_labels(axes):
+    """Set alphabetical labels, e.g. (a), on all axes."""
+
     alphabet = "abcdefghijklmnopqrstuvwxyzåäö"
     idx = 0
     for ax in axes.flatten():
@@ -209,6 +225,8 @@ def set_global_parameters(
     use_mathtext=True,
     formatter_limits=(-0, 0),
 ):
+    """Set global Matplotlib parameters."""
+
     # Check if TeX dependencies are installed.
     use_tex = use_tex and mpl.checkdep_usetex(True)
 

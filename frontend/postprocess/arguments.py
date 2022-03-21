@@ -4,6 +4,8 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Functionality for creating the argument parser for the postprocess, as well as validating the inputs."""
+
 import argparse
 import sys
 
@@ -12,9 +14,11 @@ from common import cli
 
 
 def make_parser(parser: argparse.ArgumentParser) -> None:
+    """Given a parser, add all arguments for the postprocess."""
+
     parser.set_defaults(which="postprocess")
 
-    parser.description = "Compute the spectra from a converged simulation simulation, e.g. the local density of states (LDoS)."
+    parser.description = "Compute the spectra from a converged simulation, e.g. the local density of states (LDoS)."
 
     # Config file.
     parser.add_argument(
@@ -200,6 +204,8 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
+    """Update the configuration parameters with arguments from the CLI."""
+
     group = "spectroscopy"
     cli.set_value(
         config=config,
@@ -303,6 +309,8 @@ def update_config_from_cli(config: dict, args: argparse.Namespace) -> None:
 
 
 def get_checks() -> dict:
+    """Get the sanity checks to perform on the configuration parameters."""
+
     checks = {
         "spectroscopy": {
             "type": dict,

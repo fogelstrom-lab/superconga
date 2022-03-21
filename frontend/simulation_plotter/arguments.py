@@ -4,11 +4,17 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+Functionality for creating the argument parser for the simulation plotter.
+"""
+
 import argparse
 from . import default
 
 
 def make_parser(parser: argparse.ArgumentParser):
+    """Given a parser, add all arguments for the simulation plotter."""
+
     parser.set_defaults(which="simulation_plotter")
 
     parser.description = "Plot the simulation results."

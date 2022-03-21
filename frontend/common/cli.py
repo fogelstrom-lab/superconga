@@ -4,6 +4,12 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+Common functionality for updating configuration parameters with arguments from the CLI.
+
+As well as the valid choices of certain parameters.
+"""
+
 from typing import Optional, Union
 
 # Valid choices for certain commands.
@@ -19,15 +25,17 @@ VALID_ACCELERATORS = [
     "picard",
     "polyak",
 ]
-VALID_DATA_FORMATS = ["h5", "csv"]
+VALID_DATA_FORMATS = ["csv", "h5"]
 
-# Set value from command-line argument.
+
 def set_value(
     config: dict,
     key: str,
     value: Union[dict, int, float, list],
     group: Optional[str] = None,
 ) -> None:
+    """Set value from command-line argument"""
+
     # If the value is None then it is not set in the command line arguments, so it should not be used.
     if value is not None:
         if group is None:
@@ -39,7 +47,6 @@ def set_value(
                 config[group] = {key: value}
 
 
-# Set value from command-line flag (on/off for true/false).
 def set_flag(
     config: dict,
     key: str,
@@ -47,6 +54,8 @@ def set_flag(
     off: bool,
     group: Optional[str] = None,
 ) -> None:
+    """Set value from command-line flag (on/off for true/false)."""
+
     # The flags are mutually exclusive, so both cannot be true. If both are false then they have not been set in the command line arguments, and should therefore not be used.
     if on or off:
         # Off = True implies On = False and vice versa. So only the on value needs to be considered.

@@ -4,6 +4,10 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+Default settings for the postprocess plotter.
+"""
+
 # Default settings.
 settings = {
     "limit": -1,

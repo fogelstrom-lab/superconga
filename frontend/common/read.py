@@ -4,6 +4,8 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Functionality for reading data from disk."""
+
 import h5py
 import json
 import numpy as np
@@ -13,6 +15,8 @@ import sys
 
 
 def get_config(data_dir, filenames):
+    """Read a JSON configuration file."""
+
     success = False
     for filename in filenames:
         config_path = os.path.join(data_dir, filename)
@@ -30,6 +34,8 @@ def get_config(data_dir, filenames):
 
 
 def get_simulation_config(data_dir):
+    """Read a JSON simulation configuration file."""
+
     # Supporting old filename.
     filenames = [
         "simulation_config.json",
@@ -39,6 +45,8 @@ def get_simulation_config(data_dir):
 
 
 def get_postprocess_config(data_dir):
+    """Read a JSON postprocess configuration file."""
+
     # Supporting old filename.
     filenames = [
         "postprocess_config.json",
@@ -49,6 +57,8 @@ def get_postprocess_config(data_dir):
 
 # Get data for a certain key from h5 file.
 def get_data_h5(hf, key):
+    """Read a dataset from an H5 file."""
+
     # Fetch dimensions.
     dim_x = hf[key].attrs["dim_x"]
     dim_y = hf[key].attrs["dim_y"]
@@ -60,6 +70,8 @@ def get_data_h5(hf, key):
 
 # Get data for a certain key from Pandas dataframe.
 def get_data_csv(df, key):
+    """Read a column from a CSV file."""
+
     # Fetch dimensions.
     dim_x = df["x_idx"].max() + 1
     dim_y = df["y_idx"].max() + 1
@@ -70,6 +82,8 @@ def get_data_csv(df, key):
 
 
 def get_filename(data_dir, filenames):
+    """Get the first existing filename from a list of filenames."""
+
     for filename in filenames:
         path = os.path.join(data_dir, filename)
         if os.path.exists(path):
@@ -78,6 +92,8 @@ def get_filename(data_dir, filenames):
 
 
 def get_data(data_dir, key):
+    """Read data, e.g. the order parameter, from a directory."""
+
     # Check if H5 file exists.
     # TODO(niclas): Check data format in config? I.e. use CSV even though h5 file exists.
     if key in ["ldos"]:
