@@ -2,9 +2,9 @@
 
 (Summarize the bug here.)
 
-**SuperConga version**
+**SuperConga version and Git branch**
 
-(Paste the version of SuperConga here. It can be obtained from command line via `python superconga.py -V`. If possible, please also provide the git branch, obtained from command line via e.g. `git branch`. Please note that we support the current stable release of SuperConga, i.e. the master and development branches. If the bug appears in your own modified version of the code, or in an older version of SuperConga, then please first confirm that the bug can be reproduced in the current stable release.)
+(Paste the version of SuperConga here. It can be obtained from command line via `python superconga.py -V`. If possible, please also provide the git branch, obtained from command line via e.g. `git branch`. Please note that we support the current stable release of SuperConga, i.e. the main/master branch, as well as the development branch. If the bug appears in your own modified version of the code, or in an older version of SuperConga, then please first confirm that the bug can be reproduced in the current stable release.)
 
 **Operating system**
 

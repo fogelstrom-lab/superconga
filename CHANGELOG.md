@@ -52,6 +52,7 @@
 - Improve help messages in frontend.
 - Change name of `radial` gauge to `symmetric`. Update simulation help messages.
 - Change name of the Adaptive-Ball accelerator to Cognac. Do not use capital letters in the frontend for accelerators or norms.
+- Added README to the frontend directory.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
