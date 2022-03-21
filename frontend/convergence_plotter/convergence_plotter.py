@@ -25,7 +25,7 @@ from common import plotting, read
 
 
 def compute_kernel(blur):
-    "Given the standard deviation of the Gaussian blur, create the actual kernel."
+    """Given the standard deviation of the Gaussian blur, create the actual kernel."""
 
     # Approx smallest value of any kernel element.
     epsilon = 1e-3
@@ -42,7 +42,7 @@ def compute_kernel(blur):
 
 
 def convolve(data, kernel):
-    "Convolve the data with some kernel, padding the data at both ends."
+    """Convolve the data with some kernel, padding the data at both ends."""
 
     # Pad the data.
     pad = (len(kernel) - 1) // 2
@@ -55,7 +55,7 @@ def convolve(data, kernel):
 
 
 def plot(ax, x, y, label, blur, color, alpha):
-    "Plot the data. Possibly blur it and plot the the original data semi-transparent."
+    """Plot the data. Possibly blur it and plot the the original data semi-transparent."""
 
     if blur > 0:
         kernel = compute_kernel(blur=blur)
@@ -83,7 +83,7 @@ def run(
     alpha: Optional[float] = default.settings["alpha"],
     colors: Optional[dict] = default.settings["colors"],
 ) -> None:
-    "Run the convergence plotter."
+    """Run the convergence plotter."""
 
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
     plotting.set_global_parameters(

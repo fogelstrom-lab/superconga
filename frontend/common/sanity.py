@@ -86,7 +86,7 @@ def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> 
 
 # Check that the necessary fields are set.
 def check_dict(config: dict, checks: dict) -> bool:
-     """Sanity check a dict."""
+    """Sanity check a dict."""
 
     success = True
 
