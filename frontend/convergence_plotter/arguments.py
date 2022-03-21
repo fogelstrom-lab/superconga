@@ -4,11 +4,17 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+Functionality for creating the argument parser for the convergence plotter.
+"""
+
 import argparse
 from . import default
 
 
 def make_parser(parser: argparse.ArgumentParser):
+    """Given a parser, add all arguments for the convergence plotter."""
+
     parser.set_defaults(which="convergence_plotter")
 
     parser.description = "Plot the residuals (and free energy) versus iteration number for a computation, either simulation or postprocess."

@@ -118,6 +118,7 @@
 - Create plot-type enum for strictly negative quantities in frontend.
 - Add unit test of Green functions.
 - Add unit test of vector-potential gauges.
+- Add tiny header explaining each file in frontend.
 
 ---
 

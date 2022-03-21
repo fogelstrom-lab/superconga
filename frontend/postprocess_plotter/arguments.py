@@ -4,12 +4,18 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+Functionality for creating the argument parser for the postprocess plotter.
+"""
+
 import argparse
 
 from . import default
 
 
 def make_parser(parser: argparse.ArgumentParser):
+    """Given a parser, add all arguments for the postprocess plotter."""
+
     parser.set_defaults(which="postprocess_plotter")
 
     parser.description = "Tool for exploring the postprocess data. The plots are interactive. Just click either plot to update the energy or point being visualized."

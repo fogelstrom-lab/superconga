@@ -4,6 +4,8 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Functionality for writing a configuration to file and calling the relevant C++ binary."""
+
 import datetime
 import json
 import os
@@ -11,6 +13,8 @@ import subprocess
 
 
 def run(config: dict, cpp_path: str):
+    """Call a C++ binary using a given configuration."""
+
     # Create tmp directory if it does not exist.
     tmp_path = os.path.join(os.path.dirname(__file__), "../../tmp")
     os.makedirs(tmp_path, exist_ok=True)

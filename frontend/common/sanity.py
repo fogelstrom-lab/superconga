@@ -4,10 +4,15 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""Functionality for doing sanity checks on parameters."""
+
+
 from typing import Union
 
-# Validate command-line arguments based on check list, defined in validate().
+# Validate command-line arguments based on check list.
 def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> bool:
+    """Sanity check a parameter value."""
+
     # Check that the value is of the expected type. Or if the expected type is float, accept int as well.
     expected_type = checks["type"]
     is_float = expected_type == float
@@ -81,6 +86,8 @@ def check_value(key: str, value: Union[bool, float, int, str], checks: dict) -> 
 
 # Check that the necessary fields are set.
 def check_dict(config: dict, checks: dict) -> bool:
+     """Sanity check a dict."""
+
     success = True
 
     # Loop over the keys in the checks so we can spot if something is missing.

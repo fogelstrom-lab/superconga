@@ -4,6 +4,10 @@
 # This file is part of the SuperConga Project, under the GNU LGPL v3
 # license or higher. See LICENSE.txt for license information.
 
+"""
+The main part of the postprocess runner.
+"""
+
 import argparse
 import json
 import os
