@@ -32,7 +32,7 @@ def get_title_ldos(energy):
 
 
 def get_title_dos(x, y):
-     """Given the position, get the title of the DoS plot."""
+    """Given the position, get the title of the DoS plot."""
 
     if np.isnan(x) or np.isnan(y):
         title = r"$N(\mathbf{R}, \epsilon) / (2 N_\mathrm{F}) \; | \; \mathbf{R} = (?, ?) [\xi_0]$"
