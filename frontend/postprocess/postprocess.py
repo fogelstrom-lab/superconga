@@ -17,7 +17,7 @@ import sys
 from .arguments import make_parser, update_config_from_cli, get_checks
 
 sys.path.insert(0, "../")
-from common import cpp, read, sanity
+from common import cpp, io, sanity
 from convergence_plotter import convergence_plotter
 
 # -----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ def main(args: argparse.Namespace) -> None:
             config = json.loads(data)
         else:
             # Looking for the config file in that directory.
-            config = read.get_postprocess_config(data_dir=config_path)
+            config = io.read_postprocess_config(data_dir=config_path)
 
     # Overwrite parameters from CLI.
     update_config_from_cli(config=config, args=args)

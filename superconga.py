@@ -14,6 +14,7 @@ from postprocess import postprocess
 from simulation_plotter import simulation_plotter
 from postprocess_plotter import postprocess_plotter
 from convergence_plotter import convergence_plotter
+from data_converter import data_converter
 
 # -----------------------------------------------------------------------------
 # MAIN FUNCTION
@@ -50,6 +51,10 @@ def main() -> None:
     convergence_plotter_parser = subparsers.add_parser("plot-convergence")
     convergence_plotter.make_parser(convergence_plotter_parser)
 
+    # Add data-converter parser.
+    data_converter_parser = subparsers.add_parser("convert")
+    data_converter.make_parser(data_converter_parser)
+
     # Parse arguments.
     args = parser.parse_args()
 
@@ -68,6 +73,8 @@ def main() -> None:
             postprocess_plotter_parser.print_help()
         elif args.which == "convergence_plotter":
             convergence_plotter_parser.print_help()
+        elif args.which == "data_converter":
+            data_converter_parser.print_help()
         else:
             print(f"-- ERROR! Command '{args.which}' not implemented.")
     else:
@@ -82,6 +89,8 @@ def main() -> None:
             postprocess_plotter.main(args)
         elif args.which == "convergence_plotter":
             convergence_plotter.main(args)
+        elif args.which == "data_converter":
+            data_converter.main(args)
         else:
             print(f"-- ERROR! Command '{args.which}' not implemented.")
 
