@@ -9,7 +9,11 @@
 #include <thrust/device_vector.h>
 
 #include <forge.h>
+#ifdef CONGA_USE_CUDA_OPENGL_INTEROP
+#define USE_FORGE_CUDA_COPY_HELPERS
+#else
 #define USE_FORGE_CPU_COPY_HELPERS
+#endif
 #include <fg/compute_copy.h>
 
 #include <iomanip>
@@ -357,12 +361,17 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   const std::string range = stream.str();
   const std::string title = inTitle + std::string(" : ") + range;
 
+#ifdef CONGA_USE_CUDA_OPENGL_INTEROP
+  // Use the raw GPU pointer.
+  draw(title, inCol, inRow, ptrGPU, width, height);
+#else
   // Copy to the CPU and pass the CPU pointer to Forge. This way we can
   // visualize the simulation even if we are using different GPUs for
   // computation and visualization.
   const thrust::host_vector<float> imageCPU(imageGPU);
   const float *const ptrCPU = thrust::raw_pointer_cast(imageCPU.data());
   draw(title, inCol, inRow, ptrCPU, width, height);
+#endif
 }
 
 template <typename T>

@@ -22,6 +22,16 @@ else
   VISUALIZE="-DCONGA_VISUALIZE=ON"
 fi
 
+# Use CUDA-OpenGL interopability in visualization.
+if echo $* | grep -e "--use-cuda-opengl-interop" -q
+then
+  echo "-- Building with CUDA-OpenGL interopability."
+  CUDA_OPENGL_INTEROP="-DCONGA_USE_CUDA_OPENGL_INTEROP=ON"
+else
+  echo "-- Building without CUDA-OpenGL interopability."
+  CUDA_OPENGL_INTEROP="-DCONGA_USE_CUDA_OPENGL_INTEROP=OFF"
+fi
+
 # Allow building without HDF5 support.
 if echo $* | grep -e "--no-hdf5" -q
 then
@@ -48,30 +58,26 @@ mkdir -p $pwd/tmp
 # Remove build folder.
 rm -rf build/
 
-# Build release.
-echo "================================ Setup Release ================================"
-mkdir -p $pwd/build/release
-cd $pwd/build/release
-cmake $GENERATOR $VISUALIZE $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Release $pwd
-
-# Build debug, if specified by the user.
+# Build Debug, if specified by the user, otherwise Release.
 if echo $* | grep -e "--debug" -q
 then
   echo "================================= Setup Debug ================================="
   mkdir -p $pwd/build/debug
   cd $pwd/build/debug
-  cmake $GENERATOR $VISUALIZE $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Debug $pwd
+  cmake $GENERATOR $VISUALIZE $CUDA_OPENGL_INTEROP $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Debug $pwd
 else
-  echo "================================= Setup Debug ================================="
-  echo "-- Skipping debug. Run 'setup.sh --debug' to build in debug mode."
+  echo "================================ Setup Release ================================"
+  mkdir -p $pwd/build/release
+  cd $pwd/build/release
+  cmake $GENERATOR $VISUALIZE $CUDA_OPENGL_INTEROP $HDF5 $TESTS -DCMAKE_BUILD_TYPE=Release $pwd
 fi
 
 echo "==============================================================================="
 echo "-- If build generation was successful, build and compile the code with compile.sh,"
 echo "   or by manually running the build system (e.g. ninja, make, ...) in:" 
-echo "   $pwd/build/release"
-
 if echo $* | grep -e "--debug" -q
 then
-  echo "$pwd/build/debug"
+  echo "   $pwd/build/debug"
+else
+  echo "   $pwd/build/release"
 fi
