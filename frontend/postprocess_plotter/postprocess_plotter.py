@@ -19,7 +19,7 @@ from . import default
 from .arguments import make_parser
 
 sys.path.insert(0, "../")
-from common import plotting, read
+from common import plotting, io
 
 
 def get_title_ldos(energy):
@@ -63,8 +63,8 @@ def run(
     """Run the postprocess plotter."""
 
     # Read configuration files.
-    simulation_config = read.get_simulation_config(data_dir=data_dir)
-    postprocess_config = read.get_postprocess_config(data_dir=data_dir)
+    simulation_config = io.read_simulation_config(data_dir=data_dir)
+    postprocess_config = io.read_postprocess_config(data_dir=data_dir)
 
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
     plotting.set_global_parameters(
@@ -87,11 +87,17 @@ def run(
         name=name,
     )
 
+    # Set the data formats.
+    simulation_data_format = simulation_config["misc"]["data_format"]
+    postprocess_data_format = postprocess_config["misc"]["data_format"]
+
     # For convenience.
     ax_LDoS, ax_DoS = axes
 
     # Get the domain so we can color the outside of the domain gray.
-    domain = read.get_data(data_dir=data_dir, key="domain")
+    domain = io.read_data(
+        data_dir=data_dir, key="domain", data_format=simulation_data_format
+    )
     domain = domain.astype(float)
     domain[domain == 0] = np.nan
 
@@ -101,7 +107,9 @@ def run(
     extent = plotting.get_extent(ppxi=ppxi, dim_x=dim_x, dim_y=dim_y)
 
     # Get the LDoS.
-    LDoS = read.get_data(data_dir=data_dir, key="ldos")
+    LDoS = io.read_data(
+        data_dir=data_dir, key="ldos", data_format=postprocess_data_format
+    )
     LDoS *= domain
 
     # Compute the DoS.

@@ -19,7 +19,7 @@ from . import default
 from .arguments import make_parser
 
 sys.path.insert(0, "../")
-from common import plotting, read
+from common import plotting, io
 
 
 def get_rows_cols(view: list, num_op_comps: int) -> tuple:
@@ -148,7 +148,7 @@ def run(
     """Run the simulation plotter."""
 
     # Read configuration file.
-    config = read.get_simulation_config(data_dir=data_dir)
+    config = io.read_simulation_config(data_dir=data_dir)
 
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
     plotting.set_global_parameters(fontsize=fontsize, use_tex=use_tex)
@@ -171,8 +171,11 @@ def run(
         name=name,
     )
 
+    # Set the data format.
+    data_format = config["misc"]["data_format"]
+
     # Get the domain so we can color the outside of the domain gray.
-    domain = read.get_data(data_dir=data_dir, key="domain")
+    domain = io.read_data(data_dir=data_dir, key="domain", data_format=data_format)
     domain = domain.astype(float)
     domain[domain == 0] = np.nan
 
@@ -205,7 +208,7 @@ def run(
         # Loop over keys and plot the data.
         for key in keys:
             # Extract data from file.
-            data = read.get_data(data_dir=data_dir, key=key)
+            data = io.read_data(data_dir=data_dir, key=key, data_format=data_format)
 
             # Erase data outside of the domain, i.e. set to NaN.
             if erase:

@@ -55,6 +55,7 @@
 - Added README to the frontend directory.
 - Expose the Landau gauge.
 - Print subcommand help if no additional arguments are specified.
+- Add tool for converting between data formats.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

@@ -21,7 +21,7 @@ from . import default
 from .arguments import make_parser
 
 sys.path.insert(0, "../")
-from common import plotting, read
+from common import plotting, io
 
 
 def compute_kernel(blur):
@@ -94,11 +94,11 @@ def run(
 
     # Read configuration file and set posible filenames of the convergence file.
     if view == "simulation":
-        config = read.get_simulation_config(data_dir=data_dir)
+        config = io.read_simulation_config(data_dir=data_dir)
         # Support old filename.
         filenames = ["simulation_convergence.csv", "convergence.csv"]
     elif view == "postprocess":
-        config = read.get_postprocess_config(data_dir=data_dir)
+        config = io.read_postprocess_config(data_dir=data_dir)
         filenames = ["postprocess_convergence.csv"]
     else:
         raise ValueError(f"-- ERROR! View, '{view}', not understood.")
