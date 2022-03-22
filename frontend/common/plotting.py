@@ -212,7 +212,7 @@ def set_alphabetic_labels(axes):
     idx = 0
     for ax in axes.flatten():
         if ax.has_data():
-            title = r"$(%s)$" % alphabet[idx]
+            title = r"$\mathrm{(%s)}$" % alphabet[idx]
             ax.set_title(title, loc="left", fontsize="small")
             idx += 1
 
