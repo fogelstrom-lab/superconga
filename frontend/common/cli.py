@@ -14,7 +14,7 @@ from typing import Optional, Union
 
 # Valid choices for certain commands.
 VALID_PRECISIONS = [32, 64]
-VALID_GAUGES = ["solenoid", "symmetric"]
+VALID_GAUGES = ["landau", "solenoid", "symmetric"]
 VALID_CHARGE_SIGNS = [-1, +1]
 VALID_NORMS = ["l1", "l2", "linf"]
 VALID_ACCELERATORS = [
