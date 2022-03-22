@@ -193,7 +193,7 @@ Context<T>::Context()
       m_computeVectorPotential(nullptr),
       m_startTime(std::chrono::high_resolution_clock::now()),
       m_numIterations(0), m_isFirstComputeIteration(true),
-      m_accelerator(std::make_unique<accelerators::Cognac<T>>()) {}
+      m_accelerator(std::make_unique<accelerators::CongAcc<T>>()) {}
 
 template <typename T> Context<T>::~Context() {
 #ifndef NDEBUG

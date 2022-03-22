@@ -21,7 +21,7 @@ VALID_ACCELERATORS = [
     "anderson",
     "barzilai-borwein",
     "bb",
-    "cognac",
+    "congacc",
     "picard",
     "polyak",
 ]

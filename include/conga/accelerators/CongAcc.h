@@ -1,7 +1,7 @@
 // Part of the SuperConga Project, under the GNU LGPL v3 license or higher.
 // See LICENSE.txt for license information.
-#ifndef CONGA_COGNAC_H_
-#define CONGA_COGNAC_H_
+#ifndef CONGA_CONGACC_H_
+#define CONGA_CONGACC_H_
 
 #include "../Type.h"
 #include "Accelerator.h"
@@ -17,28 +17,28 @@
 
 namespace conga {
 namespace accelerators {
-template <typename T> class Cognac : public Accelerator<T> {
+template <typename T> class CongAcc : public Accelerator<T> {
 public:
-  /// \brief Constructor of the Cognac accelerator.
+  /// \brief Constructor of the CongAcc accelerator.
   ///
   /// \param inStepSize The step size.
   /// \param inStepSizeFactor The factor used when adjusting the step size.
   /// \param inMinCosSimilarity The mininum tolerated cosine similarity.
   /// \param inMaxStepSize The maximum step size.
   /// \param inMinStepSize The minimum step size.
-  explicit Cognac(const T inStepSize = m_stepSizeDefault,
+  explicit CongAcc(const T inStepSize = m_stepSizeDefault,
                   const T inStepSizeFactor = m_stepSizeFactorDefault,
                   const T inMinCosSimilarity = m_minCosSimilarityDefault,
                   const T inMaxStepSize = m_maxStepSizeDefault,
                   const T inMinStepSize = m_minStepSizeDefault);
 
-  /// \brief Constructor of the Cognac accelerator.
+  /// \brief Constructor of the CongAcc accelerator.
   ///
   /// \param inJSON JSON with parameters. Absent keys get default values.
-  explicit Cognac(const Json::Value &inJSON);
+  explicit CongAcc(const Json::Value &inJSON);
 
-  /// \brief Destructor of the Cognac accelerator.
-  ~Cognac(){};
+  /// \brief Destructor of the CongAcc accelerator.
+  ~CongAcc(){};
 
   /// \brief Compute the next order parameter and vector potential.
   ///
@@ -139,7 +139,7 @@ private:
 };
 
 template <typename T>
-Cognac<T>::Cognac(const T inStepSize, const T inStepSizeFactor,
+CongAcc<T>::CongAcc(const T inStepSize, const T inStepSizeFactor,
                   const T inMinCosSimilarity, const T inMaxStepSize,
                   const T inMinStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize),
@@ -155,7 +155,7 @@ Cognac<T>::Cognac(const T inStepSize, const T inStepSizeFactor,
 }
 
 template <typename T>
-Cognac<T>::Cognac(const Json::Value &inJSON)
+CongAcc<T>::CongAcc(const Json::Value &inJSON)
     : Accelerator<T>(),
       m_stepSizeInit(inJSON.isMember("step_size")
                          ? static_cast<T>(inJSON["step_size"].asDouble())
@@ -184,7 +184,7 @@ Cognac<T>::Cognac(const Json::Value &inJSON)
   assert(m_minStepSize > static_cast<T>(0));
 }
 
-template <typename T> void Cognac<T>::initialize(const GridGPU<T> &inX) {
+template <typename T> void CongAcc<T>::initialize(const GridGPU<T> &inX) {
   const int dimX = inX.dimX();
   const int dimY = inX.dimY();
   const int numFields = inX.numFields();
@@ -203,7 +203,7 @@ template <typename T> void Cognac<T>::initialize(const GridGPU<T> &inX) {
 }
 
 template <typename T>
-void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
+void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
                         const GridGPU<T> &inVectorPotentialG,
                         OrderParameter<T> &inOutOrderParameterX,
                         GridGPU<T> &inOutVectorPotentialX) {
@@ -234,7 +234,7 @@ void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
 }
 
 template <typename T>
-void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
+void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
                         OrderParameter<T> &inOutOrderParameterX) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inOrderParameterG.getComponentGrid(0)->dimX();
@@ -262,7 +262,7 @@ void Cognac<T>::compute(const OrderParameter<T> &inOrderParameterG,
 }
 
 template <typename T>
-void Cognac<T>::compute(const GridGPU<T> &inVectorPotentialG,
+void CongAcc<T>::compute(const GridGPU<T> &inVectorPotentialG,
                         GridGPU<T> &inOutVectorPotentialX) {
   // Take step.
   computeInternal(inVectorPotentialG, inOutVectorPotentialX);
@@ -298,7 +298,7 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
 } // namespace adaptive_ball_internal
 
 template <typename T>
-T Cognac<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
+T CongAcc<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
                             const T inDotProduct, const T inMinCosSimilarity) {
   // In the following x = inertia.
 
@@ -359,7 +359,7 @@ T Cognac<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
 }
 
 template <typename T>
-void Cognac<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
+void CongAcc<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   // Initialize grids.
   if (!m_initialized) {
     initialize(inOutX);
@@ -419,4 +419,4 @@ void Cognac<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
 } // namespace accelerators
 } // namespace conga
 
-#endif // CONGA_COGNAC_H_
+#endif // CONGA_CONGACC_H_

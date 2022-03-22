@@ -393,9 +393,9 @@ int main(int argc, char *argv[]) {
     // Create Barzilai-Borwein accelerator.
     accelerator = std::make_unique<conga::accelerators::BarzilaiBorwein<T>>(
         simulationConfig["accelerator"]);
-  } else if (acceleratorName == "cognac") {
-    // Create Cognac accelerator.
-    accelerator = std::make_unique<conga::accelerators::Cognac<T>>(
+  } else if (acceleratorName == "congacc") {
+    // Create CongAcc accelerator.
+    accelerator = std::make_unique<conga::accelerators::CongAcc<T>>(
         simulationConfig["accelerator"]);
   } else if (acceleratorName == "picard") {
     // Create Picard accelerator.

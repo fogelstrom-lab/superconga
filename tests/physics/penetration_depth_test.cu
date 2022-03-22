@@ -3,7 +3,7 @@
 #include "conga/Context.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
-#include "conga/accelerators/Cognac.h"
+#include "conga/accelerators/CongAcc.h"
 #include "conga/boundary/BoundaryConditionSpecular.h"
 #include "conga/compute/ComputeCurrent.h"
 #include "conga/compute/ComputeFreeEnergy.h"
@@ -125,7 +125,7 @@ template <typename T> void testPenetrationDepth(const T inTolerance) {
   orderParameter->add(orderParameterComponent);
 
   context.set(
-      std::make_unique<conga::accelerators::Cognac<T>>(static_cast<T>(0.001)));
+      std::make_unique<conga::accelerators::CongAcc<T>>(static_cast<T>(0.001)));
 
   new conga::ComputeOrderParameter<T>(&context);
   new conga::ComputeCurrent<T>(&context);
