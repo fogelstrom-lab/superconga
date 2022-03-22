@@ -140,7 +140,7 @@ Set up the build with the `setup.sh` script (starting from the project root dire
 ```
 The setup script accepts the following arguments:
 
-- `--no-ninja` do not use the `ninja` build system, let  `CMake` decide instead,
+- `--no-ninja` do not use the `ninja` build system, let `CMake` decide instead,
 - `--no-visualize` build without live visualization,
 - `--use-cuda-opengl-interop` build with CUDA-OpenGL interopability in the live visualization (faster visualization),
 - `--no-hdf5` build without `hdf5` support,
