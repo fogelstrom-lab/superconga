@@ -73,6 +73,7 @@
 - Fix bug in Barzilai-Borwein asserts.
 - Fix bug in spatial interpolation when restarting from different resolution.
 - Fix bug with finite-difference indices out of bounds.
+- Fix missing path in Doxygen.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
