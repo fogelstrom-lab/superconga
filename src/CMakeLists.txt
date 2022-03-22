@@ -118,6 +118,11 @@ foreach(file ${SRC})
     if(CONGA_VISUALIZE)
       target_compile_definitions(${name} PUBLIC CONGA_VISUALIZE)
       target_link_libraries(${name} PRIVATE forge)
+
+      # Use CUDA-OpenGl interopability.
+      if(CONGA_USE_CUDA_OPENGL_INTEROP)
+        target_compile_definitions(${name} PUBLIC CONGA_USE_CUDA_OPENGL_INTEROP)
+      endif(CONGA_USE_CUDA_OPENGL_INTEROP)
     endif(CONGA_VISUALIZE)
 
     # Use C++17 since it is the latest standard CUDA supports.

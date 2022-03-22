@@ -121,6 +121,7 @@
 - Add unit test of Green functions.
 - Add unit test of vector-potential gauges.
 - Add tiny header explaining each file in frontend.
+- Re-add CUDA-OpenGL interoperability as opt-in. Only setup/compile Debug if "--debug" is passed.
 
 ---
 
