@@ -1,0 +1,29 @@
+Bootstrap: docker
+From: nvidia/cuda:11.6.0-devel-ubuntu20.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get -y update
+    apt-get install -y git-all build-essential gfortran libhdf5-dev libblas-dev liblapack-dev libjsoncpp-dev ninja-build pkg-config
+    apt-get install -y software-properties-common
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    apt-get update
+    apt-get install -y gcc-11 g++-11 gfortran-11
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-11 11
+    apt-get -y install apt-transport-https ca-certificates gnupg software-properties-common gpg wget
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+    apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
+    apt-get -y update
+    apt-get install -y cmake
+    apt-get install -y cmake-curses-gui libboost-all-dev libfontconfig1-dev libfreeimage-dev libglfw3-dev
+    apt-get install -y python3-pip python3-tk texlive-base texlive-latex-extra cm-super dvipng
+    pip3 install -r home/requirements.txt
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 3
+
+%environment
+    export LC_ALL=C
+
+%files
+    requirements.txt home/

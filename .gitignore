@@ -19,9 +19,13 @@ data/
 
 # Figures.
 *.pdf
+*.png
 
 # Virtual environment.
 venv/
 
 # For keeping files not meant for version control, e.g. run scripts, images, etc.
 private/
+
+# Singularity files.
+*.sif

@@ -18,7 +18,10 @@ SuperConga is an open-source framework for simulating the physics of superconduc
 - [Installing dependencies](#dependencies)
     - [Arch/Manjaro](#arch_manjaro)
     - [Ubuntu 20.04LTS](#ubuntu_2004LTS)
-- [Python packages](#python_packages)
+    - [Python packages](#python_packages)
+- [Singularity container](#singularity)
+    - [Arch/Manjaro](#singularity_arch_manjaro)
+    - [Ubuntu 20.04LTS](#singularity_ubuntu_2004LTS)
 - [Basic usage](#basic_usage)
     - [Setup and compilation](#setup_compilation)
     - [Run a simulation](#run_simulation)
@@ -159,12 +162,40 @@ The virtual environment is deactivated by
 deactivate
 ```
 
+# Singularity container <a name="singularity"></a>
+
+If you can not build SuperConga yourself, e.g. some dependency can not be met due limitied availability of packages on a cluster, you can use the [Singularity](https://sylabs.io/guides/3.5/user-guide/introduction.html) container instead. It contains all dependencies.
+
+
+## Arch/Manjaro <a name="singularity_arch_manjaro"></a>
+
+Install Singularity with
+```shell
+sudo pacman -S singularity-container
+```
+
+## Ubuntu 20.04LTS <a name="singularity_ubuntu_2004LTS"></a>
+
+Follow the instructions at [NeuroDebian](https://neuro.debian.net/pkgs/singularity-container.html).
+
+
+## How to build it <a name="singularity_build"></a>
+
+Build the SuperConga container with
+```shell
+sudo singularity build superconga.sif containers/singularity.def
+```
+A pre-built container can be downloaded [here](https://chalmersuniversity.box.com/s/rs4j4v0jxcyt7iibhf351hqkbchcg0jz).
 
 # Basic usage <a name="basic_usage"></a>
 
 If you installed the Python requirements in the virtual environment, remember to activate it before running SuperConga
 ```shell
 source venv/bin/activate
+```
+On the other hand, if you are using the Singularity container, then all commands must be prepended with
+```shell
+singularity run --nv superconga.sif
 ```
 The code is most easily run via its Python frontend `superconga.py`. The subcommands available are shown by running
 ```shell
