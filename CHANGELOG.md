@@ -51,7 +51,7 @@
 - Move installation guide to this repo, i.e. to the main README.
 - Improve help messages in frontend.
 - Change name of `radial` gauge to `symmetric`. Update simulation help messages.
-- Change name of the Adaptive-Ball accelerator to Cognac. Do not use capital letters in the frontend for accelerators or norms.
+- Change name of the Adaptive-Ball accelerator to CongAcc. Do not use capital letters in the frontend for accelerators or norms.
 - Added README to the frontend directory.
 - Expose the Landau gauge.
 - Print subcommand help if no additional arguments are specified.

@@ -28,7 +28,7 @@ namespace helper {
 enum class AcceleratorType {
   ANDERSON,
   BARZILAI_BORWEIN,
-  COGNAC,
+  CONGACC,
   PICARD,
   POLYAK
 };
@@ -115,8 +115,8 @@ void testAccelerator(const AcceleratorType &inAcceleratorType) {
     accelerator = std::make_unique<conga::accelerators::BarzilaiBorwein<T>>();
     break;
   }
-  case AcceleratorType::COGNAC: {
-    accelerator = std::make_unique<conga::accelerators::Cognac<T>>();
+  case AcceleratorType::CONGACC: {
+    accelerator = std::make_unique<conga::accelerators::CongAcc<T>>();
     break;
   }
   case AcceleratorType::PICARD: {
@@ -150,17 +150,17 @@ void testAccelerator(const AcceleratorType &inAcceleratorType) {
 }
 } // namespace helper
 
-// ================ Cognac ================ //
+// ================ CongAcc ================ //
 
-TEST_CASE("Test Cognac - <float>") {
+TEST_CASE("Test CongAcc - <float>") {
   const helper::AcceleratorType acceleratorType =
-      helper::AcceleratorType::COGNAC;
+      helper::AcceleratorType::CONGACC;
   helper::testAccelerator<float>(acceleratorType);
 }
 
-TEST_CASE("Test Cognac - <double>") {
+TEST_CASE("Test CongAcc - <double>") {
   const helper::AcceleratorType acceleratorType =
-      helper::AcceleratorType::COGNAC;
+      helper::AcceleratorType::CONGACC;
   helper::testAccelerator<double>(acceleratorType);
 }
 
