@@ -53,24 +53,37 @@ def main() -> None:
     # Parse arguments.
     args = parser.parse_args()
 
-    # Print help if no subparser specified.
     if len(sys.argv) == 1:
+        # Print help if no subparser specified.
         parser.print_help()
-        sys.exit(1)
-
-    # Run.
-    if args.which == "simulation":
-        simulation.main(args)
-    elif args.which == "postprocess":
-        postprocess.main(args)
-    elif args.which == "simulation_plotter":
-        simulation_plotter.main(args)
-    elif args.which == "postprocess_plotter":
-        postprocess_plotter.main(args)
-    elif args.which == "convergence_plotter":
-        convergence_plotter.main(args)
+    elif len(sys.argv) == 2:
+        # Print help of subparser if no additional arguments specified.
+        if args.which == "simulation":
+            simulation_parser.print_help()
+        elif args.which == "postprocess":
+            postprocess_parser.print_help()
+        elif args.which == "simulation_plotter":
+            simulation_plotter_parser.print_help()
+        elif args.which == "postprocess_plotter":
+            postprocess_plotter_parser.print_help()
+        elif args.which == "convergence_plotter":
+            convergence_plotter_parser.print_help()
+        else:
+            print(f"-- ERROR! Command '{args.which}' not implemented.")
     else:
-        sys.exit(f"-- ERROR! Command '{args.which}' not implemented.")
+        # Run.
+        if args.which == "simulation":
+            simulation.main(args)
+        elif args.which == "postprocess":
+            postprocess.main(args)
+        elif args.which == "simulation_plotter":
+            simulation_plotter.main(args)
+        elif args.which == "postprocess_plotter":
+            postprocess_plotter.main(args)
+        elif args.which == "convergence_plotter":
+            convergence_plotter.main(args)
+        else:
+            print(f"-- ERROR! Command '{args.which}' not implemented.")
 
 
 if __name__ == "__main__":
