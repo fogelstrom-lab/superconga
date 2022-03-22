@@ -54,7 +54,7 @@
 		"vector_potential_error": 1e-06
 	},
 	"accelerator": {
-		"name": "cognac"
+		"name": "congacc"
 	},
 	"misc": {
 		"data_format": "h5",
