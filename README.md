@@ -251,6 +251,10 @@ Note that the plots are interactive. By clicking in either plot the data being v
 ```shell
 python superconga.py plot-convergence --view postprocess -L data/examples/swave_abrikosov_lattice
 ```
+Changing data format of saved data, e.g. from `h5` to `csv`, is done with the `convert` subcommand
+```shell
+python superconga.py convert -L data/examples/swave_abrikosov_lattice --from h5 --to csv --clean
+```
 
 # Documentation <a name="documentation"></a>
 Detailed documentation can be found [here](https://superconga.gitlab.io/superconga-doc/), which is built from the [documentation repository](https://gitlab.com/superconga/superconga-doc). 
