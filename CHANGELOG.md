@@ -58,6 +58,7 @@
 - Add tool for converting between data formats.
 - Move setup and compile to the Python frontend.
 - Add Singularity build script and instructions.
+- Make help messages more instructive.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

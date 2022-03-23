@@ -18,7 +18,7 @@ def make_parser(parser: argparse.ArgumentParser):
 
     parser.set_defaults(which="postprocess_plotter")
 
-    parser.description = "Tool for exploring the postprocess data. The plots are interactive. Just click either plot to update the energy or point being visualized."
+    parser.description = "Tool for exploring the postprocess data produced by the 'postprocess' command. The plots are interactive. Just click either plot to update the energy or point being visualized."
 
     parser.add_argument(
         "-L",

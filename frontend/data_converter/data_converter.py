@@ -30,6 +30,10 @@ def main(args: argparse.Namespace) -> None:
     # Working directory.
     data_dir = args.load_path
 
+    # Check if data_dir is set.
+    if data_dir is None:
+        sys.exit("-- ERROR! Please specify '--load-path'.")
+
     # Format to convert from.
     src_data_format = args.src_data_format
 

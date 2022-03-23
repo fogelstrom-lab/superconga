@@ -23,7 +23,9 @@ from data_converter import data_converter
 # -----------------------------------------------------------------------------
 def main() -> None:
     # Create parser and subparsers.
-    parser = argparse.ArgumentParser(description="SuperConga frontend.")
+    parser = argparse.ArgumentParser(
+        description="SuperConga frontend. Quick start: Run 'setup' followed by 'compile' in order to build the C++ backend. Then run 'simulate' to run a simulation."
+    )
 
     # Version number.
     parser.add_argument("-V", "--version", action="version", version="v0.7.0")

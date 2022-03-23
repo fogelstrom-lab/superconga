@@ -17,7 +17,7 @@ def make_parser(parser: argparse.ArgumentParser):
 
     parser.set_defaults(which="convergence_plotter")
 
-    parser.description = "Plot the residuals (and free energy) versus iteration number for a computation, either simulation or postprocess."
+    parser.description = "Plot the residuals (and free energy) versus iteration number for data produced by the 'simulate' or 'postprocess' commands."
 
     parser.add_argument(
         "-L",
