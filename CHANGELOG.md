@@ -78,6 +78,7 @@
 - Fix bug in spatial interpolation when restarting from different resolution.
 - Fix bug with finite-difference indices out of bounds.
 - Fix missing path in Doxygen.
+- Do not run plotters if C++ binary not found.
 
 ### Developer changes
 - **MAJOR** Rename project to SuperConga and the namespace to `conga`.
