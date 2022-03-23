@@ -55,6 +55,11 @@ nvcc --version
 
 # Installing dependencies <a name="dependencies"></a>
 
+There are currently two ways of installing the dependencies:
+
+1. Follow the OS specific guides in this section,
+2. Use our [Singularity container](#singularity). The container contains all dependencies except the NVIDIA driver which must be installed on the host system.
+
 **Mandatory dependencies:**
 
 - `CMake` to build the software,
@@ -164,7 +169,7 @@ deactivate
 
 # Singularity container <a name="singularity"></a>
 
-If you can not build SuperConga yourself, e.g. some dependency can not be met due limitied availability of packages on a cluster, you can use the [Singularity](https://sylabs.io/guides/3.5/user-guide/introduction.html) container instead. It contains all dependencies.
+If you for some reason can not install the dependencies, e.g. due limited availability of packages on a cluster, you can use the [Singularity](https://sylabs.io/guides/3.5/user-guide/introduction.html) container instead. It contains all dependencies except the NVIDIA driver which must be installed of the host system.
 
 
 ## Arch/Manjaro <a name="singularity_arch_manjaro"></a>
@@ -187,16 +192,9 @@ sudo singularity build superconga.sif containers/singularity.def
 ```
 A pre-built container can be downloaded [here](https://chalmersuniversity.box.com/s/rs4j4v0jxcyt7iibhf351hqkbchcg0jz).
 
+
 # Basic usage <a name="basic_usage"></a>
 
-If you installed the Python requirements in the virtual environment, remember to activate it before running SuperConga
-```shell
-source venv/bin/activate
-```
-On the other hand, if you are using the Singularity container, then all commands must be prepended with
-```shell
-singularity run --nv superconga.sif
-```
 The code is most easily run via its Python frontend `superconga.py`. The subcommands available are shown by running
 ```shell
 python superconga.py --help
@@ -207,10 +205,26 @@ python superconga.py <subcommand> --help
 ```
 where `<subcommand>` should be replaced by the subcommand in question.
 
+If you installed the Python requirements in the virtual environment, remember to activate it before running SuperConga
+```shell
+source venv/bin/activate
+```
+which only needs to be done once.
+
+On the other hand, if you are using the Singularity container, then all commands must be prepended with
+```shell
+singularity exec --nv <superconga>.sif
+```
+where `<superconga>` should be replaced by the actual name of the container. For example,
+```shell
+singularity exec --nv superconga_v1.0.sif python superconga.py --help
+```
+Note that you still must build SuperConga the C++ backend when using the container. The only difference is that the dependencies are installed in the container.
+
 
 ## Setup and compilation <a name="setup_compilation"></a>
 
-Set up the (Release) build with the `setup` subcommand:
+Before running a simulation the C++ backend must be compiled. Set up the (Release) build with the `setup` subcommand:
 ```shell
 python superconga.py setup --type Release
 ```
