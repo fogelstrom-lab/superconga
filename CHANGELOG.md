@@ -59,6 +59,7 @@
 - Move setup and compile to the Python frontend.
 - Add Singularity build script and instructions.
 - Make help messages more instructive.
+- Add tool for adding noise to the order parameter and vector potential.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.
