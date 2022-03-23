@@ -3,10 +3,12 @@
 This folder contains the Python source files for the SuperConga frontend. In other words, it contains the implementation of the functionality in `superconga.py`. Each method of the frontend (e.g. `simulate` and `postprocess`) is implemented as a unique Python package. Consequently, this folder consists of the following packages:
 
 * **`common`** - Functionality which is overlapping and used by several of the other packages, like command-line interface, plotting routines and file I/O.
+* **`compilation`** - Functionality for compiling the C++ backend, invoked via `python superconga.py compile ...`.
 * **`convergence_plotter`** - Everything related to the convergence plotter, invoked via `python superconga.py plot-convergence ...`.
 * **`data_converter`** - Everything related to the data converter, used to convert data between formats, invoked via `python superconga.py convert ...`.
 * **`postprocess`** - Python routines for setting up and calling the postprocessing tool, used to calculate e.g. the LDOS, which is invoked via `python superconga.py postprocess ...`
 * **`postprocess_plotter`** - Implementation of the interactive spectroscopy tool (LDOS plotter), invoked via `python superconga.py plot-postprocess ...`.
+* **`setup`** - Functionality for setting up the the C++ backend build, invoked via `python superconga.py setup ...`.
 * **`simulation`** - Implementation of routines responsible for setting up a new simulation, and calling the backend that carries out the simulation. Invoked via `python superconga.py simulate ...`.
 * **`simulation_plotter`** - Functionality for using matplotlib to plot the results of a simulation, invoked via `python superconga.py plot-simulation ...`.
 

@@ -16,7 +16,7 @@ def run(config: dict, cpp_path: str):
     """Call a C++ binary using a given configuration."""
 
     # Create tmp directory if it does not exist.
-    tmp_path = os.path.join(os.path.dirname(__file__), "../../tmp")
+    tmp_path = os.path.normpath(os.path.join(os.path.dirname(__file__), "../../tmp"))
     os.makedirs(tmp_path, exist_ok=True)
 
     # Write config file to tmp folder.
@@ -27,7 +27,7 @@ def run(config: dict, cpp_path: str):
 
     # Run the C++ program as a subprocess.
     if os.path.exists(cpp_path) and os.access(cpp_path, os.X_OK):
-        subprocess.call([cpp_path, config_path])
+        subprocess.run([cpp_path, config_path])
     else:
         print(
             f"-- ERROR! Cannot find the C++ executable '{cpp_path}'. See the README for how to compile it."

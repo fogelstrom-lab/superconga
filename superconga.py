@@ -9,6 +9,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "frontend"))
+from setup import setup
+from compilation import compilation
 from simulation import simulation
 from postprocess import postprocess
 from simulation_plotter import simulation_plotter
@@ -30,6 +32,14 @@ def main() -> None:
     subparsers = parser.add_subparsers(
         help="SuperConga subcommands. Run 'superconga.py <subcommand> --help' for help about the specific subcommand.",
     )
+
+    # Add setup parser.
+    setup_parser = subparsers.add_parser("setup")
+    setup.make_parser(setup_parser)
+
+    # Add compilation parser.
+    compilation_parser = subparsers.add_parser("compile")
+    compilation.make_parser(compilation_parser)
 
     # Add simulation parser.
     simulation_parser = subparsers.add_parser("simulate")
@@ -63,7 +73,11 @@ def main() -> None:
         parser.print_help()
     elif len(sys.argv) == 2:
         # Print help of subparser if no additional arguments specified.
-        if args.which == "simulation":
+        if args.which == "setup":
+            setup_parser.print_help()
+        elif args.which == "compilation":
+            compilation_parser.print_help()
+        elif args.which == "simulation":
             simulation_parser.print_help()
         elif args.which == "postprocess":
             postprocess_parser.print_help()
@@ -79,7 +93,11 @@ def main() -> None:
             print(f"-- ERROR! Command '{args.which}' not implemented.")
     else:
         # Run.
-        if args.which == "simulation":
+        if args.which == "setup":
+            setup.main(args)
+        elif args.which == "compilation":
+            compilation.main(args)
+        elif args.which == "simulation":
             simulation.main(args)
         elif args.which == "postprocess":
             postprocess.main(args)

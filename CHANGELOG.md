@@ -56,6 +56,7 @@
 - Expose the Landau gauge.
 - Print subcommand help if no additional arguments are specified.
 - Add tool for converting between data formats.
+- Move setup and compile to the Python frontend.
 
 ### Bug fixes
 - Fix `runIteration` doing one more iteration than required.

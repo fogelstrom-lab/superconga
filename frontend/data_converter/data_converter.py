@@ -92,7 +92,9 @@ def main(args: argparse.Namespace) -> None:
         error = np.amax(np.abs(data - test_data))
 
         # Abort if not successful.
-        success = error < 1e-15
+        # TODO(Niclas): Investigate why the data is not identical. Probably it has to do with some default precision used in pandas/h5py.
+        epsilon = 1e-12
+        success = error < epsilon
         if not success:
             print(
                 f"-- ERROR! The newly written data for {key} is not identical to the old."

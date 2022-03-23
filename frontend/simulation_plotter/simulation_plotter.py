@@ -147,6 +147,10 @@ def run(
 ) -> None:
     """Run the simulation plotter."""
 
+    # Check if data_dir is set.
+    if data_dir is None:
+        sys.exit("-- ERROR! Please specify '--load-path'.")
+
     # Read configuration file.
     config = io.read_simulation_config(data_dir=data_dir)
 

@@ -54,7 +54,7 @@ private:
     const T boundaryCoherenceResidual =
         inContext.getRiccatiSolver()->getResidual();
 
-    // LDoS residual.
+    // LDOS residual.
     const bool LDOSExist = inContext.getComputeLDOS();
     const T LDOSResidual = LDOSExist ? inContext.getComputeLDOS()->getResidual()
                                      : static_cast<T>(0);

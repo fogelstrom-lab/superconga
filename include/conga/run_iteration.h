@@ -101,7 +101,7 @@ bool inline runIterations(
       // Solve equations for all compute objects.
       inOutContext.compute();
 
-      // Check convergence. Partial convergence for e.g. the LDoS means that one
+      // Check convergence. Partial convergence for e.g. the LDOS means that one
       // energy block out of many has converged, but for e.g. the order
       // parameter it means that everything is converged.
       isConverged = inOutContext.isPartiallyConverged();

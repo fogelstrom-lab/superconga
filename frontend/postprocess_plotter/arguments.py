@@ -23,7 +23,6 @@ def make_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-L",
         "--load-path",
-        required=True,
         type=str,
         default=None,
         help="Path to data directory. (Default: %(default)s)",
@@ -33,14 +32,14 @@ def make_parser(parser: argparse.ArgumentParser):
         "--limit",
         type=float,
         default=default.settings["limit"],
-        help="Upper limit of DoS plot y-axis. If negative it will be adjusted to the data. (Default: %(default)s)",
+        help="Upper limit of DOS plot y-axis. If negative it will be adjusted to the data. (Default: %(default)s)",
     )
 
     parser.add_argument(
         "--margin",
         type=float,
         default=default.settings["margin"],
-        help="Margin along the y-axis in the DoS plot. A value of 0.1 means an extra 10%%. Only used if 'limit' is negative. (Default: %(default)s)",
+        help="Margin along the y-axis in the DOS plot. A value of 0.1 means an extra 10%%. Only used if 'limit' is negative. (Default: %(default)s)",
     )
 
     # ==================== SIZE ==================== #
@@ -101,7 +100,7 @@ def make_parser(parser: argparse.ArgumentParser):
         "--cmap",
         type=str,
         default=default.settings["colormap"],
-        help="Colormap for the LDoS. (Default: %(default)s)",
+        help="Colormap for the LDOS. (Default: %(default)s)",
     )
 
     color.add_argument(
@@ -115,19 +114,19 @@ def make_parser(parser: argparse.ArgumentParser):
         "--dos-color",
         type=str,
         default=default.settings["dos_color"],
-        help="Color for the DoS plot. (Default: %(default)s)",
+        help="Color for the DOS plot. (Default: %(default)s)",
     )
 
     color.add_argument(
         "--ldos-color",
         type=str,
         default=default.settings["ldos_color"],
-        help="Color for the LDoS plot. (Default: %(default)s)",
+        help="Color for the LDOS plot. (Default: %(default)s)",
     )
 
     color.add_argument(
         "--marker-color",
         type=str,
         default=default.settings["marker_color"],
-        help="Color for the marker in the LDoS image. (Default: %(default)s)",
+        help="Color for the marker in the LDOS image. (Default: %(default)s)",
     )

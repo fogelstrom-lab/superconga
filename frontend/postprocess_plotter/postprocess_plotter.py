@@ -23,7 +23,7 @@ from common import plotting, io
 
 
 def get_title_ldos(energy):
-    """Given the energy get the title of the LDoS plot."""
+    """Given the energy get the title of the LDOS plot."""
 
     return (
         r"$N(\mathbf{R}, \epsilon) / (2 N_\mathrm{F}) \; | \; \epsilon = %0.2f [2\pi k_\mathrm{B} T_\mathrm{c}]$"
@@ -32,7 +32,7 @@ def get_title_ldos(energy):
 
 
 def get_title_dos(x, y):
-    """Given the position, get the title of the DoS plot."""
+    """Given the position, get the title of the DOS plot."""
 
     if np.isnan(x) or np.isnan(y):
         title = r"$N(\mathbf{R}, \epsilon) / (2 N_\mathrm{F}) \; | \; \mathbf{R} = (?, ?) [\xi_0]$"
@@ -61,6 +61,10 @@ def run(
     marker_color: Optional[str] = default.settings["marker_color"],
 ) -> None:
     """Run the postprocess plotter."""
+
+    # Check if data_dir is set.
+    if data_dir is None:
+        sys.exit("-- ERROR! Please specify '--load-path'.")
 
     # Read configuration files.
     simulation_config = io.read_simulation_config(data_dir=data_dir)
@@ -92,7 +96,7 @@ def run(
     postprocess_data_format = postprocess_config["misc"]["data_format"]
 
     # For convenience.
-    ax_LDoS, ax_DoS = axes
+    ax_LDOS, ax_DOS = axes
 
     # Get the domain so we can color the outside of the domain gray.
     domain = io.read_data(
@@ -106,15 +110,15 @@ def run(
     ppxi = simulation_config["numerics"]["points_per_coherence_length"]
     extent = plotting.get_extent(ppxi=ppxi, dim_x=dim_x, dim_y=dim_y)
 
-    # Get the LDoS.
-    LDoS = io.read_data(
+    # Get the LDOS.
+    LDOS = io.read_data(
         data_dir=data_dir, key="ldos", data_format=postprocess_data_format
     )
-    LDoS *= domain
+    LDOS *= domain
 
-    # Compute the DoS.
-    DoS = np.nanmean(LDoS, axis=(1, 2))
-    DoS_max = np.amax(DoS)
+    # Compute the DOS.
+    DOS = np.nanmean(LDOS, axis=(1, 2))
+    DOS_max = np.amax(DOS)
 
     energy_min = postprocess_config["spectroscopy"]["energy_min"]
     energy_max = postprocess_config["spectroscopy"]["energy_max"]
@@ -122,14 +126,14 @@ def run(
     energies = np.linspace(energy_min, energy_max, num_energies)
     energy_diff = np.diff(energies)[0]
 
-    # ============ LDoS subplot ============ #
+    # ============ LDOS subplot ============ #
 
     # Plot LDOS.
     energy_idx = 0
-    image_LDoS, cbar_LDoS = plotting.imshow_and_colorbar(
+    image_LDOS, cbar_LDOS = plotting.imshow_and_colorbar(
         fig=fig,
-        ax=ax_LDoS,
-        data=np.squeeze(LDoS[energy_idx, :, :]),
+        ax=ax_LDOS,
+        data=np.squeeze(LDOS[energy_idx, :, :]),
         label=None,
         extent=extent,
         colormap=colormap,
@@ -138,10 +142,10 @@ def run(
     )
 
     # Set ticks and labels, e.g. x/\xi_0.
-    plotting.set_axes_ticks_and_labels(axes=ax_LDoS, extent=extent)
+    plotting.set_axes_ticks_and_labels(axes=ax_LDOS, extent=extent)
 
-    # Marker for point LDoS in the DoS subplot.
-    (point_marker,) = ax_LDoS.plot(
+    # Marker for point LDOS in the DOS subplot.
+    (point_marker,) = ax_LDOS.plot(
         np.NaN,
         np.NaN,
         linestyle=":",
@@ -152,63 +156,63 @@ def run(
     )
 
     # Title text with the current energy.
-    title_LDoS = ax_LDoS.text(
+    title_LDOS = ax_LDOS.text(
         0.5,
         1.02,
         get_title_ldos(energy=energies[energy_idx]),
-        transform=ax_LDoS.transAxes,
+        transform=ax_LDOS.transAxes,
         ha="center",
     )
 
-    # ============ DoS subplot ============ #
+    # ============ DOS subplot ============ #
 
     # Massage margin.
     margin += 1
 
-    # Plot DoS.
-    ax_DoS.plot(
+    # Plot DOS.
+    ax_DOS.plot(
         np.concatenate([-np.flip(energies), energies]),
-        np.concatenate([np.flip(DoS), DoS]),
+        np.concatenate([np.flip(DOS), DOS]),
         color=dos_color,
         label=r"$N(\epsilon)$",
     )
-    ax_DoS.set_ylabel(r"$N / (2N_{\mathrm{F}})$")
-    ax_DoS.set_xlabel(r"$\epsilon/(2 \pi k_{\mathrm{B}} T_{\mathrm{c}})$")
+    ax_DOS.set_ylabel(r"$N / (2N_{\mathrm{F}})$")
+    ax_DOS.set_xlabel(r"$\epsilon/(2 \pi k_{\mathrm{B}} T_{\mathrm{c}})$")
     if limit > 0:
-        ax_DoS.set_ylim([0, limit])
+        ax_DOS.set_ylim([0, limit])
     else:
-        ax_DoS.set_ylim([0, DoS_max * margin])
-    ax_DoS.set_xlim([-energy_max, energy_max])
+        ax_DOS.set_ylim([0, DOS_max * margin])
+    ax_DOS.set_xlim([-energy_max, energy_max])
 
-    # LDoS at specific point.
-    LDoS_point = np.zeros_like(DoS) * np.NaN
+    # LDOS at specific point.
+    LDOS_point = np.zeros_like(DOS) * np.NaN
 
-    # Create plot for LDoS at specific point.
-    (plot_LDoS,) = ax_DoS.plot(
+    # Create plot for LDOS at specific point.
+    (plot_LDOS,) = ax_DOS.plot(
         np.concatenate([-np.flip(energies), energies]),
-        np.concatenate([np.flip(LDoS_point), LDoS_point]),
+        np.concatenate([np.flip(LDOS_point), LDOS_point]),
         color=ldos_color,
         label=r"$N(\mathbf{R},\epsilon)$",
     )
 
     # Vertical line marking the current energy.
-    energy_marker = ax_DoS.axvline(
+    energy_marker = ax_DOS.axvline(
         x=energies[energy_idx],
         color="gray",
         linestyle="--",
     )
 
     # Title text with the current point.
-    title_DoS = ax_DoS.text(
+    title_DOS = ax_DOS.text(
         0.5,
         1.02,
         get_title_dos(x=np.NaN, y=np.NaN),
-        transform=ax_DoS.transAxes,
+        transform=ax_DOS.transAxes,
         ha="center",
     )
 
     # Create legend.
-    ax_DoS.legend(loc="upper right")
+    ax_DOS.legend(loc="upper right")
 
     # Set alphabetic label, e.g. (a) at the top left.
     if alphabet:
@@ -219,7 +223,7 @@ def run(
     # --------------------------------------------------
     def onclick(event):
         if event.xdata != None and event.ydata != None:
-            if event.inaxes == ax_LDoS:
+            if event.inaxes == ax_LDOS:
                 # Compute coordinates.
                 x_scale = (dim_x - 1) / (extent[1] - extent[0])
                 y_scale = (dim_y - 1) / (extent[3] - extent[2])
@@ -228,55 +232,55 @@ def run(
                 y_idx = int((event.ydata - extent[2]) * y_scale)
 
                 # Update point-LDOS data.
-                LDoS_point = LDoS[:, y_idx, x_idx]
+                LDOS_point = LDOS[:, y_idx, x_idx]
 
-                # Update point-LDoS plot.
-                plot_LDoS.set_ydata([np.flip(LDoS_point), LDoS_point])
+                # Update point-LDOS plot.
+                plot_LDOS.set_ydata([np.flip(LDOS_point), LDOS_point])
 
                 # Update y-axis limits.
                 if limit < 0:
-                    # TODO(Niclas): Handle "RuntimeWarning: All-NaN slice encountered", i.e. set LDoS_max to zero.
-                    LDoS_max = np.nanmax(LDoS_point)
-                    if not np.isfinite(LDoS_max):
-                        LDoS_max = 0
-                    ylim = margin * max(LDoS_max, DoS_max)
-                    ax_DoS.set_ylim([0, ylim])
+                    # TODO(Niclas): Handle "RuntimeWarning: All-NaN slice encountered", i.e. set LDOS_max to zero.
+                    LDOS_max = np.nanmax(LDOS_point)
+                    if not np.isfinite(LDOS_max):
+                        LDOS_max = 0
+                    ylim = margin * max(LDOS_max, DOS_max)
+                    ax_DOS.set_ylim([0, ylim])
 
                 # Update point marker.
                 x = x_idx / x_scale + extent[0]
                 y = y_idx / x_scale + extent[2]
                 point_marker.set_data(x, y)
 
-                # Update DoS title.
-                title_DoS.set_text(get_title_dos(x=x, y=y))
+                # Update DOS title.
+                title_DOS.set_text(get_title_dos(x=x, y=y))
 
                 # Re-draw figure.
                 fig.canvas.draw()
 
-            if event.inaxes == ax_DoS:
+            if event.inaxes == ax_DOS:
                 # Compute index.
                 energy_idx = int(abs(event.xdata) / energy_diff)
 
                 # Compute actual energy.
                 energy = np.sign(event.xdata) * energies[energy_idx]
 
-                # Update LDoS title.
-                title_LDoS.set_text(get_title_ldos(energy=energy))
+                # Update LDOS title.
+                title_LDOS.set_text(get_title_ldos(energy=energy))
 
-                # LDoS for particular energy.
-                slice_LDoS = np.squeeze(LDoS[energy_idx, :, :])
+                # LDOS for particular energy.
+                slice_LDOS = np.squeeze(LDOS[energy_idx, :, :])
 
                 # Min/max values.
-                vmax = np.nanmax(slice_LDoS)
+                vmax = np.nanmax(slice_LDOS)
                 vmin = 0
 
                 # Update data
-                image_LDoS.set_data(slice_LDoS)
-                image_LDoS.set_clim(vmin=vmin, vmax=vmax)
+                image_LDOS.set_data(slice_LDOS)
+                image_LDOS.set_clim(vmin=vmin, vmax=vmax)
 
                 # Update colorbar ticks and tick labels.
                 plotting.set_colorbar_ticks_and_labels(
-                    colorbar=cbar_LDoS, vmin=vmin, vmax=vmax
+                    colorbar=cbar_LDOS, vmin=vmin, vmax=vmax
                 )
 
                 # Update vertical line.
