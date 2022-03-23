@@ -20,7 +20,7 @@ def make_parser(parser: argparse.ArgumentParser):
 
     parser.set_defaults(which="setup")
 
-    parser.description = "Setup a SuperConga build."
+    parser.description = "Setup a SuperConga build. This is the first step, the second being 'compile', in order to build the C++ backend."
 
     parser.add_argument(
         "--type",

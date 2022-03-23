@@ -18,7 +18,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
 
     parser.set_defaults(which="postprocess")
 
-    parser.description = "Compute the spectra from a converged simulation, e.g. the local density of states (LDOS)."
+    parser.description = "Compute the spectra from a converged simulation (see 'simulate'), e.g. the local density of states (LDOS). Note that the C++ backend must be compiled first. See 'setup' and 'compile'. The easiest way to run a simulation is to use a configuration file. See 'examples/' for inspiration."
 
     # Config file.
     parser.add_argument(

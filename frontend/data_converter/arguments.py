@@ -20,12 +20,11 @@ def make_parser(parser: argparse.ArgumentParser):
 
     parser.set_defaults(which="data_converter")
 
-    parser.description = "Convert data between different data formats."
+    parser.description = "Convert data produced by the 'simulate' or 'postprocess' commands between different data formats."
 
     parser.add_argument(
         "-L",
         "--load-path",
-        required=True,
         type=str,
         default=None,
         help="Path to data directory. (Default: %(default)s)",

@@ -17,7 +17,9 @@ def make_parser(parser: argparse.ArgumentParser):
 
     parser.set_defaults(which="simulation_plotter")
 
-    parser.description = "Plot the simulation results."
+    parser.description = (
+        "Plot the simulation results produced by the 'simulate' command."
+    )
 
     parser.add_argument(
         "-L",
