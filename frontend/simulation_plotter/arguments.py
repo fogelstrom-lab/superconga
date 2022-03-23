@@ -22,7 +22,6 @@ def make_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-L",
         "--load-path",
-        required=True,
         type=str,
         default=None,
         help="Path to data directory. (Default: %(default)s)",

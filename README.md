@@ -18,10 +18,12 @@ SuperConga is an open-source framework for simulating the physics of superconduc
 - [Installing dependencies](#dependencies)
     - [Arch/Manjaro](#arch_manjaro)
     - [Ubuntu 20.04LTS](#ubuntu_2004LTS)
-- [How to compile](#compilation)
-    - [On CUDA architecture auto-detection](#cuda_autodetection)
 - [Python packages](#python_packages)
 - [Basic usage](#basic_usage)
+    - [Setup and compilation](#setup_compilation)
+    - [Run a simulation](#run_simulation)
+    - [Compute the LDOS](#run_postprocess)
+    - [Convert between data formats](#convert)
 - [Documentation](#documentation)
 - [Citing SuperConga](#cite)
 - [Contribute](#contribute)
@@ -132,59 +134,6 @@ sudo apt install meld clang-format-9
 sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
 ```
 
-# How to compile <a name="compilation"></a>
-
-Set up the build with the `setup.sh` script (starting from the project root directory):
-```shell
-./setup.sh
-```
-The setup script accepts the following arguments:
-
-- `--no-ninja` do not use the `ninja` build system, let `CMake` decide instead,
-- `--no-visualize` build without live visualization,
-- `--use-cuda-opengl-interop` build with CUDA-OpenGL interopability in the live visualization (faster visualization),
-- `--no-hdf5` build without `hdf5` support,
-- `--no-tests` do not build tests,
-- `--debug` set up `Debug` build instead of `Release`.
-
-Compile the code by:
-```shell
-./compile.sh
-```
-Pass `--debug` in order to compile the `Debug` build. You can also compile it without using `compile.sh` script by e.g.
-```shell
-cd build/release
-ninja
-```
-if you use the `ninja` build system. Or more generally
-```shell
-cd build/release
-cmake --build .
-```
-Still being in `build/release/`, run all tests with
-```shell
-ctest
-```
-in order to verify that everything works.
-
-## On CUDA architecture auto-detection <a name="cuda_autodetection"></a>
-
-By default, CMake tries to autodetect the appropriate CUDA architecture. To use a specific architecture version, use the command-line option `-DCUDA_ARCH` when building, i.e. go to `build/release/` folder and write
-```shell
-cmake -G Ninja -DCMAKE_BUILD_TYPE=build_type -DCUDA_ARCH=XY ../..
-```
-where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.), and `build_type` is either `Release` or `Debug`. This is done instead of running the `setup.sh` script. Alternatively, add the `-DCUDA_ARCH` command as above to the `setup.sh` script.
-
-If multiple GPUs are present, the architecture detection works only if all GPUs support the same architecture (as the first GPU found). The available GPUs can be viewed with
-```shell
-nvidia-smi
-```
-which also displays the unique ID of each GPU. To run simulations on a specific GPU, run the following from the terminal
-```shell
-export CUDA_VISIBLE_DEVICES=X
-```
-where `X` is the GPU ID, e.g. `0`. Then re-run the `setup.sh` script in the project root directory.
-
 ## Python packages <a name="python_packages"></a>
 
 Python is used to run the frontend of the code. The Python dependencies are [Matplotlib](https://matplotlib.org/), [NumPy](https://numpy.org/), [pandas](https://pandas.pydata.org/), and [h5py](https://www.h5py.org/). Additionally, [black](https://pypi.org/project/black/) is used for code-formatting.
@@ -205,16 +154,18 @@ This should output the path to your virtual environment. All dependencies can be
 ```shell
 pip install -r requirements.txt
 ```
-Test that everything works by running SuperConga with an example parameter-file
-```shell
-python superconga.py simulate -C examples/dwave_octagon/simulation_config.json
-```
 The virtual environment is deactivated by
 ```shell
 deactivate
 ```
 
+
 # Basic usage <a name="basic_usage"></a>
+
+If you installed the Python requirements in the virtual environment, remember to activate it before running SuperConga
+```shell
+source venv/bin/activate
+```
 The code is most easily run via its Python frontend `superconga.py`. The subcommands available are shown by running
 ```shell
 python superconga.py --help
@@ -225,6 +176,35 @@ python superconga.py <subcommand> --help
 ```
 where `<subcommand>` should be replaced by the subcommand in question.
 
+
+## Setup and compilation <a name="setup_compilation"></a>
+
+Set up the (Release) build with the `setup` subcommand:
+```shell
+python superconga.py setup --type Release
+```
+and compile it, and run tests, with
+```shell
+python superconga.py compile --type Release --test
+```
+By default, CMake tries to autodetect the appropriate CUDA architecture. To use a specific architecture version, use the command-line option `--cuda-arch` with `setup`, i.e.
+```shell
+python superconga.py setup --type Release --cuda-arch XY
+```
+where `XY` is a two-digit number (for example `30`, `61`, `75`, etc.). The number describes what hardware you have. E.g. NVIDIA GTX 1080 Ti = `61`, and NVIDIA RTX 2080 Ti = `75`.
+
+If multiple GPUs are present, the architecture detection works only if all GPUs support the same architecture (as the first GPU found). The available GPUs can be viewed with
+```shell
+nvidia-smi
+```
+which also displays the unique ID of each GPU. To run simulations on a specific GPU, run the following from the terminal
+```shell
+export CUDA_VISIBLE_DEVICES=X
+```
+where `X` is the GPU ID, e.g. `0`. Then re-run the `setup`.
+
+
+## Run a simulation <a name="run_simulation"></a>
 In order to run a simulation the subcommand `simulate` is used. It is highly recommended to use the `-C | --config` argument to specify the location of an existing configuration file which sets all simulation parameters, e.g. the Abrikosov-lattice example:
 ```shell
 python superconga.py simulate -C examples/swave_abrikosov_lattice/simulation_config.json
@@ -239,11 +219,14 @@ How the simulation converged can be plotted using the `plot-convergence` subcomm
 ```shell
 python superconga.py plot-convergence --view simulation -L data/examples/swave_abrikosov_lattice
 ```
-After a simulation has converged the local density of states can be computed by running
+
+
+## Compute the LDOS <a name="run_postprocess"></a>
+After a simulation has converged the local density of states (LDOS) can be computed by running
 ```shell
 python superconga.py postprocess -C examples/swave_abrikosov_lattice/postprocess_config.json
 ```
-which will generate more data files in `data/examples/swave_abrikosov_lattice/`. The local density of states can then be visualized using the subcommand `plot-postprocess`
+which will generate more data files in `data/examples/swave_abrikosov_lattice/`. The LDOS can then be visualized using the subcommand `plot-postprocess`
 ```shell
 python superconga.py plot-postprocess -L data/examples/swave_abrikosov_lattice
 ```
@@ -251,6 +234,8 @@ Note that the plots are interactive. By clicking in either plot the data being v
 ```shell
 python superconga.py plot-convergence --view postprocess -L data/examples/swave_abrikosov_lattice
 ```
+
+## Convert between data formats <a name="convert"></a>
 Changing data format of saved data, e.g. from `h5` to `csv`, is done with the `convert` subcommand
 ```shell
 python superconga.py convert -L data/examples/swave_abrikosov_lattice --from h5 --to csv --clean

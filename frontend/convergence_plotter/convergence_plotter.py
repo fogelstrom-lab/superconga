@@ -85,6 +85,10 @@ def run(
 ) -> None:
     """Run the convergence plotter."""
 
+    # Check if data_dir is set.
+    if data_dir is None:
+        sys.exit("-- ERROR! Please specify '--load-path'.")
+
     # Set global parameters, i.e. for all plots. Must be done before the figure is made.
     plotting.set_global_parameters(
         fontsize=fontsize,

@@ -60,9 +60,11 @@ def main(args: argparse.Namespace) -> None:
 
     # If not set use default.
     if cpp_path is None:
-        cpp_path = os.path.join(
-            os.path.dirname(__file__),
-            "../../build/release/bin/simulation_f" + str(args.precision),
+        cpp_path = os.path.normpath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "../../build/release/bin/simulation_f" + str(args.precision),
+            )
         )
 
     # Run the program.

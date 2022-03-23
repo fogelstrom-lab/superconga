@@ -22,7 +22,6 @@ def make_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-L",
         "--load-path",
-        required=True,
         type=str,
         default=None,
         help="Path to data directory. (Default: %(default)s)",
@@ -144,7 +143,7 @@ def make_parser(parser: argparse.ArgumentParser):
         "--ldos-color",
         type=str,
         default=default.settings["colors"]["ldos_residual"],
-        help="Color for the LDoS. (Default: %(default)s)",
+        help="Color for the LDOS. (Default: %(default)s)",
     )
 
     color.add_argument(

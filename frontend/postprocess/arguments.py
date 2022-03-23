@@ -18,7 +18,7 @@ def make_parser(parser: argparse.ArgumentParser) -> None:
 
     parser.set_defaults(which="postprocess")
 
-    parser.description = "Compute the spectra from a converged simulation, e.g. the local density of states (LDoS)."
+    parser.description = "Compute the spectra from a converged simulation, e.g. the local density of states (LDOS)."
 
     # Config file.
     parser.add_argument(
