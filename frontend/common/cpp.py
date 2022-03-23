@@ -10,6 +10,7 @@ import datetime
 import json
 import os
 import subprocess
+import sys
 
 
 def run(config: dict, cpp_path: str):
@@ -29,7 +30,7 @@ def run(config: dict, cpp_path: str):
     if os.path.exists(cpp_path) and os.access(cpp_path, os.X_OK):
         subprocess.run([cpp_path, config_path])
     else:
-        print(
+        sys.exit(
             f"-- ERROR! Cannot find the C++ executable '{cpp_path}'. See the README for how to compile it."
         )
 
