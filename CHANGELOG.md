@@ -1,6 +1,13 @@
 # SuperConga changelog
 
 ## Latest version (unreleased)
+### Improvements
+### Bug fixes
+### Developer changes
+
+---
+
+## Version v1.0.0 (March 24, 2022)
 
 ### Improvements
 - **MAJOR** Set energy cutoff instead of the number of energies.
