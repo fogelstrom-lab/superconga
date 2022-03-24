@@ -217,7 +217,7 @@ singularity exec --nv <superconga>.sif
 ```
 where `<superconga>` should be replaced by the actual name of the container. For example,
 ```shell
-singularity exec --nv superconga_v1.0.sif python superconga.py --help
+singularity exec --nv superconga_latest.sif python superconga.py --help
 ```
 Note that you still must build SuperConga the C++ backend when using the container. The only difference is that the dependencies are installed in the container.
 
