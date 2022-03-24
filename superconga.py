@@ -24,7 +24,7 @@ from data_converter import data_converter
 def main() -> None:
     # Create parser and subparsers.
     parser = argparse.ArgumentParser(
-        description="SuperConga frontend. Quick start: Run 'setup' followed by 'compile' in order to build the C++ backend. Then run 'simulate' to run a simulation."
+        description="SuperConga frontend. Quick start: Run 'python superconga.py setup --type <type>' followed by 'python superconga.py compile --type <type>' in order to build the C++ backend, where <type> is e.g. 'Release' or 'Debug'. Then run 'python superconga.py simulate -C <config_path>' to run a simulation, where <config_path> is the configuration file path, e.g. any of the example directories in 'examples/'."
     )
 
     # Version number.
