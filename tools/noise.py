@@ -75,9 +75,6 @@ def main() -> None:
     op_noise = args.op_noise
     vp_noise = args.vp_noise
 
-    if op_noise < 0 or vp_noise < 0:
-        sys.exit("-- ERROR! The noise must be >= 0.")
-
     # Read config.
     config = io.read_simulation_config(data_dir=load_dir)
 
@@ -88,7 +85,7 @@ def main() -> None:
     if not load_dir == save_dir:
         os.makedirs(save_dir)
         if data_format == "csv":
-            for filename in ["order_parameter.csv", "vector_potential.csv"]:
+            for filename in ["domain.csv", "order_parameter.csv", "vector_potential.csv"]:
                 path = os.path.join(load_dir, filename)
                 shutil.copy(path, save_dir)
         elif data_format == "h5":
@@ -106,7 +103,7 @@ def main() -> None:
     success = True
     for key in keys:
         # Read the data.
-        data = io.read_data(data_dir=load_dir, key=key, data_format=data_format)
+        data = io.read_data(data_dir=save_dir, key=key, data_format=data_format)
 
         # Add noise.
         if "order_parameter" in key:
