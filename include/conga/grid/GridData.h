@@ -15,11 +15,8 @@
 #ifndef CONGA_GRID_DATA_H_
 #define CONGA_GRID_DATA_H_
 
-#ifdef __CUDACC__
+#include "conga/backend.h"
 #define _DEV_ __host__ __device__
-#else
-#define _DEV_
-#endif
 
 #include "../Type.h"
 #include "GridFunctions.h"
@@ -864,9 +861,9 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
           thrust::make_tuple(realPartIteratorEnd, imagPartIteratorEnd));
 
       // Sum the magnitude in each coordinate of the calling GridData object
-      resultSum += thrust::transform_reduce(zipIteratorBegin, zipIteratorEnd,
-                                            hypotFunctor(), initValue,
-                                            binaryOperatorPlus);
+      resultSum += ::conga::backend::transform_reduce(
+          zipIteratorBegin, zipIteratorEnd, hypotFunctor(), initValue,
+          binaryOperatorPlus);
     }
 
     return resultSum;
@@ -883,7 +880,7 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
     // Check the kind of field: scalar, vector, unknown
     if (_numFields == 1) {
       // Scalar field: Sum the absolute value in each coordinate
-      const T resultSum = thrust::transform_reduce(
+      const T resultSum = ::conga::backend::transform_reduce(
           xComponentIteratorBegin, xComponentIteratorEnd, absFunctor(),
           initValue, binaryOperatorPlus);
       return resultSum;
@@ -906,7 +903,7 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
           thrust::make_tuple(xComponentIteratorEnd, yComponentIteratorEnd));
 
       // Vector field: Sum the hypotenuse in each coordinate
-      const T resultSum = thrust::transform_reduce(
+      const T resultSum = ::conga::backend::transform_reduce(
           zipIteratorBegin, zipIteratorEnd, hypotFunctor(), initValue,
           binaryOperatorPlus);
 
@@ -930,16 +927,16 @@ template <typename T, typename DEV> T GridData<T, DEV>::sumMagnitude() const {
 // reduction to sum the square in each coordinate into a scalar. Note that the
 // first two steps are done in a single thrust::transform_reduce call.
 template <typename T, typename DEV> T GridData<T, DEV>::sumSquare() const {
-  return thrust::transform_reduce(m_vector.begin(), m_vector.end(),
-                                  thrust::square<T>(), static_cast<T>(0),
-                                  thrust::plus<T>());
+  return ::conga::backend::transform_reduce(
+      m_vector.begin(), m_vector.end(), thrust::square<T>(), static_cast<T>(0),
+      thrust::plus<T>());
 }
 
 // Calculate the L1 Norm of a GridData object.
 template <typename T, typename DEV> T GridData<T, DEV>::L1Norm() const {
-  return thrust::transform_reduce(m_vector.begin(), m_vector.end(),
-                                  absFunctor(), static_cast<T>(0),
-                                  thrust::plus<T>());
+  return ::conga::backend::transform_reduce(m_vector.begin(), m_vector.end(),
+                                            absFunctor(), static_cast<T>(0),
+                                            thrust::plus<T>());
 }
 
 // Calculate the L2 Norm of a GridData object.
@@ -950,12 +947,12 @@ template <typename T, typename DEV> T GridData<T, DEV>::L2Norm() const {
 
 // Calculate the LInf Norm of a GridData object.
 template <typename T, typename DEV> T GridData<T, DEV>::LInfNorm() const {
-  const T minVal =
-      thrust::reduce(m_vector.begin(), m_vector.end(),
-                     std::numeric_limits<T>::max(), thrust::minimum<T>());
-  const T maxVal =
-      thrust::reduce(m_vector.begin(), m_vector.end(),
-                     std::numeric_limits<T>::min(), thrust::maximum<T>());
+  const T minVal = ::conga::backend::reduce(m_vector.begin(), m_vector.end(),
+                                            std::numeric_limits<T>::max(),
+                                            thrust::minimum<T>());
+  const T maxVal = ::conga::backend::reduce(m_vector.begin(), m_vector.end(),
+                                            std::numeric_limits<T>::min(),
+                                            thrust::maximum<T>());
   return std::max(std::abs(minVal), std::abs(maxVal));
 }
 
@@ -1123,7 +1120,7 @@ GridData<T, DEV> GridData<T, DEV>::sumFieldComponents() const {
 
 template <typename T, typename DEV>
 T GridData<T, DEV>::sumField(const int field) const {
-  T sum = thrust::reduce(
+  T sum = ::conga::backend::reduce(
       m_vector.begin() +
           getFieldComponentOffset(field, Type::real, Type::begin),
       m_vector.begin() + getFieldComponentOffset(field, Type::real, Type::end),
@@ -1133,14 +1130,14 @@ T GridData<T, DEV>::sumField(const int field) const {
 
 template <typename T, typename DEV>
 void GridData<T, DEV>::sumField(T &sum_re, T &sum_im, const int field) const {
-  sum_re = thrust::reduce(
+  sum_re = ::conga::backend::reduce(
       m_vector.begin() +
           getFieldComponentOffset(field, Type::real, Type::begin),
       m_vector.begin() + getFieldComponentOffset(field, Type::real, Type::end),
       (T)0, thrust::plus<T>());
 
   if (isComplex()) {
-    sum_im = thrust::reduce(
+    sum_im = ::conga::backend::reduce(
         m_vector.begin() +
             getFieldComponentOffset(field, Type::imag, Type::begin),
         m_vector.begin() +

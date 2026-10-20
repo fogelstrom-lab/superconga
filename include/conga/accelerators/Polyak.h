@@ -16,7 +16,7 @@
 #include "Accelerator.h"
 #include "utils.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <json/json.h>
 
 namespace conga {
@@ -258,9 +258,10 @@ void Polyak<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
   const GridGPU<T> diff = inG - inOutX;
 
   // Take a step.
-  polyak_internal::computeInternal<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, numFields, m_stepSize, m_drag, diff.getDataPointer(),
-      m_velocity.getDataPointer(), inOutX.getDataPointer());
+  CONGA_LAUNCH((polyak_internal::computeInternal), numBlocks,
+               numThreadsPerBlock, dimX, dimY, numFields, m_stepSize, m_drag,
+               diff.getDataPointer(), m_velocity.getDataPointer(),
+               inOutX.getDataPointer());
 }
 } // namespace accelerators
 } // namespace conga

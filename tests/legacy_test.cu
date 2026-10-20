@@ -147,11 +147,12 @@ void computeVectorPotential(conga::GridGPU<T> &inOutVectorPotential,
   for (int y = 0; y < N; ++y) {
     for (int x = 0; x < N; ++x) {
       if (domainLabelsPtr[y * N + x] > 0) {
-        internal::computeVectorPotential2d_kernel<<<bpg, tpb>>>(
-            inOutVectorPotential.getDataPointer(0),
-            inOutVectorPotential.getDataPointer(1),
-            inCurrentDensity.getDataPointer(0),
-            inCurrentDensity.getDataPointer(1), x, y, inLatticeSpacing, N);
+        CONGA_LAUNCH((internal::computeVectorPotential2d_kernel), bpg, tpb,
+                     inOutVectorPotential.getDataPointer(0),
+                     inOutVectorPotential.getDataPointer(1),
+                     inCurrentDensity.getDataPointer(0),
+                     inCurrentDensity.getDataPointer(1), x, y, inLatticeSpacing,
+                     N);
       }
     }
   }

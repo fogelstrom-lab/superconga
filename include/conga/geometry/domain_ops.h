@@ -3,7 +3,7 @@
 
 #include "../grid.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 namespace conga {
 namespace geometry {
@@ -93,10 +93,9 @@ void extendValuesAtBoundary(const GridGPU<char> &inDomainLabels,
       inOutTarget.getKernelDimensions(dimX, dimY, dimZ);
 
   // Launch kernel.
-  internal::extendValuesAtBoundary_kernel<T>
-      <<<blocksPerGrid, threadsPerBlock>>>(dimX, dimY, dimZ, numExtend,
-                                           inDomainLabels.getDataPointer(),
-                                           inOutTarget.getDataPointer());
+  CONGA_LAUNCH((internal::extendValuesAtBoundary_kernel<T>), blocksPerGrid,
+               threadsPerBlock, dimX, dimY, dimZ, numExtend,
+               inDomainLabels.getDataPointer(), inOutTarget.getDataPointer());
 }
 } // namespace geometry
 } // namespace conga

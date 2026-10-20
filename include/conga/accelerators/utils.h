@@ -15,7 +15,7 @@
 #include "../grid.h"
 #include "../order_parameter/OrderParameter.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 namespace conga {
 namespace accelerators {
@@ -74,12 +74,12 @@ void concatenate(const OrderParameter<T> &inOrderParameter,
     // Get the order parameter component.
     const GridGPU<T> *const component = inOrderParameter.getComponentGrid(i);
 
-    internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, component->getDataPointer(0, Type::real),
-        inOutDst.getDataPointer(realIdx));
-    internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, component->getDataPointer(0, Type::imag),
-        inOutDst.getDataPointer(imagIdx));
+    CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 component->getDataPointer(0, Type::real),
+                 inOutDst.getDataPointer(realIdx));
+    CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 component->getDataPointer(0, Type::imag),
+                 inOutDst.getDataPointer(imagIdx));
   }
 }
 
@@ -109,12 +109,12 @@ void concatenate(const OrderParameter<T> &inOrderParameter,
   // Copy vector potential.
   const int xIdx = 2 * numComponents;
   const int yIdx = xIdx + 1;
-  internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, inVectorPotential.getDataPointer(0),
-      inOutDst.getDataPointer(xIdx));
-  internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, inVectorPotential.getDataPointer(1),
-      inOutDst.getDataPointer(yIdx));
+  CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+               inVectorPotential.getDataPointer(0),
+               inOutDst.getDataPointer(xIdx));
+  CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+               inVectorPotential.getDataPointer(1),
+               inOutDst.getDataPointer(yIdx));
 }
 
 /// \brief Split the concatenated order parameter and the vector potential.
@@ -142,12 +142,12 @@ void split(const GridGPU<T> &inSrc, OrderParameter<T> &inOutOrderParameter) {
     // Get the order parameter component.
     GridGPU<T> *const component = inOutOrderParameter.getComponentGrid(i);
 
-    internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, inSrc.getDataPointer(realIdx),
-        component->getDataPointer(0, Type::real));
-    internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, inSrc.getDataPointer(imagIdx),
-        component->getDataPointer(0, Type::imag));
+    CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 inSrc.getDataPointer(realIdx),
+                 component->getDataPointer(0, Type::real));
+    CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 inSrc.getDataPointer(imagIdx),
+                 component->getDataPointer(0, Type::imag));
   }
 }
 
@@ -177,12 +177,12 @@ void split(const GridGPU<T> &inSrc, OrderParameter<T> &inOutOrderParameter,
   // Copy vector potential.
   const int xIdx = 2 * numComponents;
   const int yIdx = xIdx + 1;
-  internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, inSrc.getDataPointer(xIdx),
-      inOutVectorPotential.getDataPointer(0));
-  internal::copy<<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, inSrc.getDataPointer(yIdx),
-      inOutVectorPotential.getDataPointer(1));
+  CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+               inSrc.getDataPointer(xIdx),
+               inOutVectorPotential.getDataPointer(0));
+  CONGA_LAUNCH((internal::copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+               inSrc.getDataPointer(yIdx),
+               inOutVectorPotential.getDataPointer(1));
 }
 } // namespace accelerators
 } // namespace conga

@@ -17,7 +17,9 @@
 #include "../defines.h"
 #include "../utils.h"
 
+#include <iostream>
 #include <thrust/device_vector.h>
+#include <thrust/extrema.h>
 
 #include <cmath>
 #include <utility>
@@ -627,8 +629,9 @@ void GridFunctions<T, thrust::device_vector<T>>::typeConvert(
   const auto [blocksPerGrid, threadsPerBlock] =
       getKernelDimensions(dimX, dimY, dimZ);
 
-  internal::typeConvert_kernel<T, T2><<<blocksPerGrid, threadsPerBlock>>>(
-      dimX, dimY, dimZ, grid->getDataPointer(), other.getDataPointer());
+  CONGA_LAUNCH((internal::typeConvert_kernel<T, T2>), blocksPerGrid,
+               threadsPerBlock, dimX, dimY, dimZ, grid->getDataPointer(),
+               other.getDataPointer());
 }
 
 template <typename T>
@@ -652,11 +655,11 @@ GridFunctions<T, thrust::device_vector<T>>::transpose(const int field) {
   }
 
   for (int i = f_start; i <= f_end; ++i) {
-    internal::transpose_kernel<<<bpg, tpb>>>(
-        grid->getDataPointer(i, Type::real), grid->_dimX);
+    CONGA_LAUNCH((internal::transpose_kernel), bpg, tpb,
+                 grid->getDataPointer(i, Type::real), grid->_dimX);
     if (grid->isComplex())
-      internal::transpose_kernel<<<bpg, tpb>>>(
-          grid->getDataPointer(i, Type::imag), grid->_dimX);
+      CONGA_LAUNCH((internal::transpose_kernel), bpg, tpb,
+                   grid->getDataPointer(i, Type::imag), grid->_dimX);
   }
 
   return *grid;
@@ -675,10 +678,11 @@ void GridFunctions<T, thrust::device_vector<T>>::complexMagnitudeSq(
   // Sanity check.
   assert(isComplex);
 
-  internal::complexMagnitudeSq_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-      dimX, dimY, numFields, grid->getDataPointer(0, Type::real),
-      grid->getDataPointer(0, Type::imag),
-      result->getDataPointer(0, Type::real));
+  CONGA_LAUNCH((internal::complexMagnitudeSq_kernel), blocksPerGrid,
+               threadsPerBlock, dimX, dimY, numFields,
+               grid->getDataPointer(0, Type::real),
+               grid->getDataPointer(0, Type::imag),
+               result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData::complexMagnitudeSq()");
 }
@@ -696,10 +700,10 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhase(
   // Sanity check.
   assert(isComplex);
 
-  internal::complexPhase_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-      dimX, dimY, numFields, grid->getDataPointer(0, Type::real),
-      grid->getDataPointer(0, Type::imag),
-      result->getDataPointer(0, Type::real));
+  CONGA_LAUNCH((internal::complexPhase_kernel), blocksPerGrid, threadsPerBlock,
+               dimX, dimY, numFields, grid->getDataPointer(0, Type::real),
+               grid->getDataPointer(0, Type::imag),
+               result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData::complexPhase()");
 }
@@ -709,7 +713,8 @@ void GridFunctions<T, thrust::device_vector<T>>::complexPhaseGradient(
     GridData<T, thrust::device_vector<T>> *result, const T h) const {
   const auto [bpg, tpb] = getKernelDimensions();
 
-  internal::complexPhaseGradient_kernel<<<bpg, tpb>>>(
+  CONGA_LAUNCH(
+      (internal::complexPhaseGradient_kernel), bpg, tpb,
       grid->getDataPointer(0, Type::real), grid->getDataPointer(0, Type::imag),
       result->getDataPointer(0, Type::real),
       result->getDataPointer(1, Type::real), h, grid->_dimX, grid->_dimY);
@@ -731,10 +736,10 @@ T GridFunctions<T, thrust::device_vector<T>>::moment(const T h) const {
   const int dimY = grid->dimY();
 
   thrust::device_vector<T> dst(dimX * dimY);
-  internal::momentKernel<<<bpg, tpb>>>(dimX, dimY,
-                                       grid->getDataPointer(0, Type::real),
-                                       grid->getDataPointer(1, Type::real),
-                                       thrust::raw_pointer_cast(dst.data()));
+  CONGA_LAUNCH((internal::momentKernel), bpg, tpb, dimX, dimY,
+               grid->getDataPointer(0, Type::real),
+               grid->getDataPointer(1, Type::real),
+               thrust::raw_pointer_cast(dst.data()));
 
   checkCudaError("GridData<T>::moment()");
 
@@ -742,7 +747,8 @@ T GridFunctions<T, thrust::device_vector<T>>::moment(const T h) const {
   // vector.
   const T factor = static_cast<T>(0.5) * h * h * h;
   const T init = static_cast<T>(0);
-  const T result = factor * thrust::reduce(dst.begin(), dst.end(), init);
+  const T result =
+      factor * ::conga::backend::reduce(dst.begin(), dst.end(), init);
 
   return result;
 }
@@ -752,10 +758,10 @@ void GridFunctions<T, thrust::device_vector<T>>::fieldMagnitude(
     GridData<T, thrust::device_vector<T>> *result) const {
   const auto [bpg, tpb] = getKernelDimensions();
 
-  internal::fieldMagnitude_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real),
-      result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
-      grid->_numFields, int(grid->isComplex()));
+  CONGA_LAUNCH((internal::fieldMagnitude_kernel), bpg, tpb,
+               grid->getDataPointer(0, Type::real),
+               result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
+               grid->_numFields, int(grid->isComplex()));
 
   checkCudaError("GridData<T>::fieldMagnitude()");
 }
@@ -783,10 +789,10 @@ void GridFunctions<T, thrust::device_vector<T>>::div(
   const auto [bpg, tpb] = getKernelDimensions();
 
   // Launch kernel.
-  internal::div_kernel<<<bpg, tpb>>>(dimX, dimY, invLatticeSiteSideLength,
-                                     grid->getDataPointer(0, Type::real),
-                                     grid->getDataPointer(1, Type::real),
-                                     result->getDataPointer(0, Type::real));
+  CONGA_LAUNCH((internal::div_kernel), bpg, tpb, dimX, dimY,
+               invLatticeSiteSideLength, grid->getDataPointer(0, Type::real),
+               grid->getDataPointer(1, Type::real),
+               result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData<T>::div()");
 }
@@ -814,10 +820,10 @@ void GridFunctions<T, thrust::device_vector<T>>::curl(
   const auto [bpg, tpb] = getKernelDimensions();
 
   // Launch kernel.
-  internal::curl_kernel<<<bpg, tpb>>>(dimX, dimY, invLatticeSiteSideLength,
-                                      grid->getDataPointer(0, Type::real),
-                                      grid->getDataPointer(1, Type::real),
-                                      result->getDataPointer(0, Type::real));
+  CONGA_LAUNCH((internal::curl_kernel), bpg, tpb, dimX, dimY,
+               invLatticeSiteSideLength, grid->getDataPointer(0, Type::real),
+               grid->getDataPointer(1, Type::real),
+               result->getDataPointer(0, Type::real));
 
   checkCudaError("GridData<T>::curl()");
 }
@@ -846,9 +852,9 @@ void GridFunctions<T, thrust::device_vector<T>>::del2(
   const auto [bpg, tpb] = getKernelDimensions(dimX, dimY, dimZ);
 
   // Launch kernel.
-  internal::del2_kernel<<<bpg, tpb>>>(dimX, dimY, dimZ, invLatticeSiteArea,
-                                      grid->getDataPointer(),
-                                      result->getDataPointer());
+  CONGA_LAUNCH((internal::del2_kernel), bpg, tpb, dimX, dimY, dimZ,
+               invLatticeSiteArea, grid->getDataPointer(),
+               result->getDataPointer());
 
   checkCudaError("GridData<T>::del2()");
 }
@@ -858,16 +864,16 @@ void GridFunctions<T, thrust::device_vector<T>>::sumFieldComponents(
     GridData<T, thrust::device_vector<T>> *result) const {
   const auto [bpg, tpb] = getKernelDimensions();
 
-  internal::sumFieldComponents_kernel<<<bpg, tpb>>>(
-      grid->getDataPointer(0, Type::real),
-      result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
-      grid->_numFields, int(grid->isComplex()));
+  CONGA_LAUNCH((internal::sumFieldComponents_kernel), bpg, tpb,
+               grid->getDataPointer(0, Type::real),
+               result->getDataPointer(0, Type::real), grid->_dimX, grid->_dimY,
+               grid->_numFields, int(grid->isComplex()));
 
   if (grid->isComplex())
-    internal::sumFieldComponents_kernel<<<bpg, tpb>>>(
-        grid->getDataPointer(0, Type::imag),
-        result->getDataPointer(0, Type::imag), grid->_dimX, grid->_dimY,
-        grid->_numFields, int(grid->isComplex()));
+    CONGA_LAUNCH((internal::sumFieldComponents_kernel), bpg, tpb,
+                 grid->getDataPointer(0, Type::imag),
+                 result->getDataPointer(0, Type::imag), grid->_dimX,
+                 grid->_dimY, grid->_numFields, int(grid->isComplex()));
 
   checkCudaError("GridData<T>::sumFieldComponents()");
 }
@@ -910,18 +916,18 @@ void GridFunctions<T, thrust::device_vector<T>>::insertGrid(
   for (int c = 0; c < grid->_numFields; ++c) {
     int c_other = c >= Nf_other ? Nf_other - 1 : c;
 
-    internal::insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-        grid->getDataPointer(c, Type::real),
-        other->getDataPointer(c_other, Type::real), grid->_dimX, grid->_dimY,
-        Nx_other, Ny_other, x_start_this, y_start_this, x_start_other,
-        y_start_other);
+    CONGA_LAUNCH((internal::insertGrid_kernel), blocksPerGrid, threadsPerBlock,
+                 grid->getDataPointer(c, Type::real),
+                 other->getDataPointer(c_other, Type::real), grid->_dimX,
+                 grid->_dimY, Nx_other, Ny_other, x_start_this, y_start_this,
+                 x_start_other, y_start_other);
 
     if (grid->isComplex()) {
-      internal::insertGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::imag),
-          other->getDataPointer(c_other, Type::imag), grid->_dimX, grid->_dimY,
-          Nx_other, Ny_other, x_start_this, y_start_this, x_start_other,
-          y_start_other);
+      CONGA_LAUNCH((internal::insertGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::imag),
+                   other->getDataPointer(c_other, Type::imag), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, x_start_this, y_start_this,
+                   x_start_other, y_start_other);
     }
   }
 
@@ -951,30 +957,30 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGrid(
       field_other = 0;
 
     if (complex_this && complex_other) {
-      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
 
-      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::imag),
-          other->getDataPointer(field_other, Type::imag), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::imag),
+                   other->getDataPointer(field_other, Type::imag), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this && !complex_other) {
-      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this) {
-      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, Type::real),
-          other->getDataPointer(field_other, part), grid->_dimX, grid->_dimY,
-          Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, part), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else {
-      internal::insertRotatedGrid_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-          grid->getDataPointer(c, part),
-          other->getDataPointer(field_other, Type::real), grid->_dimX,
-          grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGrid_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, part),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     }
   }
 
@@ -1017,35 +1023,30 @@ void GridFunctions<T, thrust::device_vector<T>>::insertRotatedGridAdditive(
       field_other = 0; // Maybe put this to other->numFields()-1 ??
 
     if (complex_this && complex_other) {
-      internal::
-          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-              grid->getDataPointer(c, Type::real),
-              other->getDataPointer(field_other, Type::real), grid->_dimX,
-              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGridAdditive_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
 
-      internal::
-          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-              grid->getDataPointer(c, Type::imag),
-              other->getDataPointer(field_other, Type::imag), grid->_dimX,
-              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGridAdditive_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::imag),
+                   other->getDataPointer(field_other, Type::imag), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this && !complex_other) {
-      internal::
-          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-              grid->getDataPointer(c, Type::real),
-              other->getDataPointer(field_other, Type::real), grid->_dimX,
-              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGridAdditive_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else if (!complex_this) {
-      internal::
-          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-              grid->getDataPointer(c, Type::real),
-              other->getDataPointer(field_other, part), grid->_dimX,
-              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGridAdditive_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, Type::real),
+                   other->getDataPointer(field_other, part), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     } else {
-      internal::
-          insertRotatedGridAdditive_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-              grid->getDataPointer(c, part),
-              other->getDataPointer(field_other, Type::real), grid->_dimX,
-              grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
+      CONGA_LAUNCH((internal::insertRotatedGridAdditive_kernel), blocksPerGrid,
+                   threadsPerBlock, grid->getDataPointer(c, part),
+                   other->getDataPointer(field_other, Type::real), grid->_dimX,
+                   grid->_dimY, Nx_other, Ny_other, phi, x_offset, y_offset);
     }
   }
 
@@ -1079,9 +1080,9 @@ void GridFunctions<T, thrust::device_vector<T>>::resample(const int inDimX,
       getKernelDimensions(inDimX, inDimY, dimZ);
 
   // Launch kernel.
-  internal::resample_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-      inDimX, inDimY, dimZ, oldDimX, oldDimY, margin, grid->getDataPointer(0),
-      thrust::raw_pointer_cast(tmp.data()));
+  CONGA_LAUNCH((internal::resample_kernel), blocksPerGrid, threadsPerBlock,
+               inDimX, inDimY, dimZ, oldDimX, oldDimY, margin,
+               grid->getDataPointer(0), thrust::raw_pointer_cast(tmp.data()));
 
   // Change affected class member variables.
   grid->_dimX = inDimX;

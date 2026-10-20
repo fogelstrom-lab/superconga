@@ -18,8 +18,6 @@ template <typename T, typename DEV> struct GridFunctions {};
 } // namespace conga
 
 #include "GridFunctions_CPU.h"
-#ifdef __CUDACC__
 #include "GridFunctions_GPU.h"
-#endif
 
 #endif // CONGA_GRID_FUNCTIONS_H_

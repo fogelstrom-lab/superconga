@@ -25,6 +25,7 @@ def main(args: argparse.Namespace) -> None:
 
     # Remove negatations etc.
     build_type = args.build_type
+    backend = args.backend.upper()
     cuda_arch = args.cuda_arch
     use_ninja = not args.no_ninja
     use_visualize = not args.no_visualize
@@ -48,6 +49,13 @@ def main(args: argparse.Namespace) -> None:
         "-B=" + build_dir,
         "-DCMAKE_BUILD_TYPE=" + build_type,
     ]
+
+    # Set execution backend.
+    setup_args.append("-DCONGA_BACKEND=" + backend)
+    if backend == "CPU" and use_visualize:
+        # The Forge visualizer needs CUDA-OpenGL interop; skip it on the CPU.
+        print("-- Note: visualization is not available on the CPU backend, disabling.")
+        use_visualize = False
 
     # Set CUDA architecture if specified.
     if cuda_arch is not None:

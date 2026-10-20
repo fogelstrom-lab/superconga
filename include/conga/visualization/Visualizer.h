@@ -5,7 +5,7 @@
 #include "../grid.h"
 #include "colormaps.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <thrust/device_vector.h>
 
 #include <forge.h>
@@ -327,26 +327,26 @@ void Visualizer<T>::draw(const std::string &inTitle, const int inCol,
   switch (inColormap) {
   case Colormap::MAGNITUDE: {
     // Convert to hot and flip y-axis.
-    internal::convertToColor<T, colormaps::YlGnBu>
-        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
-                                            inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptrGPU);
+    CONGA_LAUNCH((internal::convertToColor<T, colormaps::YlGnBu>), numBlocks,
+                 numThreadsPerBlock, width, height, scale, inErase,
+                 inGrid.getDataPointer(inField), m_domain.getDataPointer(),
+                 ptrGPU);
     break;
   }
   case Colormap::DEFAULT: {
     // Convert to red-white-blue and flip y-axis.
-    internal::convertToColor<T, colormaps::RdBu>
-        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
-                                            inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptrGPU);
+    CONGA_LAUNCH((internal::convertToColor<T, colormaps::RdBu>), numBlocks,
+                 numThreadsPerBlock, width, height, scale, inErase,
+                 inGrid.getDataPointer(inField), m_domain.getDataPointer(),
+                 ptrGPU);
     break;
   }
   case Colormap::ANGLE: {
     // Convert to twlight and flip y-axis.
-    internal::convertToColor<T, colormaps::TwilightShiftedReversed>
-        <<<numBlocks, numThreadsPerBlock>>>(width, height, scale, inErase,
-                                            inGrid.getDataPointer(inField),
-                                            m_domain.getDataPointer(), ptrGPU);
+    CONGA_LAUNCH(
+        (internal::convertToColor<T, colormaps::TwilightShiftedReversed>),
+        numBlocks, numThreadsPerBlock, width, height, scale, inErase,
+        inGrid.getDataPointer(inField), m_domain.getDataPointer(), ptrGPU);
     break;
   }
   default: {

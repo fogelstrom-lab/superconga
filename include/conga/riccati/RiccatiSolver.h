@@ -161,15 +161,15 @@ void computeEnergyShift(ContextModule<T> *inContextModule,
         static_cast<T>(1) / (penetrationDepth * penetrationDepth);
     vectorPotentialRotated *= vectorPotentialScale;
 
-    computeEnergyShiftKernel<T, VP>
-        <<<bpg, tpb>>>(vectorPotentialRotated.getDataPointer(0),
-                       vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
-                       fermiVelocityY, systemAngle, fluxDensity, chargeSign,
-                       area, N1, h, inEnergyShift->getDataPointer());
+    CONGA_LAUNCH((computeEnergyShiftKernel<T, VP>), bpg, tpb,
+                 vectorPotentialRotated.getDataPointer(0),
+                 vectorPotentialRotated.getDataPointer(1), fermiVelocityX,
+                 fermiVelocityY, systemAngle, fluxDensity, chargeSign, area, N1,
+                 h, inEnergyShift->getDataPointer());
   } else if (std::abs(fluxDensity) > static_cast<T>(0)) {
-    computeEnergyShiftOnlyExternalKernel<T, VP><<<bpg, tpb>>>(
-        fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity, chargeSign,
-        area, N1, h, inEnergyShift->getDataPointer());
+    CONGA_LAUNCH((computeEnergyShiftOnlyExternalKernel<T, VP>), bpg, tpb,
+                 fermiVelocityX, fermiVelocityY, systemAngle, fluxDensity,
+                 chargeSign, area, N1, h, inEnergyShift->getDataPointer());
   } else {
     inEnergyShift->setZero();
   }

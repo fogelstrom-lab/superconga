@@ -6,11 +6,19 @@
 
 """Functionality for reading/writing data from/to disk."""
 
-import h5py
 import json
-import numpy as np
 import os
-import pandas as pd
+
+try:  # Optional: only needed for reading/writing HDF5 data (not for setup/compile).
+    import h5py
+except ImportError:  # pragma: no cover
+    h5py = None
+try:
+    import numpy as np
+    import pandas as pd
+except ImportError:  # pragma: no cover
+    np = None
+    pd = None
 import sys
 
 

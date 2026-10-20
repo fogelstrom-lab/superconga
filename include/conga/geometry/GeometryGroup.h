@@ -20,7 +20,7 @@
 #include "GeometryComponent.h"
 #include "domain_ops.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <thrust/complex.h>
 
 #include <cassert>
@@ -593,11 +593,11 @@ void GeometryGroup<T>::geomOp(GeometryComponent<T> *newGeom,
   const auto [Nx, Ny] = getGridDimensions();
   const auto [bpg, tpb] = _domainLabels->getKernelDimensions();
 
-  internal::geomOp_kernel<T><<<bpg, tpb>>>(
-      getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
-      newGeom->getDomainLabels(), newGeom->getNormals(0),
-      newGeom->getNormals(1), newGeom->getBoundaryDistance(),
-      geomOpMatrix->getDataPointer(), Nx, Ny);
+  CONGA_LAUNCH((internal::geomOp_kernel<T>), bpg, tpb, getDomainLabels(),
+               getNormals(0), getNormals(1), getBoundaryDistance(),
+               newGeom->getDomainLabels(), newGeom->getNormals(0),
+               newGeom->getNormals(1), newGeom->getBoundaryDistance(),
+               geomOpMatrix->getDataPointer(), Nx, Ny);
 }
 
 template <typename T>
@@ -616,11 +616,12 @@ void GeometryGroup<T>::geomOpRemove(GeometryComponent<T> *newGeom) {
   GridGPU<char>::initializeGrid(domTmp, domResult);
   domTmp->setZero();
 
-  internal::geomOpRemove_kernel<T><<<bpg, tpb>>>(
-      getDomainLabels(), getNormals(0), getNormals(1), getBoundaryDistance(),
-      newGeom->getDomainLabels(), newGeom->getNormals(0),
-      newGeom->getNormals(1), newGeom->getBoundaryDistance(),
-      domTmp->getDataPointer(), _geomOpRemove->getDataPointer(), Nx, Ny);
+  CONGA_LAUNCH((internal::geomOpRemove_kernel<T>), bpg, tpb, getDomainLabels(),
+               getNormals(0), getNormals(1), getBoundaryDistance(),
+               newGeom->getDomainLabels(), newGeom->getNormals(0),
+               newGeom->getNormals(1), newGeom->getBoundaryDistance(),
+               domTmp->getDataPointer(), _geomOpRemove->getDataPointer(), Nx,
+               Ny);
 
   _domainLabels = domTmp;
   delete domResult;
@@ -633,8 +634,8 @@ void GeometryGroup<T>::geomOpAdd(GridGPU<char> *dom,
 
   const auto [bpg, tpb] = GridGPU<T>::getKernelDimensions(N, N);
 
-  internal::geomOpAdd_kernel<T>
-      <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
+  CONGA_LAUNCH((internal::geomOpAdd_kernel<T>), bpg, tpb, dom->getDataPointer(),
+               dom_local->getDataPointer(), N);
 }
 
 template <typename T>
@@ -644,8 +645,8 @@ void GeometryGroup<T>::geomOpRemove(GridGPU<char> *dom,
 
   const auto [bpg, tpb] = GridGPU<T>::getKernelDimensions(N, N);
 
-  internal::geomOpRemove_kernel<T>
-      <<<bpg, tpb>>>(dom->getDataPointer(), dom_local->getDataPointer(), N);
+  CONGA_LAUNCH((internal::geomOpRemove_kernel<T>), bpg, tpb,
+               dom->getDataPointer(), dom_local->getDataPointer(), N);
 }
 
 template <typename T>
@@ -918,9 +919,9 @@ void GeometryGroup<T>::zeroValuesOutsideDomainRef(
   const auto [blocksPerGrid, threadsPerBlock] =
       inOutTarget->getKernelDimensions(dimX, dimY, dimZ);
 
-  internal::zeroValuesOutsideDomain_kernel<<<blocksPerGrid, threadsPerBlock>>>(
-      dimX, dimY, dimZ, _domain_ref->getDataPointer(),
-      inOutTarget->getDataPointer());
+  CONGA_LAUNCH((internal::zeroValuesOutsideDomain_kernel), blocksPerGrid,
+               threadsPerBlock, dimX, dimY, dimZ, _domain_ref->getDataPointer(),
+               inOutTarget->getDataPointer());
 }
 
 template <typename T>

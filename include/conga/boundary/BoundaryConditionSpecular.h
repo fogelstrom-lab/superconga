@@ -19,7 +19,7 @@
 #include "BoundaryCondition.h"
 #include "BoundaryStorage.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <cmath>
 
@@ -236,7 +236,7 @@ __device__ void interpolate(
         outTotalWeight += weight;
       }
     } // for pt
-  }   // for rot
+  } // for rot
 }
 
 // TODO(niclas): Why is is the OUT pointers unchanged, and not IN? The
@@ -427,8 +427,9 @@ T BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     {
       const char boundaryLabel = 2;
       const int direction = 1;
-      internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s1>>>(
-          // Model parameters
+      CONGA_LAUNCH_STREAM(
+          (internal::boundaryConditionSpecularKernel<T>), bpg, tpb, 0,
+          s1, // Model parameters
           numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
           yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
           systemAnglesPtr, direction,
@@ -450,8 +451,9 @@ T BoundaryConditionSpecular<T>::computeBoundaryCondition(Context<T> *ctx) {
     {
       const char boundaryLabelTilde = 3;
       const int directionTilde = -1;
-      internal::boundaryConditionSpecularKernel<T><<<bpg, tpb, 0, s2>>>(
-          // Model parameters
+      CONGA_LAUNCH_STREAM(
+          (internal::boundaryConditionSpecularKernel<T>), bpg, tpb, 0,
+          s2, // Model parameters
           numX, numEnergies, numAngles, angleIdx, xIdxMin, xIdxMax, yIdxMin,
           yIdxMax, momentumX, momentumY, momentumOffsetX, momentumOffsetY,
           systemAnglesPtr, directionTilde,

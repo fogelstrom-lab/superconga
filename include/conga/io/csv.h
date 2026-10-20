@@ -104,16 +104,16 @@ void copy(const std::vector<T> inSrc1, const std::vector<T> inSrc2,
 
   // Call CUDA kernel.
   if (isComplex) {
-    copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, thrust::raw_pointer_cast(src1.data()),
-        thrust::raw_pointer_cast(src2.data()),
-        inOutDst.getDataPointer(0, Type::real),
-        inOutDst.getDataPointer(0, Type::imag));
+    CONGA_LAUNCH((copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 thrust::raw_pointer_cast(src1.data()),
+                 thrust::raw_pointer_cast(src2.data()),
+                 inOutDst.getDataPointer(0, Type::real),
+                 inOutDst.getDataPointer(0, Type::imag));
   } else {
-    copy<<<numBlocks, numThreadsPerBlock>>>(
-        dimX, dimY, thrust::raw_pointer_cast(src1.data()),
-        thrust::raw_pointer_cast(src2.data()), inOutDst.getDataPointer(0),
-        inOutDst.getDataPointer(1));
+    CONGA_LAUNCH((copy), numBlocks, numThreadsPerBlock, dimX, dimY,
+                 thrust::raw_pointer_cast(src1.data()),
+                 thrust::raw_pointer_cast(src2.data()),
+                 inOutDst.getDataPointer(0), inOutDst.getDataPointer(1));
   }
 }
 } // namespace internal

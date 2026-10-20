@@ -18,7 +18,7 @@
 #include "Disc.h"
 #include "GeometryComponent.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <cmath>
 
@@ -288,9 +288,9 @@ template <typename T> void DiscGeometry<T>::create(const T inAngle) {
   const auto [bpg, tpb] = G::getKernelDimensions();
 
   // Defines discrete boundary domain and properties
-  internal::generateDisc_Kernel<T><<<bpg, tpb>>>(
-      numX, numY, radius, offsetX, offsetY, G::getDomainLabels(),
-      G::getNormals(0), G::getNormals(1), G::getBoundaryDistance());
+  CONGA_LAUNCH((internal::generateDisc_Kernel<T>), bpg, tpb, numX, numY, radius,
+               offsetX, offsetY, G::getDomainLabels(), G::getNormals(0),
+               G::getNormals(1), G::getBoundaryDistance());
 }
 
 template <typename T>
@@ -315,9 +315,9 @@ DiscGeometry<T>::createDomain(const int inLatticeSideLength) const {
       GridGPU<T>::getKernelDimensions(inLatticeSideLength, inLatticeSideLength);
 
   // Compute domain labels.
-  internal::generateDisc_Kernel<T>
-      <<<bpg, tpb>>>(inLatticeSideLength, inLatticeSideLength, radius, offsetX,
-                     offsetY, dom_component->getDataPointer());
+  CONGA_LAUNCH((internal::generateDisc_Kernel<T>), bpg, tpb,
+               inLatticeSideLength, inLatticeSideLength, radius, offsetX,
+               offsetY, dom_component->getDataPointer());
 
   return dom_component;
 }

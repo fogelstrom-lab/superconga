@@ -17,7 +17,7 @@
 #include "Accelerator.h"
 #include "utils.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <json/json.h>
 
 #include <algorithm>

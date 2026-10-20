@@ -98,15 +98,7 @@ foreach(file ${SRC})
     set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                              "${PROJECT_BINARY_DIR}/bin")
 
-    # Include directories: equivalent to -I.
-    target_include_directories(
-      ${name} PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM
-                      ${ARMADILLO_INCLUDE_DIRS} ${JSONCPP_INCLUDE_DIRS})
-
-    # External libraries: equivalent to -l.
-    target_link_libraries(
-      ${name} PRIVATE gfortran jsoncpp ${ARMADILLO_LIBRARIES}
-                      ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+    conga_configure_target(${name})
 
     # Use HDF5.
     if(CONGA_USE_HDF5)
@@ -125,26 +117,10 @@ foreach(file ${SRC})
       endif(CONGA_USE_CUDA_OPENGL_INTEROP)
     endif(CONGA_VISUALIZE)
 
-    # Use C++17 since it is the latest standard CUDA supports.
-    set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
-                                             CUDA_STANDARD_REQUIRED ON)
-    set_target_properties(${name} PROPERTIES CXX_STANDARD 17
-                                             CXX_STANDARD_REQUIRED ON)
-
     # Apply compiler options.
     if(single_precision)
       target_compile_definitions(${name} PUBLIC CONGA_SINGLE_PRECISION)
     endif(single_precision)
-
-    # Set DEBUG compile flags
-    target_compile_options(
-      ${name}
-      PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
-      PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
-      PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
-
-    # Set RELEASE compile flags
-    target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
   endforeach(single_precision ${CONGA_SINGLE_PRECISION})
 endforeach(file ${SRC})
 

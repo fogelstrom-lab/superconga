@@ -2,8 +2,14 @@
 
 ## Latest version (unreleased)
 ### Improvements
+- **MAJOR** Add a CPU execution backend (`-DCONGA_BACKEND=CPU`, or `superconga.py setup --backend cpu`). The CUDA kernels are compiled as ordinary C++ and run on the host, parallelised over kernel blocks with OpenMP; Thrust is used with its OpenMP device system. No CUDA toolkit is needed, so SuperConga builds and runs on e.g. Apple-silicon Macs and on CPU-only cluster nodes. The CUDA backend is unchanged.
+- Modernise the CUDA build: drop the deprecated `FindCUDA` module, use `CMAKE_CUDA_ARCHITECTURES` (`native` by default on CMake >= 3.24, `-DCUDA_ARCH=...` to override).
 ### Bug fixes
 ### Developer changes
+- Kernel launches are written `CONGA_LAUNCH((kernel), blocksPerGrid, threadsPerBlock, args...)` (and `CONGA_LAUNCH_STREAM`) instead of `kernel<<<...>>>(args...)`; see `include/conga/backend.h`. All CUDA runtime access goes through that header.
+- Reductions go through `conga::backend::reduce`/`transform_reduce`, which on the CPU backend are blocked pairwise sums so that single-precision results have GPU-like accuracy.
+- Host stand-in for the cuRAND device API in `include/conga/cpu/curand_shim.h`.
+- Build configuration shared between binaries and tests via `conga_configure_target()`.
 
 ---
 

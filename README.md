@@ -40,6 +40,27 @@ The source can be obtained by [cloning](https://docs.gitlab.com/ee/gitlab-basics
 
 
 # Hardware requirements <a name="hardware"></a>
+SuperConga has two execution backends:
+
+- **CUDA** (the original, and the fast one): requires a [CUDA-enabled device](https://developer.nvidia.com/cuda-gpus) (NVIDIA hardware) and CUDA 11.2 or later.
+- **CPU**: the same kernels compiled as plain C++17 and run on the host, multi-threaded with OpenMP. No GPU or CUDA toolkit needed. This is roughly 10-100x slower than a GPU but runs everywhere, including Apple-silicon Macs; it is intended for development, testing, and modest production runs.
+
+The backend is chosen at configure time with `superconga.py setup --backend {auto,cuda,cpu}` (`auto` picks CUDA if `nvcc` is found).
+
+## CPU backend on macOS <a name="macos"></a>
+With [Homebrew](https://brew.sh):
+```shell
+brew install cmake ninja libomp armadillo jsoncpp hdf5 pkg-config
+python3 superconga.py setup --backend cpu --no-visualize
+python3 superconga.py compile
+```
+Apple's clang needs to be told where `libomp` is; if CMake does not find OpenMP, configure with
+```shell
+OpenMP_ROOT=$(brew --prefix libomp) python3 superconga.py setup --backend cpu --no-visualize
+```
+Thrust (header-only, from NVIDIA's CCCL) is downloaded automatically at configure time. Set the number of threads with `OMP_NUM_THREADS`, e.g. `OMP_NUM_THREADS=8 python3 superconga.py simulate -C examples/swave_disc_vortex`.
+
+## CUDA backend
 SuperConga is a GPU-accelerated code that requires a [CUDA-enabled device](https://developer.nvidia.com/cuda-gpus) (NVIDIA hardware). In Linux, it is possible to query whether there is any NVIDIA hardware:
 ```shell
 lspci | grep -i nvidia
@@ -314,3 +335,6 @@ SuperConga development is supported by the Applied Quantum Physics Laboratory at
 
 # Authors <a name="authors"></a>
 The current lead developers are Niclas Wall Wennerdal, Patric Holmvall and Pascal Stadler. Previous developers are Mikael Håkansson and Oleksii Shevtsov. The project is supervised by Mikael Fogelström and Tomas Löfwander.
+
+# Repository on GitHub <a name="github"></a>
+This fork lives at `git@github.com:fogelstrom-lab/superconga.git` (remote `github`); the original project remains `origin` on GitLab. Verified uploads: `tools/upload_to_github.sh -m "message"` (builds the CPU backend, runs the tests, commits, pushes). Run data belongs in `private/` or `data/`, both ignored.

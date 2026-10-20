@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "conga/Context.h"
+#include "../special_functions.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
 #include "conga/accelerators/BarzilaiBorwein.h"
@@ -63,8 +64,8 @@ T computeFreeEnergyAnalytic(const T inTemperature, const T inEnergyCutoff,
 
   // Relevant Bessel functions.
   const T R_k = R / k;
-  const T I0 = std::cyl_bessel_i(static_cast<T>(0), R_k);
-  const T I1 = std::cyl_bessel_i(static_cast<T>(1), R_k);
+  const T I0 = conga::special::cyl_bessel_i(0, R_k);
+  const T I1 = conga::special::cyl_bessel_i(1, R_k);
 
   // Magnetic term.
   const T tmp = R * I1 / I0;

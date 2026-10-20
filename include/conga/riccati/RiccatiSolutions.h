@@ -15,13 +15,12 @@
 #ifndef CONGA_RICCATI_SOLUTIONS_H
 #define CONGA_RICCATI_SOLUTIONS_H
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <thrust/complex.h>
 
-#ifdef __CUDACC__
+#include "conga/backend.h"
 #ifndef _HD_
 #define _HD_ __host__ __device__
-#endif
 #endif
 
 namespace conga {

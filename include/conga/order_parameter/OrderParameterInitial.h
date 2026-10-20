@@ -18,9 +18,13 @@
 #include "../utils.h"
 #include "OrderParameterComponent.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
+#ifdef CONGA_BACKEND_CUDA
 #include <curand.h>
 #include <curand_kernel.h>
+#else
+#include "conga/cpu/curand_shim.h"
+#endif
 #include <thrust/device_vector.h>
 
 #include <cmath>
@@ -342,14 +346,14 @@ void Initial<T>::perturbedPhaseWindings(
   // Initialize all order parameter components.
   for (int c = 0; c < deltaGrid->numFields(); ++c) {
     // Apply phase winding via GPU kernel.
-    internal::perturbedPhaseWindingKernel<<<blocksPerGrid, threadsPerBlock>>>(
-        deltaGrid->getDataPointer(c, Type::real),
-        deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
-        numLatticePoints, deltaBulk, numVortices,
-        thrust::raw_pointer_cast(numWindingsGPU.data()),
-        thrust::raw_pointer_cast(centersXGPU.data()),
-        thrust::raw_pointer_cast(centersYGPU.data()), inNoiseStdDev,
-        inPhaseShift);
+    CONGA_LAUNCH((internal::perturbedPhaseWindingKernel), blocksPerGrid,
+                 threadsPerBlock, deltaGrid->getDataPointer(c, Type::real),
+                 deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
+                 numLatticePoints, deltaBulk, numVortices,
+                 thrust::raw_pointer_cast(numWindingsGPU.data()),
+                 thrust::raw_pointer_cast(centersXGPU.data()),
+                 thrust::raw_pointer_cast(centersYGPU.data()), inNoiseStdDev,
+                 inPhaseShift);
   }
 }
 
@@ -404,11 +408,11 @@ void Initial<T>::edgePhaseCrystal(
   // Initialize all order parameter components.
   for (int c = 0; c < deltaGrid->numFields(); ++c) {
     // Calculate and set order parameter component.
-    internal::edgePhaseCrystalKernel<<<blocksPerGrid, threadsPerBlock>>>(
-        deltaGrid->getDataPointer(c, Type::real),
-        deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
-        numLatticePoints, waveNumber, inverseDecayLength, inCenterX, inCenterY,
-        inRotAngle, deltaBulk);
+    CONGA_LAUNCH((internal::edgePhaseCrystalKernel), blocksPerGrid,
+                 threadsPerBlock, deltaGrid->getDataPointer(c, Type::real),
+                 deltaGrid->getDataPointer(c, Type::imag), numLatticePoints,
+                 numLatticePoints, waveNumber, inverseDecayLength, inCenterX,
+                 inCenterY, inRotAngle, deltaBulk);
   }
 }
 

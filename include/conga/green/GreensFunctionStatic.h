@@ -185,13 +185,14 @@ void GreensFunctionStatic<T, GREENS>::computeGreens(
   const int numEnergies = inGamma->numFields();
 
   // Compute Greens function from gamma and gammaTilde
-  internal::computeGreens_kernel<T, GREENS><<<numBlocks, numThreadsPerBlock>>>(
-      dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
-      inGamma->getDataPointer(0, Type::imag),
-      inGammaTilde->getDataPointer(0, Type::real),
-      inGammaTilde->getDataPointer(0, Type::imag),
-      outResult->getDataPointer(0, Type::real),
-      outResult->getDataPointer(0, Type::imag));
+  CONGA_LAUNCH((internal::computeGreens_kernel<T, GREENS>), numBlocks,
+               numThreadsPerBlock, dimX, dimY, numEnergies,
+               inGamma->getDataPointer(0, Type::real),
+               inGamma->getDataPointer(0, Type::imag),
+               inGammaTilde->getDataPointer(0, Type::real),
+               inGammaTilde->getDataPointer(0, Type::imag),
+               outResult->getDataPointer(0, Type::real),
+               outResult->getDataPointer(0, Type::imag));
 }
 
 template <typename T, template <typename> class GREENS>
@@ -218,14 +219,14 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   const int numEnergies = inGamma->numFields();
 
   // Compute Greens function from gamma and gammaTilde.
-  internal::computeGreensSumEnergy_kernel<T, GREENS>
-      <<<numBlocks, numThreadsPerBlock>>>(
-          dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
-          inGamma->getDataPointer(0, Type::imag),
-          inGammaTilde->getDataPointer(0, Type::real),
-          inGammaTilde->getDataPointer(0, Type::imag),
-          outResult->getDataPointer(0, Type::real),
-          outResult->getDataPointer(0, Type::imag));
+  CONGA_LAUNCH((internal::computeGreensSumEnergy_kernel<T, GREENS>), numBlocks,
+               numThreadsPerBlock, dimX, dimY, numEnergies,
+               inGamma->getDataPointer(0, Type::real),
+               inGamma->getDataPointer(0, Type::imag),
+               inGammaTilde->getDataPointer(0, Type::real),
+               inGammaTilde->getDataPointer(0, Type::imag),
+               outResult->getDataPointer(0, Type::real),
+               outResult->getDataPointer(0, Type::imag));
 }
 
 template <typename T, template <typename> class GREENS>
@@ -253,15 +254,15 @@ void GreensFunctionStatic<T, GREENS>::computeGreensSumEnergy(
   const int numEnergies = inGamma->numFields();
 
   // Compute Greens function from gamma and gammaTilde.
-  internal::computeGreensSumEnergy_kernel<T, GREENS>
-      <<<numBlocks, numThreadsPerBlock>>>(
-          dimX, dimY, numEnergies, inGamma->getDataPointer(0, Type::real),
-          inGamma->getDataPointer(0, Type::imag),
-          inGammaTilde->getDataPointer(0, Type::real),
-          inGammaTilde->getDataPointer(0, Type::imag),
-          inResidues->getDataPointer(0, Type::real),
-          outResult->getDataPointer(0, Type::real),
-          outResult->getDataPointer(0, Type::imag));
+  CONGA_LAUNCH((internal::computeGreensSumEnergy_kernel<T, GREENS>), numBlocks,
+               numThreadsPerBlock, dimX, dimY, numEnergies,
+               inGamma->getDataPointer(0, Type::real),
+               inGamma->getDataPointer(0, Type::imag),
+               inGammaTilde->getDataPointer(0, Type::real),
+               inGammaTilde->getDataPointer(0, Type::imag),
+               inResidues->getDataPointer(0, Type::real),
+               outResult->getDataPointer(0, Type::real),
+               outResult->getDataPointer(0, Type::imag));
 }
 } // namespace conga
 

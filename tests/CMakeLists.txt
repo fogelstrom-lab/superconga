@@ -73,16 +73,9 @@ foreach(file ${SRC})
   # Add the test to the test suite.
   add_test(NAME ${name} COMMAND ${name})
 
-  # Include directories: equivalent to -I.
-  # TODO(Niclas): The ${JSONCPP_INCLUDE_DIRS} seems unnecessary.
-  target_include_directories(
-    ${name}
-    PRIVATE ${PROJECT_SOURCE_DIR}/include SYSTEM ${ARMADILLO_INCLUDE_DIRS}
-            ${JSONCPP_INCLUDE_DIRS} ${DOCTEST_INCLUDE_DIRS})
+  conga_configure_target(${name})
+  target_include_directories(${name} SYSTEM PRIVATE ${DOCTEST_INCLUDE_DIRS})
 
-  # External libraries: equivalent to -l.
-  target_link_libraries(${name} PRIVATE gfortran jsoncpp ${ARMADILLO_LIBRARIES}
-                                        ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
   if(doctest_FOUND)
     # This does not seem to be completely necessary, but this is how it is done
     # in their tutorial when using find_package.
@@ -93,21 +86,6 @@ foreach(file ${SRC})
   set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                            "${PROJECT_BINARY_DIR}/tests")
 
-  # Use C++17 since it is the lates standard CUDA supports.
-  set_target_properties(${name} PROPERTIES CUDA_STANDARD 17
-                                           CUDA_STANDARD_REQUIRED ON)
-  set_target_properties(${name} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED
-                                                           ON)
-
-  # Set DEBUG compile flags.
-  target_compile_options(
-    ${name}
-    PUBLIC "$<$<CONFIG:DEBUG>:${ARCH_FLAGS}>"
-    PUBLIC "$<$<CONFIG:DEBUG>:-Xcompiler>"
-    PUBLIC "$<$<CONFIG:DEBUG>:${NVCC_WARN}>")
-
-  # Set RELEASE compile flags.
-  target_compile_options(${name} PUBLIC "$<$<CONFIG:RELEASE>:${ARCH_FLAGS}>")
 endforeach(file ${SRC})
 
 message(

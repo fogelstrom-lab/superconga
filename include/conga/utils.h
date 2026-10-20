@@ -14,12 +14,8 @@
 
 #include "defines.h"
 
-#ifdef __CUDACC__
-#include <cuda.h>
+#include "conga/backend.h"
 #define HOST_DEVICE __host__ __device__
-#else
-#define HOST_DEVICE
-#endif
 
 #include <cmath>
 #include <vector>

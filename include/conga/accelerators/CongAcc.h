@@ -7,7 +7,7 @@
 #include "Accelerator.h"
 #include "utils.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <json/json.h>
 #include <thrust/device_vector.h>
 
@@ -27,10 +27,10 @@ public:
   /// \param inMaxStepSize The maximum step size.
   /// \param inMinStepSize The minimum step size.
   explicit CongAcc(const T inStepSize = m_stepSizeDefault,
-                  const T inStepSizeFactor = m_stepSizeFactorDefault,
-                  const T inMinCosSimilarity = m_minCosSimilarityDefault,
-                  const T inMaxStepSize = m_maxStepSizeDefault,
-                  const T inMinStepSize = m_minStepSizeDefault);
+                   const T inStepSizeFactor = m_stepSizeFactorDefault,
+                   const T inMinCosSimilarity = m_minCosSimilarityDefault,
+                   const T inMaxStepSize = m_maxStepSizeDefault,
+                   const T inMinStepSize = m_minStepSizeDefault);
 
   /// \brief Constructor of the CongAcc accelerator.
   ///
@@ -140,8 +140,8 @@ private:
 
 template <typename T>
 CongAcc<T>::CongAcc(const T inStepSize, const T inStepSizeFactor,
-                  const T inMinCosSimilarity, const T inMaxStepSize,
-                  const T inMinStepSize)
+                    const T inMinCosSimilarity, const T inMaxStepSize,
+                    const T inMinStepSize)
     : Accelerator<T>(), m_stepSizeInit(inStepSize),
       m_stepSizeFactor(inStepSizeFactor),
       m_minCosSimilarity(inMinCosSimilarity), m_maxStepSize(inMaxStepSize),
@@ -204,9 +204,9 @@ template <typename T> void CongAcc<T>::initialize(const GridGPU<T> &inX) {
 
 template <typename T>
 void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
-                        const GridGPU<T> &inVectorPotentialG,
-                        OrderParameter<T> &inOutOrderParameterX,
-                        GridGPU<T> &inOutVectorPotentialX) {
+                         const GridGPU<T> &inVectorPotentialG,
+                         OrderParameter<T> &inOutOrderParameterX,
+                         GridGPU<T> &inOutVectorPotentialX) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inVectorPotentialG.dimX();
   const int dimY = inVectorPotentialG.dimY();
@@ -235,7 +235,7 @@ void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
 
 template <typename T>
 void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
-                        OrderParameter<T> &inOutOrderParameterX) {
+                         OrderParameter<T> &inOutOrderParameterX) {
   // We copy everything to one grid, so we need the dimensions of everything.
   const int dimX = inOrderParameterG.getComponentGrid(0)->dimX();
   const int dimY = inOrderParameterG.getComponentGrid(0)->dimY();
@@ -263,7 +263,7 @@ void CongAcc<T>::compute(const OrderParameter<T> &inOrderParameterG,
 
 template <typename T>
 void CongAcc<T>::compute(const GridGPU<T> &inVectorPotentialG,
-                        GridGPU<T> &inOutVectorPotentialX) {
+                         GridGPU<T> &inOutVectorPotentialX) {
   // Take step.
   computeInternal(inVectorPotentialG, inOutVectorPotentialX);
 }
@@ -299,7 +299,7 @@ __global__ void computeInternal(const int inDimX, const int inDimY,
 
 template <typename T>
 T CongAcc<T>::computeInertia(const T inDiffNorm, const T inMeanNorm,
-                            const T inDotProduct, const T inMinCosSimilarity) {
+                             const T inDotProduct, const T inMinCosSimilarity) {
   // In the following x = inertia.
 
   // The error when x = 1.
@@ -411,7 +411,8 @@ void CongAcc<T>::computeInternal(const GridGPU<T> &inG, GridGPU<T> &inOutX) {
       inOutX.getKernelDimensionsFields();
 
   // Take a step.
-  adaptive_ball_internal::computeInternal<<<numBlocks, numThreadsPerBlock>>>(
+  CONGA_LAUNCH(
+      (adaptive_ball_internal::computeInternal), numBlocks, numThreadsPerBlock,
       dimX, dimY, numFields, thrust::raw_pointer_cast(stepSizeGPU.data()),
       thrust::raw_pointer_cast(inertiaGPU.data()), diff.getDataPointer(),
       m_mean.getDataPointer(), inOutX.getDataPointer());

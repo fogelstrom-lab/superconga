@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "conga/defines.h"
+#include "special_functions.h"
 #include "conga/order_parameter/OrderParameterBulk.h"
 #include "conga/utils.h"
 #include "conga/wrappers/doctest.h"
@@ -64,7 +65,7 @@ void testComputeOrderParameterBulkSWaveIntermediateTemperature(
   // The value of the Riemann zeto function evaluated at 3, i.e. Apery's
   // constant = zeta(3).
   // https://en.wikipedia.org/wiki/Ap%C3%A9ry's_constant
-  const T apery = static_cast<T>(std::riemann_zeta(3));
+  const T apery = static_cast<T>(conga::special::riemann_zeta(3.0));
   const T preFactor =
       std::sqrt(static_cast<T>(2) / (static_cast<T>(7) * apery));
 

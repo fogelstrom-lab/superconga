@@ -570,102 +570,100 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeCoherenceFunctionsInternal(
 
   if (inIsBurnIn) {
     // Solve gamma by propagating riccati trajectories along positive y
-    internal::computeCoherenceFunctionBurnIn<T, 2, 3, 1>
-        <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
-            // Model parameters and energy values
-            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
-            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-            energies->getDataPointer(0, Type::real) + energyIdxOffset,
-            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-            eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
-            deltaRot->getDataPointer(0, Type::imag),
-            // Grids for domain info/data
-            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-            // Data relating to sparse storage for boundary gammas
-            storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
-            storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+    CONGA_LAUNCH_STREAM(
+        (internal::computeCoherenceFunctionBurnIn<T, 2, 3, 1>), blocksPerGrid,
+        threadsPerBlock, 0, s1, // Model parameters and energy values
+        stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+        idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+        energies->getDataPointer(0, Type::real) + energyIdxOffset,
+        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+        eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
+        deltaRot->getDataPointer(0, Type::imag),
+        // Grids for domain info/data
+        geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+        geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+        // Data relating to sparse storage for boundary gammas
+        storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+        storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+        storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
     // Solve gammabar by propagating riccati trajectories along negative y
-    internal::computeCoherenceFunctionBurnIn<T, 3, 2, -1>
-        <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
-            // Model parameters and energy values
-            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
-            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-            energies->getDataPointer(0, Type::real) + energyIdxOffset,
-            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-            eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
-            deltaRot->getDataPointer(0, Type::imag),
-            // Grids for domain info/data
-            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-            // Data relating to sparse storage for boundary gammas
-            storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
-            storage->getIndexSparseOut_gammabar()->getDataPointer(0,
-                                                                  Type::real),
-            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
-            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
-            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+    CONGA_LAUNCH_STREAM(
+        (internal::computeCoherenceFunctionBurnIn<T, 3, 2, -1>), blocksPerGrid,
+        threadsPerBlock, 0, s2, // Model parameters and energy values
+        stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+        idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+        energies->getDataPointer(0, Type::real) + energyIdxOffset,
+        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+        eShift->getDataPointer(), deltaRot->getDataPointer(0, Type::real),
+        deltaRot->getDataPointer(0, Type::imag),
+        // Grids for domain info/data
+        geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+        geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+        // Data relating to sparse storage for boundary gammas
+        storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
+        storage->getIndexSparseOut_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+        storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
   } else {
     // Get pointers to grids
     GridGPU<T> *gamma = R::getGamma();
     GridGPU<T> *gammabar = R::getGammabar();
 
     // Solve gamma by propagating riccati trajectories along positive y
-    internal::computeCoherenceFunction<T, 2, 3, 1>
-        <<<blocksPerGrid, threadsPerBlock, 0, s1>>>(
-            // Model parameters and energy values
-            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
-            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-            energies->getDataPointer(0, Type::real) + energyIdxOffset,
-            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-            eShift->getDataPointer(),
-            // Grids for gamma and Delta
-            gamma->getDataPointer(0, Type::real),
-            gamma->getDataPointer(0, Type::imag),
-            deltaRot->getDataPointer(0, Type::real),
-            deltaRot->getDataPointer(0, Type::imag),
-            // Grids for domain info/data
-            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-            // Data relating to sparse storage for boundary gammas
-            storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
-            storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-            storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+    CONGA_LAUNCH_STREAM(
+        (internal::computeCoherenceFunction<T, 2, 3, 1>), blocksPerGrid,
+        threadsPerBlock, 0, s1, // Model parameters and energy values
+        stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+        idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+        energies->getDataPointer(0, Type::real) + energyIdxOffset,
+        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+        eShift->getDataPointer(),
+        // Grids for gamma and Delta
+        gamma->getDataPointer(0, Type::real),
+        gamma->getDataPointer(0, Type::imag),
+        deltaRot->getDataPointer(0, Type::real),
+        deltaRot->getDataPointer(0, Type::imag),
+        // Grids for domain info/data
+        geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+        geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+        // Data relating to sparse storage for boundary gammas
+        storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+        storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+        storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+        storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
     // Solve gammabar by propagating riccati trajectories along negative y
-    internal::computeCoherenceFunction<T, 3, 2, -1>
-        <<<blocksPerGrid, threadsPerBlock, 0, s2>>>(
-            // Model parameters and energy values
-            stepSize, N, numEnergies_storage, energyIdxOffset_storage,
-            idx_x_min, idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
-            energies->getDataPointer(0, Type::real) + energyIdxOffset,
-            energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-            eShift->getDataPointer(),
-            // Grids for gamma and Delta
-            gammabar->getDataPointer(0, Type::real),
-            gammabar->getDataPointer(0, Type::imag),
-            deltaRot->getDataPointer(0, Type::real),
-            deltaRot->getDataPointer(0, Type::imag),
-            // Grids for domain info/data
-            geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-            geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-            // Data relating to sparse storage for boundary gammas
-            storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
-            storage->getIndexSparseOut_gammabar()->getDataPointer(0,
-                                                                  Type::real),
-            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
-            storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
-            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
-            storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+    CONGA_LAUNCH_STREAM(
+        (internal::computeCoherenceFunction<T, 3, 2, -1>), blocksPerGrid,
+        threadsPerBlock, 0, s2, // Model parameters and energy values
+        stepSize, N, numEnergies_storage, energyIdxOffset_storage, idx_x_min,
+        idx_x_max, idx_y_min, idx_y_max, current_angle_idx,
+        energies->getDataPointer(0, Type::real) + energyIdxOffset,
+        energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+        eShift->getDataPointer(),
+        // Grids for gamma and Delta
+        gammabar->getDataPointer(0, Type::real),
+        gammabar->getDataPointer(0, Type::imag),
+        deltaRot->getDataPointer(0, Type::real),
+        deltaRot->getDataPointer(0, Type::imag),
+        // Grids for domain info/data
+        geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+        geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+        // Data relating to sparse storage for boundary gammas
+        storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
+        storage->getIndexSparseOut_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+        storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+        storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
   }
 
   cudaStreamDestroy(s1);
@@ -716,54 +714,56 @@ void RiccatiSolverConfined<T, POTENTIAL>::computeInitialCondition(
                                    current_angle_idx);
 
   // 	Solve gamma by propagating riccati trajectories along positive y
-  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 2, 3, 1>
-      <<<blocksPerGrid, threadsPerBlock>>>(
-          // Model parameters and energy values
-          N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
-          current_angle_idx,
-          energies->getDataPointer(0, Type::real) + energyIdxOffset,
-          energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-          eShift->getDataPointer(),
-          // Grids for gamma and Delta
-          gamma->getDataPointer(0, Type::real),
-          gamma->getDataPointer(0, Type::imag),
-          deltaRot->getDataPointer(0, Type::real),
-          deltaRot->getDataPointer(0, Type::imag),
-          // Grids for domain info/data
-          geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-          // Data relating to sparse storage for boundary gammas
-          storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
-          storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
-          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
-          storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
+  CONGA_LAUNCH(
+      (internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 2, 3,
+                                                                    1>),
+      blocksPerGrid, threadsPerBlock, // Model parameters and energy values
+      N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
+      current_angle_idx,
+      energies->getDataPointer(0, Type::real) + energyIdxOffset,
+      energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+      eShift->getDataPointer(),
+      // Grids for gamma and Delta
+      gamma->getDataPointer(0, Type::real),
+      gamma->getDataPointer(0, Type::imag),
+      deltaRot->getDataPointer(0, Type::real),
+      deltaRot->getDataPointer(0, Type::imag),
+      // Grids for domain info/data
+      geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+      geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+      // Data relating to sparse storage for boundary gammas
+      storage->getIndexSparseIn_gamma()->getDataPointer(0, Type::real),
+      storage->getIndexSparseOut_gamma()->getDataPointer(0, Type::real),
+      storage->getBoundaryIn_gamma()->getDataPointer(0, Type::real),
+      storage->getBoundaryIn_gamma()->getDataPointer(0, Type::imag),
+      storage->getBoundaryOut_gamma()->getDataPointer(0, Type::real),
+      storage->getBoundaryOut_gamma()->getDataPointer(0, Type::imag));
 
   // 	Solve gammabar by propagating riccati trajectories along negative y
-  internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 3, 2, -1>
-      <<<blocksPerGrid, threadsPerBlock>>>(
-          // Model parameters and energy values
-          N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
-          current_angle_idx,
-          energies->getDataPointer(0, Type::real) + energyIdxOffset,
-          energies->getDataPointer(0, Type::imag) + energyIdxOffset,
-          eShift->getDataPointer(),
-          // Grids for gammabar and Delta
-          gammabar->getDataPointer(0, Type::real),
-          gammabar->getDataPointer(0, Type::imag),
-          deltaRot->getDataPointer(0, Type::real),
-          deltaRot->getDataPointer(0, Type::imag),
-          // Grids for domain info/data
-          geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
-          geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
-          // Data relating to sparse storage for boundary gammas
-          storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
-          storage->getIndexSparseOut_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
-          storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
-          storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
+  CONGA_LAUNCH(
+      (internal::computeGammaFunctionInitialBoundaryTemplate_kernel<T, 3, 2,
+                                                                    -1>),
+      blocksPerGrid, threadsPerBlock, // Model parameters and energy values
+      N, numEnergies_storage, energyIdxOffset_storage, trajectoryIdx_start,
+      current_angle_idx,
+      energies->getDataPointer(0, Type::real) + energyIdxOffset,
+      energies->getDataPointer(0, Type::imag) + energyIdxOffset,
+      eShift->getDataPointer(),
+      // Grids for gammabar and Delta
+      gammabar->getDataPointer(0, Type::real),
+      gammabar->getDataPointer(0, Type::imag),
+      deltaRot->getDataPointer(0, Type::real),
+      deltaRot->getDataPointer(0, Type::imag),
+      // Grids for domain info/data
+      geom->getDomainLabelsGrid()->getDataPointer(0, Type::real),
+      geom->getBoundaryDistanceGrid()->getDataPointer(0, Type::real),
+      // Data relating to sparse storage for boundary gammas
+      storage->getIndexSparseIn_gammabar()->getDataPointer(0, Type::real),
+      storage->getIndexSparseOut_gammabar()->getDataPointer(0, Type::real),
+      storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::real),
+      storage->getBoundaryIn_gammabar()->getDataPointer(0, Type::imag),
+      storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::real),
+      storage->getBoundaryOut_gammabar()->getDataPointer(0, Type::imag));
 }
 } // namespace conga
 

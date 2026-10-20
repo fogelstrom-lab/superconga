@@ -16,11 +16,8 @@
 
 #include <cmath>
 
-#ifdef __CUDACC__
+#include "conga/backend.h"
 #define __HD__ __host__ __device__
-#else
-#define __HD__
-#endif
 
 namespace conga {
 namespace GridFunctors {

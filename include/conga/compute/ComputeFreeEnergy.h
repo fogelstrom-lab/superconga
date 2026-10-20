@@ -241,17 +241,17 @@ void ComputeFreeEnergy<T>::computeGreensAngle(
     const auto [blocksPerGrid, threadsPerBlock] =
         freeEnergyKernelIntegrand->getKernelDimensions();
 
-    computeFreeEnergy_Kernel<T><<<blocksPerGrid, threadsPerBlock>>>(
-        freeEnergyKernelIntegrand->dimX(), numEnergies,
-        freeEnergyKernelIntegrand->getDataPointer(0, Type::real),
-        freeEnergyKernelIntegrand->getDataPointer(0, Type::imag),
-        inGamma->getDataPointer(0, Type::real),
-        inGamma->getDataPointer(0, Type::imag),
-        inGammaTilde->getDataPointer(0, Type::real),
-        inGammaTilde->getDataPointer(0, Type::imag),
-        deltaRot->getDataPointer(0, Type::real),
-        deltaRot->getDataPointer(0, Type::imag),
-        ozakiResidues->getDataPointer(0, Type::real));
+    CONGA_LAUNCH((computeFreeEnergy_Kernel<T>), blocksPerGrid, threadsPerBlock,
+                 freeEnergyKernelIntegrand->dimX(), numEnergies,
+                 freeEnergyKernelIntegrand->getDataPointer(0, Type::real),
+                 freeEnergyKernelIntegrand->getDataPointer(0, Type::imag),
+                 inGamma->getDataPointer(0, Type::real),
+                 inGamma->getDataPointer(0, Type::imag),
+                 inGammaTilde->getDataPointer(0, Type::real),
+                 inGammaTilde->getDataPointer(0, Type::imag),
+                 deltaRot->getDataPointer(0, Type::real),
+                 deltaRot->getDataPointer(0, Type::imag),
+                 ozakiResidues->getDataPointer(0, Type::real));
   }
 }
 

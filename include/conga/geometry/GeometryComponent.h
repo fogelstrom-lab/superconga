@@ -18,7 +18,7 @@
 #include "../Type.h"
 #include "../grid.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <iostream>
 #include <utility>
@@ -214,8 +214,9 @@ template <typename T> void GeometryComponent<T>::labelBoundaryNodes() {
   GridGPU<char> *newLabels(0);
   GridGPU<char>::initializeGrid(newLabels, oldLabels);
 
-  internal::labelEntryExit_Kernel<T><<<bpg, tpb>>>(
-      oldLabels->getDataPointer(), newLabels->getDataPointer(), Nx, Ny);
+  CONGA_LAUNCH((internal::labelEntryExit_Kernel<T>), bpg, tpb,
+               oldLabels->getDataPointer(), newLabels->getDataPointer(), Nx,
+               Ny);
 
   _domainLabels = newLabels;
   delete oldLabels;

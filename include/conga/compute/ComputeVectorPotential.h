@@ -17,7 +17,7 @@
 #include "../wrappers/armadillo.h"
 #include "ComputeResidual.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
 #include <thrust/device_vector.h>
 
 #include <array>
@@ -617,9 +617,10 @@ void ComputeVectorPotential<T>::subtractMean(const GridGPU<T> &inSrc,
       inSrc.getKernelDimensionsFields();
 
   // Call CUDA kernel.
-  cvp_internal::subtractMean<<<numBlocks, numThreadsPerBlock>>>(
-      gridResolution, dimension, thrust::raw_pointer_cast(meansGPU.data()),
-      inSrc.getDataPointer(), outDst.getDataPointer());
+  CONGA_LAUNCH((cvp_internal::subtractMean), numBlocks, numThreadsPerBlock,
+               gridResolution, dimension,
+               thrust::raw_pointer_cast(meansGPU.data()),
+               inSrc.getDataPointer(), outDst.getDataPointer());
 }
 
 template <typename T>
@@ -682,17 +683,16 @@ void ComputeVectorPotential<T>::solveInternal(
       const T *const filter = thrust::raw_pointer_cast(m_filters[i].data());
 
       // Cross-correlate the current with the filter, and transpose the result.
-      cvp_internal::
-          crossCorrelate1DTranspose<<<numBlocks, numThreadsPerBlock>>>(
-              gridResolution, dimension, inCurrentDensity.getDataPointer(),
-              filter, tmp0.getDataPointer());
+      CONGA_LAUNCH((cvp_internal::crossCorrelate1DTranspose), numBlocks,
+                   numThreadsPerBlock, gridResolution, dimension,
+                   inCurrentDensity.getDataPointer(), filter,
+                   tmp0.getDataPointer());
 
       // Cross-correlate the previous result with the filter, and transpose the
       // result.
-      cvp_internal::
-          crossCorrelate1DTranspose<<<numBlocks, numThreadsPerBlock>>>(
-              gridResolution, dimension, tmp0.getDataPointer(), filter,
-              tmp1.getDataPointer());
+      CONGA_LAUNCH((cvp_internal::crossCorrelate1DTranspose), numBlocks,
+                   numThreadsPerBlock, gridResolution, dimension,
+                   tmp0.getDataPointer(), filter, tmp1.getDataPointer());
 
       // Accumulate.
       const bool isPositive = m_positiveFilter[i];
@@ -707,9 +707,10 @@ void ComputeVectorPotential<T>::solveInternal(
     const T *const filter = thrust::raw_pointer_cast(m_filter2D.data());
 
     // Cross-correlate the current density with the Green function.
-    cvp_internal::crossCorrelate2D<<<numBlocks, numThreadsPerBlock>>>(
-        gridResolution, dimension, inCurrentDensity.getDataPointer(), filter,
-        m_vectorPotential->getDataPointer());
+    CONGA_LAUNCH((cvp_internal::crossCorrelate2D), numBlocks,
+                 numThreadsPerBlock, gridResolution, dimension,
+                 inCurrentDensity.getDataPointer(), filter,
+                 m_vectorPotential->getDataPointer());
   }
 
   // Factor from the equation itself.

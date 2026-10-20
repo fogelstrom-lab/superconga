@@ -13,7 +13,7 @@
 #ifndef CONGA_VECTOR_POTENTIAL_KERNEL_H_
 #define CONGA_VECTOR_POTENTIAL_KERNEL_H_
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <math.h>
 

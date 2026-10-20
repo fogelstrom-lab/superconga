@@ -17,7 +17,8 @@
 #include "GeometryComponent.h"
 #include "Polygon.h"
 
-#include <cuda.h>
+#include "conga/backend.h"
+#include <vector>
 
 #include <cmath>
 
@@ -309,8 +310,9 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
   }
 #endif
 
-  T scaledVerticesX[inNumVertices] = {static_cast<T>(0.0)};
-  T scaledVerticesY[inNumVertices] = {static_cast<T>(0.0)};
+  // Note: not variable-length arrays, which are a GCC extension clang rejects.
+  std::vector<T> scaledVerticesX(inNumVertices, static_cast<T>(0.0));
+  std::vector<T> scaledVerticesY(inNumVertices, static_cast<T>(0.0));
 
   // Loop over vertex coordinates and check that all lie within allowed domain.
   for (int vertexIdx = 0; vertexIdx < inNumVertices; ++vertexIdx) {
@@ -335,7 +337,8 @@ PolygonGeometry<T>::PolygonGeometry(const T inGrainFraction,
     scaledVerticesY[vertexIdx] = vertexY * inGrainFraction;
   }
 
-  m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX, scaledVerticesY);
+  m_polygon = new Polygon<T>(inNumVertices, scaledVerticesX.data(),
+                             scaledVerticesY.data());
 }
 
 template <typename T> PolygonGeometry<T>::~PolygonGeometry() {
@@ -363,17 +366,18 @@ template <typename T> void PolygonGeometry<T>::create(const T inAngle) {
   const T scale = static_cast<T>(N - 1);
 
   // Calc inside/outside, distance, normals.
-  internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
-      G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-      G::getBoundaryDistance(), Nx, Ny, inAngle, scale,
-      m_polygon->getNumVertices(), m_polygon->getVertices()->getDataPointer(0),
-      m_polygon->getVertices()->getDataPointer(1));
+  CONGA_LAUNCH((internal::generatePolygonGeometry_Kernel<T, 256>), bpg, tpb,
+               G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
+               G::getBoundaryDistance(), Nx, Ny, inAngle, scale,
+               m_polygon->getNumVertices(),
+               m_polygon->getVertices()->getDataPointer(0),
+               m_polygon->getVertices()->getDataPointer(1));
 
   G::labelBoundaryNodes();
 
-  internal::maskNormals_Kernel<T>
-      <<<bpg, tpb>>>(G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
-                     G::getBoundaryDistance(), Nx, Ny);
+  CONGA_LAUNCH((internal::maskNormals_Kernel<T>), bpg, tpb,
+               G::getDomainLabels(), G::getNormals(0), G::getNormals(1),
+               G::getBoundaryDistance(), Nx, Ny);
 }
 
 template <typename T>
@@ -388,11 +392,11 @@ PolygonGeometry<T>::createDomain(const int inLatticeSideLength) const {
       GridGPU<T>::getKernelDimensions(inLatticeSideLength, inLatticeSideLength);
 
   // Calc inside/outside.
-  internal::generatePolygonGeometry_Kernel<T, 256><<<bpg, tpb>>>(
-      dom_component->getDataPointer(), m_polygon->getNumVertices(),
-      m_polygon->getVertices()->getDataPointer(0),
-      m_polygon->getVertices()->getDataPointer(1), inLatticeSideLength,
-      inLatticeSideLength);
+  CONGA_LAUNCH((internal::generatePolygonGeometry_Kernel<T, 256>), bpg, tpb,
+               dom_component->getDataPointer(), m_polygon->getNumVertices(),
+               m_polygon->getVertices()->getDataPointer(0),
+               m_polygon->getVertices()->getDataPointer(1), inLatticeSideLength,
+               inLatticeSideLength);
 
   return dom_component;
 }

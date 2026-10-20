@@ -11,7 +11,7 @@
 #ifndef CONGA_CONTEXT_MODULE_H_
 #define CONGA_CONTEXT_MODULE_H_
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <iostream>
 #include <string>

@@ -13,10 +13,9 @@
 #ifndef CONGA_LOCAL_GREENS_H_
 #define CONGA_LOCAL_GREENS_H_
 
-#ifdef __CUDACC__
+#include "conga/backend.h"
 #ifndef _HD_
 #define _HD_ __host__ __device__
-#endif
 #endif
 
 #include <thrust/complex.h>

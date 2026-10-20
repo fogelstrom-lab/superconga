@@ -17,7 +17,9 @@
 #include "../defines.h"
 #include "../utils.h"
 
+#include <iostream>
 #include <thrust/device_vector.h>
+#include <thrust/extrema.h>
 #include <thrust/host_vector.h>
 
 #include <cassert>

@@ -1,7 +1,7 @@
 #ifndef COLORMAPS_H_
 #define COLORMAPS_H_
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #ifndef _HD_
 #define _HD_ __host__ __device__

@@ -12,7 +12,7 @@
 #ifndef CONGA_GAUGES_H_
 #define CONGA_GAUGES_H_
 
-#include <cuda.h>
+#include "conga/backend.h"
 
 #include <string>
 

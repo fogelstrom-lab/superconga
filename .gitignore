@@ -29,3 +29,9 @@ private/
 
 # Singularity files.
 *.sif
+
+# macOS.
+.DS_Store
+
+# Local Python virtual environment.
+.venv/

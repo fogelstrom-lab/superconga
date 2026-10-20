@@ -32,6 +32,14 @@ def make_parser(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--backend",
+        type=str,
+        choices=["auto", "cuda", "cpu"],
+        default="auto",
+        help="Execution backend: 'cuda' for NVIDIA GPUs, 'cpu' to run the kernels on the host with OpenMP (e.g. on a Mac). 'auto' picks cuda if a CUDA compiler is found. (Default: %(default)s)",
+    )
+
+    parser.add_argument(
         "--cuda-arch",
         type=int,
         default=None,

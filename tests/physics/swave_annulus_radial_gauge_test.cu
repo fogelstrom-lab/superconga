@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 
 #include "conga/Context.h"
+#include "../special_functions.h"
 #include "conga/Parameters.h"
 #include "conga/Type.h"
 #include "conga/accelerators/BarzilaiBorwein.h"
@@ -130,12 +131,12 @@ getFactorsABC(const T inOuterRadius, const T inInnerRadius,
   const T r_k = inInnerRadius / inScaledPenetrationDepth;
 
   // Relevant Bessel function.
-  const T I0_r = std::cyl_bessel_i(static_cast<T>(0), r_k);
-  const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
-  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
-  const T K0_r = std::cyl_bessel_k(static_cast<T>(0), r_k);
-  const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
-  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
+  const T I0_r = conga::special::cyl_bessel_i(0, r_k);
+  const T I0_R = conga::special::cyl_bessel_i(0, R_k);
+  const T I2_r = conga::special::cyl_bessel_i(2, r_k);
+  const T K0_r = conga::special::cyl_bessel_k(0, r_k);
+  const T K0_R = conga::special::cyl_bessel_k(0, R_k);
+  const T K2_r = conga::special::cyl_bessel_k(2, r_k);
 
   // For even more convenience.
   const T chargePhaseWinding = static_cast<T>(inChargeSign) * inPhaseWinding;
@@ -207,10 +208,10 @@ T evalMagneticMoment(const T inOuterRadius, const T inInnerRadius,
   const T r_k = inInnerRadius / scaledPenetrationDepth;
 
   // Relevant Bessel function.
-  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
-  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
-  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
-  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
+  const T I2_r = conga::special::cyl_bessel_i(2, r_k);
+  const T I2_R = conga::special::cyl_bessel_i(2, R_k);
+  const T K2_r = conga::special::cyl_bessel_k(2, r_k);
+  const T K2_R = conga::special::cyl_bessel_k(2, R_k);
 
   // The (a,b,c) factors.
   const auto [a, b, c] =
@@ -285,8 +286,8 @@ std::pair<T, T> evalFreeEnergy(const T inOuterRadius, const T inInnerRadius,
   // The integrand of the magnetic term in the free energy.
   auto fnMagneticIntegrand = [&](T x) {
     const T tmp =
-        a * std::cyl_bessel_i(static_cast<T>(0), x / scaledPenetrationDepth) -
-        b * std::cyl_bessel_k(static_cast<T>(0), x / scaledPenetrationDepth) -
+        a * conga::special::cyl_bessel_i(0, x / scaledPenetrationDepth) -
+        b * conga::special::cyl_bessel_k(0, x / scaledPenetrationDepth) -
         externalFluxDensity;
     return x * tmp * tmp;
   };
@@ -314,8 +315,8 @@ std::pair<T, T> evalFreeEnergy(const T inOuterRadius, const T inInnerRadius,
   // The integrand of the kinetic term in the free energy.
   auto fnKineticIntegrand = [&](T x) {
     const T tmp =
-        a * std::cyl_bessel_i(static_cast<T>(1), x / scaledPenetrationDepth) +
-        b * std::cyl_bessel_k(static_cast<T>(1), x / scaledPenetrationDepth);
+        a * conga::special::cyl_bessel_i(1, x / scaledPenetrationDepth) +
+        b * conga::special::cyl_bessel_k(1, x / scaledPenetrationDepth);
     return x * tmp * tmp;
   };
 
@@ -492,12 +493,12 @@ template <typename T> void testMagneticMomentExpression() {
   const T r_k = r / penetrationDepth;
 
   // Relevant Bessel function.
-  const T I0_R = std::cyl_bessel_i(static_cast<T>(0), R_k);
-  const T I2_r = std::cyl_bessel_i(static_cast<T>(2), r_k);
-  const T I2_R = std::cyl_bessel_i(static_cast<T>(2), R_k);
-  const T K0_R = std::cyl_bessel_k(static_cast<T>(0), R_k);
-  const T K2_r = std::cyl_bessel_k(static_cast<T>(2), r_k);
-  const T K2_R = std::cyl_bessel_k(static_cast<T>(2), R_k);
+  const T I0_R = conga::special::cyl_bessel_i(0, R_k);
+  const T I2_r = conga::special::cyl_bessel_i(2, r_k);
+  const T I2_R = conga::special::cyl_bessel_i(2, R_k);
+  const T K0_R = conga::special::cyl_bessel_k(0, R_k);
+  const T K2_r = conga::special::cyl_bessel_k(2, r_k);
+  const T K2_R = conga::special::cyl_bessel_k(2, R_k);
 
   // The grain and hole area.
   const auto [grainArea, holeArea] = getAreas(R, r);
