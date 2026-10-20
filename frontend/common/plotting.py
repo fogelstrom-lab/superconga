@@ -7,6 +7,8 @@
 """Common functionality for plotting using Matplotlib."""
 
 from enum import Enum
+import shutil
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,7 +104,8 @@ def imshow_and_colorbar(
         vmin = -vmax
 
     # Set NaN color.
-    colormap = mpl.cm.get_cmap(colormap).copy()
+    # matplotlib >= 3.9 removed mpl.cm.get_cmap.
+    colormap = mpl.colormaps[colormap].copy()
     colormap.set_bad(bad_color, 1.0)
 
     # Plot data.
@@ -227,8 +230,12 @@ def set_global_parameters(
 ):
     """Set global Matplotlib parameters."""
 
-    # Check if TeX dependencies are installed.
-    use_tex = use_tex and mpl.checkdep_usetex(True)
+    # Check if TeX dependencies are installed (matplotlib >= 3.6 dropped
+    # checkdep_usetex, so look for the executables ourselves).
+    use_tex = use_tex and all(
+        shutil.which(executable) is not None
+        for executable in ("latex", "dvipng", "gs")
+    )
 
     plt.rcParams.update(
         {
